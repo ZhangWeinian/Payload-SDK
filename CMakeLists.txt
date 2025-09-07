@@ -1,56 +1,49 @@
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required(VERSION 3.12)
+project(DJI_PSDK_APP_TOPLEVEL CXX C)
 
-if (NOT USE_SYSTEM_ARCH)
-	# select use platform 'LINUX' or 'RTOS' here, reset cache and reload cmake project
-	set (USE_SYSTEM_ARCH LINUX)
-endif ()
+# 1. 设置全局项目路径和选项
+set(PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
+message(STATUS "Project Root: ${PROJECT_ROOT_DIR}")
 
-if (USE_SYSTEM_ARCH MATCHES RTOS)
-	cmake_minimum_required (VERSION 3.15)
-	set (CMAKE_C_COMPILER arm-none-eabi-gcc)
-	set (CMAKE_CXX_COMPILER arm-none-eabi-g++)
-	set (CMAKE_ASM_COMPILER arm-none-eabi-gcc)
-	set (CMAKE_AR arm-none-eabi-ar)
-	set (CMAKE_OBJCOPY arm-none-eabi-objcopy)
-	set (CMAKE_OBJDUMP arm-none-eabi-objdump)
-	set (SIZE arm-none-eabi-size)
-	set (CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-endif ()
+set(EXTERNAL_LIBS_DIR "${PROJECT_ROOT_DIR}/external_libs")
+set(PROJECT_ROOT_DIR ${PROJECT_ROOT_DIR} CACHE INTERNAL "Root directory of the project")
+set(EXTERNAL_LIBS_DIR ${EXTERNAL_LIBS_DIR} CACHE INTERNAL "Directory for external libraries")
 
-project (entry)
-set (CMAKE_CXX_STANDARD 20)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Disable in-source builds to prevent source tree corruption.
-if (" ${CMAKE_SOURCE_DIR}" STREQUAL " ${CMAKE_BINARY_DIR}")
-	message (FATAL_ERROR "FATAL: In-source builds are not allowed. You should create a separate directory for build files.")
-endif ()
+if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+    message(FATAL_ERROR "In-source builds are not allowed. Please create a separate build directory.")
+endif()
 
-if (USE_SYSTEM_ARCH MATCHES LINUX)
-	add_definitions (-DSYSTEM_ARCH_LINUX)
+# 2. 集成第三方依赖的自动化构建
+set(DEPS_INSTALL_DIR "${EXTERNAL_LIBS_DIR}/install")
 
-	# add_subdirectory (samples/sample_c/platform/linux/manifold2)
-	# add_subdirectory (samples/sample_c++/platform/linux/manifold2)
-	# add_subdirectory (samples/sample_c/platform/linux/raspberry_pi)
-	add_subdirectory (samples/sample_c++/platform/linux/manifold2)
+if(EXISTS "${EXTERNAL_LIBS_DIR}/build_deps.sh")
+    add_custom_target(deps
+        COMMAND ${CMAKE_COMMAND} -E echo "Building all third-party dependencies..."
+        COMMAND bash ${EXTERNAL_LIBS_DIR}/build_deps.sh
+        WORKING_DIRECTORY ${EXTERNAL_LIBS_DIR}
+        COMMENT "Building static libraries for all dependencies..."
+    )
+else()
+    message(WARNING "'build_deps.sh' not found. The 'deps' target will not be available.")
+endif()
 
-	execute_process (COMMAND uname -m OUTPUT_VARIABLE DEVICE_SYSTEM_ID)
+if(NOT EXISTS "${DEPS_INSTALL_DIR}")
+    message(WARNING "Third-party libraries are not built yet. \n"
+                    "Please run 'make deps' or 'cmake --build . --target deps' first before building the main application.")
+endif()
 
-	if (DEVICE_SYSTEM_ID MATCHES x86_64)
-		set (LIBRARY_PATH psdk_lib/lib/x86_64-linux-gnu-gcc)
-	elseif (DEVICE_SYSTEM_ID MATCHES aarch64)
-		set (LIBRARY_PATH psdk_lib/lib/aarch64-linux-gnu-gcc)
-	else ()
-		message (FATAL_ERROR "FATAL: Please confirm your platform.")
-	endif ()
+# 3. 平台选择和主应用程序引导
+set(USE_SYSTEM_ARCH LINUX CACHE STRING "Select target platform: LINUX or RTOS")
 
-	install (FILES ${LIBRARY_PATH}/libpayloadsdk.a DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
-
-	install (DIRECTORY psdk_lib/include DESTINATION "${CMAKE_INSTALL_PREFIX}")
-elseif (USE_SYSTEM_ARCH MATCHES RTOS)
-	add_definitions (-DSYSTEM_ARCH_RTOS)
-	add_subdirectory (samples/sample_c/platform/rtos_freertos/stm32f4_discovery/project/armgcc)
-endif ()
-
-add_custom_target (${PROJECT_NAME} ALL)
+if(USE_SYSTEM_ARCH MATCHES LINUX)
+    add_compile_definitions(SYSTEM_ARCH_LINUX)
+    add_subdirectory(samples/sample_c++/platform/linux/manifold2)
+elseif(USE_SYSTEM_ARCH MATCHES RTOS)
+    add_compile_definitions(SYSTEM_ARCH_RTOS)
+else()
+    message(FATAL_ERROR "Unsupported USE_SYSTEM_ARCH value: ${USE_SYSTEM_ARCH}. Should be LINUX or RTOS.")
+endif()
