@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/orangepi/Payload-SDK/build/cmake_install.cmake",
-		"/home/orangepi/Payload-SDK/build/samples/sample_c++/platform/linux/manifold2/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

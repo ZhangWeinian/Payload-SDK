@@ -1,5 +1,0 @@
-# 应用的全局配置
-mqtt:
-    url: "tcp://broker.emqx.io:1883"
-    plane_id: "JR550H-001"
-    client_id_prefix: "Plane-"
