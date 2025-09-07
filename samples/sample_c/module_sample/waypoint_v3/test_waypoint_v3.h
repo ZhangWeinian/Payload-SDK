@@ -25,25 +25,26 @@
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef TEST_WAYPOINT_V3_H
-#define TEST_WAYPOINT_V3_H
+	#define TEST_WAYPOINT_V3_H
 
-/* Includes ------------------------------------------------------------------*/
-#include "dji_typedef.h"
+	/* Includes ------------------------------------------------------------------*/
+	#include "dji_typedef.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+	#ifdef __cplusplus
+extern "C"
+{
+	#endif
 
-/* Exported constants --------------------------------------------------------*/
+	/* Exported constants --------------------------------------------------------*/
 
-/* Exported types ------------------------------------------------------------*/
+	/* Exported types ------------------------------------------------------------*/
 
-/* Exported functions --------------------------------------------------------*/
-T_DjiReturnCode DjiTest_WaypointV3RunSample(void);
+	/* Exported functions --------------------------------------------------------*/
+	T_DjiReturnCode DjiTest_WaypointV3RunSample(void);
 
-#ifdef __cplusplus
+	#ifdef __cplusplus
 }
-#endif
+	#endif
 
 #endif // TEST_WAYPOINT_V3_H
 /************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/

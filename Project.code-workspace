@@ -1,0 +1,29 @@
+{
+	"folders": [
+		{
+			"path": ".",
+			"name": "PSDK"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.json": "jsonc",
+			".prettierrc": "jsonc",
+			"*.sh": "shellscript",
+			"*.html": "html",
+			"*.vbs": "vb",
+			"*.clang-format": "yaml",
+			"*.wsb": "html",
+			"*.mhtml": "plaintext",
+			"*.tex": "latex",
+			"*.toml": "toml",
+			"*.vssettings": "html",
+			"*.json5": "json5",
+			"hal_uart.h": "c",
+			"dji_platform.h": "c",
+			"termbits.h": "c",
+			"memory": "cpp",
+			"test_widget_interaction.h": "c"
+		}
+	}
+}

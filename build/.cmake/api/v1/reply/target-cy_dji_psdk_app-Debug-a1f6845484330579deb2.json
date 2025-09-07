@@ -1,0 +1,867 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "bin/cy_dji_psdk_app"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_executable",
+			"target_link_libraries",
+			"target_compile_definitions",
+			"add_definitions",
+			"target_include_directories"
+		],
+		"files" : 
+		[
+			"samples/sample_c++/platform/linux/manifold2/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 64,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 106,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 98,
+				"parent" : 0
+			},
+			{
+				"file" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 31,
+				"parent" : 4
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 75,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : " -pthread -g -std=c++14"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 3,
+					"define" : "PLATFORM_ARCH_AARCH64=1"
+				},
+				{
+					"backtrace" : 5,
+					"define" : "SYSTEM_ARCH_LINUX"
+				},
+				{
+					"backtrace" : 3,
+					"define" : "_GNU_SOURCE"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/Payload-SDK/samples/sample_c++/platform/linux/manifold2"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/Payload-SDK/samples/sample_c++/platform/linux/manifold2/application"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/Payload-SDK/samples/sample_c++/platform/linux/manifold2/../../../../../psdk_lib/include"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/static-build-project/install/include"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/static-build-project/install/include/libusb-1.0"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/Payload-SDK/samples/sample_c++/platform/linux/manifold2/../../../module_sample"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/Payload-SDK/samples/sample_c++/platform/linux/manifold2/../../../../sample_c/module_sample"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					1
+				],
+				"standard" : "14"
+			},
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				43,
+				44,
+				45,
+				46,
+				47,
+				50,
+				51,
+				52,
+				53,
+				54,
+				55,
+				56,
+				57,
+				58,
+				59,
+				69,
+				70
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : " -pthread -std=gnu99 -g"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 3,
+					"define" : "PLATFORM_ARCH_AARCH64=1"
+				},
+				{
+					"backtrace" : 5,
+					"define" : "SYSTEM_ARCH_LINUX"
+				},
+				{
+					"backtrace" : 3,
+					"define" : "_GNU_SOURCE"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/Payload-SDK/samples/sample_c++/platform/linux/manifold2"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/Payload-SDK/samples/sample_c++/platform/linux/manifold2/application"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/Payload-SDK/samples/sample_c++/platform/linux/manifold2/../../../../../psdk_lib/include"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/static-build-project/install/include"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/static-build-project/install/include/libusb-1.0"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/Payload-SDK/samples/sample_c++/platform/linux/manifold2/../../../module_sample"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/orangepi/Payload-SDK/samples/sample_c++/platform/linux/manifold2/../../../../sample_c/module_sample"
+				}
+			],
+			"language" : "C",
+			"sourceIndexes" : 
+			[
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34,
+				35,
+				36,
+				37,
+				38,
+				39,
+				40,
+				41,
+				42,
+				63,
+				64,
+				65,
+				66,
+				67,
+				68
+			]
+		}
+	],
+	"id" : "cy_dji_psdk_app::@8fe75fd253ae634bef86",
+	"link" : 
+	{
+		"commandFragments" : 
+		[
+			{
+				"fragment" : "-pthread -g",
+				"role" : "flags"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "/home/orangepi/Payload-SDK/samples/sample_c++/platform/linux/manifold2/../../../../../psdk_lib/lib/aarch64-linux-gnu-gcc/libpayloadsdk.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "/home/orangepi/static-build-project/install/lib/libjsoncpp.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "/home/orangepi/static-build-project/install/lib/libmosquitto_static.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "/home/orangepi/static-build-project/install/lib/libmosquittopp_static.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "/home/orangepi/static-build-project/install/lib/libhv_static.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "/home/orangepi/static-build-project/install/lib/libusb-1.0.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "/home/orangepi/static-build-project/install/lib/libopus.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "/home/orangepi/static-build-project/install/lib/libyaml-cpp.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "/home/orangepi/static-build-project/install/lib/libpaho-mqtt3as.a",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "-lssl",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "-lcrypto",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "-ludev",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "-lstdc++",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "-lm",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "-ldl",
+				"role" : "libraries"
+			},
+			{
+				"backtrace" : 2,
+				"fragment" : "-lpthread",
+				"role" : "libraries"
+			}
+		],
+		"language" : "CXX"
+	},
+	"name" : "cy_dji_psdk_app",
+	"nameOnDisk" : "cy_dji_psdk_app",
+	"paths" : 
+	{
+		"build" : "samples/sample_c++/platform/linux/manifold2",
+		"source" : "samples/sample_c++/platform/linux/manifold2"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34,
+				35,
+				36,
+				37,
+				38,
+				39,
+				40,
+				41,
+				42,
+				43,
+				44,
+				45,
+				46,
+				47,
+				50,
+				51,
+				52,
+				53,
+				54,
+				55,
+				56,
+				57,
+				58,
+				59,
+				63,
+				64,
+				65,
+				66,
+				67,
+				68,
+				69,
+				70
+			]
+		},
+		{
+			"name" : "",
+			"sourceIndexes" : 
+			[
+				48,
+				49,
+				60,
+				61,
+				62
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/platform/linux/manifold2/application/application.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/platform/linux/manifold2/application/main.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/camera_emu/dji_media_file_manage/dji_media_file_core.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/camera_emu/dji_media_file_manage/dji_media_file_jpg.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/camera_emu/dji_media_file_manage/dji_media_file_mp4.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/camera_emu/test_payload_cam_emu_base.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/camera_emu/test_payload_cam_emu_media.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/camera_manager/test_camera_manager.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/cloud_api/test_cloud_api_by_web_socket.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/data_transmission/test_data_transmission.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/fc_subscription/test_fc_subscription.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/flight_control/test_flight_control.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/gimbal_emu/test_payload_gimbal_emu.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/gimbal_manager/test_gimbal_manager.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/hms/test_hms.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/interest_point/test_interest_point.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/liveview/test_liveview.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/mop_channel/test_mop_channel.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/payload_collaboration/test_payload_collaboration.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/perception/test_perception.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/positioning/test_positioning.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/power_management/test_power_management.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/tethered_battery/test_tethered_battery.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/time_sync/test_time_sync.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/upgrade/test_upgrade.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/upgrade/test_upgrade_common_file_transfer.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/upgrade/test_upgrade_platform_opt.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/utils/cJSON.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/utils/dji_config_manager.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/utils/util_buffer.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/utils/util_file.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/utils/util_link_list.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/utils/util_md5.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/utils/util_misc.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/utils/util_time.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/waypoint_v2/test_waypoint_v2.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/waypoint_v3/test_waypoint_v3.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/widget/file_binary_array_list_en.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/widget/test_widget.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/widget/test_widget_speaker.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/widget_interaction_test/file_binary_array_list_en.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/widget_interaction_test/test_widget_interaction.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c/module_sample/xport/test_payload_xport.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/camera_manager/test_camera_manager_entry.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/flight_controller/test_flight_controller_command_flying.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/flight_controller/test_flight_controller_entry.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/gimbal/test_gimbal_entry.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/hms_manager/hms_manager_entry.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/sample_c++/module_sample/liveview/data/yolo-fastest-1.1_coco/yolo-fastest-1.1-xl.cfg",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/sample_c++/module_sample/liveview/data/yolo-fastest-1.1_coco/yolo-fastest-1.1.cfg",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/liveview/dji_camera_image_handler.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/liveview/dji_camera_stream_decoder.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/liveview/dji_liveview_object_detection.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/liveview/image_processor_yolovfastest.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/liveview/test_liveview.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/liveview/test_liveview_entry.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/perception/test_lidar_entry.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/perception/test_perception.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/perception/test_perception_entry.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/module_sample/perception/test_radar_entry.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/sample_c++/platform/linux/common/3rdparty/FindFFMPEG.cmake",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/sample_c++/platform/linux/common/3rdparty/FindLIBUSB.cmake",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "samples/sample_c++/platform/linux/common/3rdparty/FindOPUS.cmake",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c++/platform/linux/common/osal/osal.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c++/platform/linux/common/osal/osal_fs.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c++/platform/linux/common/osal/osal_socket.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c++/platform/linux/manifold2/hal/hal_network.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c++/platform/linux/manifold2/hal/hal_uart.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 1,
+			"path" : "samples/sample_c++/platform/linux/manifold2/hal/hal_usb_bulk.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/platform/linux/manifold2/config/ConfigManager.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "samples/sample_c++/platform/linux/manifold2/services/mqtt/MQTTService.cpp",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "EXECUTABLE"
+}

@@ -1,142 +1,140 @@
 cmake_minimum_required(VERSION 3.5)
-project(dji_sdk_demo_linux_cxx CXX)
+project(cy_dji_psdk_app CXX)
 
-set(CMAKE_C_FLAGS "-pthread -std=gnu99")
-set(CMAKE_CXX_FLAGS "-std=c++11 -pthread")
-set(CMAKE_EXE_LINKER_FLAGS "-pthread")
-set(CMAKE_C_COMPILER "gcc")
-set(CMAKE_CXX_COMPILER "g++")
-add_definitions(-D_GNU_SOURCE)
+# 1. 编译器和构建选项
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-if (MEMORY_LEAK_CHECK_ON MATCHES TRUE)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread -std=gnu99")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+
+if(MEMORY_LEAK_CHECK_ON MATCHES TRUE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=leak")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=leak")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lasan")
-endif ()
+    set(LEAK_SANITIZER_LINK_LIBS "asan")
+endif()
 
-if (BUILD_TEST_CASES_ON MATCHES TRUE)
-    set(COMMON_CXX_FLAGS "-std=c++11 -pthread")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage -Wno-deprecated-declarations")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
-endif ()
+set(CONFIG_FILE_SOURCE "${CMAKE_HOME_DIRECTORY}/config/config.yml")
+set(CONFIG_FILE_DESTINATION "${CMAKE_BINARY_DIR}/bin/config.yml")
 
-include_directories(../../../module_sample)
-include_directories(../../../../sample_c/module_sample)
-include_directories(../common)
-include_directories(../manifold2/application)
+add_custom_command(
+    OUTPUT ${CONFIG_FILE_DESTINATION}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CONFIG_FILE_SOURCE} ${CONFIG_FILE_DESTINATION}
+    DEPENDS ${CONFIG_FILE_SOURCE}
+)
 
+add_custom_target(copy_config ALL DEPENDS ${CONFIG_FILE_DESTINATION})
+
+# 定义所有自定义静态库存放的目录
+set(STATIC_DEPS_INSTALL_DIR "$ENV{HOME}/static-build-project/install")
+message(STATUS "Using ALL static libraries from: ${STATIC_DEPS_INSTALL_DIR}")
+
+# 2. 收集源文件
 file(GLOB_RECURSE MODULE_SAMPLE_SRC
-        ../../../module_sample/liveview/*.c*
-        ../../../module_sample/camera_manager/*.c*
-        ../../../module_sample/perception/*.c*
-        ../../../module_sample/gimbal/*.c*
-        ../../../module_sample/flight_controller/*.c*
-        ../../../module_sample/hms_manager/*.c*
-        ../../../../sample_c/module_sample/*.c
-        )
+    ../../../module_sample/liveview/*.c*
+    ../../../module_sample/camera_manager/*.c*
+    ../../../module_sample/perception/*.c*
+    ../../../module_sample/gimbal/*.c*
+    ../../../module_sample/flight_controller/*.c*
+    ../../../module_sample/hms_manager/*.c*
+    ../../../../sample_c/module_sample/*.c
+)
 file(GLOB_RECURSE MODULE_COMMON_SRC ../common/*.c*)
 file(GLOB_RECURSE MODULE_HAL_SRC hal/*.c*)
 file(GLOB_RECURSE MODULE_APP_SRC application/*.c*)
+file(GLOB_RECURSE MODULE_SERVICE_SRC service/*.cpp)
 
-execute_process(COMMAND uname -m
-        OUTPUT_VARIABLE DEVICE_SYSTEM_ID)
-if (DEVICE_SYSTEM_ID MATCHES x86_64)
+# 3. 平台检测
+execute_process(COMMAND uname -m OUTPUT_VARIABLE DEVICE_SYSTEM_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+if(DEVICE_SYSTEM_ID STREQUAL "x86_64")
     set(TOOLCHAIN_NAME x86_64-linux-gnu-gcc)
-    add_definitions(-DPLATFORM_ARCH_x86_64=1)
-elseif (DEVICE_SYSTEM_ID MATCHES aarch64)
+    set(PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_x86_64=1")
+elseif(DEVICE_SYSTEM_ID STREQUAL "aarch64")
     set(TOOLCHAIN_NAME aarch64-linux-gnu-gcc)
-    add_definitions(-DPLATFORM_ARCH_AARCH64=1)
-else ()
-    message(FATAL_ERROR "FATAL: Please confirm your platform.")
-endif ()
+    set(PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_AARCH64=1")
+else()
+    message(FATAL_ERROR "FATAL: Unsupported platform detected: ${DEVICE_SYSTEM_ID}")
+endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../common/3rdparty)
+# 4. 外部依赖库 - 使用静态库，不再需要 CMake 自动查找
 
-link_directories(${CMAKE_CURRENT_LIST_DIR}/../../../../../psdk_lib/lib/${TOOLCHAIN_NAME})
-link_libraries(${CMAKE_CURRENT_LIST_DIR}/../../../../../psdk_lib/lib/${TOOLCHAIN_NAME}/libpayloadsdk.a -lstdc++)
-
+# 5. 定义可执行文件目标
 add_executable(${PROJECT_NAME}
-        ${MODULE_APP_SRC}
-        ${MODULE_SAMPLE_SRC}
-        ${MODULE_COMMON_SRC}
-        ${MODULE_HAL_SRC})
+    ${MODULE_APP_SRC}
+    ${MODULE_SAMPLE_SRC}
+    ${MODULE_COMMON_SRC}
+    ${MODULE_HAL_SRC}
 
-# Try to see if user has OpenCV installed
-# if yes, default callback will display the image
-find_package(OpenCV QUIET)
-if (OpenCV_FOUND)
-    message("\n${PROJECT_NAME}...")
-    message(STATUS "Found OpenCV installed in the system, will use it to display image in AdvancedSensing APIs")
-    message(STATUS " - Includes: ${OpenCV_INCLUDE_DIRS}")
-    message(STATUS " - Libraries: ${OpenCV_LIBRARIES}")
-    add_definitions(-DOPEN_CV_INSTALLED)
-else ()
-    message(STATUS "Did not find OpenCV in the system, image data is inside RecvContainer as raw data")
-endif ()
+	config/ConfigManager.cpp
+    services/mqtt/MQTTService.cpp
+)
 
-find_package(FFMPEG REQUIRED)
-if (FFMPEG_FOUND)
-    message(STATUS "Found FFMPEG installed in the system")
-    message(STATUS " - Includes: ${FFMPEG_INCLUDE_DIR}")
-    message(STATUS " - Libraries: ${FFMPEG_LIBRARIES}")
+# 6. 为目标配置包含目录
+target_include_directories (${PROJECT_NAME} PRIVATE
+	# 当前目录
+    ${CMAKE_CURRENT_SOURCE_DIR}
 
-    EXECUTE_PROCESS(COMMAND ffmpeg -version
-            OUTPUT_VARIABLE ffmpeg_version_output
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            )
-    string(REGEX MATCH "version.*Copyright" ffmpeg_version_line ${ffmpeg_version_output})
-    string(REGEX MATCH " .* " ffmpeg_version ${ffmpeg_version_line})
-    string(REGEX MATCH "^ 5.*$" ffmpeg_major_version ${ffmpeg_version})
+	# HAL 层的 include 路径
+	${CMAKE_CURRENT_SOURCE_DIR}/application
 
-    if (HEAD${ffmpeg_major_version} STREQUAL "HEAD")
-        message(STATUS " - Version: ${ffmpeg_version}")
-    else ()
-        message(FATAL_ERROR " - Not support FFMPEG version: ${ffmpeg_major_version}, please install 4.x.x instead.")
-    endif ()
+    # PSDK 核心库的 include 路径
+    ${CMAKE_CURRENT_LIST_DIR}/../../../../../psdk_lib/include
 
-    target_link_libraries(${PROJECT_NAME} ${FFMPEG_LIBRARIES})
-    include_directories(${FFMPEG_INCLUDE_DIR})
-    add_definitions(-DFFMPEG_INSTALLED)
-else ()
-    message(STATUS "Cannot Find FFMPEG")
-endif (FFMPEG_FOUND)
-include_directories(${CMAKE_CURRENT_LIST_DIR}/../../../../../psdk_lib/include)
+    # 静态库的 include 路径
+    ${STATIC_DEPS_INSTALL_DIR}/include
+    ${STATIC_DEPS_INSTALL_DIR}/include/libusb-1.0
 
-find_package(OPUS REQUIRED)
-if (OPUS_FOUND)
-    message(STATUS "Found OPUS installed in the system")
-    message(STATUS " - Includes: ${OPUS_INCLUDE_DIR}")
-    message(STATUS " - Libraries: ${OPUS_LIBRARY}")
+    # PSDK 示例的其他 include 路径
+    ../../../module_sample
+    ../../../../sample_c/module_sample
 
-    add_definitions(-DOPUS_INSTALLED)
-    target_link_libraries(${PROJECT_NAME} /usr/local/lib/libopus.a)
-else ()
-    message(STATUS "Cannot Find OPUS")
-endif (OPUS_FOUND)
+    # 系统路径
+    /usr/local/include
+)
 
-find_package(LIBUSB REQUIRED)
-if (LIBUSB_FOUND)
-    message(STATUS "Found LIBUSB installed in the system")
-    message(STATUS " - Includes: ${LIBUSB_INCLUDE_DIR}")
-    message(STATUS " - Libraries: ${LIBUSB_LIBRARY}")
+# 7. 为目标配置编译定义
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    _GNU_SOURCE
+    ${PLATFORM_ARCH_DEFINE}
+    # OPUS_INSTALLED
+    # LIBUSB_INSTALLED
+)
 
-    add_definitions(-DLIBUSB_INSTALLED)
-    target_link_libraries(${PROJECT_NAME} usb-1.0)
-else ()
-    message(STATUS "Cannot Find LIBUSB")
-endif (LIBUSB_FOUND)
+# 8. 为目标配置链接库
+target_link_libraries(${PROJECT_NAME} PRIVATE
 
-if (NOT EXECUTABLE_OUTPUT_PATH)
+    # PSDK 核心库
+    ${CMAKE_CURRENT_LIST_DIR}/../../../../../psdk_lib/lib/${TOOLCHAIN_NAME}/libpayloadsdk.a
+
+    # 链接所有5个库的静态版本
+    ${STATIC_DEPS_INSTALL_DIR}/lib/libjsoncpp.a
+    ${STATIC_DEPS_INSTALL_DIR}/lib/libmosquitto_static.a
+    ${STATIC_DEPS_INSTALL_DIR}/lib/libmosquittopp_static.a
+    ${STATIC_DEPS_INSTALL_DIR}/lib/libhv_static.a
+    ${STATIC_DEPS_INSTALL_DIR}/lib/libusb-1.0.a
+    ${STATIC_DEPS_INSTALL_DIR}/lib/libopus.a
+	${STATIC_DEPS_INSTALL_DIR}/lib/libyaml-cpp.a
+	${STATIC_DEPS_INSTALL_DIR}/lib/libpaho-mqtt3as.a
+
+    # mosquitto 和 libhv 依赖 ssl 和 crypto , libusb 依赖 udev
+    ssl
+    crypto
+    udev
+
+    # 基础系统库
+    stdc++
+    m
+    dl
+    pthread
+
+    # 内存泄漏检查库
+    ${LEAK_SANITIZER_LINK_LIBS}
+)
+
+# 9. 设置输出路径
+if(NOT EXECUTABLE_OUTPUT_PATH)
     set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
-endif ()
-
-target_link_libraries(${PROJECT_NAME} m)
-
-target_include_directories(${PROJECT_NAME} PRIVATE ${OpenCV_INCLUDE_DIRS})
-if (OpenCV_FOUND)
-    target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
-endif ()
-
-target_link_libraries(${PROJECT_NAME} dl)
-
+    set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
+endif()

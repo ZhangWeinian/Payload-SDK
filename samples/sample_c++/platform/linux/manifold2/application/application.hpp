@@ -25,43 +25,45 @@
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef APPLICATION_H
-#define APPLICATION_H
+	#define APPLICATION_H
 
-/* Includes ------------------------------------------------------------------*/
-#include <iostream>
-#include <fstream>
-#include "dji_typedef.h"
-#include "dji_core.h"
+	/* Includes ------------------------------------------------------------------*/
+	#include <fstream>
+	#include <iostream>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+	#include "dji_core.h"
+	#include "dji_typedef.h"
 
-/* Exported constants --------------------------------------------------------*/
+	#ifdef __cplusplus
+extern "C"
+{
+	#endif
 
-/* Exported types ------------------------------------------------------------*/
-using namespace std;
+	/* Exported constants --------------------------------------------------------*/
 
-class Application {
-public:
-    Application(int argc, char **argv);
-    ~Application();
+	/* Exported types ------------------------------------------------------------*/
+	using namespace std;
 
-private:
-    static void DjiUser_SetupEnvironment(int argc, char **argv);
-    static void DjiUser_ApplicationStart();
-    static T_DjiReturnCode DjiUser_PrintConsole(const uint8_t *data, uint16_t dataLen);
-    static T_DjiReturnCode DjiUser_LocalWrite(const uint8_t *data, uint16_t dataLen);
-    static T_DjiReturnCode DjiUser_FillInUserInfo(T_DjiUserInfo *userInfo);
-    static T_DjiReturnCode DjiUser_LocalWriteFsInit(const char *path);
-};
+	class Application
+	{
+	public:
+		Application(int argc, char** argv);
+		~Application();
 
-/* Exported functions --------------------------------------------------------*/
+	private:
+		static void			   DjiUser_SetupEnvironment(int argc, char** argv);
+		static void			   DjiUser_ApplicationStart();
+		static T_DjiReturnCode DjiUser_PrintConsole(const uint8_t* data, uint16_t dataLen);
+		static T_DjiReturnCode DjiUser_LocalWrite(const uint8_t* data, uint16_t dataLen);
+		static T_DjiReturnCode DjiUser_FillInUserInfo(T_DjiUserInfo* userInfo);
+		static T_DjiReturnCode DjiUser_LocalWriteFsInit(const char* path);
+	};
 
+	/* Exported functions --------------------------------------------------------*/
 
-#ifdef __cplusplus
+	#ifdef __cplusplus
 }
-#endif
+	#endif
 
 #endif // APPLICATION_H
 /************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/

@@ -1,0 +1,3 @@
+# Hashes of file build rules.
+c3278e26b689be281b52104c5d6506e0 bin/config.yml
+9c494fad53696e0a5c9d9eb2d7a009e5 samples/sample_c++/platform/linux/manifold2/CMakeFiles/copy_config
