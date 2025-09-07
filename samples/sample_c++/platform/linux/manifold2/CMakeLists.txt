@@ -27,7 +27,7 @@ add_custom_command(
 add_custom_target(copy_config ALL DEPENDS ${CONFIG_FILE_DESTINATION})
 
 # 定义所有自定义静态库存放的目录
-set(STATIC_DEPS_INSTALL_DIR "$ENV{HOME}/static-build-project/install")
+set(STATIC_DEPS_INSTALL_DIR "${CMAKE_HOME_DIRECTORY}/external_libs/install")
 message(STATUS "Using ALL static libraries from: ${STATIC_DEPS_INSTALL_DIR}")
 
 # 2. 收集源文件
@@ -108,20 +108,18 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     # PSDK 核心库
     ${CMAKE_CURRENT_LIST_DIR}/../../../../../psdk_lib/lib/${TOOLCHAIN_NAME}/libpayloadsdk.a
 
-    # 链接所有5个库的静态版本
+    # 链接所有第三方静态库
     ${STATIC_DEPS_INSTALL_DIR}/lib/libjsoncpp.a
-    ${STATIC_DEPS_INSTALL_DIR}/lib/libmosquitto_static.a
-    ${STATIC_DEPS_INSTALL_DIR}/lib/libmosquittopp_static.a
     ${STATIC_DEPS_INSTALL_DIR}/lib/libhv_static.a
     ${STATIC_DEPS_INSTALL_DIR}/lib/libusb-1.0.a
     ${STATIC_DEPS_INSTALL_DIR}/lib/libopus.a
-	${STATIC_DEPS_INSTALL_DIR}/lib/libyaml-cpp.a
-	${STATIC_DEPS_INSTALL_DIR}/lib/libpaho-mqtt3as.a
+    ${STATIC_DEPS_INSTALL_DIR}/lib/libyaml-cpp.a
+    ${STATIC_DEPS_INSTALL_DIR}/lib/libpaho-mqtt3as.a
 
-    # mosquitto 和 libhv 依赖 ssl 和 crypto , libusb 依赖 udev
-    ssl
-    crypto
-    udev
+    # 静态库的系统依赖
+    ssl      # paho-mqtt(s) 和 libhv 依赖
+    crypto   # paho-mqtt(s) 和 libhv 依赖
+    udev     # libusb 依赖
 
     # 基础系统库
     stdc++

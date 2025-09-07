@@ -1,0 +1,22 @@
+# 构建产物目录
+build/
+/external_libs/install/
+
+# 忽略所有子模块中的 build 目录
+/external_libs/**/build/
+
+# VS Code 配置
+.vscode/
+
+# 其他编译产物
+*.o
+*.a
+*.so
+*.la
+
+# 日志文件
+*.log
+
+# 临时文件
+*~
+.DS_Store

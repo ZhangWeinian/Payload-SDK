@@ -1,0 +1,18 @@
+[submodule "external_libs/jsoncpp"]
+	path = external_libs/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git
+[submodule "external_libs/libhv"]
+	path = external_libs/libhv
+	url = https://github.com/ithewei/libhv.git
+[submodule "external_libs/libusb"]
+	path = external_libs/libusb
+	url = https://github.com/libusb/libusb.git
+[submodule "external_libs/opus"]
+	path = external_libs/opus
+	url = https://github.com/xiph/opus.git
+[submodule "external_libs/paho.mqtt.c"]
+	path = external_libs/paho.mqtt.c
+	url = https://github.com/eclipse/paho.mqtt.c.git
+[submodule "external_libs/yaml-cpp"]
+	path = external_libs/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git
