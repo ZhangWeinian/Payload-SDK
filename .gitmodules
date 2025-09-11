@@ -19,3 +19,9 @@
 [submodule "external_libs/nlohmann_json"]
 	path = external_libs/nlohmann_json
 	url = https://github.com/nlohmann/json.git
+[submodule "external_libs/fmt"]
+	path = external_libs/fmt
+	url = https://github.com/fmtlib/fmt.git
+[submodule "external_libs/CLI11"]
+	path = external_libs/CLI11
+	url = https://github.com/CLIUtils/CLI11.git
