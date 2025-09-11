@@ -15,7 +15,7 @@ set(SERVICES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/services")
 set(PSDK_LIB_DIR "${PROJECT_ROOT_DIR}/psdk_lib")
 
 # 2. 编译器和构建选项
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -79,8 +79,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
     "${EXTERNAL_LIBS_DIR}/install/include"
     "${EXTERNAL_LIBS_DIR}/install/include/libusb-1.0"
-
-	"${EXTERNAL_LIBS_DIR}/nlohmann_json/include"
 )
 
 # 7. 为目标配置编译定义
@@ -112,6 +110,7 @@ find_static_library(OPUS_LIB opus)
 find_static_library(YAMLCPP_LIB yaml-cpp)
 find_static_library(PAHO_MQTT_LIB paho-mqtt3as)
 find_static_library(SPDLOG_LIB spdlog)
+find_static_library(FMT_LIB fmt)
 
 # 9. 为目标配置链接库
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -123,6 +122,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${YAMLCPP_LIB}
     ${PAHO_MQTT_LIB}
     ${SPDLOG_LIB}
+	${FMT_LIB}
 
     ssl
     crypto
