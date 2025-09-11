@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.12)
 project(cy_dji_psdk_app CXX C)
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type (Release, Debug, etc.)")
+endif()
+
 # 1. 定义核心路径变量
 message(STATUS "Sub-project using root (from parent): ${PROJECT_ROOT_DIR}")
 message(STATUS "External libs dir (from parent): ${EXTERNAL_LIBS_DIR}")
@@ -11,7 +15,7 @@ set(SERVICES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/services")
 set(PSDK_LIB_DIR "${PROJECT_ROOT_DIR}/psdk_lib")
 
 # 2. 编译器和构建选项
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -39,12 +43,16 @@ file(GLOB_RECURSE CUSTOM_SOURCES
     "${CONFIG_DIR}/*.cpp"
     "${SERVICES_DIR}/**/*.cpp"
 )
+file(GLOB_RECURSE PROTOCOL_SOURCES "protocol/*.cpp")
+file(GLOB_RECURSE UTILS_SOURCES "utils/*.cpp")
 
 target_sources(${PROJECT_NAME} PRIVATE
     ${PSDK_CXX_SAMPLE_SOURCES}
     ${PSDK_C_SAMPLE_SOURCES}
     ${PLATFORM_SOURCES}
     ${CUSTOM_SOURCES}
+	${PROTOCOL_SOURCES}
+    ${UTILS_SOURCES}
 )
 
 # 5. 平台检测
@@ -71,6 +79,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
     "${EXTERNAL_LIBS_DIR}/install/include"
     "${EXTERNAL_LIBS_DIR}/install/include/libusb-1.0"
+
+	"${EXTERNAL_LIBS_DIR}/nlohmann_json/include"
 )
 
 # 7. 为目标配置编译定义
@@ -79,44 +89,48 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     ${PLATFORM_ARCH_DEFINE}
 )
 
-# 8. 为目标配置链接库
+# 8. 预先查找并强制指定所有第三方静态库的绝对路径
 set(STATIC_LIB_DIR "${EXTERNAL_LIBS_DIR}/install/lib")
+message(STATUS "Searching for static libraries in: ${STATIC_LIB_DIR}")
 
+function(find_static_library TARGET_VAR LIB_NAME)
+    find_library(${TARGET_VAR}
+                 NAMES ${LIB_NAME}
+                 PATHS ${STATIC_LIB_DIR}
+                 NO_DEFAULT_PATH
+    )
+    if(NOT ${TARGET_VAR})
+        message(FATAL_ERROR "Could not find custom-built library 'lib${LIB_NAME}.a' in ${STATIC_LIB_DIR}")
+    else()
+        message(STATUS "Found ${LIB_NAME}: ${${TARGET_VAR}}")
+    endif()
+endfunction()
+
+find_static_library(LIBHV_LIB hv_static)
+find_static_library(LIBUSB_LIB usb-1.0)
+find_static_library(OPUS_LIB opus)
+find_static_library(YAMLCPP_LIB yaml-cpp)
+find_static_library(PAHO_MQTT_LIB paho-mqtt3as)
+find_static_library(SPDLOG_LIB spdlog)
+
+# 9. 为目标配置链接库
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    # PSDK 核心库
     "${PSDK_LIB_DIR}/lib/${TOOLCHAIN_NAME}/libpayloadsdk.a"
 
-    # 第三方静态库
-    "${STATIC_LIB_DIR}/libjsoncpp.a"
-    "${STATIC_LIB_DIR}/libhv_static.a"
-    "${STATIC_LIB_DIR}/libusb-1.0.a"
-    "${STATIC_LIB_DIR}/libopus.a"
-    "${STATIC_LIB_DIR}/libyaml-cpp.a"
-    "${STATIC_LIB_DIR}/libpaho-mqtt3as.a"
-	"${STATIC_LIB_DIR}/libspdlog.a"
+    ${LIBHV_LIB}
+    ${LIBUSB_LIB}
+    ${OPUS_LIB}
+    ${YAMLCPP_LIB}
+    ${PAHO_MQTT_LIB}
+    ${SPDLOG_LIB}
 
-    # 系统库依赖
     ssl
     crypto
     udev
     m
     dl
     pthread
-
-    # 内存泄漏检查库
     ${LEAK_SANITIZER_LINK_LIBS}
-)
-
-# 9. 设置输出路径和配置文件复制
-set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
-set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
-
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${PROJECT_ROOT_DIR}/config/config.yml"
-            "$<TARGET_FILE_DIR:${PROJECT_NAME}>/config.yml"
-    COMMENT "Copying config.yml to output directory"
 )
 
 # 10. 对第三方库构建目标的依赖

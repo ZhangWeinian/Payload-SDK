@@ -108,10 +108,6 @@ build_autotools_project "libusb" \
 build_cmake_project "opus" \
 	"${BASE_DIR}/opus"
 
-build_cmake_project "jsoncpp" \
-	"${BASE_DIR}/jsoncpp" \
-	-DJSONCPP_WITH_TESTS=OFF
-
 build_cmake_project "libhv" \
 	"${BASE_DIR}/libhv" \
 	-DWITH_EXAMPLES=OFF
@@ -120,6 +116,11 @@ build_cmake_project "spdlog" \
 	"${BASE_DIR}/spdlog" \
 	-DSPDLOG_BUILD_SHARED=OFF \
 	-DSPDLOG_FMT_EXTERNAL=OFF
+
+build_cmake_project "nlohmann_json" \
+	"${BASE_DIR}/nlohmann_json" \
+	-DJSON_BuildTests=OFF \
+	-DJSON_Install=ON
 
 # 构建完成
 printf "%s\n" "${COLOR_GREEN}============================================================"

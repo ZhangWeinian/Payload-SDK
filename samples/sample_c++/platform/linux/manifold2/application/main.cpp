@@ -1,28 +1,3 @@
-/**
- ********************************************************************
- * @file    main.cpp
- * @brief
- *
- * @copyright (c) 2021 DJI. All rights reserved.
- *
- * All information contained herein is, and remains, the property of DJI.
- * The intellectual and technical concepts contained herein are proprietary
- * to DJI and may be covered by U.S. and foreign patents, patents in process,
- * and protected by trade secret or copyright law.  Dissemination of this
- * information, including but not limited to data and other proprietary
- * material(s) incorporated within the information, in any form, is strictly
- * prohibited without the express written consent of DJI.
- *
- * If you receive this source code without DJI’s authorization, you may not
- * further disseminate the information, and you must immediately remove the
- * source code and notify DJI of its removal. DJI reserves the right to pursue
- * legal actions against you for any loss(es) or damage(s) caused by your
- * failure to do so.
- *
- *********************************************************************
- */
-
-/* Includes ------------------------------------------------------------------*/
 #include "application.hpp"
 
 #include "camera_manager/test_camera_manager_entry.h"
@@ -50,15 +25,6 @@
 #include "config/ConfigManager.h"
 #include "services/mqtt/MQTTService.h"
 
-/* Private constants ---------------------------------------------------------*/
-
-/* Private types -------------------------------------------------------------*/
-
-/* Private values -------------------------------------------------------------*/
-
-/* Private functions declaration ---------------------------------------------*/
-
-/* Exported functions definition ---------------------------------------------*/
 int main(int argc, char** argv)
 {
 	Application					   application(argc, argv);
@@ -69,17 +35,17 @@ int main(int argc, char** argv)
 
 start:
 	std::cout << "\n"
-			  << "| 可用命令：\n"
-			  << "| [0] Fc 订阅样本 - 订阅四元数和 gps 数据\n"
-			  << "| [1] 飞行控制器示例 - 可以通过 PSDK 控制飞行\n"
-			  << "| [2] Hms 信息管理器示例 - 通过语言获取健康管理系统信息\n"
-			  << "| [a] 云台管理器示例 - 可以通过 PSDK 控制云台\n"
-			  << "| [c] 相机流视图示例 - 显示相机视频流\n"
-			  << "| [d] 立体视觉视图示例 - 显示立体图像\n"
-			  << "| [e] 运行相机管理器示例 - 可以交互式测试相机的功能\n"
-			  << "| [f] 运行 RTK 定位示例 - 当 RTK 信号正常时，可以接收 RTK RTCM 数据\n"
-			  << "| [g] 请求激光雷达数据示例 - 请求激光雷达数据并将点云数据存储为 PCD 文件\n"
-			  << "| [h] 请求雷达数据示例 - 请求雷达数据\n"
+			  << "| Available commands:                                                                              |\n"
+			  << "| [0] Fc subscribe sample - subscribe quaternion and gps data                                      |\n"
+			  << "| [1] Flight controller sample - you can control flying by PSDK                                    |\n"
+			  << "| [2] Hms info manager sample - get health manger system info by language                          |\n"
+			  << "| [a] Gimbal manager sample - you can control gimbal by PSDK                                       |\n"
+			  << "| [c] Camera stream view sample - display the camera video stream                                  |\n"
+			  << "| [d] Stereo vision view sample - display the stereo image                                         |\n"
+			  << "| [e] Run camera manager sample - you can test camera's functions interactively                    |\n"
+			  << "| [f] Start rtk positioning sample - you can receive rtk rtcm data when rtk signal is ok           |\n"
+			  << "| [g] Request Lidar data sample - Request Lidar data and store the point cloud data as pcd files   |\n"
+			  << "| [h] Request Radar data sample - Request radar data                                               |\n"
 			  << std::endl;
 
 	std::cin >> inputChar;
@@ -152,7 +118,3 @@ start:
 
 	goto start;
 }
-
-/* Private functions definition-----------------------------------------------*/
-
-/****************** (C) COPYRIGHT DJI Innovations *****END OF FILE****/
