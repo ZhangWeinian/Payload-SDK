@@ -1,10 +1,11 @@
-#include "services/mqtt/MQTTService.h"
-
 #include "config/ConfigManager.h"
-#include "dji_logger.h"
+#include "services/mqtt/MQTTService.h"
+#include "services/mqtt/MqttTopics.h"
+
 #include "MQTTAsync.h"
 
-// --- PIMPL 实现 ---
+#include <dji_logger.h>
+
 // Impl 结构体定义，包含了所有私有成员变量
 struct plane::MQTTService::Impl
 {
@@ -12,7 +13,7 @@ struct plane::MQTTService::Impl
 	std::string		   serverURI;
 	std::string		   clientId;
 	bool			   connected = false;
-	mutable std::mutex connection_mutex; // 用于保护 connected 变量
+	mutable std::mutex connection_mutex;
 
 	~Impl()
 	{
@@ -23,8 +24,6 @@ struct plane::MQTTService::Impl
 	}
 };
 
-// --- 全局回调函数声明 ---
-// C 风格的回调，必须是全局函数或静态成员函数
 namespace
 {
 	// 连接成功时的回调
@@ -33,8 +32,11 @@ namespace
 		plane::MQTTService* service = static_cast<plane::MQTTService*>(context);
 		USER_LOG_INFO("MQTT connection successful!");
 
-		// 连接成功后，可以自动订阅一个测试主题
-		service->subscribe("psdk/test_topic");
+		service->subscribe(plane::services::mqtt::TOPIC_MISSION_CONTROL);
+		service->subscribe(plane::services::mqtt::TOPIC_COMMAND_CONTROL);
+		service->subscribe(plane::services::mqtt::TOPIC_PAYLOAD_CONTROL);
+		service->subscribe(plane::services::mqtt::TOPIC_ROCKER_CONTROL);
+		service->subscribe(plane::services::mqtt::TOPIC_VELOCITY_CONTROL);
 	}
 
 	// 连接失败时的回调
