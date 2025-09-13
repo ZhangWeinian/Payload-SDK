@@ -23,8 +23,5 @@ namespace plane::utils
 		static std::string buildStatusReportJson(const protocol::StatusPayload& payload);
 		static std::string buildMissionInfoJson(const protocol::MissionInfoPayload& payload);
 		static std::string buildHealthStatusJson(const std::vector<protocol::HealthAlertPayload>& alerts);
-
-		// 解析函数: 将 JSON 字符串解析为 C++ 结构体并分发
-		static void parseAndRouteMessage(const std::string& topic, const std::string& jsonString);
 	};
 } // namespace plane::utils

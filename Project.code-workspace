@@ -99,7 +99,11 @@
 			"cinttypes": "cpp",
 			"typeinfo": "cpp",
 			"valarray": "cpp",
-			"variant": "cpp"
+			"variant": "cpp",
+			"cfenv": "cpp",
+			"coroutine": "cpp",
+			"ranges": "cpp",
+			"typeindex": "cpp"
 		}
 	}
 }

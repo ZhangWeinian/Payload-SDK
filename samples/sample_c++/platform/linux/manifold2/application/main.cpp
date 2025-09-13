@@ -23,29 +23,53 @@
 #include <power_management/test_power_management.h>
 
 #include "config/ConfigManager.h"
-#include "services/mqtt/MqttService.h"
+#include "protocol/JsonProtocol.h"
+#include "services/mqtt/MqttLogicHandler/MqttLogicHandler.h"
+#include "services/mqtt/MqttMessageHandler/MqttMessageHandler.h"
+#include "services/mqtt/MqttService/MqttService.h"
+#include "services/mqtt/MqttTestHandler/MqttTestHandler.h"
+#include "services/mqtt/MqttTopics.h"
+#include "utils/JsonConverter/JsonConverter.h"
+#include "utils/Logger/Logger.h"
 
-int main(int argc, char** argv)
+#include "CLI11/CLI/CLI.hpp"
+
+#include <atomic>
+#include <chrono>
+#include <csignal>
+#include <iostream>
+#include <thread>
+
+#define RUN_STANDALONE_MQTT_APP
+
+std::atomic<bool> g_should_exit(false);
+
+void			  signalHandler(int signum)
 {
-	Application					   application(argc, argv);
-	char						   inputChar;
+	std::cout << "捕获到信号 " << signum << ", 正在准备退出..." << std::endl;
+	g_should_exit = true;
+}
+
+void runDJIApplication(int argc, char** argv)
+{
+	char						   inputChar {};
 	T_DjiOsalHandler*			   osalHandler = DjiPlatform_GetOsalHandler();
-	T_DjiReturnCode				   returnCode;
-	T_DjiTestApplyHighPowerHandler applyHighPowerHandler;
+	T_DjiReturnCode				   returnCode {};
+	T_DjiTestApplyHighPowerHandler applyHighPowerHandler {};
 
 start:
 	std::cout << "\n"
-			  << "| Available commands:                                                                              |\n"
-			  << "| [0] Fc subscribe sample - subscribe quaternion and gps data                                      |\n"
-			  << "| [1] Flight controller sample - you can control flying by PSDK                                    |\n"
-			  << "| [2] Hms info manager sample - get health manger system info by language                          |\n"
-			  << "| [a] Gimbal manager sample - you can control gimbal by PSDK                                       |\n"
-			  << "| [c] Camera stream view sample - display the camera video stream                                  |\n"
-			  << "| [d] Stereo vision view sample - display the stereo image                                         |\n"
-			  << "| [e] Run camera manager sample - you can test camera's functions interactively                    |\n"
-			  << "| [f] Start rtk positioning sample - you can receive rtk rtcm data when rtk signal is ok           |\n"
-			  << "| [g] Request Lidar data sample - Request Lidar data and store the point cloud data as pcd files   |\n"
-			  << "| [h] Request Radar data sample - Request radar data                                               |\n"
+			  << "| 可用命令:\n"
+			  << "| [0] 飞控数据订阅示例 - 订阅四元数和 GPS 数据\n"
+			  << "| [1] 飞行控制器示例 - 通过 PSDK 控制飞行\n"
+			  << "| [2] 健康管理系统信息示例 - 按语言获取健康管理系统信息\n"
+			  << "| [a] 云台管理器示例 - 通过 PSDK 控制云台\n"
+			  << "| [c] 相机码流查看示例 - 显示相机视频流\n"
+			  << "| [d] 双目视觉查看示例 - 显示双目图像\n"
+			  << "| [e] 运行相机管理器示例 - 交互式地测试相机功能\n"
+			  << "| [f] 启动 RTK 定位示例 - 当 RTK 信号正常时，接收 RTK RTCM 数据\n"
+			  << "| [g] 请求激光雷达数据示例 - 请求激光雷达数据并将点云数据存储为 pcd 文件\n"
+			  << "| [h] 请求毫米波雷达数据示例 - 请求毫米波雷达数据\n"
 			  << std::endl;
 
 	std::cin >> inputChar;
@@ -91,11 +115,12 @@ start:
 			returnCode = DjiTest_PositioningStartService();
 			if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
-				USER_LOG_ERROR("rtk positioning sample init error");
-				break;
+				USER_LOG_ERROR("RTK 定位样本初始化错误");
 			}
-
-			USER_LOG_INFO("Start rtk positioning sample successfully");
+			else
+			{
+				USER_LOG_INFO("成功启动 RTK 定位样本");
+			}
 			break;
 		}
 		case 'g':
@@ -117,4 +142,70 @@ start:
 	osalHandler->TaskSleepMs(2000);
 
 	goto start;
+}
+
+void runMyApplication(int argc, char** argv)
+{
+	LOG_INFO("==========================================================");
+	LOG_INFO("                      应用程序启动中");
+	LOG_INFO("==========================================================");
+
+	plane::utils::Logger::getInstance().init();
+
+	if (!plane::config::ConfigManager::getInstance().load("config.yml"))
+	{
+		LOG_ERROR("致命错误: 无法加载配置文件 'config.yml'。正在退出。");
+		return;
+	}
+	LOG_INFO("配置文件加载成功。");
+
+	plane::services::mqtt::MQTTService::getInstance();
+	LOG_INFO("MQTT 服务已启动。");
+
+	plane::services::mqtt::initialize();
+	plane::services::mqtt::MqttTestHandler::initialize();
+	LOG_INFO("业务逻辑处理器注册完毕。");
+
+	LOG_INFO("==========================================================");
+	LOG_INFO("               应用程序初始化完成，正在运行中...");
+	LOG_INFO("                    按 Ctrl+C 退出。");
+	LOG_INFO("==========================================================");
+
+	while (!g_should_exit)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+
+	LOG_INFO("收到退出信号，正在关闭应用程序...");
+
+	plane::services::mqtt::MQTTService::getInstance().shutdown();
+	LOG_INFO("应用程序已关闭。");
+}
+
+int main(int argc, char** argv)
+{
+	signal(SIGINT, signalHandler);
+	signal(SIGTERM, signalHandler);
+
+	CLI::App app { "DJI PSDK 应用，集成自定义 MQTT 服务" };
+	app.set_help_all_flag("--help-all", "显示所有帮助信息");
+
+	bool runDjiInteractiveMode = false;
+	app.add_flag("-d,--dji-interactive", runDjiInteractiveMode, "运行 DJI 官方的交互式示例菜单");
+
+	CLI11_PARSE(app, argc, argv);
+
+	Application application(argc, argv);
+
+	if (runDjiInteractiveMode)
+	{
+		runDJIApplication(argc, argv);
+	}
+	else
+	{
+		runMyApplication(argc, argv);
+	}
+
+	LOG_INFO("程序执行完毕，正常退出。");
+	return 0;
 }

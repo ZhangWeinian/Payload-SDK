@@ -9,220 +9,454 @@
 
 namespace plane::protocol
 {
+	using n_json = nlohmann::json;
+
+	enum class MissionExecutionStatus : int
+	{
+		EXECUTING		 = 1,
+		PAUSED			 = 2,
+		FINISHED		 = 3,
+		UPLOADING		 = 4,
+		UPLOAD_COMPLETE	 = 5,
+		UPLOAD_FAILED	 = 6,
+		EXECUTION_FAILED = 7
+	};
+
+	enum class MissionControlAction
+	{
+		START,
+		PAUSE,
+		RESUME,
+		STOP
+	};
+
+	inline void to_json(n_json& j, const MissionControlAction& action)
+	{
+		switch (action)
+		{
+			case MissionControlAction::START:
+			{
+				j = "RWKS";
+				break;
+			}
+			case MissionControlAction::PAUSE:
+			{
+				j = "RWZT";
+				break;
+			}
+			case MissionControlAction::RESUME:
+			{
+				j = "RWJX";
+				break;
+			}
+			case MissionControlAction::STOP:
+			{
+				j = "RWJS";
+				break;
+			}
+			default:
+			{
+				j = nullptr;
+				break;
+			}
+		}
+	}
+
+	inline void from_json(const n_json& j, MissionControlAction& action)
+	{
+		const std::string s = j.get<std::string>();
+		if (s == "RWKS")
+		{
+			action = MissionControlAction::START;
+		}
+		else if (s == "RWZT")
+		{
+			action = MissionControlAction::PAUSE;
+		}
+		else if (s == "RWJX")
+		{
+			action = MissionControlAction::RESUME;
+		}
+		else if (s == "RWJS")
+		{
+			action = MissionControlAction::STOP;
+		}
+		// 在实际业务逻辑中可能需要处理未知字符串的情况
+	}
+
+	enum class RthMode : int
+	{
+		INTELLIGENT		= 0,
+		PRESET_ALTITUDE = 1
+	};
+
+	enum class RcLostAction : int
+	{
+		HOVER	= 0,
+		LAND	= 1,
+		GO_HOME = 2
+	};
+
+	enum class CommanderModeLostAction : int
+	{
+		CONTINUE_MISSION	= 0,
+		EXECUTE_LOST_ACTION = 1
+	};
+
+	enum class CommanderFlightMode : int
+	{
+		INTELLIGENT		= 0,
+		PRESET_ALTITUDE = 1
+	};
+
+	enum class TargetType
+	{
+		INDEX,
+		COORDINATE,
+		RECTANGLE
+	};
+
+	inline void to_json(n_json& j, const TargetType& type)
+	{
+		switch (type)
+		{
+			case TargetType::INDEX:
+			{
+				j = "MBSY";
+				break;
+			}
+			case TargetType::COORDINATE:
+			{
+				j = "MBWZ";
+				break;
+			}
+			case TargetType::RECTANGLE:
+			{
+				j = "MBJX";
+				break;
+			}
+			default:
+			{
+				j = nullptr;
+				break;
+			}
+		}
+	}
+
+	inline void from_json(const n_json& j, TargetType& type)
+	{
+		const std::string s = j.get<std::string>();
+		if (s == "MBSY")
+		{
+			type = TargetType::INDEX;
+		}
+		else if (s == "MBWZ")
+		{
+			type = TargetType::COORDINATE;
+		}
+		else if (s == "MBJX")
+		{
+			type = TargetType::RECTANGLE;
+		}
+	}
+
+	struct WaypointAction
+	{
+		int LX; // LX
+		int CS; // CS
+	};
+
 	struct Waypoint
 	{
-		double				  longitude;   // JD: 经度
-		double				  latitude;	   // WD: 纬度
-		double				  altitude;	   // GD: 高度
-		std::optional<double> speed;	   // SD: 速度 (可选)
-		std::optional<double> gimbalPitch; // YTFYJ: 云台俯仰角 (可选)
+		double									   JD {};	 // JD
+		double									   WD {};	 // WD
+		double									   GD {};	 // GD
+		std::optional<double>					   SD {};	 // SD
+		std::optional<double>					   YTFYJ {}; // YTFYJ
+		std::optional<double>					   PHJ {};	 // PHJ
+		std::optional<bool>						   SFTY {};	 // SFTY
+		std::optional<std::vector<WaypointAction>> DZJ {};	 // DZJ
 	};
 
 	struct WaypointPayload
 	{
-		std::vector<Waypoint> waypoints; // HDJ: 航点集
+		std::vector<Waypoint> HDJ {}; // HDJ
+	};
+
+	struct MissionProgressPayload
+	{
+		std::optional<std::string> RWID {}; // RWID
+		std::optional<int>		   DQHD {}; // DQHD
+		std::optional<int>		   ZHD {};	// ZHD
+		std::optional<int>		   JD {};	// JD
+		std::optional<int>		   ZT {};	// ZT
+	};
+
+	struct MissionControlPayload
+	{
+		std::string RWID {}; // RWID
+		std::string RWDZ {}; // RWDZ
+	};
+
+	struct LandingPayload
+	{
+		double JD {}; // JD
+		double WD {}; // WD
 	};
 
 	struct TakeoffPayload
 	{
-		double targetAltitude = 0.0; // MBGD: 目标高度
+		std::optional<double>	   MBWD {};	  // MBWD
+		std::optional<double>	   MBJD {};	  // MBJD
+		std::optional<double>	   MBGD {};	  // MBGD
+		std::optional<double>	   AQQFGD {}; // AQQFGD
+		int						   FHMS {};	  // FHMS
+		std::optional<int>		   FHGD {};	  // FHGD
+		std::optional<int>		   SKDZ {};	  // SKDZ
+		int						   ZDSKDZ {}; // ZDSKDZ
+		int						   ZDFYMS {}; // ZDFYMS
+		double					   ZDFYGD {}; // ZDFYGD
+		std::optional<std::string> RWID {};	  // RWID
+		std::optional<int>		   ZDMSD {};  // ZDMSD
+		std::optional<int>		   AQJC {};	  // AQJC
+	};
+
+	struct FlyToPoint
+	{
+		double JD {}; // JD
+		double WD {}; // WD
+		double GD {}; // GD
+	};
+
+	struct FlyToPayload
+	{
+		std::optional<std::string> FXMBID {}; // FXMBID
+		std::optional<int>		   ZDMSD {};  // ZDMSD
+		std::vector<FlyToPoint>	   MBDS {};	  // MBDS
+	};
+
+	struct UpdateFlyToPayload
+	{
+		std::optional<int>		ZDMSD;	// ZDMSD
+		std::vector<FlyToPoint> GXMBDS; // GXMBDS
+	};
+
+	struct TargetCoordinate
+	{
+		double JD {}; // JD
+		double WD {}; // WD
+		double GD {}; // GD
+	};
+
+	struct TargetRectangle
+	{
+		int X {}; // X
+		int Y {}; // Y
+		int W {}; // W
+		int H {}; // H
 	};
 
 	struct ControlStrategyPayload
 	{
-		int strategyCode = -1; // strategy: 控制策略代码
+		std::optional<int> YTJSCL {}; // YTJSCL
+	};
+
+	struct SmartFollowPayload
+	{
+		std::string						MBLX {}; // MBLX
+		std::optional<TargetCoordinate> MBWZ {}; // MBWZ
+		std::optional<int>				MBSY {}; // MBSY
+		std::optional<TargetRectangle>	MBJX {}; // MBJX
 	};
 
 	struct CircleFlyPayload
 	{
-		double longitude; // JD: 经度
-		double latitude;  // WD: 纬度
-		double altitude;  // GD: 高度
-		double radius;	  // BJ: 半径
-		double speed;	  // SD: 速度
-		int	   laps;	  // QS: 圈数
+		double JD {}; // JD
+		double WD {}; // WD
+		double GD {}; // GD
+		double SD {}; // SD
+		double BJ {}; // BJ
+		int	   QS {}; // QS
 	};
 
 	struct GimbalControlPayload
 	{
-		double pitch;	 // FYJ: 俯仰角
-		double yaw;		 // PHJ: 偏航角
-		int	   mode = 1; // MS: 模式 (0:角度控制, 1:速度控制)
+		double FYJ {}; // 俯仰角
+		double PHJ {}; // 偏航角
+		int	   MS = 1; // 模式 (0:角度控制, 1:速度控制)
 	};
 
 	struct ZoomControlPayload
 	{
-		std::optional<double>	   zoomFactor;	 // BJB: 变焦倍数 (可选)
-		std::optional<std::string> cameraSource; // XJLX: 相机源 (ir, wide, zoom) (可选)
+		std::optional<std::string> XJSY {}; // XJSY
+		std::optional<std::string> XJLX {}; // XJLX
+		std::optional<double>	   BJB {};	// BJB
 	};
 
 	struct StickDataPayload
 	{
-		int throttle = 1024; // YML: 油门量
-		int yaw		 = 1024; // PHL: 偏航量
-		int pitch	 = 1024; // FYL: 俯仰量
-		int roll	 = 1024; // HGL: 横滚量
+		int YML = 1024; // 油门量
+		int PHL = 1024; // 偏航量
+		int FYL = 1024; // 俯仰量
+		int HGL = 1024; // 横滚量
 	};
 
 	struct StickModeSwitchPayload
 	{
-		int stickMode = 0; // YGMS: 摇杆模式 (0:关闭, 1:启用, 2:启用高级)
+		int YGMS = 0; // 摇杆模式 (0:关闭, 1:启用, 2:启用高级)
 	};
 
 	struct NedVelocityPayload
 	{
-		double velocityNorth = 0.0; // SDN: 北向速度
-		double velocityEast	 = 0.0; // SDD: 东向速度
-		double velocityDown	 = 0.0; // SDX: 地向速度 (下为正)
-		double yawRate		 = 0.0; // PHJ: 偏航角速率
+		double SDN = 0.0; // 北向速度
+		double SDD = 0.0; // 东向速度
+		double SDX = 0.0; // 地向速度 (下为正)
+		double PHJ = 0.0; // 偏航角速率
 	};
-
-	// --- 状态上报 (SBZT) 的详细子结构 ---
 
 	struct GpsInfo
 	{
-		int gpsSatelliteCount; // GPSSXSL: GPS卫星数量
-		int lockLevel;		   // SFSL: 锁星水平
-		int positionAccuracy;  // SXDW: 锁星定位
+		int GPSSXSL {}; // GPS 卫星数量
+		int SFSL {};	// 锁星水平
+		int SXDW {};	// 锁星定位
 	};
 
 	struct BatteryDetail
 	{
-		int remainingPercent; // DCSYSDL: 单电池剩余电量
-		int voltage;		  // DY: 电压
+		int DCSYSDL {}; // 单电池剩余电量
+		int DY {};		// 电压
 	};
 
 	struct BatteryInfo
 	{
-		int						   totalRemainingPercent; // SYDL: 总剩余电量
-		int						   totalVoltage;		  // ZDY: 总电压
-		std::vector<BatteryDetail> batteryDetails;		  // DCXXXX: 电池详细信息
+		int						   SYDL {};	  // 总剩余电量
+		int						   ZDY {};	  // 总电压
+		std::vector<BatteryDetail> DCXXXX {}; // 电池详细信息
 	};
 
 	struct VideoSource
 	{
-		std::string streamUrl; // SPURL: 视频流地址
-		std::string protocol;  // SPXY: 视频协议
-		int			status;	   // ZBZT: 直播状态
+		std::string SPURL {}; // 视频流地址
+		std::string SPXY {};  // 视频协议
+		int			ZBZT {};  // 直播状态
 	};
 
 	struct StatusPayload
 	{
-		GpsInfo					   gpsInfo;				  // SXZT:   搜星状态
-		BatteryInfo				   batteryInfo;			  // DCXX:   电池信息
-		double					   gimbalPitch;			  // YTFY:   云台俯仰
-		double					   gimbalRoll;			  // YTHG:   云台横滚
-		double					   gimbalYaw;			  // YTPH:   云台偏航
-		double					   aircraftPitch;		  // FJFYJ:  飞机俯仰角
-		double					   aircraftRoll;		  // FJHGJ:  飞机横滚角
-		double					   aircraftYaw;			  // FJPHJ:  飞机偏航角
-		double					   homeLatitude;		  // JWD:    Home点纬度
-		double					   homeLongitude;		  // JJD:    Home点经度
-		double					   homeAltitude;		  // JHB:    Home点海拔
-		double					   takeoffAltitude;		  // JXDGD:  Home点相对高度
-		double					   currentLatitude;		  // DQWD:   当前纬度
-		double					   currentLongitude;	  // DQJD:   当前经度
-		double					   relativeHeight;		  // XDQFGD: 相对起飞点高度
-		double					   absoluteAltitude;	  // JDGD:   绝对高度 (海拔)
-		double					   verticalSpeed;		  // CZSD:   垂直速度
-		double					   horizontalSpeed;		  // SPSD:   水平速度
-		double					   velocityEast;		  // VX:     东向速度
-		double					   velocityNorth;		  // VY:     北向速度
-		double					   velocityDown;		  // VZ:     地向速度 (下为正)
-		int						   currentWaypointIndex;  // DQHD:   当前航点
-		int						   totalWaypoints;		  // ZHD:    总航点
-		double					   laserDistance;		  // JGCJ:   激光测距
-		std::vector<VideoSource>   videoSources;		  // WZT:    视频源
-		std::string				   manufacturer;		  // CJ:     厂家
-		std::string				   model;				  // XH:     型号
-		std::optional<std::string> flightMode;			  // MODE:   飞行模式 (可选)
-		int						   isVirtualStickEnabled; // VSE:    虚拟摇杆启用
-		int						   isAdvancedModeEnabled; // AME:    高级模式启用
+		GpsInfo					   SXZT {};	  // 搜星状态
+		BatteryInfo				   DCXX {};	  // 电池信息
+		double					   YTFY {};	  // 云台俯仰
+		double					   YTHG {};	  // 云台横滚
+		double					   YTPH {};	  // 云台偏航
+		double					   FJFYJ {};  // 飞机俯仰角
+		double					   FJHGJ {};  // 飞机横滚角
+		double					   FJPHJ {};  // 飞机偏航角
+		double					   JJD {};	  // Home点经度
+		double					   JWD {};	  // Home点纬度
+		double					   JHB {};	  // Home点海拔
+		double					   JXDGD {};  // Home点相对高度
+		double					   DQWD {};	  // 当前纬度
+		double					   DQJD {};	  // 当前经度
+		double					   XDQFGD {}; // 相对起飞点高度
+		double					   JDGD {};	  // 绝对高度 (海拔)
+		double					   CZSD {};	  // 垂直速度
+		double					   SPSD {};	  // 水平速度
+		double					   VX {};	  // 东向速度
+		double					   VY {};	  // 北向速度
+		double					   VZ {};	  // 地向速度 (下为正)
+		int						   DQHD {};	  // 当前航点
+		int						   ZHD {};	  // 总航点
+		double					   JGCJ {};	  // 激光测距
+		std::vector<VideoSource>   WZT {};	  // 视频源
+		std::string				   CJ {};	  // 厂家
+		std::string				   XH {};	  // 型号
+		std::optional<std::string> MODE {};	  // 飞行模式 (可选)
+		int						   VSE {};	  // 虚拟摇杆启用
+		int						   AME {};	  // 高级模式启用
 	};
-
-	// --- 其他上报消息的 Payload ---
 
 	struct MissionInfoPayload
 	{
-		std::string planeSerialNumber; // FJSN: 飞机序列号
-		std::string controllerIp;	   // YKQIP: 遥控器IP
-		std::string rtspUrl;		   // YSRTSP: RTSP地址
+		std::string FJSN {};   // 飞机序列号
+		std::string YKQIP {};  // 遥控器IP
+		std::string YSRTSP {}; // RTSP地址
 	};
 
 	struct HealthAlertPayload
 	{
-		int			level;		 // GJDJ: 告警等级
-		int			module;		 // GJMK: 告警模块
-		std::string messageCode; // GJM: 告警码
-		std::string title;		 // GJBT: 告警标题
-		std::string description; // GJMS: 告警描述
+		int			GJDJ {}; // 告警等级
+		int			GJMK {}; // 告警模块
+		std::string GJM {};	 // 告警码
+		std::string GJBT {}; // 告警标题
+		std::string GJMS {}; // 告警描述
 	};
 
 	struct HealthStatusPayload
 	{
-		std::vector<HealthAlertPayload> alerts; // GJLB: 告警列表
+		std::vector<HealthAlertPayload> GJLB {}; // 告警列表
 	};
 
 	template<typename T>
 	struct NetworkMessage
 	{
-		std::string planeCode;			// ZBID: 飞机编码
-		std::string messageId;			// XXID: 消息ID
-		std::string messageType;		// XXLX: 消息类型
-		int64_t		timestamp;			// SJC: 时间戳 (毫秒)
-		std::string formattedTimestamp; // SBSJ: 格式化时间戳
-		T			payload;			// XXXX: 消息载荷
+		std::string				   ZBID {}; // ZBID
+		std::string				   XXID {}; // XXID
+		std::string				   XXLX {}; // XXLX
+		int64_t					   SJC {};	// SJC
+		std::optional<std::string> SBSJ {}; // SBSJ
+		std::optional<T>		   XXXX {}; // XXXX
 	};
 
 	// 上报数据: C++ -> JSON
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GpsInfo, gpsSatelliteCount, lockLevel, positionAccuracy);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BatteryDetail, remainingPercent, voltage);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BatteryInfo, totalRemainingPercent, totalVoltage, batteryDetails);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(VideoSource, streamUrl, protocol, status);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GpsInfo, GPSSXSL, SFSL, SXDW);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BatteryDetail, DCSYSDL, DY);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BatteryInfo, SYDL, ZDY, DCXXXX);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(VideoSource, SPURL, SPXY, ZBZT);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StatusPayload,
-									   gpsInfo,
-									   batteryInfo,
-									   gimbalPitch,
-									   gimbalRoll,
-									   gimbalYaw,
-									   aircraftPitch,
-									   aircraftRoll,
-									   aircraftYaw,
-									   homeLatitude,
-									   homeLongitude,
-									   homeAltitude,
-									   takeoffAltitude,
-									   currentLatitude,
-									   currentLongitude,
-									   relativeHeight,
-									   absoluteAltitude,
-									   verticalSpeed,
-									   horizontalSpeed,
-									   velocityEast,
-									   velocityNorth,
-									   velocityDown,
-									   currentWaypointIndex,
-									   totalWaypoints,
-									   laserDistance,
-									   videoSources,
-									   manufacturer,
-									   model,
-									   flightMode,
-									   isVirtualStickEnabled,
-									   isAdvancedModeEnabled);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(MissionInfoPayload, planeSerialNumber, controllerIp, rtspUrl);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HealthAlertPayload, level, module, messageCode, title, description);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HealthStatusPayload, alerts);
+									   SXZT,
+									   DCXX,
+									   YTFY,
+									   YTHG,
+									   YTPH,
+									   FJFYJ,
+									   FJHGJ,
+									   FJPHJ,
+									   JJD,
+									   JWD,
+									   JHB,
+									   JXDGD,
+									   DQWD,
+									   DQJD,
+									   XDQFGD,
+									   JDGD,
+									   CZSD,
+									   SPSD,
+									   VX,
+									   VY,
+									   VZ,
+									   DQHD,
+									   ZHD,
+									   JGCJ,
+									   WZT,
+									   CJ,
+									   XH,
+									   MODE,
+									   VSE,
+									   AME);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(MissionInfoPayload, FJSN, YKQIP, YSRTSP);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HealthAlertPayload, GJDJ, GJMK, GJM, GJBT, GJMS);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HealthStatusPayload, GJLB);
 
 	// 下行指令: JSON -> C++
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Waypoint, longitude, latitude, altitude, speed, gimbalPitch);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WaypointPayload, waypoints);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TakeoffPayload, targetAltitude);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ControlStrategyPayload, strategyCode);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CircleFlyPayload, longitude, latitude, altitude, radius, speed, laps);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GimbalControlPayload, pitch, yaw, mode);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ZoomControlPayload, zoomFactor, cameraSource);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StickDataPayload, throttle, yaw, pitch, roll);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StickModeSwitchPayload, stickMode);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(NedVelocityPayload, velocityNorth, velocityEast, velocityDown, yawRate);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Waypoint, JD, WD, GD, SD, YTFYJ, PHJ, SFTY, DZJ);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WaypointPayload, HDJ);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TakeoffPayload, MBWD, MBJD, MBGD, AQQFGD, FHMS, FHGD, SKDZ, ZDSKDZ, ZDFYMS, ZDFYGD, RWID, ZDMSD, AQJC);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ControlStrategyPayload, YTJSCL);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CircleFlyPayload, JD, WD, GD, SD, BJ, QS);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GimbalControlPayload, FYJ, PHJ, MS);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ZoomControlPayload, XJSY, XJLX, BJB);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WaypointAction, LX, CS);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StickDataPayload, YML, PHL, FYL, HGL);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StickModeSwitchPayload, YGMS);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(NedVelocityPayload, SDN, SDD, SDX, PHJ);
 } // namespace plane::protocol

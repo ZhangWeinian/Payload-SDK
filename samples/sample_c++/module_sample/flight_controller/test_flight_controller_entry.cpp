@@ -1,28 +1,3 @@
-/**
- ********************************************************************
- * @file    test_flight_controller_entry.cpp
- * @brief
- *
- * @copyright (c) 2018 DJI. All rights reserved.
- *
- * All information contained herein is, and remains, the property of DJI.
- * The intellectual and technical concepts contained herein are proprietary
- * to DJI and may be covered by U.S. and foreign patents, patents in process,
- * and protected by trade secret or copyright law.  Dissemination of this
- * information, including but not limited to data and other proprietary
- * material(s) incorporated within the information, in any form, is strictly
- * prohibited without the express written consent of DJI.
- *
- * If you receive this source code without DJI’s authorization, you may not
- * further disseminate the information, and you must immediately remove the
- * source code and notify DJI of its removal. DJI reserves the right to pursue
- * legal actions against you for any loss(es) or damage(s) caused by your
- * failure to do so.
- *
- *********************************************************************
- */
-
-/* Includes ------------------------------------------------------------------*/
 #include "dji_logger.h"
 #include "test_flight_controller_command_flying.h"
 #include "test_flight_controller_entry.h"
@@ -32,15 +7,6 @@
 #include <waypoint_v3/test_waypoint_v3.h>
 #include <iostream>
 
-/* Private constants ---------------------------------------------------------*/
-
-/* Private types -------------------------------------------------------------*/
-
-/* Private values -------------------------------------------------------------*/
-
-/* Private functions declaration ---------------------------------------------*/
-
-/* Exported functions definition ---------------------------------------------*/
 void DjiUser_RunFlightControllerSample(void)
 {
 	T_DjiOsalHandler* osalHandler = DjiPlatform_GetOsalHandler();
@@ -50,21 +16,21 @@ start:
 	osalHandler->TaskSleepMs(100);
 
 	std::cout << "\n"
-			  << "| 可用命令：\n"
-			  << "| [0] 飞行控制器示例 - 用键盘控制飞行\n"
-			  << "| [1] 飞行控制器样本 - 起飞着陆\n"
-			  << "| [2] 飞行控制器样本 - 起飞位置 ctrl 着陆\n"
-			  << "| [3] 飞行控制器示例 - 起飞返航强制着陆\n"
-			  << "| [4] 飞行控制器示例 - 起飞速度控制着陆\n"
-			  << "| [5] 飞行管制员样本 - 拦阻飞行\n"
-			  << "| [6] 飞行控制器示例 - 设置获取参数\n"
-			  << "| [7] Waypoint 2.0 示例 - 按设置运行航线任务（仅支持 M300 RTK ）\n"
-			  << "| [8] Waypoint 3.0 示例 - 按 kmz 文件运行航线任务（ M300 RTK 不支持）\n"
-			  << "| [9] 兴趣点样本 - 按设置运行兴趣点任务（仅支持 M3E/M3T ）\n"
-			  << "| [a] EU-C6 FTS 触发样本 - 接收 FTS 回调以触发降落伞功能（仅支持 M3D/M3DT ）\n"
-			  << "| [b] 慢速旋转叶片示例，仅支持 M400\n"
-			  << "| [c] 选择 FTS pwm 触发位置，支持 M4/M4T/M4D/M4TD\n"
-			  << "| [d] 选择 FTS pwm 触发位置，支持M400\n"
+			  << "| 可用命令:\n"
+			  << "| [0] 飞行控制器示例 - 使用键盘控制飞行\n"
+			  << "| [1] 飞行控制器示例 - 起飞与降落\n"
+			  << "| [2] 飞行控制器示例 - 起飞 -> 位置控制 -> 降落\n"
+			  << "| [3] 飞行控制器示例 - 起飞 -> 返航 -> 强制降落\n"
+			  << "| [4] 飞行控制器示例 - 起飞 -> 速度控制 -> 降落\n"
+			  << "| [5] 飞行控制器示例 - 紧急停止飞行 (Arrest Flying)\n"
+			  << "| [6] 飞行控制器示例 - 设置与获取参数\n"
+			  << "| [7] 航点 2.0 示例 - 通过设置运行航线任务 (仅支持 M300 RTK)\n"
+			  << "| [8] 航点 3.0 示例 - 通过 KMZ 文件运行航线任务 (不支持 M300 RTK)\n"
+			  << "| [9] 兴趣点示例 - 通过设置运行兴趣点任务 (仅支持 M3E/M3T)\n"
+			  << "| [a] EU-C6 FTS 触发示例 - 接收 FTS 回调以触发降落伞功能 (仅支持 M3D/M3DT)\n"
+			  << "| [b] 慢速转桨示例 (仅支持 M400)\n"
+			  << "| [c] 选择 FTS PWM 触发位置 (支持 M4/M4T/M4D/M4TD)\n"
+			  << "| [d] 选择 FTS PWM 触发位置 (支持 M400)\n"
 			  << std::endl;
 
 	std::cin >> inputSelectSample;
@@ -153,7 +119,3 @@ start:
 		}
 	}
 }
-
-/* Private functions definition-----------------------------------------------*/
-
-/****************** (C) COPYRIGHT DJI Innovations *****END OF FILE****/

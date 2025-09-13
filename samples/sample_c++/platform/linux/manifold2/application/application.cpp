@@ -9,12 +9,12 @@
 #include <dji_platform.h>
 #include <csignal>
 
-#include "../common/osal/osal.h"
-#include "../common/osal/osal_fs.h"
-#include "../common/osal/osal_socket.h"
-#include "../manifold2/hal/hal_network.h"
-#include "../manifold2/hal/hal_uart.h"
-#include "../manifold2/hal/hal_usb_bulk.h"
+#include "hal/hal_network.h"
+#include "hal/hal_uart.h"
+#include "hal/hal_usb_bulk.h"
+#include "osal/osal.h"
+#include "osal/osal_fs.h"
+#include "osal/osal_socket.h"
 
 #include "data_transmission/test_data_transmission.h"
 #include "utils/dji_config_manager.h"
@@ -27,7 +27,7 @@
 #include <power_management/test_power_management.h>
 
 #include "config/ConfigManager.h"
-#include "services/mqtt/MqttService.h"
+#include "services/mqtt/MqttService/MqttService.h"
 
 #define DJI_LOG_PATH				 "Logs/DJI"
 #define DJI_LOG_INDEX_FILE_NAME		 "Logs/index"
@@ -56,25 +56,6 @@ Application::Application(int argc, char** argv)
 	Application::DjiUser_ApplicationStart();
 
 	Osal_TaskSleepMs(3000);
-
-	USER_LOG_INFO("==========================================================");
-	USER_LOG_INFO("               Initializing Custom Services               ");
-	USER_LOG_INFO("==========================================================");
-
-	USER_LOG_INFO("Loading configuration from 'config.yml'...");
-	if (!ConfigManager::getInstance().load("config.yml"))
-	{
-		USER_LOG_ERROR("FATAL: Failed to load configuration. Custom services will not start.");
-	}
-	else
-	{
-		USER_LOG_INFO("Configuration loaded successfully.");
-		USER_LOG_INFO("Initializing MQTT Service...");
-		plane::MQTTService::getInstance();
-	}
-
-	USER_LOG_INFO("Custom services initialization finished.");
-	USER_LOG_INFO("==========================================================");
 }
 
 Application::~Application() = default;

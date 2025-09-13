@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.12)
 project(DJI_PSDK_APP_TOPLEVEL CXX C)
 
+if (NOT CMAKE_BUILD_TYPE)
+	set (CMAKE_BUILD_TYPE Debug CACHE STRING "Build type (Release, Debug, etc.)")
+endif ()
+
 # 1. 设置全局项目路径和选项
 set(PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
 message(STATUS "Project Root: ${PROJECT_ROOT_DIR}")

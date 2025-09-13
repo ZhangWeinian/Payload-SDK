@@ -4,25 +4,26 @@
 
 #include <string>
 
-class ConfigManager
+namespace plane::config
 {
-public:
-	// 获取单例实例
-	static ConfigManager& getInstance();
+	class ConfigManager
+	{
+	public:
+		static ConfigManager& getInstance();
 
-	// 加载配置文件
-	bool load(const std::string& filepath);
+		bool				  load(const std::string& filepath);
 
-	// 获取配置项
-	std::string getMqttUrl() const;
-	std::string getMqttClientId() const;
+		std::string			  getMqttUrl() const;
 
-private:
-	ConfigManager()								   = default; // 私有构造函数
-	~ConfigManager()							   = default;
-	ConfigManager(const ConfigManager&)			   = delete;
-	ConfigManager& operator=(const ConfigManager&) = delete;
+		std::string			  getMqttClientId() const;
 
-	YAML::Node	   configNode; // 用于存储解析后的 YAML 数据
-	bool		   loaded = false;
-};
+	private:
+		ConfigManager()								   = default;
+		~ConfigManager()							   = default;
+		ConfigManager(const ConfigManager&)			   = delete;
+		ConfigManager& operator=(const ConfigManager&) = delete;
+
+		YAML::Node	   configNode					   = {};
+		bool		   loaded						   = false;
+	};
+} // namespace plane::config

@@ -154,6 +154,13 @@ build_cmake_project "benchmark" \
 	"${BASE_DIR}/benchmark" \
 	-DBENCHMARK_ENABLE_TESTING=OFF
 
+build_cmake_project "libzip" \
+	"${BASE_DIR}/libzip" \
+    -DBUILD_TOOLS=OFF \
+    -DBUILD_REGRESS=OFF \
+    -DBUILD_EXAMPLES=OFF \
+    -DENABLE_OPENSSL=ON
+
 install_header_only_library "CLI11" \
 	"${BASE_DIR}/CLI11" \
 	"include"
