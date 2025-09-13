@@ -67,6 +67,14 @@ else()
     message(FATAL_ERROR "FATAL: Unsupported platform detected: ${DEVICE_SYSTEM_ID}")
 endif()
 
+# 5.1 查找核心系统依赖
+find_package(OpenSSL REQUIRED)
+if(OPENSSL_FOUND)
+    message(STATUS "Found system OpenSSL ${OPENSSL_VERSION}:")
+    message(STATUS "  - Includes: ${OPENSSL_INCLUDE_DIR}")
+    message(STATUS "  - Libraries: ${OPENSSL_LIBRARIES}")
+endif()
+
 # 6. 为目标配置包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -79,6 +87,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
     "${EXTERNAL_LIBS_DIR}/install/include"
     "${EXTERNAL_LIBS_DIR}/install/include/libusb-1.0"
+
+	${OPENSSL_INCLUDE_DIR}
 )
 
 # 7. 为目标配置编译定义
@@ -124,12 +134,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${SPDLOG_LIB}
 	${FMT_LIB}
 
-    ssl
-    crypto
+    ${OPENSSL_LIBRARIES}
+
     udev
     m
     dl
     pthread
+
     ${LEAK_SANITIZER_LINK_LIBS}
 )
 

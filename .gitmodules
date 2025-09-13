@@ -37,3 +37,6 @@
 [submodule "external_libs/googletest"]
 	path = external_libs/googletest
 	url = https://github.com/google/googletest.git
+[submodule "external_libs/external_libs/libzip"]
+	path = external_libs/external_libs/libzip
+	url = https://github.com/nih-at/libzip.git

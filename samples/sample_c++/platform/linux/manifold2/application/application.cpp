@@ -27,7 +27,7 @@
 #include <power_management/test_power_management.h>
 
 #include "config/ConfigManager.h"
-#include "services/mqtt/MQTTService.h"
+#include "services/mqtt/MqttService.h"
 
 #define DJI_LOG_PATH				 "Logs/DJI"
 #define DJI_LOG_INDEX_FILE_NAME		 "Logs/index"
