@@ -20,7 +20,7 @@ namespace plane::utils
 
 		try
 		{
-			auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+			auto console_sink { std::make_shared<spdlog::sinks::stdout_color_sink_mt>() };
 			console_sink->set_level(console_level);
 			console_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] [%s:%#] %v");
 
@@ -28,7 +28,6 @@ namespace plane::utils
 			logger_->set_level(spdlog::level::trace);
 
 			spdlog::set_default_logger(logger_);
-
 			spdlog::set_level(spdlog::level::trace);
 			spdlog::flush_on(spdlog::level::info);
 		}

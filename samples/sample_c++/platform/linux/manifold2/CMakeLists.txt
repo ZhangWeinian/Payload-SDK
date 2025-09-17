@@ -9,18 +9,19 @@ function (pretty_message TITLE CONTENT)
 endfunction ()
 
 if (NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE Debug CACHE STRING "Build type (Release, Debug, etc.)")
+	set (CMAKE_BUILD_TYPE Debug CACHE STRING "构建类型（Release，Debug 等）")
 endif ()
 
 # 1. 定义核心路径变量
-message (STATUS "Sub-project using root (from parent): ${PROJECT_ROOT_DIR}")
-message (STATUS "External libs dir (from parent): ${EXTERNAL_LIBS_DIR}")
-pretty_message ("项目路径设置"
-	"根目录 (由顶层传入): ${PROJECT_ROOT_DIR}\n   第三方库 (由顶层传入): ${EXTERNAL_LIBS_DIR}")
+message (STATUS "使用根的子项目（来自父项目）: ${PROJECT_ROOT_DIR}")
+message (STATUS "外部库目录（来自父项目）: ${EXTERNAL_LIBS_DIR}")
+pretty_message ("项目路径设置" "根目录 (由顶层传入): ${PROJECT_ROOT_DIR}\n   第三方库 (由顶层传入): ${EXTERNAL_LIBS_DIR}")
 
 # 定义自己的模块和第三方库的路径
 set (CONFIG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
+set (PROTOCOL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protocol")
 set (SERVICES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/services")
+set (UTILS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/utils")
 set (PSDK_LIB_DIR "${PROJECT_ROOT_DIR}/psdk_lib")
 
 # 2. 编译器和构建选项
@@ -50,18 +51,16 @@ file (GLOB_RECURSE PLATFORM_SOURCES
 )
 file (GLOB_RECURSE CUSTOM_SOURCES
 	"${CONFIG_DIR}/*.cpp"
+	"${PROTOCOL_DIR}/*.cpp"
 	"${SERVICES_DIR}/**/*.cpp"
+	"${UTILS_DIR}/**/*.cpp"
 )
-file (GLOB_RECURSE PROTOCOL_SOURCES "protocol/*.cpp")
-file (GLOB_RECURSE UTILS_SOURCES "utils/*.cpp")
 
 target_sources (${PROJECT_NAME} PRIVATE
 	${PSDK_CXX_SAMPLE_SOURCES}
 	${PSDK_C_SAMPLE_SOURCES}
 	${PLATFORM_SOURCES}
 	${CUSTOM_SOURCES}
-	${PROTOCOL_SOURCES}
-	${UTILS_SOURCES}
 )
 
 # 5. 平台检测
@@ -74,15 +73,14 @@ elseif (DEVICE_SYSTEM_ID STREQUAL "aarch64")
 	set (TOOLCHAIN_NAME aarch64-linux-gnu-gcc)
 	set (PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_AARCH64=1")
 else ()
-	message (FATAL_ERROR "FATAL: Unsupported platform detected: ${DEVICE_SYSTEM_ID}")
+	message (FATAL_ERROR "错误！检测到不支持的平台： ${DEVICE_SYSTEM_ID}")
 endif ()
 
 # 5.1 查找核心系统依赖
 find_package (OpenSSL REQUIRED)
 
 if (OPENSSL_FOUND)
-	pretty_message ("系统依赖检查: OpenSSL"
-		"版本: ${OPENSSL_VERSION}\n   头文件: ${OPENSSL_INCLUDE_DIR}\n   库文件: ${OPENSSL_LIBRARIES}")
+	pretty_message ("系统依赖检查: OpenSSL" "版本: ${OPENSSL_VERSION}\n   头文件: ${OPENSSL_INCLUDE_DIR}\n   库文件: ${OPENSSL_LIBRARIES}")
 endif ()
 
 # 6. 为目标配置包含目录
@@ -118,13 +116,13 @@ function (find_static_library TARGET_VAR LIB_NAME)
 		NO_DEFAULT_PATH
 	)
 
-	if(NOT ${TARGET_VAR})
-        message(WARNING "找不到自定义编译的库 'lib${LIB_NAME}.a'。如果这是第一次构建，请先运行 'make deps'。")
-        set(${TARGET_VAR} "" PARENT_SCOPE)
-    else()
-        message(STATUS "  [✓] 成功找到 ${LIB_NAME}: ${${TARGET_VAR}}")
-        set(${TARGET_VAR} ${${TARGET_VAR}} PARENT_SCOPE)
-    endif()
+	if (NOT ${TARGET_VAR})
+		message (WARNING "找不到自定义编译的库 'lib${LIB_NAME}.a'。如果这是第一次构建，请先运行 'make deps'。")
+		set (${TARGET_VAR} "" PARENT_SCOPE)
+	else ()
+		message (STATUS "  [✓] 成功找到 ${LIB_NAME}: ${${TARGET_VAR}}")
+		set (${TARGET_VAR} ${${TARGET_VAR}} PARENT_SCOPE)
+	endif ()
 endfunction ()
 
 find_static_library (LIBHV_LIB hv_static)
@@ -134,7 +132,7 @@ find_static_library (YAMLCPP_LIB yaml-cpp)
 find_static_library (PAHO_MQTT_LIB paho-mqtt3as)
 find_static_library (SPDLOG_LIB spdlog)
 find_static_library (FMT_LIB fmt)
-find_static_library(LIBZIP_LIB zip)
+find_static_library (LIBZIP_LIB zip)
 message (STATUS "")
 
 # 9. 为目标配置链接库
@@ -156,6 +154,7 @@ target_link_libraries (${PROJECT_NAME} PRIVATE
 	m
 	dl
 	pthread
+	z
 
 	${LEAK_SANITIZER_LINK_LIBS}
 )
@@ -174,5 +173,5 @@ add_custom_command (
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 	"${PROJECT_ROOT_DIR}/config/config.yml"
 	"$<TARGET_FILE_DIR:${PROJECT_NAME}>/config.yml"
-	COMMENT "Copying config.yml to output directory"
+	COMMENT "正在将 config.yml 复制到输出目录"
 )

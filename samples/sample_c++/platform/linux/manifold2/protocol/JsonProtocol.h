@@ -180,7 +180,8 @@ namespace plane::protocol
 
 	struct WaypointPayload
 	{
-		std::vector<Waypoint> HDJ {}; // HDJ
+		std::optional<std::string> RWID {}; // 任务ID
+		std::vector<Waypoint>	   HDJ {};	// HDJ
 	};
 
 	struct MissionProgressPayload
@@ -206,19 +207,13 @@ namespace plane::protocol
 
 	struct TakeoffPayload
 	{
-		std::optional<double>	   MBWD {};	  // MBWD
-		std::optional<double>	   MBJD {};	  // MBJD
-		std::optional<double>	   MBGD {};	  // MBGD
-		std::optional<double>	   AQQFGD {}; // AQQFGD
-		int						   FHMS {};	  // FHMS
-		std::optional<int>		   FHGD {};	  // FHGD
-		std::optional<int>		   SKDZ {};	  // SKDZ
-		int						   ZDSKDZ {}; // ZDSKDZ
-		int						   ZDFYMS {}; // ZDFYMS
-		double					   ZDFYGD {}; // ZDFYGD
-		std::optional<std::string> RWID {};	  // RWID
-		std::optional<int>		   ZDMSD {};  // ZDMSD
-		std::optional<int>		   AQJC {};	  // AQJC
+		std::optional<double> MBWD {};	// MBWD
+		std::optional<double> MBJD {};	// MBJD
+		std::optional<double> MBGD {};	// MBGD
+		int					  FHMS {};	// FHMS
+		std::optional<int>	  FHGD {};	// FHGD
+		std::optional<int>	  ZDMSD {}; // ZDMSD
+		std::optional<int>	  AQJC {};	// AQJC
 	};
 
 	struct FlyToPoint
@@ -449,8 +444,8 @@ namespace plane::protocol
 
 	// 下行指令: JSON -> C++
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Waypoint, JD, WD, GD, SD, YTFYJ, PHJ, SFTY, DZJ);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WaypointPayload, HDJ);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TakeoffPayload, MBWD, MBJD, MBGD, AQQFGD, FHMS, FHGD, SKDZ, ZDSKDZ, ZDFYMS, ZDFYGD, RWID, ZDMSD, AQJC);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WaypointPayload, HDJ, RWID);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TakeoffPayload, MBWD, MBJD, MBGD, FHMS, FHGD, ZDMSD, AQJC);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ControlStrategyPayload, YTJSCL);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CircleFlyPayload, JD, WD, GD, SD, BJ, QS);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GimbalControlPayload, FYJ, PHJ, MS);

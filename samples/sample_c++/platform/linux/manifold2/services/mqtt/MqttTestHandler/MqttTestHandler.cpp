@@ -15,9 +15,9 @@ namespace plane::services::mqtt
 {
 	namespace MqttTestHandler
 	{
-		using n_json					   = nlohmann::json;
+		using n_json = nlohmann::json;
 
-		static bool s_hasJoystickAuthority = false;
+		static bool s_hasJoystickAuthority { false };
 
 		static void TestTakeoffCallback(T_DjiReturnCode returnCode)
 		{
@@ -58,10 +58,9 @@ namespace plane::services::mqtt
 		void initialize()
 		{
 			LOG_INFO("正在初始化 MQTT [测试] 逻辑处理器...");
-			auto&			msg_handler = MqttMessageHandler::getInstance();
+			auto&			msg_handler { MqttMessageHandler::getInstance() };
 
 			T_DjiReturnCode returnCode {};
-
 			returnCode = DjiFcSubscription_SubscribeTopic(DJI_FC_SUBSCRIPTION_TOPIC_STATUS_FLIGHT, DJI_DATA_SUBSCRIPTION_TOPIC_10_HZ, NULL);
 			if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
@@ -88,7 +87,7 @@ namespace plane::services::mqtt
 										{
 											LOG_INFO("[MQTT] 收到【起飞】指令...");
 
-											T_DjiReturnCode rc;
+											T_DjiReturnCode rc {};
 
 											// 步骤 2.1: 获取控制权
 											if (!s_hasJoystickAuthority)

@@ -12,32 +12,32 @@
 
 struct plane::services::mqtt::MQTTService::Impl
 {
-	MQTTAsync		  client			= nullptr;
-	std::string		  serverURI			= {};
-	std::string		  clientId			= {};
-	std::thread		  heartbeat_thread_ = {};
-	std::atomic<bool> run_heartbeat_	= { true };
+	MQTTAsync		  client { nullptr };
+	std::string		  serverURI {};
+	std::string		  clientId {};
+	std::thread		  heartbeat_thread_ {};
+	std::atomic<bool> run_heartbeat_ { true };
 
-	~Impl()								= default;
+	~Impl() = default;
 };
 
 static void onSubscribeSuccess(void* context, MQTTAsync_successData* response)
 {
-	std::string* topic = static_cast<std::string*>(context);
+	std::string* topic { static_cast<std::string*>(context) };
 	LOG_INFO("成功订阅主题: '{}'", *topic);
 	delete topic;
 }
 
 static void onSubscribeFailure(void* context, MQTTAsync_failureData* response)
 {
-	std::string* topic = static_cast<std::string*>(context);
+	std::string* topic { static_cast<std::string*>(context) };
 	LOG_ERROR("订阅主题 '{}' 失败，错误码: {}", *topic, response ? response->code : -1);
 	delete topic;
 }
 
 void onConnectSuccess(void* context, MQTTAsync_successData* response)
 {
-	plane::services::mqtt::MQTTService* service = static_cast<plane::services::mqtt::MQTTService*>(context);
+	plane::services::mqtt::MQTTService* service { static_cast<plane::services::mqtt::MQTTService*>(context) };
 	service->setConnected(true);
 	LOG_INFO("MQTT 连接成功!（内部状态更新为已连接）");
 
@@ -51,7 +51,7 @@ void onConnectSuccess(void* context, MQTTAsync_successData* response)
 
 void onConnectFailure(void* context, MQTTAsync_failureData* response)
 {
-	plane::services::mqtt::MQTTService* service = static_cast<plane::services::mqtt::MQTTService*>(context);
+	plane::services::mqtt::MQTTService* service { static_cast<plane::services::mqtt::MQTTService*>(context) };
 	service->setConnected(false);
 	LOG_ERROR("MQTT 连接失败，错误码: {}, 消息: {}", response ? response->code : -1, response ? response->message : "未知错误");
 }
@@ -68,7 +68,7 @@ static int messageArrived(void* context, char* topicName, int topicLen, MQTTAsyn
 
 void connectionLost(void* context, char* cause)
 {
-	plane::services::mqtt::MQTTService* service = static_cast<plane::services::mqtt::MQTTService*>(context);
+	plane::services::mqtt::MQTTService* service { static_cast<plane::services::mqtt::MQTTService*>(context) };
 	service->setConnected(false);
 	LOG_WARN("MQTT 连接已断开，原因: {}. Paho 库将自动重新连接。", cause ? cause : "未知");
 }
@@ -91,7 +91,7 @@ plane::services::mqtt::MQTTService::MQTTService(): impl_(new Impl())
 
 	LOG_INFO("配置已加载。服务器=[{}]，客户端ID=[{}]", impl_->serverURI, impl_->clientId);
 
-	if (int rc = MQTTAsync_create(&impl_->client, impl_->serverURI.c_str(), impl_->clientId.c_str(), MQTTCLIENT_PERSISTENCE_NONE, nullptr);
+	if (int rc { MQTTAsync_create(&impl_->client, impl_->serverURI.c_str(), impl_->clientId.c_str(), MQTTCLIENT_PERSISTENCE_NONE, nullptr) };
 		rc != MQTTASYNC_SUCCESS)
 	{
 		LOG_ERROR("MQTTAsync_create 失败，返回码 {}", rc);
@@ -110,7 +110,7 @@ plane::services::mqtt::MQTTService::MQTTService(): impl_(new Impl())
 	conn_opts.minRetryInterval		   = 1;
 	conn_opts.maxRetryInterval		   = 60;
 
-	if (int rc = MQTTAsync_connect(impl_->client, &conn_opts); rc != MQTTASYNC_SUCCESS)
+	if (int rc { MQTTAsync_connect(impl_->client, &conn_opts) }; rc != MQTTASYNC_SUCCESS)
 	{
 		LOG_ERROR("启动 MQTT 连接失败，返回码 {}", rc);
 	}
@@ -169,7 +169,7 @@ void plane::services::mqtt::MQTTService::publish(const std::string& topic, const
 
 	MQTTAsync_responseOptions opts = MQTTAsync_responseOptions_initializer;
 	opts.context				   = this;
-	if (int rc = MQTTAsync_send(impl_->client, topic.c_str(), payload.length(), payload.c_str(), 1, 0, &opts); rc != MQTTASYNC_SUCCESS)
+	if (int rc { MQTTAsync_send(impl_->client, topic.c_str(), payload.length(), payload.c_str(), 1, 0, &opts) }; rc != MQTTASYNC_SUCCESS)
 	{
 		LOG_ERROR("向主题 '{}' 发布消息失败，返回码 {}", topic, rc);
 	}
@@ -188,7 +188,7 @@ void plane::services::mqtt::MQTTService::subscribe(const std::string& topic)
 	opts.onFailure				   = onSubscribeFailure;
 	opts.context				   = new std::string(topic);
 
-	if (int rc = MQTTAsync_subscribe(impl_->client, topic.c_str(), 1, &opts); rc != MQTTASYNC_SUCCESS)
+	if (int rc { MQTTAsync_subscribe(impl_->client, topic.c_str(), 1, &opts) }; rc != MQTTASYNC_SUCCESS)
 	{
 		LOG_ERROR("发起订阅主题 '{}' 的请求失败，返回码 {}", topic, rc);
 		delete static_cast<std::string*>(opts.context);
@@ -217,7 +217,7 @@ void plane::services::mqtt::MQTTService::shutdown()
 		LOG_INFO("MQTTService shutdown：客户端已连接，正在发送断开连接请求...");
 		MQTTAsync_disconnectOptions opts = MQTTAsync_disconnectOptions_initializer;
 		opts.timeout					 = 1000;
-		if (int rc = MQTTAsync_disconnect(impl_->client, &opts); rc != MQTTASYNC_SUCCESS)
+		if (int rc { MQTTAsync_disconnect(impl_->client, &opts) }; rc != MQTTASYNC_SUCCESS)
 		{
 			LOG_ERROR("MQTTService shutdown：断开连接调用失败，错误码 {}", rc);
 		}
@@ -267,7 +267,7 @@ void plane::services::mqtt::MQTTService::heartbeatLoop()
 			// this->publish("topic/sensor", sensor_data);
 		}
 
-		for (int i = 0; i < 100 && impl_->run_heartbeat_.load(std::memory_order_acquire); ++i)
+		for (size_t i { 0 }; i < 100 && impl_->run_heartbeat_.load(std::memory_order_acquire); ++i)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}

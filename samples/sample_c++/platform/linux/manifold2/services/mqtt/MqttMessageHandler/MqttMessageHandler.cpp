@@ -5,7 +5,7 @@ namespace plane::services::mqtt
 {
 	MqttMessageHandler& MqttMessageHandler::getInstance()
 	{
-		static MqttMessageHandler instance;
+		static MqttMessageHandler instance {};
 		return instance;
 	}
 
@@ -20,14 +20,14 @@ namespace plane::services::mqtt
 	{
 		try
 		{
-			n_json						jValue		= n_json::parse(rawJsonPayload);
-			std::string					messageType = jValue.at("XXLX").get<std::string>();
-			const n_json&				payloadJson = jValue.at("XXXX");
+			n_json						jValue { n_json::parse(rawJsonPayload) };
+			std::string					messageType { jValue.at("XXLX").get<std::string>() };
+			const n_json&				payloadJson { jValue.at("XXXX") };
 			std::lock_guard<std::mutex> lock(handler_mutex_);
 
-			if (auto topic_it = handler_map_.find(topic); topic_it != handler_map_.end())
+			if (auto topic_it { handler_map_.find(topic) }; topic_it != handler_map_.end())
 			{
-				if (auto type_it = topic_it->second.find(messageType); type_it != topic_it->second.end())
+				if (auto type_it { topic_it->second.find(messageType) }; type_it != topic_it->second.end())
 				{
 					LOG_DEBUG("路由消息: topic='{}', messageType='{}'", topic, messageType);
 					type_it->second(payloadJson);
