@@ -23,7 +23,7 @@ namespace plane::utils
 		void		   init(spdlog::level::level_enum console_level = spdlog::level::info);
 
 		template<typename... Args>
-		void log(spdlog::source_loc loc, spdlog::level::level_enum lvl, spdlog::format_string_t<Args...> fmt, Args&&... args)
+		void log(spdlog::source_loc loc, spdlog::level::level_enum lvl, spdlog::format_string_t<Args...> fmt, Args&&... args) const noexcept
 		{
 			if (logger_)
 			{

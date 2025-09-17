@@ -12,13 +12,13 @@ namespace plane::utils
 {
 	using n_json = ::nlohmann::json;
 
-	static int64_t getCurrentTimestampMs()
+	static int64_t getCurrentTimestampMs(void) noexcept
 	{
 		using namespace std::chrono;
 		return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	}
 
-	static std::string formatTimestamp(int64_t ms)
+	static std::string formatTimestamp(int64_t ms) noexcept
 	{
 		auto			  time_t { static_cast<std::time_t>(ms / 1000) };
 		std::tm			  tm { *std::localtime(&time_t) };
@@ -27,7 +27,7 @@ namespace plane::utils
 		return ss.str();
 	}
 
-	std::string JsonConverter::buildStatusReportJson(const protocol::StatusPayload& payload)
+	std::string JsonConverter::buildStatusReportJson(const protocol::StatusPayload& payload) noexcept
 	{
 		auto											  now { getCurrentTimestampMs() };
 		std::string										  plane_code { plane::config::ConfigManager::getInstance().getMqttClientId() };
@@ -47,7 +47,7 @@ namespace plane::utils
 		return jValue.dump();
 	}
 
-	std::string JsonConverter::buildMissionInfoJson(const protocol::MissionInfoPayload& payload)
+	std::string JsonConverter::buildMissionInfoJson(const protocol::MissionInfoPayload& payload) noexcept
 	{
 		auto												   now { getCurrentTimestampMs() };
 		std::string											   plane_code { plane::config::ConfigManager::getInstance().getMqttClientId() };
@@ -67,7 +67,7 @@ namespace plane::utils
 		return jValue.dump();
 	}
 
-	std::string JsonConverter::buildHealthStatusJson(const std::vector<protocol::HealthAlertPayload>& alerts)
+	std::string JsonConverter::buildHealthStatusJson(const std::vector<protocol::HealthAlertPayload>& alerts) noexcept
 	{
 		auto						  now { getCurrentTimestampMs() };
 		std::string					  plane_code { plane::config::ConfigManager::getInstance().getMqttClientId() };

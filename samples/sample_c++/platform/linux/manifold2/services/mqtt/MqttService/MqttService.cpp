@@ -117,8 +117,6 @@ plane::services::mqtt::MQTTService::MQTTService(): impl_(new Impl())
 	else
 	{
 		LOG_INFO("MQTTAsync_connect 调用成功。连接过程正在后台运行。");
-		LOG_INFO("启动心跳线程...");
-		impl_->heartbeat_thread_ = std::thread(&MQTTService::heartbeatLoop, this);
 	}
 }
 
@@ -127,15 +125,19 @@ plane::services::mqtt::MQTTService::~MQTTService()
 	shutdown();
 }
 
-void plane::services::mqtt::MQTTService::startBackgroundThreads()
+void plane::services::mqtt::MQTTService::startBackgroundThreads(void) noexcept
 {
 	LOG_INFO("正在启动后台任务线程...");
-	impl_->heartbeat_thread_ = std::thread(&MQTTService::heartbeatLoop, this);
+	impl_->heartbeat_thread_ = std::thread(
+		[this]
+		{
+			this->heartbeatLoop();
+		});
 	// 如果未来有其他线程，在这里一并启动：
-	// impl_->sensor_thread_ = std::thread(&MQTTService::sensorLoop, this);
+	// impl_->sensor_thread_ = std::thread([this] { this->sensorLoop(); });
 }
 
-void plane::services::mqtt::MQTTService::stopBackgroundThreads()
+void plane::services::mqtt::MQTTService::stopBackgroundThreads(void) const noexcept
 {
 	LOG_INFO("正在停止后台任务线程...");
 
@@ -153,13 +155,13 @@ void plane::services::mqtt::MQTTService::stopBackgroundThreads()
 	// }
 }
 
-plane::services::mqtt::MQTTService& plane::services::mqtt::MQTTService::getInstance()
+plane::services::mqtt::MQTTService& plane::services::mqtt::MQTTService::getInstance(void) noexcept
 {
 	static MQTTService instance;
 	return instance;
 }
 
-void plane::services::mqtt::MQTTService::publish(const std::string& topic, const std::string& payload)
+void plane::services::mqtt::MQTTService::publish(const std::string& topic, const std::string& payload) noexcept
 {
 	if (!isConnected())
 	{
@@ -175,7 +177,7 @@ void plane::services::mqtt::MQTTService::publish(const std::string& topic, const
 	}
 }
 
-void plane::services::mqtt::MQTTService::subscribe(const std::string& topic)
+void plane::services::mqtt::MQTTService::subscribe(const std::string& topic) const noexcept
 {
 	if (!isConnected())
 	{
@@ -199,7 +201,7 @@ void plane::services::mqtt::MQTTService::subscribe(const std::string& topic)
 	}
 }
 
-void plane::services::mqtt::MQTTService::shutdown()
+void plane::services::mqtt::MQTTService::shutdown(void) const noexcept
 {
 	if (impl_)
 	{
@@ -237,17 +239,17 @@ void plane::services::mqtt::MQTTService::shutdown()
 	impl_->client = nullptr;
 }
 
-void plane::services::mqtt::MQTTService::setConnected(bool status)
+void plane::services::mqtt::MQTTService::setConnected(bool status) noexcept
 {
 	connected_.store(status, std::memory_order_release);
 }
 
-bool plane::services::mqtt::MQTTService::isConnected() const
+bool plane::services::mqtt::MQTTService::isConnected(void) const noexcept
 {
 	return connected_.load(std::memory_order_acquire);
 }
 
-void plane::services::mqtt::MQTTService::heartbeatLoop()
+void plane::services::mqtt::MQTTService::heartbeatLoop(void) noexcept
 {
 	LOG_INFO("心跳线程已启动。");
 	while (impl_->run_heartbeat_.load(std::memory_order_acquire))

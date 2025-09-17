@@ -19,7 +19,7 @@ namespace plane::services::mqtt
 
 		static bool s_hasJoystickAuthority { false };
 
-		static void TestTakeoffCallback(T_DjiReturnCode returnCode)
+		static void TestTakeoffCallback(T_DjiReturnCode returnCode) noexcept
 		{
 			if (returnCode == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
@@ -31,7 +31,7 @@ namespace plane::services::mqtt
 			}
 		}
 
-		static void TestLandingCallback(T_DjiReturnCode returnCode)
+		static void TestLandingCallback(T_DjiReturnCode returnCode) noexcept
 		{
 			if (returnCode == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
@@ -43,7 +43,7 @@ namespace plane::services::mqtt
 			}
 		}
 
-		static void TestGoHomeCallback(T_DjiReturnCode returnCode)
+		static void TestGoHomeCallback(T_DjiReturnCode returnCode) noexcept
 		{
 			if (returnCode == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
@@ -55,7 +55,7 @@ namespace plane::services::mqtt
 			}
 		}
 
-		void initialize()
+		void initialize(void) noexcept
 		{
 			LOG_INFO("正在初始化 MQTT [测试] 逻辑处理器...");
 			auto&			msg_handler { MqttMessageHandler::getInstance() };

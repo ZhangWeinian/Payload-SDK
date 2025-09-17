@@ -20,8 +20,8 @@ namespace plane::utils
 	{
 	public:
 		// 将 C++ 结构体转换为 JSON 字符串
-		static std::string buildStatusReportJson(const protocol::StatusPayload& payload);
-		static std::string buildMissionInfoJson(const protocol::MissionInfoPayload& payload);
-		static std::string buildHealthStatusJson(const std::vector<protocol::HealthAlertPayload>& alerts);
+		static std::string buildStatusReportJson(const protocol::StatusPayload& payload) noexcept;
+		static std::string buildMissionInfoJson(const protocol::MissionInfoPayload& payload) noexcept;
+		static std::string buildHealthStatusJson(const std::vector<protocol::HealthAlertPayload>& alerts) noexcept;
 	};
 } // namespace plane::utils

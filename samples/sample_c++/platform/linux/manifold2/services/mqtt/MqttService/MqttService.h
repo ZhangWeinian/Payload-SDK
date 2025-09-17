@@ -16,12 +16,12 @@ namespace plane::services::mqtt
 	class MQTTService
 	{
 	public:
-		static MQTTService& getInstance();
-		void				publish(const std::string& topic, const std::string& payload);
-		bool				isConnected() const;
-		void				subscribe(const std::string& topic);
-		void				shutdown();
-		void				setConnected(bool status);
+		static MQTTService& getInstance(void) noexcept;
+		void				publish(const std::string& topic, const std::string& payload) noexcept;
+		bool				isConnected(void) const noexcept;
+		void				subscribe(const std::string& topic) const noexcept;
+		void				shutdown(void) const noexcept;
+		void				setConnected(bool status) noexcept;
 
 	private:
 		struct Impl;
@@ -32,12 +32,12 @@ namespace plane::services::mqtt
 		friend void ::onConnectFailure(void* context, MQTTAsync_failureData* response);
 		friend void ::connectionLost(void* context, char* cause);
 
-		void startBackgroundThreads();
-		void stopBackgroundThreads();
-		void heartbeatLoop();
+		void startBackgroundThreads(void) noexcept;
+		void stopBackgroundThreads(void) const noexcept;
+		void heartbeatLoop(void) noexcept;
 
-		MQTTService();
-		~MQTTService();
+		MQTTService(void);
+		~MQTTService(void);
 		MQTTService(const MQTTService&)			   = delete;
 		MQTTService& operator=(const MQTTService&) = delete;
 	};

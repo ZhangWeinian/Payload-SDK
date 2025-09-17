@@ -155,6 +155,7 @@ target_link_libraries (${PROJECT_NAME} PRIVATE
 	dl
 	pthread
 	z
+	lzma
 
 	${LEAK_SANITIZER_LINK_LIBS}
 )

@@ -2,6 +2,7 @@
 #include "services/mqtt/MqttLogicHandler/MqttLogicHandler.h"
 #include "services/mqtt/MqttMessageHandler/MqttMessageHandler.h"
 #include "services/mqtt/MqttTopics.h"
+#include "utils/JsonToKmzConverter/JsonToKmzConverter.h"
 #include "utils/Logger/Logger.h"
 
 namespace plane::services::mqtt::MqttLogicHandler
@@ -27,6 +28,9 @@ namespace plane::services::mqtt::MqttLogicHandler
 			// TODO: 判断是否需要航线优化 (SettingsManager.isWaypointOptimizationEnabled)
 			// TODO: 如果需要，调用 FlyManager 的 optimizeWaypoints(payload.HDJ)
 			// TODO: 调用 FlyManager 的 waypointFly(...);
+			std::string missionId { payload.RWID.value_or("unknown_mission") };
+			std::string kmz_path = "/tmp/" + missionId + ".kmz";
+			bool		success	 = plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload);
 		}
 	}
 
