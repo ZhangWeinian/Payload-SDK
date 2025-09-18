@@ -5,7 +5,7 @@
 #include "utils/JsonToKmzConverter/JsonToKmzConverter.h"
 #include "utils/Logger/Logger.h"
 
-namespace plane::services::mqtt::MqttLogicHandler
+namespace plane::services::MqttLogicHandler
 {
 	using n_json = ::nlohmann::json;
 
@@ -176,4 +176,4 @@ namespace plane::services::mqtt::MqttLogicHandler
 		msg_handler.registerHandler(TOPIC_VELOCITY_CONTROL, "SDKZ", handleNedVelocity);
 		LOG_INFO("所有 MQTT 业务逻辑处理器注册完毕。");
 	}
-} // namespace plane::services::mqtt::MqttLogicHandler
+} // namespace plane::services::MqttLogicHandler

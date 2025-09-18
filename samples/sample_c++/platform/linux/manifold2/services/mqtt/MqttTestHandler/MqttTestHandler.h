@@ -1,6 +1,6 @@
 #pragma once
 
-namespace plane::services::mqtt
+namespace plane::services
 {
 	namespace MqttTestHandler
 	{

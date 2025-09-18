@@ -1,7 +1,7 @@
 #include "services/mqtt/MqttMessageHandler/MqttMessageHandler.h"
 #include "utils/Logger/Logger.h"
 
-namespace plane::services::mqtt
+namespace plane::services
 {
 	MqttMessageHandler& MqttMessageHandler::getInstance()
 	{
@@ -51,4 +51,4 @@ namespace plane::services::mqtt
 			LOG_ERROR("处理 MQTT 消息时发生未知错误 (topic: {}): {}", topic, e.what());
 		}
 	}
-} // namespace plane::services::mqtt
+} // namespace plane::services

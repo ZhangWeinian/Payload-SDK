@@ -2,7 +2,6 @@
 
 #include "camera_manager/test_camera_manager_entry.h"
 #include "data_transmission/test_data_transmission.h"
-#include "dji_logger.h"
 #include "fc_subscription/test_fc_subscription.h"
 #include "widget/test_widget.h"
 #include "widget/test_widget_speaker.h"
@@ -29,8 +28,10 @@
 #include "services/mqtt/MqttService/MqttService.h"
 #include "services/mqtt/MqttTestHandler/MqttTestHandler.h"
 #include "services/mqtt/MqttTopics.h"
+#include "services/telemetry/TelemetryReporter.h"
 #include "utils/JsonConverter/JsonConverter.h"
 #include "utils/Logger/Logger.h"
+#include "utils/NetworkUtils/NetworkUtils.h"
 
 #include "CLI11/CLI/CLI.hpp"
 
@@ -159,12 +160,15 @@ void runMyApplication(int argc, char** argv)
 	}
 	LOG_INFO("配置文件加载成功。");
 
-	plane::services::mqtt::MQTTService::getInstance();
+	plane::services::MQTTService::getInstance();
 	LOG_INFO("MQTT 服务已启动。");
 
-	plane::services::mqtt::initialize();
-	plane::services::mqtt::MqttTestHandler::initialize();
+	plane::services::initialize();
+	plane::services::MqttTestHandler::initialize();
 	LOG_INFO("业务逻辑处理器注册完毕。");
+
+	LOG_INFO("正在启动遥测上报服务...");
+	plane::services::TelemetryReporter::getInstance().start();
 
 	LOG_INFO("==========================================================");
 	LOG_INFO("               应用程序初始化完成，正在运行中...");
@@ -178,7 +182,7 @@ void runMyApplication(int argc, char** argv)
 
 	LOG_INFO("收到退出信号，正在关闭应用程序...");
 
-	plane::services::mqtt::MQTTService::getInstance().shutdown();
+	plane::services::MQTTService::getInstance().shutdown();
 	LOG_INFO("应用程序已关闭。");
 }
 
@@ -195,10 +199,9 @@ int main(int argc, char** argv)
 
 	CLI11_PARSE(app, argc, argv);
 
-	Application application(argc, argv);
-
 	if (runDjiInteractiveMode)
 	{
+		Application application(argc, argv);
 		runDJIApplication(argc, argv);
 	}
 	else

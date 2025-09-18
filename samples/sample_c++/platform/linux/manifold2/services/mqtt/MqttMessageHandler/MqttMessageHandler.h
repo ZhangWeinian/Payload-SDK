@@ -7,7 +7,7 @@
 #include <mutex>
 #include <string>
 
-namespace plane::services::mqtt
+namespace plane::services
 {
 	class MqttMessageHandler
 	{
@@ -16,9 +16,7 @@ namespace plane::services::mqtt
 		using HandlerFunc = std::function<void(const n_json&)>;
 
 		static MqttMessageHandler& getInstance();
-
 		void					   registerHandler(const std::string& topic, const std::string& messageType, HandlerFunc handler);
-
 		void					   routeMessage(const std::string& topic, const std::string& rawJsonPayload);
 
 	private:
@@ -28,4 +26,4 @@ namespace plane::services::mqtt
 		std::map<std::string, std::map<std::string, HandlerFunc>> handler_map_;
 		std::mutex												  handler_mutex_;
 	};
-} // namespace plane::services::mqtt
+} // namespace plane::services

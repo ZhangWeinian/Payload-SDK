@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace plane::services::mqtt
+namespace plane::services
 {
 	// 上行主题
 	constexpr inline const char* TOPIC_DRONE_STATUS	 = "/wrgk/uav/status";

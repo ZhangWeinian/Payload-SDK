@@ -64,7 +64,7 @@ namespace plane::protocol
 
 	inline void from_json(const n_json& j, MissionControlAction& action)
 	{
-		const std::string s = j.get<std::string>();
+		const std::string s { j.get<std::string>() };
 		if (s == "RWKS")
 		{
 			action = MissionControlAction::START;
@@ -145,7 +145,7 @@ namespace plane::protocol
 
 	inline void from_json(const n_json& j, TargetType& type)
 	{
-		const std::string s = j.get<std::string>();
+		const std::string s { j.get<std::string>() };
 		if (s == "MBSY")
 		{
 			type = TargetType::INDEX;
@@ -276,9 +276,9 @@ namespace plane::protocol
 
 	struct GimbalControlPayload
 	{
-		double FYJ {}; // 俯仰角
-		double PHJ {}; // 偏航角
-		int	   MS = 1; // 模式 (0:角度控制, 1:速度控制)
+		double FYJ {};	 // 俯仰角
+		double PHJ {};	 // 偏航角
+		int	   MS { 1 }; // 模式 (0:角度控制, 1:速度控制)
 	};
 
 	struct ZoomControlPayload
@@ -290,23 +290,23 @@ namespace plane::protocol
 
 	struct StickDataPayload
 	{
-		int YML = 1024; // 油门量
-		int PHL = 1024; // 偏航量
-		int FYL = 1024; // 俯仰量
-		int HGL = 1024; // 横滚量
+		int YML { 1024 }; // 油门量
+		int PHL { 1024 }; // 偏航量
+		int FYL { 1024 }; // 俯仰量
+		int HGL { 1024 }; // 横滚量
 	};
 
 	struct StickModeSwitchPayload
 	{
-		int YGMS = 0; // 摇杆模式 (0:关闭, 1:启用, 2:启用高级)
+		int YGMS { 0 }; // 摇杆模式 (0:关闭, 1:启用, 2:启用高级)
 	};
 
 	struct NedVelocityPayload
 	{
-		double SDN = 0.0; // 北向速度
-		double SDD = 0.0; // 东向速度
-		double SDX = 0.0; // 地向速度 (下为正)
-		double PHJ = 0.0; // 偏航角速率
+		double SDN { 0.0 }; // 北向速度
+		double SDD { 0.0 }; // 东向速度
+		double SDX { 0.0 }; // 地向速度 (下为正)
+		double PHJ { 0.0 }; // 偏航角速率
 	};
 
 	struct GpsInfo
@@ -372,9 +372,9 @@ namespace plane::protocol
 
 	struct MissionInfoPayload
 	{
-		std::string FJSN {};   // 飞机序列号
-		std::string YKQIP {};  // 遥控器IP
-		std::string YSRTSP {}; // RTSP地址
+		std::string FJSN {};   // PlaneCode
+		std::string YKQIP {};  // 遥控器 IP
+		std::string YSRTSP {}; // RTSP 地址
 	};
 
 	struct HealthAlertPayload

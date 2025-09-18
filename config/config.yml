@@ -1,5 +1,5 @@
 # 应用的全局配置
 mqtt:
-    url: "tcp://192.168.31.21:1883"
-    plane_id: "123AB"
-    client_id_prefix: "Plane-"
+    url: "tcp://192.168.1.25:1883"
+    plane_id: "plane_test"
+    client_id_prefix: "com.dji.sampleV5.cy_"

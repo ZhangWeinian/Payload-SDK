@@ -11,7 +11,7 @@
 #include <waypoint_v2/test_waypoint_v2.h>
 #include <waypoint_v3/test_waypoint_v3.h>
 
-namespace plane::services::mqtt
+namespace plane::services
 {
 	namespace MqttTestHandler
 	{
@@ -159,4 +159,4 @@ namespace plane::services::mqtt
 			LOG_INFO("MQTT [测试] 逻辑处理器注册完毕。");
 		}
 	} // namespace MqttTestHandler
-} // namespace plane::services::mqtt
+} // namespace plane::services

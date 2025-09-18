@@ -14,7 +14,7 @@ else
     COLOR_NC=""
 fi
 
-CPP_STANDARD=17
+CPP_STANDARD=20
 
 BASE_DIR=$(pwd)
 INSTALL_DIR="${BASE_DIR}/install"

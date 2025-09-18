@@ -11,7 +11,7 @@ void onConnectSuccess(void* context, MQTTAsync_successData* response);
 void onConnectFailure(void* context, MQTTAsync_failureData* response);
 void connectionLost(void* context, char* cause);
 
-namespace plane::services::mqtt
+namespace plane::services
 {
 	class MQTTService
 	{
@@ -31,10 +31,6 @@ namespace plane::services::mqtt
 		friend void ::onConnectSuccess(void* context, MQTTAsync_successData* response);
 		friend void ::onConnectFailure(void* context, MQTTAsync_failureData* response);
 		friend void ::connectionLost(void* context, char* cause);
-
-		void startBackgroundThreads(void) noexcept;
-		void stopBackgroundThreads(void) const noexcept;
-		void heartbeatLoop(void) noexcept;
 
 		MQTTService(void);
 		~MQTTService(void);

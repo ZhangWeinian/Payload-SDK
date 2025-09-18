@@ -2,6 +2,7 @@
 #include "services/mqtt/MqttMessageHandler/MqttMessageHandler.h"
 #include "services/mqtt/MqttService/MqttService.h"
 #include "services/mqtt/MqttTopics.h"
+#include "utils/JsonConverter/JsonConverter.h"
 #include "utils/Logger/Logger.h"
 
 #include "fmt/format.h"
@@ -10,13 +11,11 @@
 #include <cstring>
 #include <thread>
 
-struct plane::services::mqtt::MQTTService::Impl
+struct plane::services::MQTTService::Impl
 {
-	MQTTAsync		  client { nullptr };
-	std::string		  serverURI {};
-	std::string		  clientId {};
-	std::thread		  heartbeat_thread_ {};
-	std::atomic<bool> run_heartbeat_ { true };
+	MQTTAsync	client { nullptr };
+	std::string serverURI {};
+	std::string clientId {};
 
 	~Impl() = default;
 };
@@ -37,21 +36,21 @@ static void onSubscribeFailure(void* context, MQTTAsync_failureData* response)
 
 void onConnectSuccess(void* context, MQTTAsync_successData* response)
 {
-	plane::services::mqtt::MQTTService* service { static_cast<plane::services::mqtt::MQTTService*>(context) };
+	plane::services::MQTTService* service { static_cast<plane::services::MQTTService*>(context) };
 	service->setConnected(true);
 	LOG_INFO("MQTT 连接成功!（内部状态更新为已连接）");
 
-	service->subscribe(plane::services::mqtt::TOPIC_MISSION_CONTROL);
-	service->subscribe(plane::services::mqtt::TOPIC_COMMAND_CONTROL);
-	service->subscribe(plane::services::mqtt::TOPIC_PAYLOAD_CONTROL);
-	service->subscribe(plane::services::mqtt::TOPIC_ROCKER_CONTROL);
-	service->subscribe(plane::services::mqtt::TOPIC_VELOCITY_CONTROL);
-	service->subscribe(plane::services::mqtt::TOPIC_TEST);
+	service->subscribe(plane::services::TOPIC_MISSION_CONTROL);
+	service->subscribe(plane::services::TOPIC_COMMAND_CONTROL);
+	service->subscribe(plane::services::TOPIC_PAYLOAD_CONTROL);
+	service->subscribe(plane::services::TOPIC_ROCKER_CONTROL);
+	service->subscribe(plane::services::TOPIC_VELOCITY_CONTROL);
+	service->subscribe(plane::services::TOPIC_TEST);
 }
 
 void onConnectFailure(void* context, MQTTAsync_failureData* response)
 {
-	plane::services::mqtt::MQTTService* service { static_cast<plane::services::mqtt::MQTTService*>(context) };
+	plane::services::MQTTService* service { static_cast<plane::services::MQTTService*>(context) };
 	service->setConnected(false);
 	LOG_ERROR("MQTT 连接失败，错误码: {}, 消息: {}", response ? response->code : -1, response ? response->message : "未知错误");
 }
@@ -60,7 +59,7 @@ static int messageArrived(void* context, char* topicName, int topicLen, MQTTAsyn
 {
 	std::string topic(topicName, topicLen > 0 ? topicLen : strlen(topicName));
 	std::string rawPayload(static_cast<char*>(message->payload), message->payloadlen);
-	plane::services::mqtt::MqttMessageHandler::getInstance().routeMessage(topic, rawPayload);
+	plane::services::MqttMessageHandler::getInstance().routeMessage(topic, rawPayload);
 	MQTTAsync_freeMessage(&message);
 	MQTTAsync_free(topicName);
 	return 1;
@@ -68,7 +67,7 @@ static int messageArrived(void* context, char* topicName, int topicLen, MQTTAsyn
 
 void connectionLost(void* context, char* cause)
 {
-	plane::services::mqtt::MQTTService* service { static_cast<plane::services::mqtt::MQTTService*>(context) };
+	plane::services::MQTTService* service { static_cast<plane::services::MQTTService*>(context) };
 	service->setConnected(false);
 	LOG_WARN("MQTT 连接已断开，原因: {}. Paho 库将自动重新连接。", cause ? cause : "未知");
 }
@@ -78,7 +77,7 @@ static void deliveryComplete(void* context, MQTTAsync_token token)
 	LOG_DEBUG("MQTT 消息发送完成，令牌: {}", token);
 }
 
-plane::services::mqtt::MQTTService::MQTTService(): impl_(new Impl())
+plane::services::MQTTService::MQTTService(): impl_(new Impl())
 {
 	impl_->serverURI = config::ConfigManager::getInstance().getMqttUrl();
 	impl_->clientId	 = config::ConfigManager::getInstance().getMqttClientId();
@@ -120,48 +119,18 @@ plane::services::mqtt::MQTTService::MQTTService(): impl_(new Impl())
 	}
 }
 
-plane::services::mqtt::MQTTService::~MQTTService()
+plane::services::MQTTService::~MQTTService()
 {
 	shutdown();
 }
 
-void plane::services::mqtt::MQTTService::startBackgroundThreads(void) noexcept
-{
-	LOG_INFO("正在启动后台任务线程...");
-	impl_->heartbeat_thread_ = std::thread(
-		[this]
-		{
-			this->heartbeatLoop();
-		});
-	// 如果未来有其他线程，在这里一并启动：
-	// impl_->sensor_thread_ = std::thread([this] { this->sensorLoop(); });
-}
-
-void plane::services::mqtt::MQTTService::stopBackgroundThreads(void) const noexcept
-{
-	LOG_INFO("正在停止后台任务线程...");
-
-	impl_->run_heartbeat_.store(false, std::memory_order_release);
-	if (impl_->heartbeat_thread_.joinable())
-	{
-		impl_->heartbeat_thread_.join();
-	}
-
-	// 如果未来有其他线程，在这里一并停止：
-	// impl_->run_sensor_.store(false, std::memory_order_release);
-	// if (impl_->sensor_thread_.joinable())
-	// {
-	//	   impl_->sensor_thread_.join();
-	// }
-}
-
-plane::services::mqtt::MQTTService& plane::services::mqtt::MQTTService::getInstance(void) noexcept
+plane::services::MQTTService& plane::services::MQTTService::getInstance(void) noexcept
 {
 	static MQTTService instance;
 	return instance;
 }
 
-void plane::services::mqtt::MQTTService::publish(const std::string& topic, const std::string& payload) noexcept
+void plane::services::MQTTService::publish(const std::string& topic, const std::string& payload) noexcept
 {
 	if (!isConnected())
 	{
@@ -177,7 +146,7 @@ void plane::services::mqtt::MQTTService::publish(const std::string& topic, const
 	}
 }
 
-void plane::services::mqtt::MQTTService::subscribe(const std::string& topic) const noexcept
+void plane::services::MQTTService::subscribe(const std::string& topic) const noexcept
 {
 	if (!isConnected())
 	{
@@ -201,13 +170,8 @@ void plane::services::mqtt::MQTTService::subscribe(const std::string& topic) con
 	}
 }
 
-void plane::services::mqtt::MQTTService::shutdown(void) const noexcept
+void plane::services::MQTTService::shutdown(void) const noexcept
 {
-	if (impl_)
-	{
-		stopBackgroundThreads();
-	}
-
 	if (!impl_ || !impl_->client)
 	{
 		LOG_INFO("MQTTService shutdown：客户端不存在或已被销毁。");
@@ -239,40 +203,12 @@ void plane::services::mqtt::MQTTService::shutdown(void) const noexcept
 	impl_->client = nullptr;
 }
 
-void plane::services::mqtt::MQTTService::setConnected(bool status) noexcept
+void plane::services::MQTTService::setConnected(bool status) noexcept
 {
 	connected_.store(status, std::memory_order_release);
 }
 
-bool plane::services::mqtt::MQTTService::isConnected(void) const noexcept
+bool plane::services::MQTTService::isConnected(void) const noexcept
 {
 	return connected_.load(std::memory_order_acquire);
-}
-
-void plane::services::mqtt::MQTTService::heartbeatLoop(void) noexcept
-{
-	LOG_INFO("心跳线程已启动。");
-	while (impl_->run_heartbeat_.load(std::memory_order_acquire))
-	{
-		if (this->isConnected())
-		{
-			LOG_DEBUG("发送 MQTT 心跳状态...");
-			std::string online_json =
-				fmt::format("{{\"status\":\"online\", \"timestamp\":{}}}",
-							std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-
-			this->publish(plane::services::mqtt::TOPIC_FIXED_INFO, online_json);
-
-			// 未来可以在这里添加其他需要定时发送的消息
-			// 例如：
-			// std::string sensor_data = getSensorData();
-			// this->publish("topic/sensor", sensor_data);
-		}
-
-		for (size_t i { 0 }; i < 100 && impl_->run_heartbeat_.load(std::memory_order_acquire); ++i)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		}
-	}
-	LOG_INFO("心跳线程已停止。");
 }
