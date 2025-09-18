@@ -1,3 +1,4 @@
+#include "FlyManager.h"
 #include "services/drone_control/FlyManager/FlyManager.h"
 #include "services/drone_control/PSDKAdapter/PSDKAdapter.h"
 #include "utils/Logger/Logger.h"
@@ -30,30 +31,54 @@ namespace plane::services
 
 	void FlyManager::takeoff(const protocol::TakeoffPayload& takeoffParams) const noexcept
 	{
-		LOG_INFO("执行【起飞】...");
-		if (T_DjiReturnCode rc { PSDKAdapter::getInstance().takeoff(takeoffParams) }; rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		if (T_DjiReturnCode rc { plane::services::PSDKAdapter::getInstance().takeoff(takeoffParams) };
+			rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 		{
 			LOG_INFO("起飞指令已成功发送至飞机。");
-			// TODO: 更新内部状态为“正在起飞”，并通过 MQTT 上报
 		}
 		else
 		{
 			LOG_ERROR("起飞指令发送失败！");
-			// TODO: 通过 MQTT 上报错误
 		}
 	}
 
 	void FlyManager::goHome(void) const noexcept
 	{
-		LOG_INFO("执行【返航】");
-		PSDKAdapter::getInstance().goHome();
+		if (T_DjiReturnCode rc { plane::services::PSDKAdapter::getInstance().goHome() }; rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_INFO("返航指令已成功发送至飞机。");
+		}
+		else
+		{
+			LOG_ERROR("返航指令发送失败！");
+		}
 	}
 
 	void FlyManager::hover(void) const noexcept
 	{
-		LOG_INFO("执行【悬停】");
-		// TODO: 调用 PSDK 的悬停 API
+		if (T_DjiReturnCode rc { plane::services::PSDKAdapter::getInstance().hover() }; rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_INFO("悬停指令已成功发送至飞机。");
+		}
+		else
+		{
+			LOG_ERROR("悬停指令发送失败！");
+		}
 	}
+
+	void FlyManager::land(void) const noexcept
+	{
+		if (T_DjiReturnCode rc { plane::services::PSDKAdapter::getInstance().land() }; rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_INFO("降落指令已成功发送至飞机。");
+		}
+		else
+		{
+			LOG_ERROR("降落指令发送失败！");
+		}
+	}
+
+	void FlyManager::waypointFly(const std::string& kmzFilePath) const noexcept {}
 
 	void FlyManager::setControlStrategy(int strategyCode) const noexcept
 	{
@@ -91,7 +116,6 @@ namespace plane::services
 		// TODO: 调用 PSDK 的相机视频源切换 API
 	}
 
-	// --- 虚拟摇杆实现 ---
 	void FlyManager::sendRawStickData(int throttle, int yaw, int pitch, int roll) const noexcept
 	{
 		LOG_DEBUG("发送【虚拟摇杆数据】: T:{} Y:{} P:{} R:{}", throttle, yaw, pitch, roll);

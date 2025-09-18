@@ -25,25 +25,26 @@
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef TEST_FLIGHT_CONTROLLER_ENTRY_H
-#define TEST_FLIGHT_CONTROLLER_ENTRY_H
+	#define TEST_FLIGHT_CONTROLLER_ENTRY_H
 
-/* Includes ------------------------------------------------------------------*/
-#include <gimbal_manager/test_gimbal_manager.h>
+	/* Includes ------------------------------------------------------------------*/
+	#include <gimbal_manager/test_gimbal_manager.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+	#ifdef __cplusplus
+extern "C"
+{
+	#endif
 
-/* Exported constants --------------------------------------------------------*/
+	/* Exported constants --------------------------------------------------------*/
 
-/* Exported types ------------------------------------------------------------*/
+	/* Exported types ------------------------------------------------------------*/
 
-/* Exported functions --------------------------------------------------------*/
-void DjiUser_RunFlightControllerSample(void);
+	/* Exported functions --------------------------------------------------------*/
+	void DjiUser_RunFlightControllerSample(void);
 
-#ifdef __cplusplus
+	#ifdef __cplusplus
 }
-#endif
+	#endif
 
 #endif // TEST_FLIGHT_CONTROLLER_ENTRY_H
 /************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/

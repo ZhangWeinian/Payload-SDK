@@ -18,6 +18,8 @@ namespace plane::services
 		void							takeoff(const protocol::TakeoffPayload& takeoffParams) const noexcept;
 		void							goHome(void) const noexcept;
 		void							hover(void) const noexcept;
+		void							land(void) const noexcept;
+		void							waypointFly(const std::string& kmzFilePath) const noexcept;
 		void							setControlStrategy(int strategyCode) const noexcept;
 		void							flyCircleAroundPoint(const protocol::CircleFlyPayload& circleParams) const noexcept;
 

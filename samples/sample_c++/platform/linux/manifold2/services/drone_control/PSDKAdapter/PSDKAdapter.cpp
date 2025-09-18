@@ -24,6 +24,7 @@
 #include <perception/test_radar_entry.hpp>
 #include <positioning/test_positioning.h>
 #include <power_management/test_power_management.h>
+#include <waypoint_v3/test_waypoint_v3.h>
 
 namespace plane::services
 {
@@ -35,7 +36,7 @@ namespace plane::services
 
 	T_DjiReturnCode PSDKAdapter::takeoff(const protocol::TakeoffPayload& takeoffParams) const noexcept
 	{
-		T_DjiReturnCode returnCode = DjiFlightController_StartTakeoff();
+		T_DjiReturnCode returnCode { DjiFlightController_StartTakeoff() };
 		if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 		{
 			LOG_ERROR("PSDK API DjiFlightController_StartTakeoff() 调用失败，错误码: 0x{:08X}", returnCode);
@@ -45,15 +46,42 @@ namespace plane::services
 
 	T_DjiReturnCode PSDKAdapter::goHome(void) const noexcept
 	{
-		LOG_INFO("PSDK Adapter: 调用 DjiFlightController_StartGoHome()");
-		return DjiFlightController_StartGoHome();
+		T_DjiReturnCode returnCode { DjiFlightController_StartGoHome() };
+		if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_ERROR("PSDK API DjiFlightController_StartGoHome() 调用失败，错误码: 0x{:08X}", returnCode);
+		}
+		return returnCode;
 	}
 
 	T_DjiReturnCode PSDKAdapter::hover(void) const noexcept
 	{
-		LOG_INFO("PSDK Adapter: 调用 DjiFlightController_CancelTask()");
-		// 悬停通常是通过取消当前任务来实现的
-		return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+		T_DjiReturnCode returnCode { DjiTest_FlightControlRunSample(E_DJI_TEST_FLIGHT_CTRL_SAMPLE_SELECT_ARREST_FLYING) };
+		if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_ERROR("PSDK API DjiTest_FlightControlRunSample() 调用失败，错误码: 0x{:08X}", returnCode);
+		}
+		return returnCode;
+	}
+
+	T_DjiReturnCode PSDKAdapter::land(void) const noexcept
+	{
+		T_DjiReturnCode returnCode { DjiFlightController_StartLanding() };
+		if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_ERROR("PSDK API DjiFlightController_StartLanding() 调用失败，错误码: 0x{:08X}", returnCode);
+		}
+		return returnCode;
+	}
+
+	T_DjiReturnCode PSDKAdapter::waypointV3MissionStart(const std::string& kmzFilePath) const noexcept
+	{
+		T_DjiReturnCode returnCode { DjiTest_WaypointV3RunSampleWithKmzFilePath(kmzFilePath.c_str()) };
+		if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_ERROR("PSDK API DjiTest_WaypointV3RunSampleWithKmzFilePath() 调用失败，错误码: 0x{:08X}", returnCode);
+		}
+		return returnCode;
 	}
 
 	T_DjiReturnCode PSDKAdapter::setControlStrategy(int strategyCode) const noexcept

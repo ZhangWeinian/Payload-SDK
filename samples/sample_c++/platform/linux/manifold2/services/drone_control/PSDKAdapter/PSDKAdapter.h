@@ -20,6 +20,8 @@ namespace plane::services
 		_NODISCARD T_DjiReturnCode takeoff(const protocol::TakeoffPayload& takeoffParams) const noexcept;
 		_NODISCARD T_DjiReturnCode goHome(void) const noexcept;
 		_NODISCARD T_DjiReturnCode hover(void) const noexcept;
+		_NODISCARD T_DjiReturnCode land(void) const noexcept;
+		_NODISCARD T_DjiReturnCode waypointV3MissionStart(const std::string& kmzFilePath) const noexcept;
 		_NODISCARD T_DjiReturnCode setControlStrategy(int strategyCode) const noexcept;
 		_NODISCARD T_DjiReturnCode flyCircleAroundPoint(const protocol::CircleFlyPayload& circleParams) const noexcept;
 

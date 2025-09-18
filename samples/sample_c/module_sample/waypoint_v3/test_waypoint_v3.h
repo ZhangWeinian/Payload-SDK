@@ -42,6 +42,8 @@ extern "C"
 	/* Exported functions --------------------------------------------------------*/
 	T_DjiReturnCode DjiTest_WaypointV3RunSample(void);
 
+	T_DjiReturnCode DjiTest_WaypointV3RunSampleWithKmzFilePath(const char* kmzFilePath);
+
 	#ifdef __cplusplus
 }
 	#endif

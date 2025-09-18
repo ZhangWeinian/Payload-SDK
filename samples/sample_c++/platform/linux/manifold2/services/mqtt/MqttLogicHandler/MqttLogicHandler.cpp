@@ -1,4 +1,5 @@
 #include "protocol/JsonProtocol.h"
+#include "services/drone_control/FlyManager/FlyManager.h"
 #include "services/mqtt/MqttLogicHandler/MqttLogicHandler.h"
 #include "services/mqtt/MqttMessageHandler/MqttMessageHandler.h"
 #include "services/mqtt/MqttTopics.h"
@@ -37,46 +38,26 @@ namespace plane::services::MqttLogicHandler
 	void handleTakeoff(const n_json& payloadJson)
 	{
 		LOG_INFO("[MQTT] 收到【起飞】指令:");
-
-		auto payload { payloadJson.get<plane::protocol::TakeoffPayload>() };
-		if (payload.MBWD && payload.MBJD && payload.MBGD)
-		{
-			LOG_INFO("  -> 目标位置: Lat={}, Lon={}, Alt={}", *payload.MBWD, *payload.MBJD, *payload.MBGD);
-		}
-		else
-		{
-			LOG_INFO("  -> 未指定目标位置，将垂直起飞。");
-		}
-
-		LOG_INFO("  -> 返航模式: {}", payload.FHMS);
-
-		if (payload.FHGD)
-		{
-			LOG_INFO("  -> 返航高度: {} 米", *payload.FHGD);
-		}
-		if (payload.ZDMSD)
-		{
-			LOG_INFO("  -> 最大速度: {} m/s", *payload.ZDMSD);
-		}
-		if (payload.AQJC)
-		{
-			LOG_INFO("  -> 安全预检: {}", (*payload.AQJC == 1) ? "开启" : "关闭");
-		}
-
-		// TODO: 创建一个包含所有起飞参数的结构体或对象
-		// TODO: 调用 FlyManager::takeoff(takeoff_params);
+		const auto& payload { payloadJson.get<plane::protocol::TakeoffPayload>() };
+		plane::services::FlyManager::getInstance().takeoff(payload);
 	}
 
 	void handleGoHome(const n_json& payloadJson)
 	{
 		LOG_INFO("[MQTT] 收到【返航】指令");
-		// TODO: 调用 FlyManager 的 goHome();
+		plane::services::FlyManager::getInstance().goHome();
 	}
 
 	void handleHover(const n_json& payloadJson)
 	{
 		LOG_INFO("[MQTT] 收到【悬停】指令");
-		// TODO: 调用 FlyManager 的 hover();
+		plane::services::FlyManager::getInstance().hover();
+	}
+
+	void handleLand(const n_json& payloadJson)
+	{
+		LOG_INFO("[MQTT] 收到【降落】指令，准备执行...");
+		plane::services::FlyManager::getInstance().land();
 	}
 
 	void handleControlStrategySwitch(const n_json& payloadJson)
@@ -165,8 +146,9 @@ namespace plane::services::MqttLogicHandler
 		auto& msg_handler { MqttMessageHandler::getInstance() };
 		msg_handler.registerHandler(TOPIC_MISSION_CONTROL, "XFHXRW", handleWaypointMission);
 		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "QF", handleTakeoff);
-		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "JL", handleGoHome);
+		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "FH", handleGoHome);
 		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "XT", handleHover);
+		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "JL", handleLand);
 		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "YTJSCL", handleControlStrategySwitch);
 		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "ZNHR", handleCircleFly);
 		msg_handler.registerHandler(TOPIC_PAYLOAD_CONTROL, "YTKZ", handleGimbalControl);

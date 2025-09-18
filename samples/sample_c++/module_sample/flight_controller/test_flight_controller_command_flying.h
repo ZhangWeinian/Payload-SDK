@@ -25,24 +25,25 @@
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef TEST_FLIGHT_CONTROLLER_COMMAND_FLYING_H
-#define TEST_FLIGHT_CONTROLLER_COMMAND_FLYING_H
+	#define TEST_FLIGHT_CONTROLLER_COMMAND_FLYING_H
 
 /* Includes ------------------------------------------------------------------*/
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+	#ifdef __cplusplus
+extern "C"
+{
+	#endif
 
-/* Exported constants --------------------------------------------------------*/
+	/* Exported constants --------------------------------------------------------*/
 
-/* Exported types ------------------------------------------------------------*/
+	/* Exported types ------------------------------------------------------------*/
 
-/* Exported functions --------------------------------------------------------*/
-void DjiUser_RunFlightControllerCommandFlyingSample(void);
+	/* Exported functions --------------------------------------------------------*/
+	void DjiUser_RunFlightControllerCommandFlyingSample(void);
 
-#ifdef __cplusplus
+	#ifdef __cplusplus
 }
-#endif
+	#endif
 
 #endif // TEST_FLIGHT_CONTROLLER_COMMAND_FLYING_H
 /************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/
