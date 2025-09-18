@@ -15,7 +15,4 @@ namespace plane::services
 	constexpr inline const char* TOPIC_PAYLOAD_CONTROL	= "/wrgk/uav/payload_control";
 	constexpr inline const char* TOPIC_ROCKER_CONTROL	= "/wrgk/uav/rocker_control";
 	constexpr inline const char* TOPIC_VELOCITY_CONTROL = "/wrgk/uav/velocity_control";
-
-	// 下行测试
-	constexpr inline const char* TOPIC_TEST = "/wrgk/uav/test";
-} // namespace plane::services::mqtt
+} // namespace plane::services

@@ -26,7 +26,6 @@
 #include "services/mqtt/MqttLogicHandler/MqttLogicHandler.h"
 #include "services/mqtt/MqttMessageHandler/MqttMessageHandler.h"
 #include "services/mqtt/MqttService/MqttService.h"
-#include "services/mqtt/MqttTestHandler/MqttTestHandler.h"
 #include "services/mqtt/MqttTopics.h"
 #include "services/telemetry/TelemetryReporter.h"
 #include "utils/JsonConverter/JsonConverter.h"
@@ -164,7 +163,6 @@ void runMyApplication(int argc, char** argv)
 	LOG_INFO("MQTT 服务已启动。");
 
 	plane::services::initialize();
-	plane::services::MqttTestHandler::initialize();
 	LOG_INFO("业务逻辑处理器注册完毕。");
 
 	LOG_INFO("正在启动遥测上报服务...");

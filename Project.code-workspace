@@ -103,7 +103,8 @@
 			"cfenv": "cpp",
 			"coroutine": "cpp",
 			"ranges": "cpp",
-			"typeindex": "cpp"
+			"typeindex": "cpp",
+			"version": "cpp"
 		}
 	}
 }

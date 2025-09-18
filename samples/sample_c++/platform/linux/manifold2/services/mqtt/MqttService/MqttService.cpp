@@ -45,7 +45,6 @@ void onConnectSuccess(void* context, MQTTAsync_successData* response)
 	service->subscribe(plane::services::TOPIC_PAYLOAD_CONTROL);
 	service->subscribe(plane::services::TOPIC_ROCKER_CONTROL);
 	service->subscribe(plane::services::TOPIC_VELOCITY_CONTROL);
-	service->subscribe(plane::services::TOPIC_TEST);
 }
 
 void onConnectFailure(void* context, MQTTAsync_failureData* response)
