@@ -94,9 +94,9 @@ target_include_directories (${PROJECT_NAME} PRIVATE
 	"${PROJECT_ROOT_DIR}/samples/sample_c/module_sample"
 
 	"${EXTERNAL_LIBS_DIR}/install/include"
+	"${EXTERNAL_LIBS_DIR}/install/include/CLI11"
 	"${EXTERNAL_LIBS_DIR}/install/include/libusb-1.0"
 	"${EXTERNAL_LIBS_DIR}/install/include/range-v3"
-	"${EXTERNAL_LIBS_DIR}/install/include/CLI11"
 
 	${OPENSSL_INCLUDE_DIR}
 )

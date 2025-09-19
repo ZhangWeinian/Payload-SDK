@@ -1,5 +1,4 @@
 #include "services/drone_control/PSDKAdapter/PSDKAdapter.h"
-#include "utils/Logger/Logger.h"
 
 #include "camera_manager/test_camera_manager_entry.h"
 #include "data_transmission/test_data_transmission.h"
@@ -25,6 +24,8 @@
 #include <positioning/test_positioning.h>
 #include <power_management/test_power_management.h>
 #include <waypoint_v3/test_waypoint_v3.h>
+
+#include "utils/Logger/Logger.h"
 
 namespace plane::services
 {

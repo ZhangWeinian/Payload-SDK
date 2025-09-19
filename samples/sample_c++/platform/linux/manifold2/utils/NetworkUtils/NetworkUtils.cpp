@@ -1,5 +1,6 @@
-#include "utils/Logger/Logger.h"
 #include "utils/NetworkUtils/NetworkUtils.h"
+
+#include "utils/Logger/Logger.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>

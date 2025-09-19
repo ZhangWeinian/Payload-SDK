@@ -1,7 +1,8 @@
+#include "utils/JsonConverter/JsonToDataClassConverter.h"
+
 #include "config/ConfigManager.h"
 #include "protocol/JsonProtocol.h"
 #include "services/mqtt/MqttHandler/MqttMessageHandler.h"
-#include "utils/JsonConverter/JsonToDataClassConverter.h"
 #include "utils/Logger/Logger.h"
 
 #include <chrono>

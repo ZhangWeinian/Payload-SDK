@@ -1,5 +1,8 @@
 #include "utils/JsonConverter/JsonToKmzConverter.h"
+
 #include "utils/Logger/Logger.h"
+
+#include "zip.h"
 
 #include <chrono>
 #include <cmath>
@@ -7,8 +10,6 @@
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
-
-#include <zip.h>
 
 #ifndef M_PI
 	#define M_PI 3.14159265358979323846

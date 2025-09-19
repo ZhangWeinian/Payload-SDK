@@ -1,4 +1,5 @@
-#include "utils/Logger/dji_logger_adapter.h"
+#include "utils/Logger/DjiLoggerAdapter.h"
+
 #include <string>
 
 T_DjiReturnCode DjiLoggerAdapter_ConsoleFunc(const uint8_t* data, uint16_t dataLen)

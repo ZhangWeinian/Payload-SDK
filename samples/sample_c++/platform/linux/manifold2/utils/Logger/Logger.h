@@ -1,6 +1,7 @@
 #pragma once
 
 #include "spdlog/spdlog.h"
+
 #include <memory>
 
 // __FILE__ 是文件名, __LINE__ 是行号, __FUNCTION__ 是函数名
