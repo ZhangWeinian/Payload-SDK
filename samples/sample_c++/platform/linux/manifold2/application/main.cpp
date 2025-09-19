@@ -32,7 +32,7 @@
 #include "utils/Logger/Logger.h"
 #include "utils/NetworkUtils/NetworkUtils.h"
 
-#include "CLI11/CLI/CLI.hpp"
+#include "CLI/CLI.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -150,7 +150,7 @@ void runMyApplication(int argc, char** argv)
 	LOG_INFO("                      应用程序启动中");
 	LOG_INFO("==========================================================");
 
-	plane::utils::Logger::getInstance().init();
+	plane::utils::Logger::getInstance().init(spdlog::level::trace);
 
 	if (!plane::config::ConfigManager::getInstance().load("config.yml"))
 	{

@@ -12,26 +12,35 @@ namespace plane::services::MqttLogicHandler
 
 	void handleWaypointMission(const n_json& payloadJson)
 	{
-		auto payload { payloadJson.get<plane::protocol::WaypointPayload>() };
-		if (payload.HDJ.empty())
+		try
 		{
-			LOG_WARN("[MQTT] 收到的航点任务中不包含任何航点。");
-			return;
+			auto payload { payloadJson.get<plane::protocol::WaypointPayload>() };
+			if (payload.HDJ.empty())
+			{
+				LOG_WARN("[MQTT] 收到的航点任务 (RWID: {}) 中不包含任何航点。", payload.RWID.value_or("N/A"));
+				return;
+			}
+
+			if (payload.HDJ.size() == 1)
+			{
+				LOG_INFO("[MQTT] 收到并准备执行【单航点任务】");
+				plane::services::FlyManager::getInstance().flyToPoint(payload.HDJ[0]);
+				return;
+			}
+			else
+			{
+				LOG_INFO("[MQTT] 收到并准备执行【航线任务】，共 {} 个航点", payload.HDJ.size());
+				if (!plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload))
+				{
+					LOG_ERROR("生成 KMZ 文件失败！任务中止。");
+					return;
+				}
+				plane::services::FlyManager::getInstance().waypointFly(plane::utils::JsonToKmzConverter::getKmzFilePath());
+			}
 		}
-		else if (payload.HDJ.size() == 1)
+		catch (const n_json::exception& e)
 		{
-			LOG_INFO("[MQTT] 收到并准备执行【单航点任务】");
-			// TODO: 调用 FlyManager 的 flyToPoint(payload.HDJ[0]);
-		}
-		else
-		{
-			LOG_INFO("[MQTT] 收到并准备执行【航线任务】");
-			// TODO: 判断是否需要航线优化 (SettingsManager.isWaypointOptimizationEnabled)
-			// TODO: 如果需要，调用 FlyManager 的 optimizeWaypoints(payload.HDJ)
-			// TODO: 调用 FlyManager 的 waypointFly(...);
-			std::string missionId { payload.RWID.value_or("unknown_mission") };
-			std::string kmz_path = "/tmp/" + missionId + ".kmz";
-			bool		success	 = plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload);
+			LOG_ERROR("解析航点任务 (XFHXRW) 失败: {}", e.what());
 		}
 	}
 

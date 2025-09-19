@@ -12,5 +12,8 @@ namespace plane::utils
 
 		NetworkUtils(void) noexcept	 = delete;
 		~NetworkUtils(void) noexcept = delete;
+
+	private:
+		static std::optional<std::string> getDeviceIpv4AddressImpl(void) noexcept;
 	};
 } // namespace plane::utils

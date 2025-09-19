@@ -16,25 +16,24 @@ struct plane::services::MQTTService::Impl
 	MQTTAsync	client { nullptr };
 	std::string serverURI {};
 	std::string clientId {};
-
-	~Impl() = default;
+	~Impl(void) noexcept = default;
 };
 
-static void onSubscribeSuccess(void* context, MQTTAsync_successData* response)
+static void onSubscribeSuccess(void* context, MQTTAsync_successData* response) noexcept
 {
 	std::string* topic { static_cast<std::string*>(context) };
 	LOG_INFO("成功订阅主题: '{}'", *topic);
 	delete topic;
 }
 
-static void onSubscribeFailure(void* context, MQTTAsync_failureData* response)
+static void onSubscribeFailure(void* context, MQTTAsync_failureData* response) noexcept
 {
 	std::string* topic { static_cast<std::string*>(context) };
 	LOG_ERROR("订阅主题 '{}' 失败，错误码: {}", *topic, response ? response->code : -1);
 	delete topic;
 }
 
-void onConnectSuccess(void* context, MQTTAsync_successData* response)
+void onConnectSuccess(void* context, MQTTAsync_successData* response) noexcept
 {
 	plane::services::MQTTService* service { static_cast<plane::services::MQTTService*>(context) };
 	service->setConnected(true);
@@ -47,24 +46,24 @@ void onConnectSuccess(void* context, MQTTAsync_successData* response)
 	service->subscribe(plane::services::TOPIC_VELOCITY_CONTROL);
 }
 
-void onConnectFailure(void* context, MQTTAsync_failureData* response)
+void onConnectFailure(void* context, MQTTAsync_failureData* response) noexcept
 {
 	plane::services::MQTTService* service { static_cast<plane::services::MQTTService*>(context) };
 	service->setConnected(false);
 	LOG_ERROR("MQTT 连接失败，错误码: {}, 消息: {}", response ? response->code : -1, response ? response->message : "未知错误");
 }
 
-static int messageArrived(void* context, char* topicName, int topicLen, MQTTAsync_message* message)
+static int messageArrived(void* context, char* topicName, int topicLen, MQTTAsync_message* message) noexcept
 {
 	std::string topic(topicName, topicLen > 0 ? topicLen : strlen(topicName));
 	std::string rawPayload(static_cast<char*>(message->payload), message->payloadlen);
-	plane::services::MqttMessageHandler::getInstance().routeMessage(topic, rawPayload);
+	plane::utils::JsonConverter::parseAndRouteMessage(topic, rawPayload);
 	MQTTAsync_freeMessage(&message);
 	MQTTAsync_free(topicName);
 	return 1;
 }
 
-void connectionLost(void* context, char* cause)
+void connectionLost(void* context, char* cause) noexcept
 {
 	plane::services::MQTTService* service { static_cast<plane::services::MQTTService*>(context) };
 	service->setConnected(false);
@@ -76,7 +75,7 @@ static void deliveryComplete(void* context, MQTTAsync_token token)
 	LOG_DEBUG("MQTT 消息发送完成，令牌: {}", token);
 }
 
-plane::services::MQTTService::MQTTService(): impl_(new Impl())
+plane::services::MQTTService::MQTTService(void): impl_(new Impl())
 {
 	impl_->serverURI = config::ConfigManager::getInstance().getMqttUrl();
 	impl_->clientId	 = config::ConfigManager::getInstance().getMqttClientId();
@@ -118,14 +117,14 @@ plane::services::MQTTService::MQTTService(): impl_(new Impl())
 	}
 }
 
-plane::services::MQTTService::~MQTTService()
+plane::services::MQTTService::~MQTTService(void) noexcept
 {
 	shutdown();
 }
 
 plane::services::MQTTService& plane::services::MQTTService::getInstance(void) noexcept
 {
-	static MQTTService instance;
+	static MQTTService instance {};
 	return instance;
 }
 

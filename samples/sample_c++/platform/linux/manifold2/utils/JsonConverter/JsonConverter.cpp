@@ -1,8 +1,8 @@
 #include "config/ConfigManager.h"
 #include "protocol/JsonProtocol.h"
+#include "services/mqtt/MqttMessageHandler/MqttMessageHandler.h"
 #include "utils/JsonConverter/JsonConverter.h"
-
-#include <dji_logger.h>
+#include "utils/Logger/Logger.h"
 
 #include <chrono>
 #include <iomanip>
@@ -30,7 +30,7 @@ namespace plane::utils
 	std::string JsonConverter::buildStatusReportJson(const protocol::StatusPayload& payload) noexcept
 	{
 		auto											  now { getCurrentTimestampMs() };
-		std::string										  plane_code { plane::config::ConfigManager::getInstance().getMqttClientId() };
+		std::string										  plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
 		protocol::NetworkMessage<protocol::StatusPayload> msg { .ZBID = plane_code,
 																.XXID = "SBZT-" + plane_code + "-" + std::to_string(now),
 																.XXLX = "SBZT",
@@ -50,7 +50,7 @@ namespace plane::utils
 	std::string JsonConverter::buildMissionInfoJson(const protocol::MissionInfoPayload& payload) noexcept
 	{
 		auto												   now { getCurrentTimestampMs() };
-		std::string											   plane_code { plane::config::ConfigManager::getInstance().getMqttClientId() };
+		std::string											   plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
 		protocol::NetworkMessage<protocol::MissionInfoPayload> msg { .ZBID = plane_code,
 																	 .XXID = "GDXX-" + plane_code + "-" + std::to_string(now),
 																	 .XXLX = "GDXX",
@@ -87,5 +87,41 @@ namespace plane::utils
 		jValue["SBSJ"] = msg.SBSJ;
 		jValue["XXXX"] = msg.XXXX;
 		return jValue.dump();
+	}
+
+	void JsonConverter::parseAndRouteMessage(const std::string& topic, const std::string& jsonString) noexcept
+	{
+		try
+		{
+			LOG_INFO("收到 MQTT 消息，主题: '{}', 内容: {}", topic, jsonString);
+			n_json j { n_json::parse(jsonString) };
+			if (j.contains("ZBID"))
+			{
+				std::string targetPlaneCode { j.at("ZBID").get<std::string>() };
+				std::string localPlaneCode { config::ConfigManager::getInstance().getPlaneCode() };
+				if (targetPlaneCode != localPlaneCode)
+				{
+					LOG_DEBUG("收到发往其他设备 ({}) 的消息，本机 ({}) 已忽略。", targetPlaneCode, localPlaneCode);
+					return;
+				}
+			}
+			else
+			{
+				LOG_WARN("收到的消息缺少 ZBID 字段，无法验证目标设备。");
+				return;
+			}
+
+			std::string messageType { j.at("XXLX").get<std::string>() };
+			n_json		payloadJson { j.at("XXXX") };
+			plane::services::MqttMessageHandler::getInstance().routeMessage(topic, messageType, payloadJson);
+		}
+		catch (const n_json::exception& e)
+		{
+			LOG_ERROR("处理 MQTT 消息时发生 JSON 错误 (主题: '{}'): {}", topic, e.what());
+		}
+		catch (const std::exception& e)
+		{
+			LOG_ERROR("处理 MQTT 消息时发生未知异常 (主题: '{}'): {}", topic, e.what());
+		}
 	}
 } // namespace plane::utils

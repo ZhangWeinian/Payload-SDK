@@ -7,9 +7,9 @@
 #include <mutex>
 #include <string>
 
-void onConnectSuccess(void* context, MQTTAsync_successData* response);
-void onConnectFailure(void* context, MQTTAsync_failureData* response);
-void connectionLost(void* context, char* cause);
+void onConnectSuccess(void* context, MQTTAsync_successData* response) noexcept;
+void onConnectFailure(void* context, MQTTAsync_failureData* response) noexcept;
+void connectionLost(void* context, char* cause) noexcept;
 
 namespace plane::services
 {
@@ -25,16 +25,17 @@ namespace plane::services
 
 	private:
 		struct Impl;
-		std::unique_ptr<Impl> impl_;
-		std::atomic<bool>	  connected_ = { false };
 
-		friend void ::onConnectSuccess(void* context, MQTTAsync_successData* response);
-		friend void ::onConnectFailure(void* context, MQTTAsync_failureData* response);
-		friend void ::connectionLost(void* context, char* cause);
+		std::unique_ptr<Impl> impl_ {};
+		std::atomic<bool>	  connected_ { false };
+
+		friend void ::onConnectSuccess(void* context, MQTTAsync_successData* response) noexcept;
+		friend void ::onConnectFailure(void* context, MQTTAsync_failureData* response) noexcept;
+		friend void ::connectionLost(void* context, char* cause) noexcept;
 
 		MQTTService(void);
-		~MQTTService(void);
-		MQTTService(const MQTTService&)			   = delete;
-		MQTTService& operator=(const MQTTService&) = delete;
+		~MQTTService(void) noexcept;
+		MQTTService(const MQTTService&) noexcept			= delete;
+		MQTTService& operator=(const MQTTService&) noexcept = delete;
 	};
-} // namespace plane::services::mqtt
+} // namespace plane::services

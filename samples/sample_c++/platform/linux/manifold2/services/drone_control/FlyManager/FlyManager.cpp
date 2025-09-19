@@ -7,7 +7,7 @@ namespace plane::services
 {
 	FlyManager& FlyManager::getInstance(void) noexcept
 	{
-		static FlyManager instance;
+		static FlyManager instance {};
 		return instance;
 	}
 
@@ -17,16 +17,17 @@ namespace plane::services
 		// TODO: 调用 PSDK 的单点飞行 API
 	}
 
-	void FlyManager::waypointFly(const std::vector<protocol::Waypoint>& waypoints) const noexcept
+	void FlyManager::waypointFly(const std::string& kmzFilePath) const noexcept
 	{
-		LOG_INFO("执行【航线飞行】, 共 {} 个航点", waypoints.size());
-		// TODO: 将 waypoints 转换为 PSDK 的航线格式
-		// TODO: 调用 PSDK 的航线上传和启动 API
-	}
-
-	std::vector<protocol::Waypoint> FlyManager::optimizeWaypoints(const std::vector<protocol::Waypoint>& waypoints) const noexcept
-	{
-		return std::vector<protocol::Waypoint>();
+		if (T_DjiReturnCode rc { plane::services::PSDKAdapter::getInstance().waypointV3MissionStart(kmzFilePath) };
+			rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_INFO("KMZ 航线任务已成功启动。");
+		}
+		else
+		{
+			LOG_ERROR("启动 KMZ 航线任务失败！PSDK 返回错误码: 0x{:08X}", rc);
+		}
 	}
 
 	void FlyManager::takeoff(const protocol::TakeoffPayload& takeoffParams) const noexcept
@@ -77,8 +78,6 @@ namespace plane::services
 			LOG_ERROR("降落指令发送失败！");
 		}
 	}
-
-	void FlyManager::waypointFly(const std::string& kmzFilePath) const noexcept {}
 
 	void FlyManager::setControlStrategy(int strategyCode) const noexcept
 	{

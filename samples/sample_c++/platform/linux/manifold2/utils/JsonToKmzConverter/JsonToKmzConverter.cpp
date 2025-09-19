@@ -44,6 +44,7 @@ namespace plane::utils
 					g_kmzStorageDir = "";
 				}
 			}
+
 			return g_kmzStorageDir;
 		}
 
@@ -283,7 +284,6 @@ namespace plane::utils
 			auto			   now { std::chrono::system_clock::now() };
 			auto			   time_t_now { std::chrono::system_clock::to_time_t(now) };
 			std::tm			   tm_now { *std::localtime(&time_t_now) };
-
 			std::ostringstream kml {};
 			kml << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
 			kml << "<kml xmlns=\"http://www.opengis.net/kml/2.2\" xmlns:wpml=\"http://www.dji.com/wpmz/1.0.6\">\n";
@@ -293,7 +293,6 @@ namespace plane::utils
 			kml << "    <wpml:updateTime>" << std::put_time(&tm_now, "%Y-%m-%d %H:%M:%S") << "</wpml:updateTime>\n";
 			kml << "  </Document>\n";
 			kml << "</kml>\n";
-
 			return kml.str();
 		}
 	} // namespace
@@ -301,32 +300,31 @@ namespace plane::utils
 	bool JsonToKmzConverter::convertWaypointsToKmz(const std::vector<protocol::Waypoint>& waypoints,
 												   const protocol::WaypointPayload&		  missionInfo) noexcept
 	{
-		g_latestKmzFilePath		   = "";
+		g_latestKmzFilePath = "";
 
-		const fs::path& storageDir = getKmzStorageDir();
+		const fs::path& storageDir { getKmzStorageDir() };
 		if (waypoints.empty() || storageDir.empty())
 		{
 			LOG_ERROR("无法生成 KMZ：航点列表为空或存储目录无效。");
 			return false;
 		}
 
-		std::string		  missionId	 = missionInfo.RWID.value_or("mission_unknown");
-		auto			  now		 = std::chrono::system_clock::now();
-		auto			  time_t_now = std::chrono::system_clock::to_time_t(now);
-		std::tm			  tm_now	 = *std::localtime(&time_t_now);
-		std::stringstream time_ss;
+		std::string		  missionId { missionInfo.RWID.value_or("mission_unknown") };
+		auto			  now { std::chrono::system_clock::now() };
+		auto			  time_t_now { std::chrono::system_clock::to_time_t(now) };
+		std::tm			  tm_now { *std::localtime(&time_t_now) };
+		std::stringstream time_ss {};
 		time_ss << std::put_time(&tm_now, "%Y%m%d_%H%M%S");
-		std::string filename	= fmt::format("{}_{}.kmz", missionId, time_ss.str());
-
-		fs::path	kmzFilePath = storageDir / filename;
+		std::string filename { fmt::format("{}_{}.kmz", missionId, time_ss.str()) };
+		fs::path	kmzFilePath { storageDir / filename };
 
 		LOG_INFO("开始生成 KMZ 文件，任务 ID: {}, 路径: {}", missionId, kmzFilePath.string());
 
-		std::string waylinesKml = generateWaylinesKml(waypoints);
-		std::string templateKml = generateTemplateKml();
+		std::string waylinesKml { generateWaylinesKml(waypoints) };
+		std::string templateKml { generateTemplateKml() };
 
-		int			error		= 0;
-		zip_t*		archive		= zip_open(kmzFilePath.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &error);
+		int			error { 0 };
+		zip_t*		archive { zip_open(kmzFilePath.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &error) };
 		if (!archive)
 		{
 			zip_error_t ziperror;
@@ -336,10 +334,10 @@ namespace plane::utils
 			return false;
 		}
 
-		zip_source_t* waylines_source = zip_source_buffer(archive, waylinesKml.c_str(), waylinesKml.length(), 0);
+		zip_source_t* waylines_source { zip_source_buffer(archive, waylinesKml.c_str(), waylinesKml.length(), 0) };
 		if (!waylines_source)
 		{
-			/* 错误处理 */
+			LOG_ERROR("");
 		}
 		if (zip_file_add(archive, "waylines.wpml", waylines_source, ZIP_FL_ENC_UTF_8) < 0)
 		{
@@ -349,10 +347,10 @@ namespace plane::utils
 			return false;
 		}
 
-		zip_source_t* template_source = zip_source_buffer(archive, templateKml.c_str(), templateKml.length(), 0);
+		zip_source_t* template_source { zip_source_buffer(archive, templateKml.c_str(), templateKml.length(), 0) };
 		if (!template_source)
 		{
-			/* 错误处理 */
+			LOG_ERROR("");
 		}
 		if (zip_file_add(archive, "template.kml", template_source, ZIP_FL_ENC_UTF_8) < 0)
 		{

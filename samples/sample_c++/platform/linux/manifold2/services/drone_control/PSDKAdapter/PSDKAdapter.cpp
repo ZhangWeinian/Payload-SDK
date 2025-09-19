@@ -30,7 +30,7 @@ namespace plane::services
 {
 	PSDKAdapter& PSDKAdapter::getInstance(void) noexcept
 	{
-		static PSDKAdapter instance;
+		static PSDKAdapter instance {};
 		return instance;
 	}
 

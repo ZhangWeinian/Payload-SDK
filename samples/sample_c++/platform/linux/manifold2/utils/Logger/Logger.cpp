@@ -5,13 +5,13 @@
 
 namespace plane::utils
 {
-	Logger& Logger::getInstance()
+	Logger& Logger::getInstance(void) noexcept
 	{
-		static Logger instance;
+		static Logger instance {};
 		return instance;
 	}
 
-	void Logger::init(spdlog::level::level_enum console_level)
+	void Logger::init(spdlog::level::level_enum console_level) noexcept
 	{
 		if (logger_)
 		{
