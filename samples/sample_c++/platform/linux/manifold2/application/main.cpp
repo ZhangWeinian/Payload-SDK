@@ -1,36 +1,15 @@
+// #define OPERATING_STANDARD_PROCEDURES
+
 #include "application.hpp"
 
-#include "camera_manager/test_camera_manager_entry.h"
-#include "data_transmission/test_data_transmission.h"
-#include "fc_subscription/test_fc_subscription.h"
-#include "widget/test_widget.h"
-#include "widget/test_widget_speaker.h"
-
-#include <camera_emu/test_payload_cam_emu_base.h>
-#include <camera_emu/test_payload_cam_emu_media.h>
-#include <dji_logger.h>
-#include <flight_control/test_flight_control.h>
-#include <flight_controller/test_flight_controller_entry.h>
-#include <gimbal/test_gimbal_entry.hpp>
-#include <gimbal_emu/test_payload_gimbal_emu.h>
-#include <hms_manager/hms_manager_entry.h>
-#include <liveview/test_liveview_entry.hpp>
-#include <perception/test_lidar_entry.hpp>
-#include <perception/test_perception_entry.hpp>
-#include <perception/test_radar_entry.hpp>
-#include <positioning/test_positioning.h>
-#include <power_management/test_power_management.h>
+#include <dji_flight_controller.h>
 
 #include "config/ConfigManager.h"
-#include "protocol/JsonProtocol.h"
-#include "services/mqtt/MqttLogicHandler/MqttLogicHandler.h"
-#include "services/mqtt/MqttMessageHandler/MqttMessageHandler.h"
+#include "dji_demo.h"
+#include "services/mqtt/MqttHandler/MqttLogicHandler.h"
 #include "services/mqtt/MqttService/MqttService.h"
-#include "services/mqtt/MqttTopics.h"
 #include "services/telemetry/TelemetryReporter.h"
-#include "utils/JsonConverter/JsonConverter.h"
 #include "utils/Logger/Logger.h"
-#include "utils/NetworkUtils/NetworkUtils.h"
 
 #include "CLI/CLI.hpp"
 
@@ -40,8 +19,6 @@
 #include <iostream>
 #include <thread>
 
-#define RUN_STANDALONE_MQTT_APP
-
 std::atomic<bool> g_should_exit(false);
 
 void			  signalHandler(int signum)
@@ -50,107 +27,27 @@ void			  signalHandler(int signum)
 	g_should_exit = true;
 }
 
-void runDJIApplication(int argc, char** argv)
-{
-	char						   inputChar {};
-	T_DjiOsalHandler*			   osalHandler = DjiPlatform_GetOsalHandler();
-	T_DjiReturnCode				   returnCode {};
-	T_DjiTestApplyHighPowerHandler applyHighPowerHandler {};
-
-start:
-	std::cout << "\n"
-			  << "| 可用命令:\n"
-			  << "| [0] 飞控数据订阅示例 - 订阅四元数和 GPS 数据\n"
-			  << "| [1] 飞行控制器示例 - 通过 PSDK 控制飞行\n"
-			  << "| [2] 健康管理系统信息示例 - 按语言获取健康管理系统信息\n"
-			  << "| [a] 云台管理器示例 - 通过 PSDK 控制云台\n"
-			  << "| [c] 相机码流查看示例 - 显示相机视频流\n"
-			  << "| [d] 双目视觉查看示例 - 显示双目图像\n"
-			  << "| [e] 运行相机管理器示例 - 交互式地测试相机功能\n"
-			  << "| [f] 启动 RTK 定位示例 - 当 RTK 信号正常时，接收 RTK RTCM 数据\n"
-			  << "| [g] 请求激光雷达数据示例 - 请求激光雷达数据并将点云数据存储为 pcd 文件\n"
-			  << "| [h] 请求毫米波雷达数据示例 - 请求毫米波雷达数据\n"
-			  << std::endl;
-
-	std::cin >> inputChar;
-	switch (inputChar)
-	{
-		case '0':
-		{
-			DjiTest_FcSubscriptionRunSample();
-			break;
-		}
-		case '1':
-		{
-			DjiUser_RunFlightControllerSample();
-			break;
-		}
-		case '2':
-		{
-			DjiUser_RunHmsManagerSample();
-			break;
-		}
-		case 'a':
-		{
-			DjiUser_RunGimbalManagerSample();
-			break;
-		}
-		case 'c':
-		{
-			DjiUser_RunCameraStreamViewSample();
-			break;
-		}
-		case 'd':
-		{
-			DjiUser_RunStereoVisionViewSample();
-			break;
-		}
-		case 'e':
-		{
-			DjiUser_RunCameraManagerSample();
-			break;
-		}
-		case 'f':
-		{
-			returnCode = DjiTest_PositioningStartService();
-			if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-			{
-				USER_LOG_ERROR("RTK 定位样本初始化错误");
-			}
-			else
-			{
-				USER_LOG_INFO("成功启动 RTK 定位样本");
-			}
-			break;
-		}
-		case 'g':
-		{
-			DjiUser_RunLidarDataSubscriptionSample();
-			break;
-		}
-		case 'h':
-		{
-			DjiUser_RunRadarDataSubscriptionSample();
-			break;
-		}
-		default:
-		{
-			break;
-		}
-	}
-
-	osalHandler->TaskSleepMs(2000);
-
-	goto start;
-}
-
 void runMyApplication(int argc, char** argv)
 {
 	LOG_INFO("==========================================================");
-	LOG_INFO("                      应用程序启动中");
+	LOG_INFO("                          应用程序启动中");
 	LOG_INFO("==========================================================");
 
-	plane::utils::Logger::getInstance().init(spdlog::level::trace);
+#ifdef OPERATING_STANDARD_PROCEDURES
+	Application application(argc, argv);
+
+	if (T_DjiReturnCode returnCode { DjiFlightController_SetRCLostActionEnableStatus(DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
+		returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+	{
+		LOG_WARN("禁用 RC 丢失动作失败，无法支持无遥控器飞行，错误码: 0x{:08X}", returnCode);
+	}
+	else
+	{
+		LOG_INFO("禁用 RC 成功");
+	}
+#else
+	LOG_WARN("未启用标准作业流程，无法支持无遥控器飞行");
+#endif
 
 	if (!plane::config::ConfigManager::getInstance().load("config.yml"))
 	{
@@ -168,6 +65,7 @@ void runMyApplication(int argc, char** argv)
 	LOG_INFO("正在启动遥测上报服务...");
 	plane::services::TelemetryReporter::getInstance().start();
 
+	std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 	LOG_INFO("==========================================================");
 	LOG_INFO("               应用程序初始化完成，正在运行中...");
 	LOG_INFO("                    按 Ctrl+C 退出。");
@@ -186,6 +84,8 @@ void runMyApplication(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
+	plane::utils::Logger::getInstance().init(spdlog::level::info);
+
 	signal(SIGINT, signalHandler);
 	signal(SIGTERM, signalHandler);
 
@@ -199,8 +99,7 @@ int main(int argc, char** argv)
 
 	if (runDjiInteractiveMode)
 	{
-		Application application(argc, argv);
-		runDJIApplication(argc, argv);
+		plane::dji_demo::runDjiApplication(argc, argv);
 	}
 	else
 	{

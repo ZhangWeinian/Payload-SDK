@@ -1,9 +1,9 @@
 #include "protocol/JsonProtocol.h"
 #include "services/drone_control/FlyManager/FlyManager.h"
-#include "services/mqtt/MqttLogicHandler/MqttLogicHandler.h"
-#include "services/mqtt/MqttMessageHandler/MqttMessageHandler.h"
+#include "services/mqtt/MqttHandler/MqttLogicHandler.h"
+#include "services/mqtt/MqttHandler/MqttMessageHandler.h"
 #include "services/mqtt/MqttTopics.h"
-#include "utils/JsonToKmzConverter/JsonToKmzConverter.h"
+#include "utils/JsonConverter/JsonToKmzConverter.h"
 #include "utils/Logger/Logger.h"
 
 namespace plane::services::MqttLogicHandler

@@ -1,8 +1,8 @@
 #include "config/ConfigManager.h"
-#include "services/mqtt/MqttMessageHandler/MqttMessageHandler.h"
+#include "services/mqtt/MqttHandler/MqttMessageHandler.h"
 #include "services/mqtt/MqttService/MqttService.h"
 #include "services/mqtt/MqttTopics.h"
-#include "utils/JsonConverter/JsonConverter.h"
+#include "utils/JsonConverter/JsonToDataClassConverter.h"
 #include "utils/Logger/Logger.h"
 
 #include "fmt/format.h"
