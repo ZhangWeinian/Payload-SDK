@@ -4,6 +4,7 @@
 #include "services/mqtt/Handler/MessageHandler.h"
 #include "utils/Logger/Logger.h"
 
+#include "BuildAndParse.h"
 #include <chrono>
 #include <iomanip>
 #include <sstream>
@@ -93,8 +94,8 @@ namespace plane::utils
 	{
 		try
 		{
-			LOG_INFO("收到 MQTT 消息，主题: '{}', 内容: {}", topic, jsonString);
-			n_json j { n_json::parse(jsonString) };
+			n_json j = n_json::parse(jsonString);
+
 			if (j.contains("ZBID"))
 			{
 				std::string targetPlaneCode { j.at("ZBID").get<std::string>() };
@@ -112,16 +113,16 @@ namespace plane::utils
 			}
 
 			std::string messageType { j.at("XXLX").get<std::string>() };
-			n_json		payloadJson { j.at("XXXX") };
+			n_json		payloadJson = j.at("XXXX");
 			plane::services::MqttMessageHandler::getInstance().routeMessage(topic, messageType, payloadJson);
 		}
 		catch (const n_json::exception& e)
 		{
-			LOG_ERROR("处理 MQTT 消息时发生 JSON 错误 (主题: '{}'): {}", topic, e.what());
+			LOG_ERROR("处理 MQTT 消息时发生 JSON 错误 (主题: '{}'): {}. Raw JSON string:\n{}", topic, e.what(), jsonString);
 		}
 		catch (const std::exception& e)
 		{
-			LOG_ERROR("处理 MQTT 消息时发生未知异常 (主题: '{}'): {}", topic, e.what());
+			LOG_ERROR("处理 MQTT 消息时发生未知异常 (主题: '{}'): {}. Raw JSON string:\n{}", topic, e.what(), jsonString);
 		}
 	}
 } // namespace plane::utils

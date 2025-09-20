@@ -7,15 +7,43 @@
 #include "utils/JsonConverter/JsonToKmz.h"
 #include "utils/Logger/Logger.h"
 
-namespace plane::services::MqttLogicHandler
+namespace plane::services
 {
 	using n_json = ::nlohmann::json;
 
-	void handleWaypointMission(const n_json& payloadJson)
+	bool LogicHandler::init(void) noexcept
 	{
 		try
 		{
-			auto payload { payloadJson.get<plane::protocol::WaypointPayload>() };
+			LOG_DEBUG("正在初始化 MQTT 业务逻辑处理器...");
+			auto& msg_handler { MqttMessageHandler::getInstance() };
+			msg_handler.registerHandler(plane::services::TOPIC_MISSION_CONTROL, "XFHXRW", &LogicHandler::handleWaypointMission);
+			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "QF", &LogicHandler::handleTakeoff);
+			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "FH", &LogicHandler::handleGoHome);
+			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "XT", &LogicHandler::handleHover);
+			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "JL", &LogicHandler::handleLand);
+			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "YTJSCL", &LogicHandler::handleControlStrategySwitch);
+			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "ZNHR", &LogicHandler::handleCircleFly);
+			msg_handler.registerHandler(plane::services::TOPIC_PAYLOAD_CONTROL, "YTKZ", &LogicHandler::handleGimbalControl);
+			msg_handler.registerHandler(plane::services::TOPIC_PAYLOAD_CONTROL, "BJKZ", &LogicHandler::handleCameraControl);
+			msg_handler.registerHandler(plane::services::TOPIC_ROCKER_CONTROL, "YGFXZL", &LogicHandler::handleStickData);
+			msg_handler.registerHandler(plane::services::TOPIC_ROCKER_CONTROL, "YGMSQH", &LogicHandler::handleStickModeSwitch);
+			msg_handler.registerHandler(plane::services::TOPIC_VELOCITY_CONTROL, "SDKZ", &LogicHandler::handleNedVelocity);
+		}
+		catch (const std::exception& e)
+		{
+			LOG_ERROR("初始化 MQTT 业务逻辑处理器时发生异常: {}", e.what());
+			return false;
+		}
+
+		return true;
+	}
+
+	void LogicHandler::handleWaypointMission(const n_json& payloadJson)
+	{
+		try
+		{
+			auto payload = payloadJson.get<plane::protocol::WaypointPayload>();
 			if (payload.HDJ.empty())
 			{
 				LOG_WARN("[MQTT] 收到的航点任务 (RWID: {}) 中不包含任何航点。", payload.RWID.value_or("N/A"));
@@ -41,36 +69,36 @@ namespace plane::services::MqttLogicHandler
 		}
 		catch (const n_json::exception& e)
 		{
-			LOG_ERROR("解析航点任务 (XFHXRW) 失败: {}", e.what());
+			LOG_ERROR("解析航点任务失败: {}, payloadJson:\n{}", e.what(), payloadJson.dump());
 		}
 	}
 
-	void handleTakeoff(const n_json& payloadJson)
+	void LogicHandler::handleTakeoff(const n_json& payloadJson)
 	{
 		LOG_INFO("[MQTT] 收到【起飞】指令:");
 		const auto& payload { payloadJson.get<plane::protocol::TakeoffPayload>() };
 		plane::services::FlyManager::getInstance().takeoff(payload);
 	}
 
-	void handleGoHome(const n_json& payloadJson)
+	void LogicHandler::handleGoHome(const n_json& payloadJson)
 	{
 		LOG_INFO("[MQTT] 收到【返航】指令");
 		plane::services::FlyManager::getInstance().goHome();
 	}
 
-	void handleHover(const n_json& payloadJson)
+	void LogicHandler::handleHover(const n_json& payloadJson)
 	{
 		LOG_INFO("[MQTT] 收到【悬停】指令");
 		plane::services::FlyManager::getInstance().hover();
 	}
 
-	void handleLand(const n_json& payloadJson)
+	void LogicHandler::handleLand(const n_json& payloadJson)
 	{
 		LOG_INFO("[MQTT] 收到【降落】指令，准备执行...");
 		plane::services::FlyManager::getInstance().land();
 	}
 
-	void handleControlStrategySwitch(const n_json& payloadJson)
+	void LogicHandler::handleControlStrategySwitch(const n_json& payloadJson)
 	{
 		auto payload { payloadJson.get<plane::protocol::ControlStrategyPayload>() };
 		if (payload.YTJSCL)
@@ -81,7 +109,7 @@ namespace plane::services::MqttLogicHandler
 		}
 	}
 
-	void handleCircleFly(const n_json& payloadJson)
+	void LogicHandler::handleCircleFly(const n_json& payloadJson)
 	{
 		auto payload { payloadJson.get<plane::protocol::CircleFlyPayload>() };
 		LOG_INFO("[MQTT] 收到【智能环绕】指令: lat={}, lon={}, alt={}, r={}, spd={}",
@@ -93,7 +121,7 @@ namespace plane::services::MqttLogicHandler
 		// TODO: 调用 FlyManager 的 flyCircleAroundPoint(...)
 	}
 
-	void handleGimbalControl(const n_json& payloadJson)
+	void LogicHandler::handleGimbalControl(const n_json& payloadJson)
 	{
 		auto payload { payloadJson.get<plane::protocol::GimbalControlPayload>() };
 		if (payload.MS == 0) // 角度控制
@@ -108,7 +136,7 @@ namespace plane::services::MqttLogicHandler
 		}
 	}
 
-	void handleCameraControl(const n_json& payloadJson)
+	void LogicHandler::handleCameraControl(const n_json& payloadJson)
 	{
 		auto payload { payloadJson.get<plane::protocol::ZoomControlPayload>() };
 		if (payload.BJB)
@@ -124,21 +152,21 @@ namespace plane::services::MqttLogicHandler
 		}
 	}
 
-	void handleStickData(const n_json& payloadJson)
+	void LogicHandler::handleStickData(const n_json& payloadJson)
 	{
 		// TODO: 在这里检查虚拟摇杆功能是否开启 (SettingsManager.isVirtualStickFeatureEnabled)
 		auto payload { payloadJson.get<plane::protocol::StickDataPayload>() };
 		// TODO: 调用 FlyManager 的 sendRawStickData(...);
 	}
 
-	void handleStickModeSwitch(const n_json& payloadJson)
+	void LogicHandler::handleStickModeSwitch(const n_json& payloadJson)
 	{
 		auto payload { payloadJson.get<plane::protocol::StickModeSwitchPayload>() };
 		LOG_INFO("[MQTT] 收到【虚拟摇杆模式切换】指令: mode={}", payload.YGMS);
 		// TODO: 根据 payload.stickMode (0,1,2) 调用 FlyManager 的 enable/disableVirtualStick，并处理回调
 	}
 
-	void handleNedVelocity(const n_json& payloadJson)
+	void LogicHandler::handleNedVelocity(const n_json& payloadJson)
 	{
 		// TODO: 在这里检查虚拟摇杆/速度控制功能是否开启
 		auto payload { payloadJson.get<plane::protocol::NedVelocityPayload>() };
@@ -149,23 +177,4 @@ namespace plane::services::MqttLogicHandler
 				  payload.PHJ);
 		// TODO: 调用 FlyManager 的 sendNedVelocityCommand(...);
 	}
-
-	void initialize()
-	{
-		LOG_INFO("正在初始化 MQTT 业务逻辑处理器...");
-		auto& msg_handler { MqttMessageHandler::getInstance() };
-		msg_handler.registerHandler(TOPIC_MISSION_CONTROL, "XFHXRW", handleWaypointMission);
-		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "QF", handleTakeoff);
-		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "FH", handleGoHome);
-		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "XT", handleHover);
-		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "JL", handleLand);
-		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "YTJSCL", handleControlStrategySwitch);
-		msg_handler.registerHandler(TOPIC_COMMAND_CONTROL, "ZNHR", handleCircleFly);
-		msg_handler.registerHandler(TOPIC_PAYLOAD_CONTROL, "YTKZ", handleGimbalControl);
-		msg_handler.registerHandler(TOPIC_PAYLOAD_CONTROL, "BJKZ", handleCameraControl);
-		msg_handler.registerHandler(TOPIC_ROCKER_CONTROL, "YGFXZL", handleStickData);
-		msg_handler.registerHandler(TOPIC_ROCKER_CONTROL, "YGMSQH", handleStickModeSwitch);
-		msg_handler.registerHandler(TOPIC_VELOCITY_CONTROL, "SDKZ", handleNedVelocity);
-		LOG_INFO("所有 MQTT 业务逻辑处理器注册完毕。");
-	}
-} // namespace plane::services::MqttLogicHandler
+} // namespace plane::services

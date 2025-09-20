@@ -23,14 +23,15 @@ namespace plane::services
 		stop();
 	}
 
-	void TelemetryReporter::start(void) noexcept
+	bool TelemetryReporter::start(void) noexcept
 	{
 		if (run_.exchange(true, std::memory_order_relaxed))
 		{
-			LOG_WARN("TelemetryReporter 已经启动，请勿重复调用 start()。");
-			return;
+			LOG_WARN("TelemetryReporter 已经启动，请勿重复调用 start() 。");
+			return false;
 		}
-		LOG_INFO("正在启动遥测上报服务...");
+
+		LOG_DEBUG("正在启动遥测上报服务...");
 		status_thread_ = std::thread(
 			[this]()
 			{
@@ -41,6 +42,8 @@ namespace plane::services
 			{
 				this->fixedInfoReportLoop();
 			});
+
+		return true;
 	}
 
 	void TelemetryReporter::stop(void) noexcept
@@ -62,7 +65,7 @@ namespace plane::services
 
 	void TelemetryReporter::statusReportLoop(void) noexcept
 	{
-		LOG_INFO("状态上报线程已启动。");
+		LOG_DEBUG("状态上报线程已启动。");
 		const auto&					   ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
 		plane::protocol::StatusPayload status_payload {};
 		status_payload.SXZT	  = { .GPSSXSL = 15, .SFSL = 5, .SXDW = 5 };
@@ -118,12 +121,12 @@ namespace plane::services
 			plane::services::MQTTService::getInstance().publish(plane::services::TOPIC_DRONE_STATUS, status_json);
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		LOG_INFO("状态上报线程已停止。");
+		LOG_DEBUG("状态上报线程已停止。");
 	}
 
 	void TelemetryReporter::fixedInfoReportLoop(void) noexcept
 	{
-		LOG_INFO("固定信息上报线程已启动。");
+		LOG_DEBUG("固定信息上报线程已启动。");
 		const auto&							ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
 		plane::protocol::MissionInfoPayload info_payload { .FJSN   = plane::config::ConfigManager::getInstance().getPlaneCode(),
 														   .YKQIP  = ipAddresses,
@@ -149,6 +152,6 @@ namespace plane::services
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
 		}
-		LOG_INFO("固定信息上报线程已停止。");
+		LOG_DEBUG("固定信息上报线程已停止。");
 	}
 } // namespace plane::services

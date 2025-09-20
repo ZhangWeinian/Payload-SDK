@@ -162,35 +162,35 @@ namespace plane::protocol
 
 	struct WaypointAction
 	{
-		int LX; // LX
-		int CS; // CS
+		int LX; // 类型
+		int CS; // 参数
 	};
 
 	struct Waypoint
 	{
-		double									   JD {};	 // JD
-		double									   WD {};	 // WD
-		double									   GD {};	 // GD
-		std::optional<double>					   SD {};	 // SD
-		std::optional<double>					   YTFYJ {}; // YTFYJ
-		std::optional<double>					   PHJ {};	 // PHJ
+		double									   JD {};	 // 经度
+		double									   WD {};	 // 维度
+		double									   GD {};	 // 高度
+		std::optional<double>					   SD {};	 // 速度
+		std::optional<double>					   YTFYJ {}; // 云台俯仰角
+		std::optional<double>					   PHJ {};	 // 偏航角
 		std::optional<bool>						   SFTY {};	 // SFTY
-		std::optional<std::vector<WaypointAction>> DZJ {};	 // DZJ
+		std::optional<std::vector<WaypointAction>> DZJ {};	 // 动作集
 	};
 
 	struct WaypointPayload
 	{
-		std::optional<std::string> RWID {}; // 任务ID
-		std::vector<Waypoint>	   HDJ {};	// HDJ
+		std::optional<std::string> RWID {}; // 任务 ID
+		std::vector<Waypoint>	   HDJ {};	// 航点集
 	};
 
 	struct MissionProgressPayload
 	{
-		std::optional<std::string> RWID {}; // RWID
-		std::optional<int>		   DQHD {}; // DQHD
-		std::optional<int>		   ZHD {};	// ZHD
-		std::optional<int>		   JD {};	// JD
-		std::optional<int>		   ZT {};	// ZT
+		std::optional<std::string> RWID {}; // 任务 ID
+		std::optional<int>		   DQHD {}; // 当前航点
+		std::optional<int>		   ZHD {};	// 总航点
+		std::optional<int>		   JD {};	// 进度
+		std::optional<int>		   ZT {};	// 状态
 	};
 
 	struct MissionControlPayload
@@ -207,9 +207,9 @@ namespace plane::protocol
 
 	struct TakeoffPayload
 	{
-		std::optional<double> MBWD {};	// MBWD
-		std::optional<double> MBJD {};	// MBJD
-		std::optional<double> MBGD {};	// MBGD
+		std::optional<double> MBWD {};	// 目标纬度
+		std::optional<double> MBJD {};	// 目标经度
+		std::optional<double> MBGD {};	// 目标高度
 		int					  FHMS {};	// FHMS
 		std::optional<int>	  FHGD {};	// FHGD
 		std::optional<int>	  ZDMSD {}; // ZDMSD
@@ -218,9 +218,9 @@ namespace plane::protocol
 
 	struct FlyToPoint
 	{
-		double JD {}; // JD
-		double WD {}; // WD
-		double GD {}; // GD
+		double JD {}; // 经度
+		double WD {}; // 维度
+		double GD {}; // 高度
 	};
 
 	struct FlyToPayload
@@ -238,9 +238,9 @@ namespace plane::protocol
 
 	struct TargetCoordinate
 	{
-		double JD {}; // JD
-		double WD {}; // WD
-		double GD {}; // GD
+		double JD {}; // 经度
+		double WD {}; // 纬度
+		double GD {}; // 高度
 	};
 
 	struct TargetRectangle
@@ -266,12 +266,12 @@ namespace plane::protocol
 
 	struct CircleFlyPayload
 	{
-		double JD {}; // JD
-		double WD {}; // WD
-		double GD {}; // GD
-		double SD {}; // SD
-		double BJ {}; // BJ
-		int	   QS {}; // QS
+		double JD {}; // 经度
+		double WD {}; // 纬度
+		double GD {}; // 高度
+		double SD {}; // 速度
+		double BJ {}; // 半径
+		int	   QS {}; // 圈数
 	};
 
 	struct GimbalControlPayload
@@ -346,10 +346,10 @@ namespace plane::protocol
 		double					   FJFYJ {};  // 飞机俯仰角
 		double					   FJHGJ {};  // 飞机横滚角
 		double					   FJPHJ {};  // 飞机偏航角
-		double					   JJD {};	  // Home点经度
-		double					   JWD {};	  // Home点纬度
-		double					   JHB {};	  // Home点海拔
-		double					   JXDGD {};  // Home点相对高度
+		double					   JJD {};	  // Home 点经度
+		double					   JWD {};	  // Home 点纬度
+		double					   JHB {};	  // Home 点海拔
+		double					   JXDGD {};  // Home 点相对高度
 		double					   DQWD {};	  // 当前纬度
 		double					   DQJD {};	  // 当前经度
 		double					   XDQFGD {}; // 相对起飞点高度
@@ -394,12 +394,12 @@ namespace plane::protocol
 	template<typename T>
 	struct NetworkMessage
 	{
-		std::string				   ZBID {}; // ZBID
-		std::string				   XXID {}; // XXID
-		std::string				   XXLX {}; // XXLX
-		int64_t					   SJC {};	// SJC
-		std::optional<std::string> SBSJ {}; // SBSJ
-		std::optional<T>		   XXXX {}; // XXXX
+		std::string				   ZBID {}; // 装备 ID
+		std::string				   XXID {}; // 消息 ID
+		std::string				   XXLX {}; // 消息类型
+		int64_t					   SJC {};	// 时间戳 (毫秒)
+		std::optional<std::string> SBSJ {}; // 上报时间
+		std::optional<T>		   XXXX {}; // 消息信息
 	};
 
 	// 上报数据: C++ -> JSON

@@ -14,7 +14,7 @@ namespace plane::services
 	{
 		std::lock_guard<std::mutex> lock(handler_mutex_);
 		handler_map_[topic][messageType] = std::move(handler);
-		LOG_INFO("为主题 '{}', 消息类型 '{}' 注册了处理器。", topic, messageType);
+		LOG_DEBUG("为主题 '{}', 消息类型 '{}' 注册了处理器。", topic, messageType);
 	}
 
 	void MqttMessageHandler::routeMessage(const std::string& topic, const std::string& messageType, const n_json& payloadJson) noexcept

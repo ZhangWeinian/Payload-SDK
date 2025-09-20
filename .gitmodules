@@ -1,42 +1,45 @@
 [submodule "external_libs/libhv"]
 	path = external_libs/libhv
-	url = https://github.com/ithewei/libhv.git
+	url = git@github.com:ithewei/libhv.git
 [submodule "external_libs/libusb"]
 	path = external_libs/libusb
-	url = https://github.com/libusb/libusb.git
+	url = git@github.com:libusb/libusb.git
 [submodule "external_libs/opus"]
 	path = external_libs/opus
-	url = https://github.com/xiph/opus.git
-[submodule "external_libs/paho.mqtt.c"]
-	path = external_libs/paho.mqtt.c
-	url = https://github.com/eclipse/paho.mqtt.c.git
+	url = git@github.com:xiph/opus.git
 [submodule "external_libs/yaml-cpp"]
 	path = external_libs/yaml-cpp
-	url = https://github.com/jbeder/yaml-cpp.git
+	url = git@github.com:jbeder/yaml-cpp.git
 [submodule "external_libs/spdlog"]
 	path = external_libs/spdlog
-	url = https://github.com/gabime/spdlog.git
+	url = git@github.com:gabime/spdlog.git
 [submodule "external_libs/nlohmann_json"]
 	path = external_libs/nlohmann_json
-	url = https://github.com/nlohmann/json.git
+	url = git@github.com:nlohmann/json.git
 [submodule "external_libs/fmt"]
 	path = external_libs/fmt
-	url = https://github.com/fmtlib/fmt.git
+	url = git@github.com:fmtlib/fmt.git
 [submodule "external_libs/CLI11"]
 	path = external_libs/CLI11
-	url = https://github.com/CLIUtils/CLI11.git
+	url = git@github.com:CLIUtils/CLI11.git
 [submodule "external_libs/expected"]
 	path = external_libs/expected
-	url = https://github.com/TartanLlama/expected.git
+	url = git@github.com:TartanLlama/expected.git
 [submodule "external_libs/range-v3"]
 	path = external_libs/range-v3
-	url = https://github.com/ericniebler/range-v3.git
+	url = git@github.com:ericniebler/range-v3.git
 [submodule "external_libs/benchmark"]
 	path = external_libs/benchmark
-	url = https://github.com/google/benchmark.git
+	url = git@github.com:google/benchmark.git
 [submodule "external_libs/googletest"]
 	path = external_libs/googletest
-	url = https://github.com/google/googletest.git
+	url = git@github.com:google/googletest.git
 [submodule "external_libs/libzip"]
 	path = external_libs/libzip
-	url = https://github.com/nih-at/libzip.git
+	url = git@github.com:nih-at/libzip.git
+[submodule "external_libs/paho.mqtt.cpp"]
+	path = external_libs/paho.mqtt.cpp
+	url = git@github.com:eclipse-paho/paho.mqtt.cpp.git
+[submodule "external_libs/paho.mqtt.c"]
+	path = external_libs/paho.mqtt.c
+	url = git@github.com:eclipse-paho/paho.mqtt.c.git

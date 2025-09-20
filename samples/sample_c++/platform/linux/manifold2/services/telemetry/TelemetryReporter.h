@@ -9,7 +9,7 @@ namespace plane::services
 	{
 	public:
 		static TelemetryReporter& getInstance(void) noexcept;
-		void					  start(void) noexcept;
+		bool					  start(void) noexcept;
 		void					  stop(void) noexcept;
 
 	private:
@@ -25,4 +25,4 @@ namespace plane::services
 		TelemetryReporter(const TelemetryReporter&)			   = delete;
 		TelemetryReporter& operator=(const TelemetryReporter&) = delete;
 	};
-} // namespace plane::services::telemetry
+} // namespace plane::services

@@ -2,12 +2,15 @@
 
 #include "utils/Logger/Logger.h"
 
+#include "fmt/format.h"
 #include "zip.h"
 
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
 
@@ -28,8 +31,20 @@ namespace plane::utils
 		{
 			if (g_kmzStorageDir.empty())
 			{
-				fs::path executable_dir { "." };
-				g_kmzStorageDir = executable_dir / "kmz_files";
+				char exePath[PATH_MAX] {};
+
+				if (ssize_t count { readlink("/proc/self/exe", exePath, sizeof(exePath) - 1) }; count != -1)
+				{
+					exePath[count] = '\0';
+					fs::path executablePath(exePath);
+					fs::path executableDir { executablePath.parent_path() };
+					g_kmzStorageDir = executableDir / "kmz_files";
+				}
+				else
+				{
+					LOG_WARN("无法获取可执行文件路径，使用当前工作目录");
+					g_kmzStorageDir = fs::absolute(fs::current_path() / "kmz_files");
+				}
 
 				try
 				{
@@ -38,10 +53,22 @@ namespace plane::utils
 						fs::create_directories(g_kmzStorageDir);
 						LOG_INFO("创建 KMZ 存储目录: {}", g_kmzStorageDir.string());
 					}
+
+					fs::path testFile { g_kmzStorageDir / "test_write.tmp" };
+					if (std::ofstream ofs(testFile); !ofs)
+					{
+						LOG_ERROR("KMZ 目录 '{}' 不可写", g_kmzStorageDir.string());
+						g_kmzStorageDir = "";
+					}
+					else
+					{
+						ofs.close();
+						fs::remove(testFile);
+					}
 				}
 				catch (const fs::filesystem_error& e)
 				{
-					LOG_ERROR("创建 KMZ 目录 '{}' 失败: {}", g_kmzStorageDir.string(), e.what());
+					LOG_ERROR("创建或访问 KMZ 目录 '{}' 失败: {}", g_kmzStorageDir.string(), e.what());
 					g_kmzStorageDir = "";
 				}
 			}
@@ -306,7 +333,7 @@ namespace plane::utils
 		const fs::path& storageDir { getKmzStorageDir() };
 		if (waypoints.empty() || storageDir.empty())
 		{
-			LOG_ERROR("无法生成 KMZ：航点列表为空或存储目录无效。");
+			LOG_ERROR("无法生成 KMZ 文件，因为航点列表为空或存储目录无效。");
 			return false;
 		}
 
@@ -319,7 +346,7 @@ namespace plane::utils
 		std::string filename { fmt::format("{}_{}.kmz", missionId, time_ss.str()) };
 		fs::path	kmzFilePath { storageDir / filename };
 
-		LOG_INFO("开始生成 KMZ 文件，任务 ID: {}, 路径: {}", missionId, kmzFilePath.string());
+		LOG_DEBUG("开始生成 KMZ 文件，任务 ID: {}, 路径: {}", missionId, kmzFilePath.string());
 
 		std::string waylinesKml { generateWaylinesKml(waypoints) };
 		std::string templateKml { generateTemplateKml() };
@@ -338,7 +365,9 @@ namespace plane::utils
 		zip_source_t* waylines_source { zip_source_buffer(archive, waylinesKml.c_str(), waylinesKml.length(), 0) };
 		if (!waylines_source)
 		{
-			LOG_ERROR("");
+			LOG_ERROR("无法创建 waylines.wpml 的 ZIP 源");
+			zip_close(archive);
+			return false;
 		}
 		if (zip_file_add(archive, "waylines.wpml", waylines_source, ZIP_FL_ENC_UTF_8) < 0)
 		{
@@ -351,7 +380,9 @@ namespace plane::utils
 		zip_source_t* template_source { zip_source_buffer(archive, templateKml.c_str(), templateKml.length(), 0) };
 		if (!template_source)
 		{
-			LOG_ERROR("");
+			LOG_ERROR("无法创建 template.kml 的 ZIP 源");
+			zip_close(archive);
+			return false;
 		}
 		if (zip_file_add(archive, "template.kml", template_source, ZIP_FL_ENC_UTF_8) < 0)
 		{
@@ -367,7 +398,7 @@ namespace plane::utils
 			return false;
 		}
 
-		g_latestKmzFilePath = kmzFilePath;
+		g_latestKmzFilePath = fs::absolute(kmzFilePath);
 
 		LOG_INFO("成功创建 KMZ 文件: {}", g_latestKmzFilePath.string());
 		return true;

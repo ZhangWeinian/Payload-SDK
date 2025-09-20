@@ -4,7 +4,6 @@
 
 #include <memory>
 
-// __FILE__ 是文件名, __LINE__ 是行号, __FUNCTION__ 是函数名
 #define LOG_INFO(fmt, ...)                                                                                                                    \
 	plane::utils::Logger::getInstance().log(spdlog::source_loc { __FILE__, __LINE__, __FUNCTION__ }, spdlog::level::info, fmt, ##__VA_ARGS__)
 

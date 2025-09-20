@@ -1,7 +1,7 @@
 mqtt:
     url: "tcp://127.0.0.1:1883"
-    client_id_prefix: "PSDK-Client-"
+    client_id: "cv_cae4422ecc6e64077d7f0a34ab50"
 
 plane:
-    sn: "10001"
+    sn: "10010101"
     code: "10010101"
