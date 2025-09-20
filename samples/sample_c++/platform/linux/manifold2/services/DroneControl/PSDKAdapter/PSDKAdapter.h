@@ -2,7 +2,7 @@
 
 #include "dji_typedef.h"
 
-#include "protocol/JsonProtocol.h"
+#include "protocol/DroneDataClass.h"
 
 #include <vector>
 

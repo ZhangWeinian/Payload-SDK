@@ -1,4 +1,4 @@
-#include "utils/JsonConverter/JsonToKmzConverter.h"
+#include "utils/JsonConverter/JsonToKmz.h"
 
 #include "utils/Logger/Logger.h"
 

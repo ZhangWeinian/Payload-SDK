@@ -1,10 +1,10 @@
 #include "services/telemetry/TelemetryReporter.h"
 
 #include "config/ConfigManager.h"
-#include "protocol/JsonProtocol.h"
-#include "services/mqtt/MqttService/MqttService.h"
-#include "services/mqtt/MqttTopics.h"
-#include "utils/JsonConverter/JsonToDataClassConverter.h"
+#include "protocol/DroneDataClass.h"
+#include "services/mqtt/Service.h"
+#include "services/mqtt/Topics.h"
+#include "utils/JsonConverter/BuildAndParse.h"
 #include "utils/Logger/Logger.h"
 #include "utils/NetworkUtils/NetworkUtils.h"
 

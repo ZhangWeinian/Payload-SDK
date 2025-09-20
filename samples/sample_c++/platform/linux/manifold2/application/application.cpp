@@ -26,9 +26,6 @@
 #include <gimbal_emu/test_payload_gimbal_emu.h>
 #include <power_management/test_power_management.h>
 
-#include "config/ConfigManager.h"
-#include "services/mqtt/MqttService/MqttService.h"
-
 #define DJI_LOG_PATH				 "Logs/DJI"
 #define DJI_LOG_INDEX_FILE_NAME		 "Logs/index"
 #define DJI_LOG_FOLDER_NAME			 "Logs"

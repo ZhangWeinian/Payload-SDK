@@ -3,6 +3,9 @@
 		{
 			"path": ".",
 			"name": "PSDK"
+		},
+		{
+			"path": "../llvm"
 		}
 	],
 	"settings": {

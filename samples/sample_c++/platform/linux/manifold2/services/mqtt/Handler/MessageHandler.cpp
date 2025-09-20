@@ -1,4 +1,4 @@
-#include "services/mqtt/MqttHandler/MqttMessageHandler.h"
+#include "services/mqtt/Handler/MessageHandler.h"
 
 #include "utils/Logger/Logger.h"
 

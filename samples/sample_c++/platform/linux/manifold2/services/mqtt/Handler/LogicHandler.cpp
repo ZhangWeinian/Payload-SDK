@@ -1,10 +1,10 @@
-#include "services/mqtt/MqttHandler/MqttLogicHandler.h"
+#include "services/mqtt/Handler/LogicHandler.h"
 
-#include "protocol/JsonProtocol.h"
-#include "services/drone_control/FlyManager/FlyManager.h"
-#include "services/mqtt/MqttHandler/MqttMessageHandler.h"
-#include "services/mqtt/MqttTopics.h"
-#include "utils/JsonConverter/JsonToKmzConverter.h"
+#include "protocol/DroneDataClass.h"
+#include "services/DroneControl/FlyManager.h"
+#include "services/mqtt/Handler/MessageHandler.h"
+#include "services/mqtt/Topics.h"
+#include "utils/JsonConverter/JsonToKmz.h"
 #include "utils/Logger/Logger.h"
 
 namespace plane::services::MqttLogicHandler

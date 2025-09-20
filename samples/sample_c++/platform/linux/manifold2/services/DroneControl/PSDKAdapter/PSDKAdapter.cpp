@@ -1,4 +1,4 @@
-#include "services/drone_control/PSDKAdapter/PSDKAdapter.h"
+#include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
 
 #include "camera_manager/test_camera_manager_entry.h"
 #include "data_transmission/test_data_transmission.h"

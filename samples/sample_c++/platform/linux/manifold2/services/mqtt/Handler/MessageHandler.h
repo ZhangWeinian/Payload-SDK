@@ -1,6 +1,6 @@
 #pragma once
 
-#include "protocol/JsonProtocol.h"
+#include "protocol/DroneDataClass.h"
 
 #include <functional>
 #include <map>

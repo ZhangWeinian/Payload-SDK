@@ -1,6 +1,6 @@
-#include "services/drone_control/FlyManager/FlyManager.h"
+#include "services/DroneControl/FlyManager.h"
 
-#include "services/drone_control/PSDKAdapter/PSDKAdapter.h"
+#include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
 #include "utils/Logger/Logger.h"
 
 namespace plane::services
