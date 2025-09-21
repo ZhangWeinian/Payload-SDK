@@ -43,3 +43,6 @@
 [submodule "external_libs/paho.mqtt.c"]
 	path = external_libs/paho.mqtt.c
 	url = git@github.com:eclipse-paho/paho.mqtt.c.git
+[submodule "external_libs/pugixml"]
+	path = external_libs/pugixml
+	url = git@github.com:zeux/pugixml.git
