@@ -27,22 +27,27 @@ namespace plane::services
 	{
 		if (run_.exchange(true, std::memory_order_relaxed))
 		{
-			LOG_WARN("TelemetryReporter 已经启动，请勿重复调用 start() 。");
+			LOG_DEBUG("TelemetryReporter 已经启动，请勿重复调用 start() 。");
 			return false;
 		}
 
 		LOG_DEBUG("正在启动遥测上报服务...");
+
 		status_thread_ = std::thread(
 			[this]()
 			{
 				this->statusReportLoop();
+				LOG_DEBUG("[start] statusReportLoop 线程启动");
 			});
+
 		fixed_info_thread_ = std::thread(
 			[this]()
 			{
 				this->fixedInfoReportLoop();
+				LOG_DEBUG("[start] fixedInfoReportLoop 线程启动");
 			});
 
+		LOG_DEBUG("[start] 线程已创建，服务启动完成");
 		return true;
 	}
 
@@ -50,22 +55,28 @@ namespace plane::services
 	{
 		if (!run_.exchange(false, std::memory_order_release))
 		{
+			LOG_DEBUG("已经停止，无需重复");
 			return;
 		}
-		LOG_INFO("正在停止遥测上报服务...");
+
 		if (status_thread_.joinable())
 		{
 			status_thread_.join();
 		}
+
 		if (fixed_info_thread_.joinable())
 		{
 			fixed_info_thread_.join();
 		}
+
+		LOG_DEBUG("所有线程已结束，服务完全停止");
 	}
 
 	void TelemetryReporter::statusReportLoop(void) noexcept
 	{
-		LOG_DEBUG("状态上报线程已启动。");
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		LOG_DEBUG("线程启动，MQTTService instance addr: {}", (void*)&plane::services::MQTTService::getInstance());
+
 		const auto&					   ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
 		plane::protocol::StatusPayload status_payload {};
 		status_payload.SXZT	  = { .GPSSXSL = 15, .SFSL = 5, .SXDW = 5 };
@@ -107,6 +118,7 @@ namespace plane::services
 		{
 			if (!plane::services::MQTTService::getInstance().isConnected())
 			{
+				LOG_DEBUG("MQTTService 未连接，sleep 1s 后重试");
 				std::this_thread::sleep_for(std::chrono::seconds(1));
 				continue;
 			}
@@ -118,7 +130,21 @@ namespace plane::services
 			}
 
 			std::string status_json { plane::utils::JsonConverter::buildStatusReportJson(status_payload) };
-			plane::services::MQTTService::getInstance().publish(plane::services::TOPIC_DRONE_STATUS, status_json);
+			try
+			{
+				if (!plane::services::MQTTService::getInstance().publish(plane::services::TOPIC_DRONE_STATUS, status_json))
+				{
+					LOG_ERROR("MQTTService 在'{}' publish 失败", plane::services::TOPIC_DRONE_STATUS);
+				}
+			}
+			catch (const std::exception& ex)
+			{
+				LOG_ERROR("MQTTService 在'{}' publish 异常: {}", plane::services::TOPIC_DRONE_STATUS, ex.what());
+			}
+			catch (...)
+			{
+				LOG_ERROR("MQTTService 在'{}' publish 未知异常", plane::services::TOPIC_DRONE_STATUS);
+			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		LOG_DEBUG("状态上报线程已停止。");
@@ -126,6 +152,7 @@ namespace plane::services
 
 	void TelemetryReporter::fixedInfoReportLoop(void) noexcept
 	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		LOG_DEBUG("固定信息上报线程已启动。");
 		const auto&							ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
 		plane::protocol::MissionInfoPayload info_payload { .FJSN   = plane::config::ConfigManager::getInstance().getPlaneCode(),
@@ -136,17 +163,33 @@ namespace plane::services
 		{
 			if (!plane::services::MQTTService::getInstance().isConnected())
 			{
+				LOG_DEBUG("MQTTService 未连接，sleep 1s 后重试");
 				std::this_thread::sleep_for(std::chrono::seconds(1));
 				continue;
 			}
 
 			std::string info_json { plane::utils::JsonConverter::buildMissionInfoJson(info_payload) };
-			plane::services::MQTTService::getInstance().publish(plane::services::TOPIC_FIXED_INFO, info_json);
+			try
+			{
+				if (!plane::services::MQTTService::getInstance().publish(plane::services::TOPIC_FIXED_INFO, info_json))
+				{
+					LOG_ERROR("MQTTService 在'{}'发布失败", plane::services::TOPIC_FIXED_INFO);
+				}
+			}
+			catch (const std::exception& ex)
+			{
+				LOG_ERROR("MQTTService 在'{}' publish 异常: {}", plane::services::TOPIC_FIXED_INFO, ex.what());
+			}
+			catch (...)
+			{
+				LOG_ERROR("MQTTService 在'{}' publish 未知异常", plane::services::TOPIC_FIXED_INFO);
+			}
 
 			for (size_t i { 0 }; i < 10; ++i)
 			{
 				if (!run_.load(std::memory_order_acquire))
 				{
+					LOG_DEBUG("MQTTService 在'{}' run_ 已停止，提前 break", plane::services::TOPIC_FIXED_INFO);
 					break;
 				}
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));

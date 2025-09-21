@@ -7,132 +7,89 @@
 #include "utils/Logger/Logger.h"
 
 #include "fmt/format.h"
+#include "mqtt/async_client.h"
 
 #include <chrono>
-#include <cstring>
 #include <thread>
+
+using namespace mqtt;
 
 namespace plane::services
 {
-	class MQTTPropertiesRAII
+	class MqttCallback: public callback,
+						public iaction_listener
 	{
 	public:
-		MQTTPropertiesRAII(void) noexcept
+		explicit MqttCallback(MQTTService* service): service_(service) {}
+
+		void connected(const std::string& cause) override
 		{
-			props_ = MQTTProperties_initializer;
+			service_->setConnected(true);
+			LOG_INFO("MQTT 连接成功!（内部状态更新为已连接） cause: {}", cause);
+			service_->subscribe(TOPIC_MISSION_CONTROL);
+			service_->subscribe(TOPIC_COMMAND_CONTROL);
+			service_->subscribe(TOPIC_PAYLOAD_CONTROL);
+			service_->subscribe(TOPIC_ROCKER_CONTROL);
+			service_->subscribe(TOPIC_VELOCITY_CONTROL);
 		}
 
-		~MQTTPropertiesRAII(void) noexcept
+		void connection_lost(const std::string& cause) override
 		{
-			MQTTProperties_free(&props_);
+			auto& impl { service_->getImpl() };
+			if (!impl.manualDisconnect)
+			{
+				impl.reconnectAttempts++;
+				impl.lastDisconnectTime = std::chrono::steady_clock::now();
+				LOG_WARN("MQTT 连接已断开，原因: {}. 重连尝试次数: {}.", cause, impl.reconnectAttempts);
+			}
+			else
+			{
+				LOG_INFO("MQTT 连接已手动断开");
+				impl.manualDisconnect = false;
+			}
+			service_->setConnected(false);
 		}
 
-		MQTTProperties* get(void) noexcept
+		void message_arrived(mqtt::const_message_ptr msg) override
 		{
-			return &props_;
+			LOG_DEBUG("收到消息: topic={}, payload={}", msg->get_topic(), msg->to_string());
+			plane::utils::JsonConverter::parseAndRouteMessage(msg->get_topic(), msg->to_string());
 		}
 
-		operator MQTTProperties*(void) noexcept
+		void delivery_complete(delivery_token_ptr token) override
 		{
-			return &props_;
+			LOG_DEBUG("MQTT 消息发送完成，令牌: {}", token ? token->get_message_id() : -1);
+		}
+
+		void on_failure(const token& tok) override
+		{
+			LOG_ERROR("MQTT 操作失败，token: {}", tok.get_message_id());
+		}
+
+		void on_success(const token& tok) override
+		{
+			LOG_DEBUG("MQTT 操作成功，token: {}", tok.get_message_id());
 		}
 
 	private:
-		MQTTProperties props_ {};
+		MQTTService* service_ {};
 	};
-
-	static void onSubscribeSuccess(void* context, MQTTAsync_successData* response) noexcept
-	{
-		std::string* topic { static_cast<std::string*>(context) };
-		LOG_DEBUG("成功订阅主题: '{}'", *topic);
-		delete topic;
-	}
-
-	static void onSubscribeFailure(void* context, MQTTAsync_failureData* response) noexcept
-	{
-		std::string* topic { static_cast<std::string*>(context) };
-
-		if (response)
-		{
-			LOG_ERROR("订阅主题 '{}' 失败，错误码: {}, 原因: {}", *topic, response->code, response->message ? response->message : "未知错误");
-		}
-		else
-		{
-			LOG_ERROR("订阅主题 '{}' 失败，无详细错误信息", *topic);
-		}
-
-		delete topic;
-	}
-
-	void onConnectSuccess(void* context, MQTTAsync_successData* response) noexcept
-	{
-		MQTTService* service { static_cast<MQTTService*>(context) };
-		service->setConnected(true);
-		LOG_INFO("MQTT 连接成功!（内部状态更新为已连接）");
-
-		service->subscribe(plane::services::TOPIC_MISSION_CONTROL);
-		service->subscribe(plane::services::TOPIC_COMMAND_CONTROL);
-		service->subscribe(plane::services::TOPIC_PAYLOAD_CONTROL);
-		service->subscribe(plane::services::TOPIC_ROCKER_CONTROL);
-		service->subscribe(plane::services::TOPIC_VELOCITY_CONTROL);
-	}
-
-	void onConnectFailure(void* context, MQTTAsync_failureData* response) noexcept
-	{
-		MQTTService* service { static_cast<MQTTService*>(context) };
-		service->setConnected(false);
-		LOG_ERROR("MQTT 连接失败，错误码: {}, 消息: {}", response ? response->code : -1, response ? response->message : "未知错误");
-	}
-
-	static void onPublishSuccess(void* context, MQTTAsync_successData* response) noexcept
-	{
-		MQTTService* service { static_cast<MQTTService*>(context) };
-		LOG_DEBUG("消息发布成功");
-	}
-
-	static void onPublishFailure(void* context, MQTTAsync_failureData* response) noexcept
-	{
-		MQTTService* service { static_cast<MQTTService*>(context) };
-		LOG_ERROR("消息发布失败，错误码: {}, 原因: {}", response ? response->code : -1, response ? response->message : "未知错误");
-	}
-
-	static int messageArrived(void* context, char* topicName, int topicLen, MQTTAsync_message* message) noexcept
-	{
-		std::string topic(topicName, topicLen > 0 ? topicLen : strlen(topicName));
-		std::string rawPayload(static_cast<char*>(message->payload), message->payloadlen);
-		plane::utils::JsonConverter::parseAndRouteMessage(topic, rawPayload);
-		MQTTAsync_freeMessage(&message);
-		MQTTAsync_free(topicName);
-		return 1;
-	}
-
-	void connectionLost(void* context, char* cause) noexcept
-	{
-		plane::services::MQTTService* service { static_cast<plane::services::MQTTService*>(context) };
-		auto&						  impl = service->getImpl();
-		if (!impl.manualDisconnect)
-		{
-			impl.reconnectAttempts++;
-			impl.lastDisconnectTime = std::chrono::steady_clock::now();
-			LOG_WARN("MQTT 连接已断开，原因: {}. 重连尝试次数: {}. Paho 库将自动重新连接。", cause ? cause : "未知", impl.reconnectAttempts);
-		}
-		else
-		{
-			LOG_INFO("MQTT 连接已手动断开");
-			impl.manualDisconnect = false;
-		}
-
-		service->setConnected(false);
-	}
-
-	static void deliveryComplete(void* context, MQTTAsync_token token)
-	{
-		LOG_DEBUG("MQTT 消息发送完成，令牌: {}", token);
-	}
 
 	MQTTService::~MQTTService(void) noexcept
 	{
-		stop();
+		try
+		{
+			stop();
+			LOG_DEBUG("[MQTTService::dtor] stop() 完成");
+		}
+		catch (const std::exception& ex)
+		{
+			LOG_ERROR("MQTTService 析构异常: {}", ex.what());
+		}
+		catch (...)
+		{
+			LOG_ERROR("MQTTService 析构发生未知异常: <non-std exception>");
+		}
 	}
 
 	MQTTService& MQTTService::getInstance(void) noexcept
@@ -144,53 +101,62 @@ namespace plane::services
 	bool MQTTService::publish(const std::string& topic, const std::string& payload) noexcept
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
-
 		if (!isConnected() || !impl_->client)
 		{
 			LOG_WARN("MQTT 未连接，发布请求被忽略。");
 			return false;
 		}
 
-		MQTTAsync_responseOptions opts = MQTTAsync_responseOptions_initializer;
-		opts.context				   = this;
-		opts.onSuccess				   = onPublishSuccess;
-		opts.onFailure				   = onPublishFailure;
-
-		if (int rc { MQTTAsync_send(impl_->client, topic.c_str(), payload.length(), payload.c_str(), 1, 0, &opts) }; rc != MQTTASYNC_SUCCESS)
+		try
 		{
-			LOG_ERROR("向主题 '{}' 发布消息失败，返回码 {}", topic, rc);
-			return false;
-		}
-		else
-		{
+			auto msg { mqtt::make_message(topic, payload) };
+			msg->set_qos(1);
+			impl_->client->publish(msg);
 			LOG_DEBUG("已向主题 '{}' 发送消息发布请求。", topic);
 			return true;
+		}
+		catch (const mqtt::exception& ex)
+		{
+			LOG_ERROR("向主题 '{}' 发布消息失败: {}，client={}", topic, ex.what(), (void*)impl_->client.get());
+			return false;
+		}
+		catch (const std::exception& ex)
+		{
+			LOG_ERROR("向主题 '{}' 发布消息发生未知异常: {}，client={}", topic, ex.what(), (void*)impl_->client.get());
+			return false;
+		}
+		catch (...)
+		{
+			LOG_ERROR("向主题 '{}' 发布消息发生未知异常: <non-std exception>，client={}", topic, (void*)impl_->client.get());
+			return false;
 		}
 	}
 
 	void MQTTService::subscribe(const std::string& topic) noexcept
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
-
 		if (!isConnected() || !impl_->client)
 		{
 			LOG_WARN("MQTT 未连接，对主题 '{}' 的订阅请求被忽略。", topic);
 			return;
 		}
 
-		MQTTAsync_responseOptions opts = MQTTAsync_responseOptions_initializer;
-		opts.onSuccess				   = onSubscribeSuccess;
-		opts.onFailure				   = onSubscribeFailure;
-		opts.context				   = new std::string(topic);
-
-		if (int rc { MQTTAsync_subscribe(impl_->client, topic.c_str(), 1, &opts) }; rc != MQTTASYNC_SUCCESS)
+		try
 		{
-			LOG_ERROR("发起订阅主题 '{}' 的请求失败，返回码 {}", topic, rc);
-			delete static_cast<std::string*>(opts.context);
-		}
-		else
-		{
+			impl_->client->subscribe(topic, 1);
 			LOG_DEBUG("已发送订阅主题 '{}' 的请求。", topic);
+		}
+		catch (const mqtt::exception& ex)
+		{
+			LOG_ERROR("发起订阅主题 '{}' 的请求失败: {}", topic, ex.what());
+		}
+		catch (const std::exception& ex)
+		{
+			LOG_ERROR("发起订阅主题 '{}' 的请求发生未知异常: {}", topic, ex.what());
+		}
+		catch (...)
+		{
+			LOG_ERROR("发起订阅主题 '{}' 的请求发生未知异常: <non-std exception>", topic);
 		}
 	}
 
@@ -200,7 +166,7 @@ namespace plane::services
 
 		if (isConnected())
 		{
-			LOG_WARN("MQTT 服务已经启动，忽略重复启动请求");
+			LOG_DEBUG("MQTT 服务已经启动，忽略重复启动请求");
 			return true;
 		}
 
@@ -222,84 +188,44 @@ namespace plane::services
 		{
 			LOG_DEBUG("清理现有的 MQTT 客户端实例");
 			stop();
+			LOG_DEBUG("[start] stop() 完成，client 已清理");
 		}
 
-		if (!initializeClient(url, cid))
+		try
 		{
-			LOG_ERROR("MQTT 客户端初始化失败");
+			impl_->client	= std::make_unique<mqtt::async_client>(url, cid);
+			impl_->callback = std::make_shared<MqttCallback>(this);
+			impl_->client->set_callback(*impl_->callback);
+			mqtt::connect_options connOpts;
+			connOpts.set_keep_alive_interval(30);
+			connOpts.set_clean_session(true);
+			connOpts.set_automatic_reconnect(true);
+			connOpts.set_mqtt_version(MQTTVERSION_5);
+			impl_->client->connect(connOpts);
+			LOG_DEBUG("MQTT 服务启动成功，等待连接建立...");
+			return true;
+		}
+		catch (const mqtt::exception& ex)
+		{
+			LOG_ERROR("MQTT 客户端初始化或连接失败: {}", ex.what());
+			impl_->client.reset();
+			impl_->callback.reset();
 			return false;
 		}
-
-		if (!connectToBroker())
+		catch (const std::exception& ex)
 		{
-			LOG_ERROR("MQTT 连接失败");
-			if (impl_->client)
-			{
-				MQTTAsync_destroy(&impl_->client);
-				impl_->client = nullptr;
-			}
+			LOG_ERROR("MQTT 客户端初始化或连接发生未知异常: {}", ex.what());
+			impl_->client.reset();
+			impl_->callback.reset();
 			return false;
 		}
-
-		LOG_DEBUG("MQTT 服务启动成功，等待连接建立...");
-		return true;
-	}
-
-	bool MQTTService::initializeClient(const std::string& serverURI, const std::string& clientId) noexcept
-	{
-		impl_->serverURI = serverURI;
-		impl_->clientId	 = clientId;
-
-		LOG_INFO("初始化 MQTT 客户端: 服务器={}, 客户端ID={}", impl_->serverURI, impl_->clientId);
-
-		if (int rc { MQTTAsync_create(&impl_->client, impl_->serverURI.c_str(), impl_->clientId.c_str(), MQTTCLIENT_PERSISTENCE_NONE, nullptr) };
-			rc != MQTTASYNC_SUCCESS)
+		catch (...)
 		{
-			LOG_ERROR("MQTTAsync_create 失败，返回码 {}", rc);
-			impl_->client = nullptr;
+			LOG_ERROR("MQTT 客户端初始化或连接发生未知异常: <non-std exception>");
+			impl_->client.reset();
+			impl_->callback.reset();
 			return false;
 		}
-
-		if (int rc { MQTTAsync_setCallbacks(impl_->client, this, connectionLost, messageArrived, deliveryComplete) }; rc != MQTTASYNC_SUCCESS)
-		{
-			LOG_ERROR("设置 MQTT 回调失败，返回码 {}", rc);
-			MQTTAsync_destroy(&impl_->client);
-			impl_->client = nullptr;
-			return false;
-		}
-
-		LOG_DEBUG("MQTT 客户端创建成功，准备连接");
-		return true;
-	}
-
-	bool MQTTService::connectToBroker(void) noexcept
-	{
-		MQTTAsync_connectOptions conn_opts = MQTTAsync_connectOptions_initializer;
-		strncpy(conn_opts.struct_id, "MQTC", 4);
-		conn_opts.keepAliveInterval	 = 30;				 // 30 秒心跳间隔
-		conn_opts.cleansession		 = 1;				 // 保持会话状态，允许离线消息
-		conn_opts.connectTimeout	 = 10;				 // 10秒连接超时
-		conn_opts.retryInterval		 = 0;				 // 禁用会话内重试
-		conn_opts.automaticReconnect = 1;				 // 启用自动重连
-		conn_opts.minRetryInterval	 = 1;				 // 最小重试间隔 1 秒
-		conn_opts.maxRetryInterval	 = 60;				 // 最大重试间隔 60 秒
-		conn_opts.maxInflight		 = 1000;			 // 允许最多 1000 个未确认消息
-		conn_opts.onSuccess			 = onConnectSuccess; // 连接成功回调
-		conn_opts.onFailure			 = onConnectFailure; // 连接失败回调
-		conn_opts.context			 = this;			 // 回调上下文
-
-		// conn_opts.cleansession		 = 1;
-
-		LOG_DEBUG("使用 MQTT v5 协议连接服务器: {}", impl_->serverURI);
-
-		if (int rc { MQTTAsync_connect(impl_->client, &conn_opts) }; rc != MQTTASYNC_SUCCESS)
-		{
-			LOG_ERROR("启动 MQTT v5 连接失败，返回码: {}", rc);
-			return false;
-		}
-
-		LOG_DEBUG("MQTT v5 连接请求已发送，等待连接结果...");
-		return true;
 	}
 
 	void MQTTService::stop(void) noexcept
@@ -315,32 +241,35 @@ namespace plane::services
 			return;
 		}
 
-		if (int rc { MQTTAsync_isConnected(impl_->client) }; rc == 1)
+		try
 		{
-			LOG_DEBUG("MQTTService 停止：客户端已连接，正在发送断开连接请求...");
-			MQTTAsync_disconnectOptions opts = MQTTAsync_disconnectOptions_initializer;
-			opts.timeout					 = 1000;
-
-			if (int rc { MQTTAsync_disconnect(impl_->client, &opts) }; rc != MQTTASYNC_SUCCESS)
+			if (impl_->client->is_connected())
 			{
-				LOG_ERROR("MQTTService 停止：断开连接调用失败，错误码 {}", rc);
+				LOG_DEBUG("MQTTService 停止：客户端已连接，正在发送断开连接请求...");
+				impl_->client->disconnect()->wait();
+				std::this_thread::sleep_for(std::chrono::milliseconds(200));
 			}
 			else
 			{
-				LOG_DEBUG("MQTTService 停止：断开连接请求已发送");
-				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+				LOG_DEBUG("MQTTService 停止：客户端未连接，跳过断开步骤");
 			}
+			LOG_DEBUG("正在销毁 MQTT 客户端实例...");
+			impl_->client.reset();
+			impl_->callback.reset();
+			LOG_INFO("MQTT 服务已停止");
 		}
-		else
+		catch (const mqtt::exception& ex)
 		{
-			LOG_DEBUG("MQTTService 停止：客户端未连接，跳过断开步骤");
+			LOG_ERROR("MQTTService 停止异常: {}", ex.what());
 		}
-
-		LOG_DEBUG("正在销毁 MQTT 客户端实例...");
-		MQTTAsync_destroy(&impl_->client);
-		impl_->client = nullptr;
-
-		LOG_INFO("MQTT 服务已停止");
+		catch (const std::exception& ex)
+		{
+			LOG_ERROR("MQTTService 停止发生未知异常: {}", ex.what());
+		}
+		catch (...)
+		{
+			LOG_ERROR("MQTTService 停止发生未知异常: <non-std exception>");
+		}
 	}
 
 	void MQTTService::restart(const std::string& serverURI, const std::string& clientId) noexcept
@@ -349,7 +278,10 @@ namespace plane::services
 		LOG_INFO("重新启动 MQTT 服务...");
 		stop();
 		std::this_thread::sleep_for(std::chrono::milliseconds(300));
-		start(serverURI, clientId);
+		if (!start(serverURI, clientId))
+		{
+			LOG_ERROR("MQTT restart 启动失败！");
+		}
 	}
 
 	void MQTTService::setConnected(bool status) noexcept

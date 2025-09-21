@@ -111,7 +111,7 @@ namespace plane::my_dji
 			return;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 		LOG_INFO("==========================================================");
 		LOG_INFO("               应用程序初始化完成，正在运行中...");
 		LOG_INFO("                    按 Ctrl+C 退出。");
@@ -127,6 +127,7 @@ namespace plane::my_dji
 
 		plane::services::MQTTService::getInstance().stop();
 
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 		LOG_INFO("应用程序已关闭。");
 	}
 } // namespace plane::my_dji
