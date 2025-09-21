@@ -23,7 +23,7 @@ namespace plane::config
 		_NODISCARD std::string getPlaneCode(void) const noexcept;
 
 	private:
-		ConfigManager(void) noexcept								   = default;
+		explicit ConfigManager(void) noexcept						   = default;
 		~ConfigManager(void) noexcept								   = default;
 		ConfigManager(const ConfigManager&)							   = delete;
 		ConfigManager&				   operator=(const ConfigManager&) = delete;

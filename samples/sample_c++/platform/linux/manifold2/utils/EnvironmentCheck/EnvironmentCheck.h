@@ -2,9 +2,9 @@
 
 namespace plane::utils
 {
-	#ifndef	_NODISCARD
+#ifndef _NODISCARD
 	#define _NODISCARD [[nodiscard]]
-	#endif
+#endif
 
 	_NODISCARD bool isStandardProceduresEnabled(void) noexcept;
 	_NODISCARD bool isLogLevelDebug(void) noexcept;

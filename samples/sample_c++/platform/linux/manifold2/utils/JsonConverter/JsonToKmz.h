@@ -14,8 +14,8 @@ namespace plane::utils
 	class JsonToKmzConverter
 	{
 	public:
-		_NODISCARD static bool		  convertWaypointsToKmz(const std::vector<protocol::Waypoint>& waypoints,
-															const protocol::WaypointPayload&	   missionInfo = {}) noexcept;
+		_NODISCARD static bool		  convertWaypointsToKmz(const std::vector<plane::protocol::Waypoint>& waypoints,
+															const plane::protocol::WaypointPayload&		  missionInfo = {}) noexcept;
 
 		_NODISCARD static std::string getKmzFilePath(void) noexcept;
 	};

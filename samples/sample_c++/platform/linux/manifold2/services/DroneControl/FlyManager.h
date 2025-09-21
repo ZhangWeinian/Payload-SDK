@@ -35,7 +35,7 @@ namespace plane::services
 		void			   sendNedVelocityCommand(const protocol::NedVelocityPayload& velocityParams) const noexcept;
 
 	private:
-		FlyManager(void) noexcept						  = default;
+		explicit FlyManager(void) noexcept				  = default;
 		~FlyManager(void) noexcept						  = default;
 		FlyManager(const FlyManager&) noexcept			  = delete;
 		FlyManager& operator=(const FlyManager&) noexcept = delete;

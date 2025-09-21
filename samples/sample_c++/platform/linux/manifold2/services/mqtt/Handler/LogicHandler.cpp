@@ -39,7 +39,7 @@ namespace plane::services
 		return true;
 	}
 
-	void LogicHandler::handleWaypointMission(const n_json& payloadJson)
+	void LogicHandler::handleWaypointMission(const n_json& payloadJson) noexcept
 	{
 		try
 		{
@@ -73,32 +73,32 @@ namespace plane::services
 		}
 	}
 
-	void LogicHandler::handleTakeoff(const n_json& payloadJson)
+	void LogicHandler::handleTakeoff(const n_json& payloadJson) noexcept
 	{
 		LOG_INFO("[MQTT] 收到【起飞】指令:");
 		const auto& payload { payloadJson.get<plane::protocol::TakeoffPayload>() };
 		plane::services::FlyManager::getInstance().takeoff(payload);
 	}
 
-	void LogicHandler::handleGoHome(const n_json& payloadJson)
+	void LogicHandler::handleGoHome(const n_json& payloadJson) noexcept
 	{
 		LOG_INFO("[MQTT] 收到【返航】指令");
 		plane::services::FlyManager::getInstance().goHome();
 	}
 
-	void LogicHandler::handleHover(const n_json& payloadJson)
+	void LogicHandler::handleHover(const n_json& payloadJson) noexcept
 	{
 		LOG_INFO("[MQTT] 收到【悬停】指令");
 		plane::services::FlyManager::getInstance().hover();
 	}
 
-	void LogicHandler::handleLand(const n_json& payloadJson)
+	void LogicHandler::handleLand(const n_json& payloadJson) noexcept
 	{
 		LOG_INFO("[MQTT] 收到【降落】指令，准备执行...");
 		plane::services::FlyManager::getInstance().land();
 	}
 
-	void LogicHandler::handleControlStrategySwitch(const n_json& payloadJson)
+	void LogicHandler::handleControlStrategySwitch(const n_json& payloadJson) noexcept
 	{
 		auto payload { payloadJson.get<plane::protocol::ControlStrategyPayload>() };
 		if (payload.YTJSCL)
@@ -109,7 +109,7 @@ namespace plane::services
 		}
 	}
 
-	void LogicHandler::handleCircleFly(const n_json& payloadJson)
+	void LogicHandler::handleCircleFly(const n_json& payloadJson) noexcept
 	{
 		auto payload { payloadJson.get<plane::protocol::CircleFlyPayload>() };
 		LOG_INFO("[MQTT] 收到【智能环绕】指令: lat={}, lon={}, alt={}, r={}, spd={}",
@@ -121,7 +121,7 @@ namespace plane::services
 		// TODO: 调用 FlyManager 的 flyCircleAroundPoint(...)
 	}
 
-	void LogicHandler::handleGimbalControl(const n_json& payloadJson)
+	void LogicHandler::handleGimbalControl(const n_json& payloadJson) noexcept
 	{
 		auto payload { payloadJson.get<plane::protocol::GimbalControlPayload>() };
 		if (payload.MS == 0) // 角度控制
@@ -136,7 +136,7 @@ namespace plane::services
 		}
 	}
 
-	void LogicHandler::handleCameraControl(const n_json& payloadJson)
+	void LogicHandler::handleCameraControl(const n_json& payloadJson) noexcept
 	{
 		auto payload { payloadJson.get<plane::protocol::ZoomControlPayload>() };
 		if (payload.BJB)
@@ -152,21 +152,21 @@ namespace plane::services
 		}
 	}
 
-	void LogicHandler::handleStickData(const n_json& payloadJson)
+	void LogicHandler::handleStickData(const n_json& payloadJson) noexcept
 	{
 		// TODO: 在这里检查虚拟摇杆功能是否开启 (SettingsManager.isVirtualStickFeatureEnabled)
-		auto payload { payloadJson.get<plane::protocol::StickDataPayload>() };
+		[[maybe_unused]] auto payload { payloadJson.get<plane::protocol::StickDataPayload>() };
 		// TODO: 调用 FlyManager 的 sendRawStickData(...);
 	}
 
-	void LogicHandler::handleStickModeSwitch(const n_json& payloadJson)
+	void LogicHandler::handleStickModeSwitch(const n_json& payloadJson) noexcept
 	{
 		auto payload { payloadJson.get<plane::protocol::StickModeSwitchPayload>() };
 		LOG_INFO("[MQTT] 收到【虚拟摇杆模式切换】指令: mode={}", payload.YGMS);
 		// TODO: 根据 payload.stickMode (0,1,2) 调用 FlyManager 的 enable/disableVirtualStick，并处理回调
 	}
 
-	void LogicHandler::handleNedVelocity(const n_json& payloadJson)
+	void LogicHandler::handleNedVelocity(const n_json& payloadJson) noexcept
 	{
 		// TODO: 在这里检查虚拟摇杆/速度控制功能是否开启
 		auto payload { payloadJson.get<plane::protocol::NedVelocityPayload>() };

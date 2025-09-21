@@ -20,10 +20,10 @@ namespace plane::services
 		void					   routeMessage(const std::string& topic, const std::string& messageType, const n_json& payloadJson) noexcept;
 
 	private:
-		MqttMessageHandler(void)noexcept  = default;
-		~MqttMessageHandler(void)noexcept = default;
+		explicit MqttMessageHandler(void) noexcept = default;
+		~MqttMessageHandler(void) noexcept		   = default;
 
-		std::map<std::string, std::map<std::string, LogicHandler>> handler_map_{};
-		std::mutex												   handler_mutex_{};
+		std::map<std::string, std::map<std::string, LogicHandler>> handler_map_ {};
+		std::mutex												   handler_mutex_ {};
 	};
 } // namespace plane::services

@@ -3,5 +3,4 @@ mqtt:
     client_id: "cv_cae4422ecc6e64077d7f0a34ab50"
 
 plane:
-    sn: "10010101"
     code: "10010101"

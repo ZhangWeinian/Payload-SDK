@@ -88,22 +88,6 @@ namespace plane::config
 				return false;
 			}
 
-			if (configNode["plane"] && configNode["plane"]["sn"])
-			{
-				std::string sn { configNode["plane"]["sn"].as<std::string>() };
-				if (sn.empty())
-				{
-					LOG_ERROR("Plane SN 不能为空");
-					return false;
-				}
-				appConfig.planeSn = sn;
-			}
-			else
-			{
-				LOG_ERROR("配置文件中缺少 Plane SN");
-				return false;
-			}
-
 			if (configNode["mqtt"] && configNode["mqtt"]["client_id"])
 			{
 				std::string clientId { configNode["mqtt"]["client_id"].as<std::string>() };

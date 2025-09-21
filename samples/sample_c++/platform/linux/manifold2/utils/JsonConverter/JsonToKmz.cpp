@@ -1,8 +1,10 @@
 #include "utils/JsonConverter/JsonToKmz.h"
 
+#include "protocol/KmlDataClass.h"
 #include "utils/Logger/Logger.h"
 
 #include "fmt/format.h"
+#include "pugixml.hpp"
 #include "zip.h"
 
 #include <chrono>
@@ -14,20 +16,19 @@
 #include <iomanip>
 #include <sstream>
 
-#ifndef M_PI
-	#define M_PI 3.14159265358979323846
-#endif
-
 namespace plane::utils
 {
-	namespace fs = std::filesystem;
+	constexpr inline double MATH_PI		   = 3.14159265358979323846;
+	constexpr inline double EARTH_RADIUS_M = 6'371'000.0;
+
+	namespace fs						   = std::filesystem;
 
 	namespace
 	{
-		fs::path		g_latestKmzFilePath {};
-		fs::path		g_kmzStorageDir {};
+		fs::path			   g_latestKmzFilePath {};
+		fs::path			   g_kmzStorageDir {};
 
-		const fs::path& getKmzStorageDir()
+		inline const fs::path& getKmzStorageDir(void) noexcept
 		{
 			if (g_kmzStorageDir.empty())
 			{
@@ -76,20 +77,19 @@ namespace plane::utils
 			return g_kmzStorageDir;
 		}
 
-		double calculateDistance(const protocol::Waypoint& wp1, const protocol::Waypoint& wp2)
+		inline double calculateDistance(const protocol::Waypoint& wp1, const protocol::Waypoint& wp2) noexcept
 		{
-			const double R { 6'371'000 };
-			const double lat1Rad { wp1.WD * M_PI / 180.0 };
-			const double lat2Rad { wp2.WD * M_PI / 180.0 };
-			const double deltaLatRad { (wp2.WD - wp1.WD) * M_PI / 180.0 };
-			const double deltaLonRad { (wp2.JD - wp1.JD) * M_PI / 180.0 };
+			const double lat1Rad { wp1.WD * MATH_PI / 180.0 };
+			const double lat2Rad { wp2.WD * MATH_PI / 180.0 };
+			const double deltaLatRad { (wp2.WD - wp1.WD) * MATH_PI / 180.0 };
+			const double deltaLonRad { (wp2.JD - wp1.JD) * MATH_PI / 180.0 };
 			const double a { sin(deltaLatRad / 2) * sin(deltaLatRad / 2) +
 							 cos(lat1Rad) * cos(lat2Rad) * sin(deltaLonRad / 2) * sin(deltaLonRad / 2) };
 			const double c { 2 * atan2(sqrt(a), sqrt(1 - a)) };
-			return R * c;
+			return EARTH_RADIUS_M * c;
 		}
 
-		double calculateTotalDistance(const std::vector<protocol::Waypoint>& waypoints)
+		inline double calculateTotalDistance(const std::vector<protocol::Waypoint>& waypoints) noexcept
 		{
 			double totalDistance { 0.0 };
 			for (size_t i { 1 }; i < waypoints.size(); ++i)
@@ -99,7 +99,7 @@ namespace plane::utils
 			return totalDistance;
 		}
 
-		double calculateTotalDuration(const std::vector<protocol::Waypoint>& waypoints)
+		inline double calculateTotalDuration(const std::vector<protocol::Waypoint>& waypoints) noexcept
 		{
 			double totalDuration { 0.0 };
 			for (size_t i { 1 }; i < waypoints.size(); ++i)
@@ -115,213 +115,215 @@ namespace plane::utils
 			return totalDuration;
 		}
 
-		double calculateHeadingAngle(const protocol::Waypoint& from, const protocol::Waypoint& to)
+		inline double calculateHeadingAngle(const protocol::Waypoint& from, const protocol::Waypoint& to) noexcept
 		{
-			const double deltaLon { (to.JD - from.JD) * M_PI / 180.0 };
-			const double fromLatRad { from.WD * M_PI / 180.0 };
-			const double toLatRad { to.WD * M_PI / 180.0 };
+			const double deltaLon { (to.JD - from.JD) * MATH_PI / 180.0 };
+			const double fromLatRad { from.WD * MATH_PI / 180.0 };
+			const double toLatRad { to.WD * MATH_PI / 180.0 };
 			const double y { sin(deltaLon) * cos(toLatRad) };
 			const double x { cos(fromLatRad) * sin(toLatRad) - sin(fromLatRad) * cos(toLatRad) * cos(deltaLon) };
-			const double bearing { atan2(y, x) * 180.0 / M_PI };
+			const double bearing { atan2(y, x) * 180.0 / MATH_PI };
 			return fmod(bearing + 360.0, 360.0);
 		}
 
-		static std::string generateWaylinesKml(const std::vector<protocol::Waypoint>& waypoints)
+		static std::string generateWaylinesKml(const std::vector<protocol::Waypoint>& waypoints) noexcept
 		{
-			std::ostringstream kml {};
-			const double	   totalDistance { calculateTotalDistance(waypoints) };
-			const double	   totalDuration { calculateTotalDuration(waypoints) };
-			const double	   avgSpeed { waypoints.empty() ? 5.0 : waypoints[0].SD.value_or(5.0) };
+			protocol::KmlRoot kmlRoot {};
+			kmlRoot.document.missionConfig.globalTransitionalSpeed = waypoints.empty() ? 5.0 : waypoints[0].SD.value_or(5.0);
+			kmlRoot.document.folder.templateId					   = 0;
+			kmlRoot.document.folder.executeHeightMode			   = "relativeToStartPoint";
+			kmlRoot.document.folder.waylineId					   = 0;
+			kmlRoot.document.folder.distance					   = std::stod(fmt::format("{:.2f}", calculateTotalDistance(waypoints)));
+			kmlRoot.document.folder.duration					   = std::stod(fmt::format("{:.2f}", calculateTotalDuration(waypoints)));
+			kmlRoot.document.folder.autoFlightSpeed				   = kmlRoot.document.missionConfig.globalTransitionalSpeed;
 
-			kml << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-			kml << "<kml xmlns=\"http://www.opengis.net/kml/2.2\" xmlns:wpml=\"http://www.dji.com/wpmz/1.0.6\">\n";
-			kml << "  <Document>\n";
-			kml << "    <wpml:missionConfig>\n";
-			kml << "      <wpml:flyToWaylineMode>safely</wpml:flyToWaylineMode>\n";
-			kml << "      <wpml:finishAction>goHome</wpml:finishAction>\n";
-			kml << "      <wpml:exitOnRCLost>executeLostAction</wpml:exitOnRCLost>\n";
-			kml << "      <wpml:executeRCLostAction>goBack</wpml:executeRCLostAction>\n";
-			kml << "      <wpml:takeOffSecurityHeight>20</wpml:takeOffSecurityHeight>\n";
-			kml << "      <wpml:globalTransitionalSpeed>" << avgSpeed << "</wpml:globalTransitionalSpeed>\n";
-			kml << "      <wpml:droneInfo>\n";
-			kml << "        <wpml:droneEnumValue>99</wpml:droneEnumValue>\n";
-			kml << "        <wpml:droneSubEnumValue>0</wpml:droneSubEnumValue>\n";
-			kml << "      </wpml:droneInfo>\n";
-			kml << "      <wpml:waylineAvoidLimitAreaMode>1</wpml:waylineAvoidLimitAreaMode>\n";
-			kml << "      <wpml:payloadInfo>\n";
-			kml << "        <wpml:payloadEnumValue>89</wpml:payloadEnumValue>\n";
-			kml << "        <wpml:payloadSubEnumValue>0</wpml:payloadSubEnumValue>\n";
-			kml << "        <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>\n";
-			kml << "      </wpml:payloadInfo>\n";
-			kml << "    </wpml:missionConfig>\n";
-			kml << "    <Folder>\n";
-			kml << "      <wpml:templateId>0</wpml:templateId>\n";
-			kml << "      <wpml:executeHeightMode>relativeToStartPoint</wpml:executeHeightMode>\n";
-			kml << "      <wpml:waylineId>0</wpml:waylineId>\n";
-			kml << "      <wpml:distance>" << std::fixed << std::setprecision(2) << totalDistance << "</wpml:distance>\n";
-			kml << "      <wpml:duration>" << std::fixed << std::setprecision(2) << totalDuration << "</wpml:duration>\n";
-			kml << "      <wpml:autoFlightSpeed>" << avgSpeed << "</wpml:autoFlightSpeed>\n";
-
-			// 起始动作组
 			if (!waypoints.empty())
 			{
-				kml << "      <wpml:startActionGroup>\n";
-				kml << "        <wpml:action>\n";
-				kml << "          <wpml:actionId>0</wpml:actionId>\n";
-				kml << "          <wpml:actionActuatorFunc>gimbalRotate</wpml:actionActuatorFunc>\n";
-				kml << "          <wpml:actionActuatorFuncParam>\n";
-				kml << "            <wpml:gimbalHeadingYawBase>aircraft</wpml:gimbalHeadingYawBase>\n";
-				kml << "            <wpml:gimbalRotateMode>absoluteAngle</wpml:gimbalRotateMode>\n";
-				kml << "            <wpml:gimbalPitchRotateEnable>1</wpml:gimbalPitchRotateEnable>\n";
-				kml << "            <wpml:gimbalPitchRotateAngle>" << waypoints[0].YTFYJ.value_or(-90.0) << "</wpml:gimbalPitchRotateAngle>\n";
-				kml << "            <wpml:gimbalRollRotateEnable>0</wpml:gimbalRollRotateEnable>\n";
-				kml << "            <wpml:gimbalRollRotateAngle>0</wpml:gimbalRollRotateAngle>\n";
-				kml << "            <wpml:gimbalYawRotateEnable>1</wpml:gimbalYawRotateEnable>\n";
-				kml << "            <wpml:gimbalYawRotateAngle>0</wpml:gimbalYawRotateAngle>\n";
-				kml << "            <wpml:gimbalRotateTimeEnable>0</wpml:gimbalRotateTimeEnable>\n";
-				kml << "            <wpml:gimbalRotateTime>10</wpml:gimbalRotateTime>\n";
-				kml << "            <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>\n";
-				kml << "          </wpml:actionActuatorFuncParam>\n";
-				kml << "        </wpml:action>\n";
-				kml << "        <wpml:action>\n";
-				kml << "          <wpml:actionId>1</wpml:actionId>\n";
-				kml << "          <wpml:actionActuatorFunc>hover</wpml:actionActuatorFunc>\n";
-				kml << "          <wpml:actionActuatorFuncParam>\n";
-				kml << "            <wpml:hoverTime>0.5</wpml:hoverTime>\n";
-				kml << "          </wpml:actionActuatorFuncParam>\n";
-				kml << "        </wpml:action>\n";
-				kml << "      </wpml:startActionGroup>\n";
+				protocol::KmlActionGroup startGroup {};
+				startGroup.groupId	   = 0;
+				startGroup.startIndex  = 0;
+				startGroup.endIndex	   = 0;
+				startGroup.mode		   = "sequence";
+				startGroup.triggerType = "takeoff";
+
+				protocol::KmlAction gimbalRotate {};
+				gimbalRotate.actionId	  = 0;
+				gimbalRotate.actuatorFunc = "gimbalRotate";
+
+				protocol::KmlActionActuatorFuncParam gimbalParam {};
+				gimbalParam.gimbalPitchRotateAngle	= -90.00;
+				gimbalParam.payloadPositionIndex	= 0;
+				gimbalParam.gimbalHeadingYawBase	= "aircraft";
+				gimbalParam.gimbalRotateMode		= "absoluteAngle";
+				gimbalParam.gimbalPitchRotateEnable = 1;
+				gimbalParam.gimbalRollRotateEnable	= 0;
+				gimbalParam.gimbalRollRotateAngle	= 0.00;
+				gimbalParam.gimbalYawRotateEnable	= 1;
+				gimbalParam.gimbalYawRotateAngle	= 0.00;
+				gimbalParam.gimbalRotateTimeEnable	= 0;
+				gimbalParam.gimbalRotateTime		= 10;
+				gimbalRotate.actuatorFuncParam		= gimbalParam;
+
+				startGroup.actions.push_back(gimbalRotate);
+
+				protocol::KmlAction hover {};
+				hover.actionId	   = 1;
+				hover.actuatorFunc = "hover";
+
+				protocol::KmlActionActuatorFuncParam hoverParam {};
+				hoverParam.hoverTime	= 0.5;
+				hover.actuatorFuncParam = hoverParam;
+
+				startGroup.actions.push_back(hover);
+
+				kmlRoot.document.folder.startActionGroups.push_back(startGroup);
 			}
 
-			// 生成航点
-			for (size_t i { 0 }; i < waypoints.size(); ++i)
+			size_t i { 0 };
+			size_t size { waypoints.size() };
+			for (const auto& wp : waypoints)
 			{
-				const auto& wp { waypoints[i] };
-				double		headingAngle { 0.0 };
-				if (i < waypoints.size() - 1)
-				{
-					headingAngle = calculateHeadingAngle(wp, waypoints[i + 1]);
-				}
+				protocol::KmlPlacemark placemark {};
+				placemark.point.longitude		   = wp.JD;
+				placemark.point.latitude		   = wp.WD;
+				placemark.executeHeight			   = std::stod(fmt::format("{:.12f}", wp.GD));
+				placemark.waypointSpeed			   = std::stod(fmt::format("{:.12f}", wp.SD.value_or(5.0)));
+				placemark.waypointSpeed			   = wp.SD.value_or(5.0);
 
-				kml << "      <Placemark>\n";
-				kml << "        <Point>\n";
-				kml << "          <coordinates>\n";
-				kml << "            " << std::fixed << std::setprecision(12) << wp.JD << "," << wp.WD << "\n";
-				kml << "          </coordinates>\n";
-				kml << "        </Point>\n";
-				kml << "        <wpml:index>" << i << "</wpml:index>\n";
-				kml << "        <wpml:executeHeight>" << wp.GD << "</wpml:executeHeight>\n";
-				kml << "        <wpml:waypointSpeed>" << wp.SD.value_or(5.0) << "</wpml:waypointSpeed>\n";
-				kml << "        <wpml:waypointHeadingParam>\n";
-				kml << "          <wpml:waypointHeadingMode>followWayline</wpml:waypointHeadingMode>\n";
-				kml << "          <wpml:waypointHeadingAngle>" << std::fixed << std::setprecision(6) << headingAngle
-					<< "</wpml:waypointHeadingAngle>\n";
-				kml << "          <wpml:waypointPoiPoint>0.000000,0.000000,0.000000</wpml:waypointPoiPoint>\n";
-				kml << "          <wpml:waypointHeadingAngleEnable>1</wpml:waypointHeadingAngleEnable>\n";
-				kml << "          <wpml:waypointHeadingPathMode>followBadArc</wpml:waypointHeadingPathMode>\n";
-				kml << "          <wpml:waypointHeadingPoiIndex>0</wpml:waypointHeadingPoiIndex>\n";
-				kml << "        </wpml:waypointHeadingParam>\n";
-				kml << "        <wpml:waypointTurnParam>\n";
+				placemark.headingParam.headingMode = "followWayline";
+				placemark.headingParam.headingAngle =
+					(i < size - 1) ? std::stod(fmt::format("{:.6f}", calculateHeadingAngle(wp, waypoints[i + 1]))) : 0.0;
+				placemark.headingParam.poiPoint			  = "0.000000,0.000000,0.000000";
+				placemark.headingParam.headingAngleEnable = 1;
+				placemark.headingParam.headingPathMode	  = "followBadArc";
+				placemark.headingParam.headingPoiIndex	  = 0;
 
-				if ((i == 0) || (i == waypoints.size() - 1))
+				if ((i == 0) || (i == size - 1))
 				{
-					kml << "          <wpml:waypointTurnMode>toPointAndStopWithDiscontinuityCurvature</wpml:waypointTurnMode>\n";
-					kml << "          <wpml:waypointTurnDampingDist>0</wpml:waypointTurnDampingDist>\n";
+					placemark.turnParam.turnMode		= "toPointAndStopWithDiscontinuityCurvature";
+					placemark.turnParam.turnDampingDist = 0;
 				}
 				else
 				{
-					kml << "          <wpml:waypointTurnMode>coordinateTurn</wpml:waypointTurnMode>\n";
-					kml << "          <wpml:waypointTurnDampingDist>10</wpml:waypointTurnDampingDist>\n";
+					placemark.turnParam.turnMode		= "coordinateTurn";
+					placemark.turnParam.turnDampingDist = 10;
 				}
 
-				kml << "        </wpml:waypointTurnParam>\n";
-				kml << "        <wpml:useStraightLine>1</wpml:useStraightLine>\n";
+				placemark.useStraightLine					  = 1;
+				placemark.gimbalHeadingParam.gimbalPitchAngle = 0;
+				placemark.gimbalHeadingParam.gimbalYawAngle	  = 0;
+				placemark.isRisky							  = 0;
+				placemark.workType							  = 0;
 
-				// 为第一个航点添加拍照动作
+				// 首航点 actionGroup
 				if (i == 0)
 				{
-					kml << "        <wpml:actionGroup>\n";
-					kml << "          <wpml:actionGroupId>0</wpml:actionGroupId>\n";
-					kml << "          <wpml:actionGroupStartIndex>0</wpml:actionGroupStartIndex>\n";
-					kml << "          <wpml:actionGroupEndIndex>" << (waypoints.size() - 2) << "</wpml:actionGroupEndIndex>\n";
-					kml << "          <wpml:actionGroupMode>sequence</wpml:actionGroupMode>\n";
-					kml << "          <wpml:actionTrigger>\n";
-					kml << "            <wpml:actionTriggerType>betweenAdjacentPoints</wpml:actionTriggerType>\n";
-					kml << "          </wpml:actionTrigger>\n";
-					kml << "          <wpml:action>\n";
-					kml << "            <wpml:actionId>0</wpml:actionId>\n";
-					kml << "            <wpml:actionActuatorFunc>gimbalAngleLock</wpml:actionActuatorFunc>\n";
-					kml << "          </wpml:action>\n";
-					kml << "          <wpml:action>\n";
-					kml << "            <wpml:actionId>1</wpml:actionId>\n";
-					kml << "            <wpml:actionActuatorFunc>startTimeLapse</wpml:actionActuatorFunc>\n";
-					kml << "            <wpml:actionActuatorFuncParam>\n";
-					kml << "              <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>\n";
-					kml << "              <wpml:useGlobalPayloadLensIndex>0</wpml:useGlobalPayloadLensIndex>\n";
-					kml << "              <wpml:payloadLensIndex>visable</wpml:payloadLensIndex>\n";
-					kml << "              <wpml:minShootInterval>2.0</wpml:minShootInterval>\n";
-					kml << "            </wpml:actionActuatorFuncParam>\n";
-					kml << "          </wpml:action>\n";
-					kml << "        </wpml:actionGroup>\n";
+					protocol::KmlActionGroup ag;
+					ag.groupId	   = 0;
+					ag.startIndex  = 0;
+					ag.endIndex	   = size > 1 ? size - 2 : 0;
+					ag.mode		   = "sequence";
+					ag.triggerType = "betweenAdjacentPoints";
+
+					protocol::KmlAction lock;
+					lock.actionId	  = 0;
+					lock.actuatorFunc = "gimbalAngleLock";
+					ag.actions.push_back(lock);
+
+					protocol::KmlAction timeLapse;
+					timeLapse.actionId	   = 1;
+					timeLapse.actuatorFunc = "startTimeLapse";
+					protocol::KmlActionActuatorFuncParam param;
+					param.payloadPositionIndex		= 0;
+					param.useGlobalPayloadLensIndex = 0;
+					param.payloadLensIndex			= "visable";
+					param.minShootInterval			= 2.0;
+					timeLapse.actuatorFuncParam		= param;
+					ag.actions.push_back(timeLapse);
+
+					placemark.actionGroups.push_back(ag);
 				}
 
-				// 为最后一个航点添加停止拍照动作
-				if (i == waypoints.size() - 1)
+				// 末航点 actionGroup
+				if (i == size - 1)
 				{
-					kml << "        <wpml:actionGroup>\n";
-					kml << "          <wpml:actionGroupId>1</wpml:actionGroupId>\n";
-					kml << "          <wpml:actionGroupStartIndex>" << i << "</wpml:actionGroupStartIndex>\n";
-					kml << "          <wpml:actionGroupEndIndex>" << i << "</wpml:actionGroupEndIndex>\n";
-					kml << "          <wpml:actionGroupMode>sequence</wpml:actionGroupMode>\n";
-					kml << "          <wpml:actionTrigger>\n";
-					kml << "            <wpml:actionTriggerType>reachPoint</wpml:actionTriggerType>\n";
-					kml << "          </wpml:actionTrigger>\n";
-					kml << "          <wpml:action>\n";
-					kml << "            <wpml:actionId>0</wpml:actionId>\n";
-					kml << "            <wpml:actionActuatorFunc>stopTimeLapse</wpml:actionActuatorFunc>\n";
-					kml << "            <wpml:actionActuatorFuncParam>\n";
-					kml << "              <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>\n";
-					kml << "              <wpml:payloadLensIndex>visable</wpml:payloadLensIndex>\n";
-					kml << "            </wpml:actionActuatorFuncParam>\n";
-					kml << "          </wpml:action>\n";
-					kml << "          <wpml:action>\n";
-					kml << "            <wpml:actionId>1</wpml:actionId>\n";
-					kml << "            <wpml:actionActuatorFunc>gimbalAngleUnlock</wpml:actionActuatorFunc>\n";
-					kml << "          </wpml:action>\n";
-					kml << "        </wpml:actionGroup>\n";
+					protocol::KmlActionGroup ag;
+					ag.groupId	   = 1;
+					ag.startIndex  = i;
+					ag.endIndex	   = i;
+					ag.mode		   = "sequence";
+					ag.triggerType = "reachPoint";
+
+					protocol::KmlAction stop;
+					stop.actionId	  = 0;
+					stop.actuatorFunc = "stopTimeLapse";
+					protocol::KmlActionActuatorFuncParam param;
+					param.payloadPositionIndex = 0;
+					param.payloadLensIndex	   = "visable";
+					stop.actuatorFuncParam	   = param;
+					ag.actions.push_back(stop);
+
+					protocol::KmlAction unlock;
+					unlock.actionId		= 1;
+					unlock.actuatorFunc = "gimbalAngleUnlock";
+					ag.actions.push_back(unlock);
+
+					placemark.actionGroups.push_back(ag);
 				}
 
-				kml << "        <wpml:waypointGimbalHeadingParam>\n";
-				kml << "          <wpml:waypointGimbalPitchAngle>0</wpml:waypointGimbalPitchAngle>\n";
-				kml << "          <wpml:waypointGimbalYawAngle>0</wpml:waypointGimbalYawAngle>\n";
-				kml << "        </wpml:waypointGimbalHeadingParam>\n";
-				kml << "        <wpml:isRisky>0</wpml:isRisky>\n";
-				kml << "        <wpml:waypointWorkType>0</wpml:waypointWorkType>\n";
-				kml << "      </Placemark>\n";
+				kmlRoot.document.folder.placemarks.push_back(placemark);
+				++i;
 			}
 
-			kml << "    </Folder>\n";
-			kml << "  </Document>\n";
-			kml << "</kml>\n";
-
-			return kml.str();
+			pugi::xml_document doc {};
+			kmlRoot.toXml(doc);
+			std::ostringstream oss {};
+			doc.save(oss, "  ", pugi::format_default, pugi::encoding_utf8);
+			return oss.str();
 		}
 
-		static std::string generateTemplateKml()
+		struct TemplateKml
 		{
-			auto			   now { std::chrono::system_clock::now() };
-			auto			   time_t_now { std::chrono::system_clock::to_time_t(now) };
-			std::tm			   tm_now { *std::localtime(&time_t_now) };
-			std::ostringstream kml {};
-			kml << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-			kml << "<kml xmlns=\"http://www.opengis.net/kml/2.2\" xmlns:wpml=\"http://www.dji.com/wpmz/1.0.6\">\n";
-			kml << "  <Document>\n";
-			kml << "    <wpml:author>PSDK Application</wpml:author>\n";
-			kml << "    <wpml:createTime>" << std::put_time(&tm_now, "%Y-%m-%d %H:%M:%S") << "</wpml:createTime>\n";
-			kml << "    <wpml:updateTime>" << std::put_time(&tm_now, "%Y-%m-%d %H:%M:%S") << "</wpml:updateTime>\n";
-			kml << "  </Document>\n";
-			kml << "</kml>\n";
-			return kml.str();
+			std::string author { "cy_psdk" };
+			std::string createTime {};
+			std::string updateTime {};
+
+			explicit TemplateKml(void) noexcept
+			{
+				auto	now { std::chrono::system_clock::now() };
+				auto	time_t_now { std::chrono::system_clock::to_time_t(now) };
+				std::tm tm_now { *std::localtime(&time_t_now) };
+				char	buf[32] {};
+				std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_now);
+				createTime = buf;
+				updateTime = buf;
+			}
+
+			void toXml(pugi::xml_document& doc) const noexcept
+			{
+				auto decl { doc.append_child(pugi::node_declaration) };
+				decl.append_attribute("version")  = "1.0";
+				decl.append_attribute("encoding") = "UTF-8";
+
+				auto kmlNode { doc.append_child("kml") };
+				kmlNode.append_attribute("xmlns")	   = "http://www.opengis.net/kml/2.2";
+				kmlNode.append_attribute("xmlns:wpml") = "http://www.dji.com/wpmz/1.0.6";
+
+				auto docNode { kmlNode.append_child("Document") };
+				docNode.append_child("wpml:author").text().set(author);
+				docNode.append_child("wpml:createTime").text().set(createTime);
+				docNode.append_child("wpml:updateTime").text().set(updateTime);
+			}
+		};
+
+		static std::string generateTemplateKml(void) noexcept
+		{
+			TemplateKml		   tpl {};
+			pugi::xml_document doc {};
+			tpl.toXml(doc);
+			std::ostringstream oss {};
+			doc.save(oss, "  ", pugi::format_default, pugi::encoding_utf8);
+			return oss.str();
 		}
 	} // namespace
 
@@ -343,7 +345,7 @@ namespace plane::utils
 		std::tm			  tm_now { *std::localtime(&time_t_now) };
 		std::stringstream time_ss {};
 		time_ss << std::put_time(&tm_now, "%Y%m%d_%H%M%S");
-		std::string filename { fmt::format("{}_{}.kmz", missionId, time_ss.str()) };
+		std::string filename { fmt::format("{}.kmz", time_ss.str()) };
 		fs::path	kmzFilePath { storageDir / filename };
 
 		LOG_DEBUG("开始生成 KMZ 文件，任务 ID: {}, 路径: {}", missionId, kmzFilePath.string());

@@ -26,7 +26,7 @@ namespace plane::services
 		_NODISCARD T_DjiReturnCode flyCircleAroundPoint(const protocol::CircleFlyPayload& circleParams) const noexcept;
 
 	private:
-		PSDKAdapter(void) noexcept							= default;
+		explicit PSDKAdapter(void) noexcept					= default;
 		~PSDKAdapter(void) noexcept							= default;
 		PSDKAdapter(const PSDKAdapter&) noexcept			= delete;
 		PSDKAdapter& operator=(const PSDKAdapter&) noexcept = delete;

@@ -173,6 +173,9 @@ build_cmake_project "libzip" \
 	-DBUILD_EXAMPLES=OFF \
 	-DENABLE_OPENSSL=ON
 
+build_cmake_project "pugixml" \
+	"${BASE_DIR}/pugixml"
+
 install_header_only_library "CLI11" \
 	"${BASE_DIR}/CLI11" \
 	"include"

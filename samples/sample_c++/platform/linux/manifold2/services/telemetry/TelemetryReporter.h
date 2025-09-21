@@ -24,9 +24,9 @@ namespace plane::services
 		std::thread		  fixed_info_thread_ {};
 		std::atomic<bool> run_ { false };
 
-		TelemetryReporter(void) = default;
+		explicit TelemetryReporter(void) noexcept = default;
 		~TelemetryReporter(void) noexcept;
-		TelemetryReporter(const TelemetryReporter&)			   = delete;
-		TelemetryReporter& operator=(const TelemetryReporter&) = delete;
+		TelemetryReporter(const TelemetryReporter&) noexcept			= delete;
+		TelemetryReporter& operator=(const TelemetryReporter&) noexcept = delete;
 	};
 } // namespace plane::services
