@@ -8,6 +8,7 @@
 #include "services/mqtt/Handler/LogicHandler.h"
 #include "services/mqtt/Service.h"
 #include "services/telemetry/TelemetryReporter.h"
+#include "utils/EnvironmentCheck/EnvironmentCheck.h"
 #include "utils/Logger/Logger.h"
 
 #include <atomic>
@@ -28,18 +29,6 @@ namespace plane::my_dji
 			LOG_DEBUG("捕获到信号 {}, 正在准备退出...", signum);
 			g_should_exit = true;
 		}
-
-		bool isStandardProceduresEnabled(void) noexcept
-		{
-			const char* envValue { std::getenv("FULL_PSDK") };
-			return (envValue != nullptr) && (std::string(envValue) == "1");
-		}
-
-		bool isLogLevelDebug(void) noexcept
-		{
-			const char* envValue { std::getenv("LOG_DEBUG") };
-			return (envValue != nullptr) && (std::string(envValue) == "1");
-		}
 	} // namespace
 
 	void runMyApplication(int argc, char** argv)
@@ -47,7 +36,7 @@ namespace plane::my_dji
 		signal(SIGINT, signalHandler);
 		signal(SIGTERM, signalHandler);
 
-		if (isLogLevelDebug())
+		if (plane::utils::isLogLevelDebug())
 		{
 			plane::utils::Logger::getInstance().init(spdlog::level::trace);
 			LOG_DEBUG("日志级别设置为 DEBUG");
@@ -63,7 +52,7 @@ namespace plane::my_dji
 		LOG_INFO("                        应用程序启动中");
 		LOG_INFO("==========================================================");
 
-		if (isStandardProceduresEnabled())
+		if (plane::utils::isStandardProceduresEnabled())
 		{
 			Application application(argc, argv);
 

@@ -132,6 +132,9 @@ find_static_library (LIBUSB_LIB usb-1.0)
 find_static_library (OPUS_LIB opus)
 find_static_library (YAMLCPP_LIB yaml-cpp)
 find_static_library (PAHO_MQTT_LIB paho-mqtt3as)
+find_static_library (PAHO_MQTTC_LIB paho-mqtt3c)
+find_static_library (PAHO_MQTTC_SSL_LIB paho-mqtt3cs)
+find_static_library (PAHO_MQTTCPP_LIB paho-mqttpp3)
 find_static_library (SPDLOG_LIB spdlog)
 find_static_library (FMT_LIB fmt)
 find_static_library (LIBZIP_LIB zip)
@@ -145,7 +148,10 @@ target_link_libraries (${PROJECT_NAME} PRIVATE
 	${LIBUSB_LIB}
 	${OPUS_LIB}
 	${YAMLCPP_LIB}
+	${PAHO_MQTTCPP_LIB}
 	${PAHO_MQTT_LIB}
+	${PAHO_MQTTC_LIB}
+	${PAHO_MQTTC_SSL_LIB}
 	${SPDLOG_LIB}
 	${FMT_LIB}
 	${LIBZIP_LIB}
