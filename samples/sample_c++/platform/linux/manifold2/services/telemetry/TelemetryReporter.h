@@ -5,11 +5,15 @@
 
 namespace plane::services
 {
+#ifndef _NODISCARD
+	#define _NODISCARD [[nodiscard]]
+#endif
+
 	class TelemetryReporter
 	{
 	public:
 		static TelemetryReporter& getInstance(void) noexcept;
-		bool					  start(void) noexcept;
+		_NODISCARD bool			  start(void) noexcept;
 		void					  stop(void) noexcept;
 
 	private:

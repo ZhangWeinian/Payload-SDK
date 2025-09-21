@@ -5,10 +5,14 @@
 
 namespace plane::utils
 {
+#ifndef _NODISCARD
+	#define _NODISCARD [[nodiscard]]
+#endif
+
 	class NetworkUtils
 	{
 	public:
-		static std::optional<std::string> getDeviceIpv4Address(void) noexcept;
+		_NODISCARD static std::optional<std::string> getDeviceIpv4Address(void) noexcept;
 
 		NetworkUtils(void) noexcept	 = delete;
 		~NetworkUtils(void) noexcept = delete;

@@ -141,14 +141,14 @@ namespace plane::services
 		return instance;
 	}
 
-	void MQTTService::publish(const std::string& topic, const std::string& payload) noexcept
+	bool MQTTService::publish(const std::string& topic, const std::string& payload) noexcept
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
 
 		if (!isConnected() || !impl_->client)
 		{
 			LOG_WARN("MQTT 未连接，发布请求被忽略。");
-			return;
+			return false;
 		}
 
 		MQTTAsync_responseOptions opts = MQTTAsync_responseOptions_initializer;
@@ -159,6 +159,12 @@ namespace plane::services
 		if (int rc { MQTTAsync_send(impl_->client, topic.c_str(), payload.length(), payload.c_str(), 1, 0, &opts) }; rc != MQTTASYNC_SUCCESS)
 		{
 			LOG_ERROR("向主题 '{}' 发布消息失败，返回码 {}", topic, rc);
+			return false;
+		}
+		else
+		{
+			LOG_DEBUG("已向主题 '{}' 发送消息发布请求。", topic);
+			return true;
 		}
 	}
 

@@ -9,14 +9,18 @@
 
 namespace plane::config
 {
+#ifndef _NODISCARD
+	#define _NODISCARD [[nodiscard]]
+#endif
+
 	class ConfigManager
 	{
 	public:
 		static ConfigManager& getInstance(void) noexcept;
-		bool				  loadAndCheck(const std::string& filepath) noexcept;
-		std::string			  getMqttUrl(void) const noexcept;
-		std::string			  getMqttClientId(void) const noexcept;
-		std::string			  getPlaneCode(void) const noexcept;
+		_NODISCARD bool		  loadAndCheck(const std::string& filepath) noexcept;
+		_NODISCARD std::string getMqttUrl(void) const noexcept;
+		_NODISCARD std::string getMqttClientId(void) const noexcept;
+		_NODISCARD std::string getPlaneCode(void) const noexcept;
 
 	private:
 		ConfigManager(void) noexcept								   = default;

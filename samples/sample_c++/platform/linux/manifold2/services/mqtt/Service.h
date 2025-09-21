@@ -10,6 +10,10 @@
 
 namespace plane::services
 {
+#ifndef _NODISCARD
+	#define _NODISCARD [[nodiscard]]
+#endif
+
 	void onConnectSuccess(void* context, MQTTAsync_successData* response) noexcept;
 	void onConnectFailure(void* context, MQTTAsync_failureData* response) noexcept;
 	void connectionLost(void* context, char* cause) noexcept;
@@ -18,12 +22,12 @@ namespace plane::services
 	{
 	public:
 		static MQTTService& getInstance(void) noexcept;
-		bool				start(const std::string& serverURI = "", const std::string& clientId = "") noexcept;
+		_NODISCARD bool		start(const std::string& serverURI = "", const std::string& clientId = "") noexcept;
 		void				stop(void) noexcept;
 		void				restart(const std::string& serverURI, const std::string& clientId) noexcept;
 
-		void				publish(const std::string& topic, const std::string& payload) noexcept;
-		bool				isConnected(void) const noexcept;
+		_NODISCARD bool		publish(const std::string& topic, const std::string& payload) noexcept;
+		_NODISCARD bool		isConnected(void) const noexcept;
 		void				subscribe(const std::string& topic) noexcept;
 		void				setConnected(bool status) noexcept;
 

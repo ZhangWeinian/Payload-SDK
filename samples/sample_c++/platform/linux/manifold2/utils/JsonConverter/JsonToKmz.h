@@ -7,12 +7,16 @@
 
 namespace plane::utils
 {
+#ifndef _NODISCARD
+	#define _NODISCARD [[nodiscard]]
+#endif
+
 	class JsonToKmzConverter
 	{
 	public:
-		static bool		   convertWaypointsToKmz(const std::vector<protocol::Waypoint>& waypoints,
-												 const protocol::WaypointPayload&		missionInfo = {}) noexcept;
+		_NODISCARD static bool		  convertWaypointsToKmz(const std::vector<protocol::Waypoint>& waypoints,
+															const protocol::WaypointPayload&	   missionInfo = {}) noexcept;
 
-		static std::string getKmzFilePath(void) noexcept;
+		_NODISCARD static std::string getKmzFilePath(void) noexcept;
 	};
 } // namespace plane::utils

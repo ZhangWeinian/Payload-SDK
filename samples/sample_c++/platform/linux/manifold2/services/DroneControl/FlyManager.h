@@ -6,6 +6,10 @@
 
 namespace plane::services
 {
+#ifndef _NODISCARD
+	#define _NODISCARD [[nodiscard]]
+#endif
+
 	class FlyManager
 	{
 	public:
