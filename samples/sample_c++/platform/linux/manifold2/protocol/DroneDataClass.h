@@ -403,55 +403,55 @@ namespace plane::protocol
 	};
 
 	// 上报数据: C++ -> JSON
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GpsInfo, GPSSXSL, SFSL, SXDW);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BatteryDetail, DCSYSDL, DY);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(BatteryInfo, SYDL, ZDY, DCXXXX);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(VideoSource, SPURL, SPXY, ZBZT);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StatusPayload,
-									   SXZT,
-									   DCXX,
-									   YTFY,
-									   YTHG,
-									   YTPH,
-									   FJFYJ,
-									   FJHGJ,
-									   FJPHJ,
-									   JJD,
-									   JWD,
-									   JHB,
-									   JXDGD,
-									   DQWD,
-									   DQJD,
-									   XDQFGD,
-									   JDGD,
-									   CZSD,
-									   SPSD,
-									   VX,
-									   VY,
-									   VZ,
-									   DQHD,
-									   ZHD,
-									   JGCJ,
-									   WZT,
-									   CJ,
-									   XH,
-									   MODE,
-									   VSE,
-									   AME);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(MissionInfoPayload, FJSN, YKQIP, YSRTSP);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HealthAlertPayload, GJDJ, GJMK, GJM, GJBT, GJMS);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(HealthStatusPayload, GJLB);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GpsInfo, GPSSXSL, SFSL, SXDW);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(BatteryDetail, DCSYSDL, DY);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(BatteryInfo, SYDL, ZDY, DCXXXX);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(VideoSource, SPURL, SPXY, ZBZT);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(StatusPayload,
+													SXZT,
+													DCXX,
+													YTFY,
+													YTHG,
+													YTPH,
+													FJFYJ,
+													FJHGJ,
+													FJPHJ,
+													JJD,
+													JWD,
+													JHB,
+													JXDGD,
+													DQWD,
+													DQJD,
+													XDQFGD,
+													JDGD,
+													CZSD,
+													SPSD,
+													VX,
+													VY,
+													VZ,
+													DQHD,
+													ZHD,
+													JGCJ,
+													WZT,
+													CJ,
+													XH,
+													MODE,
+													VSE,
+													AME);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(MissionInfoPayload, FJSN, YKQIP, YSRTSP);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(HealthAlertPayload, GJDJ, GJMK, GJM, GJBT, GJMS);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(HealthStatusPayload, GJLB);
 
 	// 下行指令: JSON -> C++
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Waypoint, JD, WD, GD, SD, YTFYJ, PHJ, SFTY, DZJ);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WaypointPayload, HDJ, RWID);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TakeoffPayload, MBWD, MBJD, MBGD, FHMS, FHGD, ZDMSD, AQJC);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ControlStrategyPayload, YTJSCL);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CircleFlyPayload, JD, WD, GD, SD, BJ, QS);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GimbalControlPayload, FYJ, PHJ, MS);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ZoomControlPayload, XJSY, XJLX, BJB);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(WaypointAction, LX, CS);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StickDataPayload, YML, PHL, FYL, HGL);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StickModeSwitchPayload, YGMS);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(NedVelocityPayload, SDN, SDD, SDX, PHJ);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Waypoint, JD, WD, GD, SD, YTFYJ, PHJ, SFTY, DZJ);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(WaypointPayload, HDJ, RWID);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(TakeoffPayload, MBWD, MBJD, MBGD, FHMS, FHGD, ZDMSD, AQJC);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ControlStrategyPayload, YTJSCL);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CircleFlyPayload, JD, WD, GD, SD, BJ, QS);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GimbalControlPayload, FYJ, PHJ, MS);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ZoomControlPayload, XJSY, XJLX, BJB);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(WaypointAction, LX, CS);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(StickDataPayload, YML, PHL, FYL, HGL);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(StickModeSwitchPayload, YGMS);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(NedVelocityPayload, SDN, SDD, SDX, PHJ);
 } // namespace plane::protocol

@@ -34,7 +34,9 @@ namespace plane::utils
 		}
 		catch (const spdlog::spdlog_ex& ex)
 		{
-			std::cerr << "日志初始化失败：" << ex.what() << std::endl;
+			std::cerr << "====================================" << std::endl;
+			std::cerr << "           日志初始化失败：" << ex.what() << std::endl;
+			std::cerr << "====================================" << std::endl;
 		}
 	}
 } // namespace plane::utils

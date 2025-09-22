@@ -1,6 +1,6 @@
 #include "utils/JsonConverter/JsonToKmz.h"
 
-#include "protocol/KmlDataClass.h"
+#include "protocol/KmzDataClass.h"
 #include "utils/Logger/Logger.h"
 
 #include "fmt/format.h"
@@ -25,8 +25,8 @@ namespace plane::utils
 
 	namespace
 	{
-		fs::path			   g_latestKmzFilePath {};
-		fs::path			   g_kmzStorageDir {};
+		static fs::path		   g_latestKmzFilePath {};
+		static fs::path		   g_kmzStorageDir {};
 
 		inline const fs::path& getKmzStorageDir(void) noexcept
 		{
@@ -77,7 +77,7 @@ namespace plane::utils
 			return g_kmzStorageDir;
 		}
 
-		inline double calculateDistance(const protocol::Waypoint& wp1, const protocol::Waypoint& wp2) noexcept
+		inline double calculateDistance(const plane::protocol::Waypoint& wp1, const plane::protocol::Waypoint& wp2) noexcept
 		{
 			const double lat1Rad { wp1.WD * MATH_PI / 180.0 };
 			const double lat2Rad { wp2.WD * MATH_PI / 180.0 };
@@ -89,7 +89,7 @@ namespace plane::utils
 			return EARTH_RADIUS_M * c;
 		}
 
-		inline double calculateTotalDistance(const std::vector<protocol::Waypoint>& waypoints) noexcept
+		inline double calculateTotalDistance(const std::vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
 			double totalDistance { 0.0 };
 			for (size_t i { 1 }; i < waypoints.size(); ++i)
@@ -99,7 +99,7 @@ namespace plane::utils
 			return totalDistance;
 		}
 
-		inline double calculateTotalDuration(const std::vector<protocol::Waypoint>& waypoints) noexcept
+		inline double calculateTotalDuration(const std::vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
 			double totalDuration { 0.0 };
 			for (size_t i { 1 }; i < waypoints.size(); ++i)
@@ -115,7 +115,7 @@ namespace plane::utils
 			return totalDuration;
 		}
 
-		inline double calculateHeadingAngle(const protocol::Waypoint& from, const protocol::Waypoint& to) noexcept
+		inline double calculateHeadingAngle(const plane::protocol::Waypoint& from, const plane::protocol::Waypoint& to) noexcept
 		{
 			const double deltaLon { (to.JD - from.JD) * MATH_PI / 180.0 };
 			const double fromLatRad { from.WD * MATH_PI / 180.0 };
@@ -126,31 +126,31 @@ namespace plane::utils
 			return fmod(bearing + 360.0, 360.0);
 		}
 
-		static std::string generateWaylinesKml(const std::vector<protocol::Waypoint>& waypoints) noexcept
+		static std::string generateWaylinesWpml(const std::vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
-			protocol::KmlRoot kmlRoot {};
-			kmlRoot.document.missionConfig.globalTransitionalSpeed = waypoints.empty() ? 5.0 : waypoints[0].SD;
-			kmlRoot.document.folder.templateId					   = 0;
-			kmlRoot.document.folder.executeHeightMode			   = "relativeToStartPoint";
-			kmlRoot.document.folder.waylineId					   = 0;
-			kmlRoot.document.folder.distance					   = std::stod(fmt::format("{:.2f}", calculateTotalDistance(waypoints)));
-			kmlRoot.document.folder.duration					   = std::stod(fmt::format("{:.2f}", calculateTotalDuration(waypoints)));
-			kmlRoot.document.folder.autoFlightSpeed				   = kmlRoot.document.missionConfig.globalTransitionalSpeed;
+			plane::protocol::WpmlRoot wpmlRoot {};
+			wpmlRoot.document.missionConfig.globalTransitionalSpeed = waypoints.empty() ? 5.0 : waypoints[0].SD;
+			wpmlRoot.document.folder.templateId						= 0;
+			wpmlRoot.document.folder.executeHeightMode				= "relativeToStartPoint";
+			wpmlRoot.document.folder.waylineId						= 0;
+			wpmlRoot.document.folder.distance						= std::stod(fmt::format("{:.2f}", calculateTotalDistance(waypoints)));
+			wpmlRoot.document.folder.duration						= std::stod(fmt::format("{:.2f}", calculateTotalDuration(waypoints)));
+			wpmlRoot.document.folder.autoFlightSpeed				= wpmlRoot.document.missionConfig.globalTransitionalSpeed;
 
 			if (!waypoints.empty())
 			{
-				protocol::KmlActionGroup startGroup {};
+				plane::protocol::WpmlActionGroup startGroup {};
 				startGroup.groupId	   = 0;
 				startGroup.startIndex  = 0;
 				startGroup.endIndex	   = 0;
 				startGroup.mode		   = "sequence";
 				startGroup.triggerType = "takeoff";
 
-				protocol::KmlAction gimbalRotate {};
+				plane::protocol::WpmlAction gimbalRotate {};
 				gimbalRotate.actionId	  = 0;
 				gimbalRotate.actuatorFunc = "gimbalRotate";
 
-				protocol::KmlActionActuatorFuncParam gimbalParam {};
+				plane::protocol::WpmlActionActuatorFuncParam gimbalParam {};
 				gimbalParam.gimbalPitchRotateAngle	= -90.00;
 				gimbalParam.payloadPositionIndex	= 0;
 				gimbalParam.gimbalHeadingYawBase	= "aircraft";
@@ -163,27 +163,25 @@ namespace plane::utils
 				gimbalParam.gimbalRotateTimeEnable	= 0;
 				gimbalParam.gimbalRotateTime		= 10;
 				gimbalRotate.actuatorFuncParam		= gimbalParam;
-
 				startGroup.actions.push_back(gimbalRotate);
 
-				protocol::KmlAction hover {};
+				plane::protocol::WpmlAction hover {};
 				hover.actionId	   = 1;
 				hover.actuatorFunc = "hover";
 
-				protocol::KmlActionActuatorFuncParam hoverParam {};
+				plane::protocol::WpmlActionActuatorFuncParam hoverParam {};
 				hoverParam.hoverTime	= 0.5;
 				hover.actuatorFuncParam = hoverParam;
-
 				startGroup.actions.push_back(hover);
 
-				kmlRoot.document.folder.startActionGroups.push_back(startGroup);
+				wpmlRoot.document.folder.startActionGroups.push_back(startGroup);
 			}
 
 			size_t i { 0 };
 			size_t size { waypoints.size() };
 			for (const auto& wp : waypoints)
 			{
-				protocol::KmlPlacemark placemark {};
+				plane::protocol::WpmlPlacemark placemark {};
 				placemark.point.longitude		   = wp.JD;
 				placemark.point.latitude		   = wp.WD;
 				placemark.executeHeight			   = std::stod(fmt::format("{:.12f}", wp.GD));
@@ -217,25 +215,26 @@ namespace plane::utils
 				// 首航点 actionGroup
 				if (i == 0)
 				{
-					protocol::KmlActionGroup ag;
+					plane::protocol::WpmlActionGroup ag;
 					ag.groupId	   = 0;
 					ag.startIndex  = 0;
 					ag.endIndex	   = size > 1 ? size - 2 : 0;
 					ag.mode		   = "sequence";
 					ag.triggerType = "betweenAdjacentPoints";
 
-					protocol::KmlAction lock;
+					plane::protocol::WpmlAction lock;
 					lock.actionId	  = 0;
 					lock.actuatorFunc = "gimbalAngleLock";
 					ag.actions.push_back(lock);
 
-					protocol::KmlAction timeLapse;
+					plane::protocol::WpmlAction timeLapse;
 					timeLapse.actionId	   = 1;
 					timeLapse.actuatorFunc = "startTimeLapse";
-					protocol::KmlActionActuatorFuncParam param;
+
+					plane::protocol::WpmlActionActuatorFuncParam param;
 					param.payloadPositionIndex		= 0;
 					param.useGlobalPayloadLensIndex = 0;
-					param.payloadLensIndex			= "visable";
+					param.payloadLensIndex			= "visible";
 					param.minShootInterval			= 2.0;
 					timeLapse.actuatorFuncParam		= param;
 					ag.actions.push_back(timeLapse);
@@ -246,23 +245,23 @@ namespace plane::utils
 				// 末航点 actionGroup
 				if (i == size - 1)
 				{
-					protocol::KmlActionGroup ag;
+					protocol::WpmlActionGroup ag;
 					ag.groupId	   = 1;
 					ag.startIndex  = i;
 					ag.endIndex	   = i;
 					ag.mode		   = "sequence";
 					ag.triggerType = "reachPoint";
 
-					protocol::KmlAction stop;
+					protocol::WpmlAction stop;
 					stop.actionId	  = 0;
 					stop.actuatorFunc = "stopTimeLapse";
-					protocol::KmlActionActuatorFuncParam param;
+					protocol::WpmlActionActuatorFuncParam param;
 					param.payloadPositionIndex = 0;
-					param.payloadLensIndex	   = "visable";
+					param.payloadLensIndex	   = "visible";
 					stop.actuatorFuncParam	   = param;
 					ag.actions.push_back(stop);
 
-					protocol::KmlAction unlock;
+					protocol::WpmlAction unlock;
 					unlock.actionId		= 1;
 					unlock.actuatorFunc = "gimbalAngleUnlock";
 					ag.actions.push_back(unlock);
@@ -270,58 +269,26 @@ namespace plane::utils
 					placemark.actionGroups.push_back(ag);
 				}
 
-				kmlRoot.document.folder.placemarks.push_back(placemark);
+				wpmlRoot.document.folder.placemarks.push_back(placemark);
 				++i;
 			}
 
 			pugi::xml_document doc {};
-			kmlRoot.toXml(doc);
+			wpmlRoot.toXml(doc);
 			std::ostringstream oss {};
 			doc.save(oss, "  ", pugi::format_default, pugi::encoding_utf8);
 			return oss.str();
 		}
 
-		struct TemplateKml
-		{
-			std::string author { "cy_psdk" };
-			std::string createTime {};
-			std::string updateTime {};
-
-			explicit TemplateKml(void) noexcept
-			{
-				auto	now { std::chrono::system_clock::now() };
-				auto	time_t_now { std::chrono::system_clock::to_time_t(now) };
-				std::tm tm_now { *std::localtime(&time_t_now) };
-				char	buf[32] {};
-				std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_now);
-				createTime = buf;
-				updateTime = buf;
-			}
-
-			void toXml(pugi::xml_document& doc) const noexcept
-			{
-				auto decl { doc.append_child(pugi::node_declaration) };
-				decl.append_attribute("version")  = "1.0";
-				decl.append_attribute("encoding") = "UTF-8";
-
-				auto kmlNode { doc.append_child("kml") };
-				kmlNode.append_attribute("xmlns")	   = "http://www.opengis.net/kml/2.2";
-				kmlNode.append_attribute("xmlns:wpml") = "http://www.dji.com/wpmz/1.0.6";
-
-				auto docNode { kmlNode.append_child("Document") };
-				docNode.append_child("wpml:author").text().set(author);
-				docNode.append_child("wpml:createTime").text().set(createTime);
-				docNode.append_child("wpml:updateTime").text().set(updateTime);
-			}
-		};
-
 		static std::string generateTemplateKml(void) noexcept
 		{
-			TemplateKml		   tpl {};
-			pugi::xml_document doc {};
+			plane::protocol::TemplateKml tpl {};
+			pugi::xml_document			 doc {};
 			tpl.toXml(doc);
+
 			std::ostringstream oss {};
 			doc.save(oss, "  ", pugi::format_default, pugi::encoding_utf8);
+
 			return oss.str();
 		}
 	} // namespace
@@ -349,7 +316,7 @@ namespace plane::utils
 
 		LOG_DEBUG("开始生成 KMZ 文件, 任务 ID: {}, 路径: {}", missionId, kmzFilePath.string());
 
-		std::string waylinesKml { generateWaylinesKml(waypoints) };
+		std::string waylinesWpml { generateWaylinesWpml(waypoints) };
 		std::string templateKml { generateTemplateKml() };
 
 		int			error { 0 };
@@ -363,7 +330,7 @@ namespace plane::utils
 			return false;
 		}
 
-		zip_source_t* waylines_source { zip_source_buffer(archive, waylinesKml.c_str(), waylinesKml.length(), 0) };
+		zip_source_t* waylines_source { zip_source_buffer(archive, waylinesWpml.c_str(), waylinesWpml.length(), 0) };
 		if (!waylines_source)
 		{
 			LOG_ERROR("无法创建 waylines.wpml 的 ZIP 源");
@@ -392,7 +359,6 @@ namespace plane::utils
 			zip_close(archive);
 			return false;
 		}
-
 		if (zip_close(archive) < 0)
 		{
 			LOG_ERROR("关闭 KMZ 文件时出错: {}", zip_strerror(archive));
@@ -405,7 +371,7 @@ namespace plane::utils
 		return true;
 	}
 
-	std::string_view JsonToKmzConverter::getKmzFilePath(void) noexcept
+	std::string JsonToKmzConverter::getKmzFilePath(void) noexcept
 	{
 		return g_latestKmzFilePath.string();
 	}

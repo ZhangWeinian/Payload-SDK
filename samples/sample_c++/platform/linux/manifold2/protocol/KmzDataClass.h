@@ -68,7 +68,7 @@ namespace plane::protocol
 		}
 	};
 
-	struct KmlActionActuatorFuncParam
+	struct WpmlActionActuatorFuncParam
 	{
 		std::optional<double>	   gimbalPitchRotateAngle {};
 		std::optional<double>	   hoverTime {};
@@ -152,13 +152,13 @@ namespace plane::protocol
 		}
 	};
 
-	struct KmlAction
+	struct WpmlAction
 	{
-		int										  actionId { 0 };
-		std::string								  actuatorFunc {};
-		std::optional<KmlActionActuatorFuncParam> actuatorFuncParam {};
+		int										   actionId { 0 };
+		std::string								   actuatorFunc {};
+		std::optional<WpmlActionActuatorFuncParam> actuatorFuncParam {};
 
-		void									  toXml(pugi::xml_node& parent) const
+		void									   toXml(pugi::xml_node& parent) const
 		{
 			auto node { parent.append_child("wpml:action") };
 			node.append_child("wpml:actionId").text().set(actionId);
@@ -170,16 +170,16 @@ namespace plane::protocol
 		}
 	};
 
-	struct KmlActionGroup
+	struct WpmlActionGroup
 	{
-		int					   groupId { 0 };
-		int					   startIndex { 0 };
-		int					   endIndex { 0 };
-		std::string			   mode { "sequence" };
-		std::string			   triggerType {};
-		std::vector<KmlAction> actions {};
+		int						groupId { 0 };
+		int						startIndex { 0 };
+		int						endIndex { 0 };
+		std::string				mode { "sequence" };
+		std::string				triggerType {};
+		std::vector<WpmlAction> actions {};
 
-		void				   toXml(pugi::xml_node& parent, bool isStartActionGroup = false) const
+		void					toXml(pugi::xml_node& parent, bool isStartActionGroup = false) const
 		{
 			auto node = parent.append_child(isStartActionGroup ? "wpml:startActionGroup" : "wpml:actionGroup");
 			if (!isStartActionGroup)
@@ -198,21 +198,21 @@ namespace plane::protocol
 		}
 	};
 
-	struct KmlPlacemark
+	struct WpmlPlacemark
 	{
-		KmlPoint					point {};
-		int							index { 0 };
-		double						executeHeight { 0.0 };
-		double						waypointSpeed { 5.0 };
-		KmlWaypointHeadingParam		headingParam {};
-		KmlWaypointTurnParam		turnParam {};
-		int							useStraightLine { 1 };
-		std::vector<KmlActionGroup> actionGroups {};
-		KmlGimbalHeadingParam		gimbalHeadingParam {};
-		int							isRisky { 0 };
-		int							workType { 0 };
+		KmlPoint					 point {};
+		int							 index { 0 };
+		double						 executeHeight { 0.0 };
+		double						 waypointSpeed { 5.0 };
+		KmlWaypointHeadingParam		 headingParam {};
+		KmlWaypointTurnParam		 turnParam {};
+		int							 useStraightLine { 1 };
+		std::vector<WpmlActionGroup> actionGroups {};
+		KmlGimbalHeadingParam		 gimbalHeadingParam {};
+		int							 isRisky { 0 };
+		int							 workType { 0 };
 
-		void						toXml(pugi::xml_node& parent) const
+		void						 toXml(pugi::xml_node& parent) const
 		{
 			auto node { parent.append_child("Placemark") };
 			point.toXml(node);
@@ -234,16 +234,16 @@ namespace plane::protocol
 
 	struct KmlFolder
 	{
-		int							templateId { 0 };
-		std::string					executeHeightMode { "relativeToStartPoint" };
-		int							waylineId { 0 };
-		double						distance { 0.0 };
-		double						duration { 0.0 };
-		double						autoFlightSpeed { 5.0 };
-		std::vector<KmlActionGroup> startActionGroups;
-		std::vector<KmlPlacemark>	placemarks;
+		int							 templateId { 0 };
+		std::string					 executeHeightMode { "relativeToStartPoint" };
+		int							 waylineId { 0 };
+		double						 distance { 0.0 };
+		double						 duration { 0.0 };
+		double						 autoFlightSpeed { 5.0 };
+		std::vector<WpmlActionGroup> startActionGroups;
+		std::vector<WpmlPlacemark>	 placemarks;
 
-		void						toXml(pugi::xml_node& parent) const
+		void						 toXml(pugi::xml_node& parent) const
 		{
 			auto node { parent.append_child("Folder") };
 			node.append_child("wpml:templateId").text().set(templateId);
@@ -266,7 +266,7 @@ namespace plane::protocol
 	struct KmlMissionConfig
 	{
 		std::string flyToWaylineMode { "safely" };
-		std::string finishAction { "goHome" };
+		std::string finishAction { "noAction" };
 		std::string exitOnRCLost { "executeLostAction" };
 		std::string executeRCLostAction { "goBack" };
 		int			takeOffSecurityHeight { 20 };
@@ -333,7 +333,7 @@ namespace plane::protocol
 		}
 	};
 
-	struct KmlRoot
+	struct WpmlRoot
 	{
 		std::string xml_version { "1.0" };
 		std::string encoding { "UTF-8" };
@@ -352,6 +352,40 @@ namespace plane::protocol
 			kmlNode.append_attribute("xmlns:wpml") = xmlns_wpml;
 
 			document.toXml(kmlNode);
+		}
+	};
+
+	struct TemplateKml
+	{
+		std::string author { "cy_psdk" };
+		std::string createTime {};
+		std::string updateTime {};
+
+		explicit TemplateKml(void) noexcept
+		{
+			auto	now { std::chrono::system_clock::now() };
+			auto	time_t_now { std::chrono::system_clock::to_time_t(now) };
+			std::tm tm_now { *std::localtime(&time_t_now) };
+			char	buf[32] {};
+			std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_now);
+			createTime = buf;
+			updateTime = buf;
+		}
+
+		void toXml(pugi::xml_document& doc) const noexcept
+		{
+			auto decl { doc.append_child(pugi::node_declaration) };
+			decl.append_attribute("version")  = "1.0";
+			decl.append_attribute("encoding") = "UTF-8";
+
+			auto kmlNode { doc.append_child("kml") };
+			kmlNode.append_attribute("xmlns")	   = "http://www.opengis.net/kml/2.2";
+			kmlNode.append_attribute("xmlns:wpml") = "http://www.dji.com/wpmz/1.0.6";
+
+			auto docNode { kmlNode.append_child("Document") };
+			docNode.append_child("wpml:author").text().set(author);
+			docNode.append_child("wpml:createTime").text().set(createTime);
+			docNode.append_child("wpml:updateTime").text().set(updateTime);
 		}
 	};
 } // namespace plane::protocol

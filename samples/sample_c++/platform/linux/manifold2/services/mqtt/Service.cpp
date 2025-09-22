@@ -79,6 +79,11 @@ namespace plane::services
 	{
 		try
 		{
+			if (!impl_ || !impl_->client)
+			{
+				return;
+			}
+
 			stop();
 			LOG_DEBUG("[MQTTService::dtor] stop() 完成");
 		}
@@ -237,7 +242,7 @@ namespace plane::services
 
 		if (!impl_ || !impl_->client)
 		{
-			LOG_INFO("MQTTService 停止：客户端不存在或已被销毁");
+			LOG_DEBUG("MQTTService 停止：客户端不存在或已被销毁");
 			return;
 		}
 
