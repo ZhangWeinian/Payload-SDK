@@ -30,7 +30,7 @@ namespace plane::services
 			msg_handler.registerHandler(plane::services::TOPIC_ROCKER_CONTROL, "YGMSQH", &LogicHandler::handleStickModeSwitch);
 			msg_handler.registerHandler(plane::services::TOPIC_VELOCITY_CONTROL, "SDKZ", &LogicHandler::handleNedVelocity);
 		}
-		catch (const std::exception& e)
+		catch (const _STD exception& e)
 		{
 			LOG_ERROR("初始化 MQTT 业务逻辑处理器时发生异常: {}", e.what());
 			return false;

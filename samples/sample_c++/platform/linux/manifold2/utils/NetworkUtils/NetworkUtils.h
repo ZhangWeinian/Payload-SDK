@@ -1,23 +1,21 @@
 #pragma once
 
+#include "define.h"
+
 #include <optional>
 #include <string>
 
 namespace plane::utils
 {
-#ifndef _NODISCARD
-	#define _NODISCARD [[nodiscard]]
-#endif
-
 	class NetworkUtils
 	{
 	public:
-		_NODISCARD static std::optional<std::string> getDeviceIpv4Address(void) noexcept;
+		_NODISCARD static _STD optional<_STD string> getDeviceIpv4Address(void) noexcept;
 
 		NetworkUtils(void) noexcept	 = delete;
 		~NetworkUtils(void) noexcept = delete;
 
 	private:
-		static std::optional<std::string> getDeviceIpv4AddressImpl(void) noexcept;
+		static _STD optional<_STD string> getDeviceIpv4AddressImpl(void) noexcept;
 	};
 } // namespace plane::utils

@@ -15,14 +15,14 @@ namespace plane::config
 		return instance;
 	}
 
-	bool ConfigManager::loadAndCheck(const std::string& filepath) noexcept
+	bool ConfigManager::loadAndCheck(const _STD string& filepath) noexcept
 	{
 		configFilePath = filepath;
 		loaded		   = false;
 
 		try
 		{
-			if (std::ifstream file(filepath); !file.good())
+			if (_STD ifstream file(filepath); !file.good())
 			{
 				LOG_ERROR("配置文件未找到: {}", filepath);
 				return false;
@@ -45,7 +45,7 @@ namespace plane::config
 			LOG_ERROR("解析 YAML 配置文件 '{}' 失败: {}", filepath, e.what());
 			return false;
 		}
-		catch (const std::exception& e)
+		catch (const _STD exception& e)
 		{
 			LOG_ERROR("处理配置文件时发生未知异常: {}", e.what());
 			return false;
@@ -58,7 +58,7 @@ namespace plane::config
 		{
 			if (configNode["mqtt"] && configNode["mqtt"]["url"])
 			{
-				std::string url { configNode["mqtt"]["url"].as<std::string>() };
+				_STD string url { configNode["mqtt"]["url"].as<_STD string>() };
 				if (url.empty())
 				{
 					LOG_ERROR("MQTT URL 不能为空");
@@ -74,7 +74,7 @@ namespace plane::config
 
 			if (configNode["plane"] && configNode["plane"]["code"])
 			{
-				std::string code { configNode["plane"]["code"].as<std::string>() };
+				_STD string code { configNode["plane"]["code"].as<_STD string>() };
 				if (code.empty())
 				{
 					LOG_ERROR("Plane Code 不能为空");
@@ -90,7 +90,7 @@ namespace plane::config
 
 			if (configNode["mqtt"] && configNode["mqtt"]["client_id"])
 			{
-				std::string clientId { configNode["mqtt"]["client_id"].as<std::string>() };
+				_STD string clientId { configNode["mqtt"]["client_id"].as<_STD string>() };
 				if (clientId.empty())
 				{
 					clientId						= generateUuidWithoutDashes();
@@ -113,7 +113,7 @@ namespace plane::config
 			}
 			else
 			{
-				std::string clientId { generateUuidWithoutDashes() };
+				_STD string clientId { generateUuidWithoutDashes() };
 				appConfig.mqttClientId = clientId;
 
 				if (!configNode["mqtt"])
@@ -134,22 +134,22 @@ namespace plane::config
 
 			return true;
 		}
-		catch (const std::exception& e)
+		catch (const _STD exception& e)
 		{
 			LOG_ERROR("验证和修复配置时发生异常: {}", e.what());
 			return false;
 		}
 	}
 
-	std::string ConfigManager::generateUuidWithoutDashes(void) noexcept
+	_STD string ConfigManager::generateUuidWithoutDashes(void) noexcept
 	{
-		std::random_device				rd {};
-		std::mt19937					gen(rd());
-		std::uniform_int_distribution<> dis(0, 15);
-		std::uniform_int_distribution<> dis2(8, 11);
+		_STD random_device rd {};
+		_STD mt19937	   gen(rd());
+		_STD uniform_int_distribution<> dis(0, 15);
+		_STD uniform_int_distribution<> dis2(8, 11);
 
-		std::stringstream				ss {};
-		ss << std::hex;
+		_STD stringstream				ss {};
+		ss << _STD						hex;
 
 		for (int i { 0 }; i < 32; i++)
 		{
@@ -175,24 +175,24 @@ namespace plane::config
 		return "cv_" + ss.str();
 	}
 
-	bool ConfigManager::saveConfigToFile(const std::string& filepath) const noexcept
+	bool ConfigManager::saveConfigToFile(const _STD string& filepath) const noexcept
 	{
 		try
 		{
-			std::ofstream fout(filepath);
+			_STD ofstream fout(filepath);
 			fout << configNode;
 			fout.close();
 			LOG_DEBUG("配置已写回文件: {}", filepath);
 			return true;
 		}
-		catch (const std::exception& e)
+		catch (const _STD exception& e)
 		{
 			LOG_ERROR("写回配置文件失败: {}", e.what());
 			return false;
 		}
 	}
 
-	std::string ConfigManager::getMqttUrl(void) const noexcept
+	_STD string ConfigManager::getMqttUrl(void) const noexcept
 	{
 		if (loaded && !appConfig.mqttUrl.empty())
 		{
@@ -202,7 +202,7 @@ namespace plane::config
 		return "";
 	}
 
-	std::string ConfigManager::getMqttClientId(void) const noexcept
+	_STD string ConfigManager::getMqttClientId(void) const noexcept
 	{
 		if (loaded && !appConfig.mqttClientId.empty())
 		{
@@ -212,7 +212,7 @@ namespace plane::config
 		return "";
 	}
 
-	std::string ConfigManager::getPlaneCode(void) const noexcept
+	_STD string ConfigManager::getPlaneCode(void) const noexcept
 	{
 		if (loaded && !appConfig.planeCode.empty())
 		{

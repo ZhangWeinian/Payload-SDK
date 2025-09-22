@@ -22,7 +22,7 @@ namespace plane::services
 	public:
 		explicit MqttCallback(MQTTService* service): service_(service) {}
 
-		void connected(const std::string& cause) override
+		void connected(const _STD string& cause) override
 		{
 			service_->setConnected(true);
 			LOG_INFO("MQTT 连接成功！");
@@ -33,13 +33,13 @@ namespace plane::services
 			service_->subscribe(plane::services::TOPIC_VELOCITY_CONTROL);
 		}
 
-		void connection_lost(const std::string& cause) override
+		void connection_lost(const _STD string& cause) override
 		{
 			auto& impl { service_->getImpl() };
 			if (!impl.manualDisconnect)
 			{
 				impl.reconnectAttempts++;
-				impl.lastDisconnectTime = std::chrono::steady_clock::now();
+				impl.lastDisconnectTime = _STD chrono::steady_clock::now();
 				LOG_WARN("MQTT 连接已断开, 原因: {}. 重连尝试次数: {}.", cause, impl.reconnectAttempts);
 			}
 			else
@@ -87,7 +87,7 @@ namespace plane::services
 			stop();
 			LOG_DEBUG("[MQTTService::dtor] stop() 完成");
 		}
-		catch (const std::exception& ex)
+		catch (const _STD exception& ex)
 		{
 			LOG_ERROR("MQTTService 析构异常: {}", ex.what());
 		}
@@ -103,9 +103,9 @@ namespace plane::services
 		return instance;
 	}
 
-	bool MQTTService::publish(std::string_view topic, std::string_view payload) noexcept
+	bool MQTTService::publish(_STD string_view topic, _STD string_view payload) noexcept
 	{
-		std::lock_guard<std::mutex> lock(mutex_);
+		_STD lock_guard<_STD mutex> lock(mutex_);
 		if (!isConnected() || !impl_->client)
 		{
 			LOG_WARN("MQTT 未连接, 发布请求被忽略。");
@@ -125,7 +125,7 @@ namespace plane::services
 			LOG_ERROR("向主题 '{}' 发布消息失败: {}, client={}", topic, ex.what(), (void*)impl_->client.get());
 			return false;
 		}
-		catch (const std::exception& ex)
+		catch (const _STD exception& ex)
 		{
 			LOG_ERROR("向主题 '{}' 发布消息发生未知异常: {}, client={}", topic, ex.what(), (void*)impl_->client.get());
 			return false;
@@ -137,9 +137,9 @@ namespace plane::services
 		}
 	}
 
-	void MQTTService::subscribe(std::string_view topic) noexcept
+	void MQTTService::subscribe(_STD string_view topic) noexcept
 	{
-		std::lock_guard<std::mutex> lock(mutex_);
+		_STD lock_guard<_STD mutex> lock(mutex_);
 		if (!isConnected() || !impl_->client)
 		{
 			LOG_WARN("MQTT 未连接, 对主题 '{}' 的订阅请求被忽略。", topic);
@@ -155,7 +155,7 @@ namespace plane::services
 		{
 			LOG_ERROR("发起订阅主题 '{}' 的请求失败: {}", topic, ex.what());
 		}
-		catch (const std::exception& ex)
+		catch (const _STD exception& ex)
 		{
 			LOG_ERROR("发起订阅主题 '{}' 的请求发生未知异常: {}", topic, ex.what());
 		}
@@ -165,9 +165,9 @@ namespace plane::services
 		}
 	}
 
-	bool MQTTService::start(std::string_view serverURI, std::string_view clientId) noexcept
+	bool MQTTService::start(_STD string_view serverURI, _STD string_view clientId) noexcept
 	{
-		std::lock_guard<std::mutex> lock(mutex_);
+		_STD lock_guard<_STD mutex> lock(mutex_);
 
 		if (isConnected())
 		{
@@ -175,8 +175,8 @@ namespace plane::services
 			return true;
 		}
 
-		std::string url { serverURI };
-		std::string cid { clientId };
+		_STD string url { serverURI };
+		_STD string cid { clientId };
 
 		if (url.empty() || cid.empty())
 		{
@@ -198,8 +198,8 @@ namespace plane::services
 
 		try
 		{
-			impl_->client	= std::make_unique<mqtt::async_client>(url, cid);
-			impl_->callback = std::make_shared<MqttCallback>(this);
+			impl_->client	= _STD	 make_unique<mqtt::async_client>(url, cid);
+			impl_->callback = _STD make_shared<MqttCallback>(this);
 			impl_->client->set_callback(*impl_->callback);
 			mqtt::connect_options connOpts;
 			connOpts.set_keep_alive_interval(30);
@@ -217,7 +217,7 @@ namespace plane::services
 			impl_->callback.reset();
 			return false;
 		}
-		catch (const std::exception& ex)
+		catch (const _STD exception& ex)
 		{
 			LOG_ERROR("MQTT 客户端初始化或连接发生未知异常: {}", ex.what());
 			impl_->client.reset();
@@ -235,7 +235,7 @@ namespace plane::services
 
 	void MQTTService::stop(void) noexcept
 	{
-		std::lock_guard<std::mutex> lock(mutex_);
+		_STD lock_guard<_STD mutex> lock(mutex_);
 
 		impl_->manualDisconnect = true;
 		setConnected(false);
@@ -252,7 +252,7 @@ namespace plane::services
 			{
 				LOG_DEBUG("MQTTService 停止：客户端已连接, 正在发送断开连接请求...");
 				impl_->client->disconnect()->wait();
-				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+				_STD this_thread::sleep_for(_STD chrono::milliseconds(200));
 			}
 			else
 			{
@@ -267,7 +267,7 @@ namespace plane::services
 		{
 			LOG_ERROR("MQTTService 停止异常: {}", ex.what());
 		}
-		catch (const std::exception& ex)
+		catch (const _STD exception& ex)
 		{
 			LOG_ERROR("MQTTService 停止发生未知异常: {}", ex.what());
 		}
@@ -277,12 +277,12 @@ namespace plane::services
 		}
 	}
 
-	void MQTTService::restart(std::string_view serverURI, std::string_view clientId) noexcept
+	void MQTTService::restart(_STD string_view serverURI, _STD string_view clientId) noexcept
 	{
-		std::lock_guard<std::mutex> lock(mutex_);
+		_STD lock_guard<_STD mutex> lock(mutex_);
 		LOG_INFO("重新启动 MQTT 服务...");
 		stop();
-		std::this_thread::sleep_for(std::chrono::milliseconds(300));
+		_STD this_thread::sleep_for(_STD chrono::milliseconds(300));
 		if (!start(serverURI, clientId))
 		{
 			LOG_ERROR("MQTT restart 启动失败！");
@@ -291,11 +291,11 @@ namespace plane::services
 
 	void MQTTService::setConnected(bool status) noexcept
 	{
-		connected_.store(status, std::memory_order_release);
+		connected_.store(status, _STD memory_order_release);
 	}
 
 	bool MQTTService::isConnected(void) const noexcept
 	{
-		return connected_.load(std::memory_order_acquire);
+		return connected_.load(_STD memory_order_acquire);
 	}
 } // namespace plane::services

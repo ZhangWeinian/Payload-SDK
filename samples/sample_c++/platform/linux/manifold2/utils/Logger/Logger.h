@@ -1,5 +1,7 @@
 #pragma once
 
+#include "define.h"
+
 #include "spdlog/spdlog.h"
 
 #include <memory>
@@ -29,16 +31,16 @@ namespace plane::utils
 		{
 			if (logger_)
 			{
-				logger_->log(loc, lvl, fmt, std::forward<Args>(args)...);
+				logger_->log(loc, lvl, fmt, _STD forward<Args>(args)...);
 			}
 		}
 
 	private:
-		Logger(void) noexcept											  = default;
-		~Logger(void) noexcept											  = default;
-		Logger(const Logger&) noexcept									  = delete;
-		Logger&							operator=(const Logger&) noexcept = delete;
+		Logger(void) noexcept					  = default;
+		~Logger(void) noexcept					  = default;
+		Logger(const Logger&) noexcept			  = delete;
+		Logger& operator=(const Logger&) noexcept = delete;
 
-		std::shared_ptr<spdlog::logger> logger_ {};
+		_STD shared_ptr<spdlog::logger> logger_ {};
 	};
 } // namespace plane::utils

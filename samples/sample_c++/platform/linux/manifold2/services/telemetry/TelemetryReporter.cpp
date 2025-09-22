@@ -25,7 +25,7 @@ namespace plane::services
 
 	bool TelemetryReporter::start(void) noexcept
 	{
-		if (run_.exchange(true, std::memory_order_relaxed))
+		if (run_.exchange(true, _STD memory_order_relaxed))
 		{
 			LOG_DEBUG("TelemetryReporter 已经启动, 请勿重复调用 start() 。");
 			return false;
@@ -33,14 +33,14 @@ namespace plane::services
 
 		LOG_DEBUG("正在启动遥测上报服务...");
 
-		status_thread_ = std::thread(
+		status_thread_ = _STD thread(
 			[this]()
 			{
 				this->statusReportLoop();
 				LOG_DEBUG("[start] statusReportLoop 线程启动");
 			});
 
-		fixed_info_thread_ = std::thread(
+		fixed_info_thread_ = _STD thread(
 			[this]()
 			{
 				this->fixedInfoReportLoop();
@@ -53,7 +53,7 @@ namespace plane::services
 
 	void TelemetryReporter::stop(void) noexcept
 	{
-		if (!run_.exchange(false, std::memory_order_release))
+		if (!run_.exchange(false, _STD memory_order_release))
 		{
 			LOG_DEBUG("已经停止, 无需重复");
 			return;
@@ -74,7 +74,7 @@ namespace plane::services
 
 	void TelemetryReporter::statusReportLoop(void) noexcept
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		_STD this_thread::sleep_for(_STD chrono::milliseconds(100));
 		LOG_DEBUG("线程启动, MQTTService instance addr: {}", (void*)&plane::services::MQTTService::getInstance());
 
 		const auto&					   ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
@@ -114,12 +114,12 @@ namespace plane::services
 		status_payload.VSE	= 0;
 		status_payload.AME	= 0;
 
-		while (run_.load(std::memory_order_acquire))
+		while (run_.load(_STD memory_order_acquire))
 		{
 			if (!plane::services::MQTTService::getInstance().isConnected())
 			{
 				LOG_DEBUG("MQTTService 未连接, 1s 后重试");
-				std::this_thread::sleep_for(std::chrono::seconds(1));
+				_STD this_thread::sleep_for(_STD chrono::seconds(1));
 				continue;
 			}
 
@@ -129,49 +129,49 @@ namespace plane::services
 				status_payload.FJPHJ -= 360.0;
 			}
 
-			std::string status_json { plane::utils::JsonConverter::buildStatusReportJson(status_payload) };
+			_STD string status_json { plane::utils::JsonConverter::buildStatusReportJson(status_payload) };
 			publishStatus(plane::services::TOPIC_DRONE_STATUS, status_json);
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			_STD this_thread::sleep_for(_STD chrono::milliseconds(100));
 		}
 		LOG_DEBUG("状态上报线程已停止。");
 	}
 
 	void TelemetryReporter::fixedInfoReportLoop(void) noexcept
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		_STD this_thread::sleep_for(_STD chrono::milliseconds(100));
 		LOG_DEBUG("固定信息上报线程已启动。");
 		const auto&							ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
 		plane::protocol::MissionInfoPayload info_payload { .FJSN   = plane::config::ConfigManager::getInstance().getPlaneCode(),
 														   .YKQIP  = ipAddresses,
 														   .YSRTSP = fmt::format("rtsp://admin:1@{}:8554/streaming/live/1", ipAddresses) };
 
-		while (run_.load(std::memory_order_acquire))
+		while (run_.load(_STD memory_order_acquire))
 		{
 			if (!plane::services::MQTTService::getInstance().isConnected())
 			{
 				LOG_DEBUG("MQTTService 未连接, 1s 后重试");
-				std::this_thread::sleep_for(std::chrono::seconds(1));
+				_STD this_thread::sleep_for(_STD chrono::seconds(1));
 				continue;
 			}
 
-			std::string info_json { plane::utils::JsonConverter::buildMissionInfoJson(info_payload) };
+			_STD string info_json { plane::utils::JsonConverter::buildMissionInfoJson(info_payload) };
 			publishStatus(plane::services::TOPIC_FIXED_INFO, info_json);
 
 			for (size_t i { 0 }; i < 10; ++i)
 			{
-				if (!run_.load(std::memory_order_acquire))
+				if (!run_.load(_STD memory_order_acquire))
 				{
 					LOG_DEBUG("MQTTService 在'{}' run_ 已停止, 提前 break", plane::services::TOPIC_FIXED_INFO);
 					break;
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				_STD this_thread::sleep_for(_STD chrono::milliseconds(100));
 			}
 		}
 		LOG_DEBUG("固定信息上报线程已停止。");
 	}
 
-	bool TelemetryReporter::publishStatus(std::string_view topic, std::string_view status_json) noexcept
+	bool TelemetryReporter::publishStatus(_STD string_view topic, _STD string_view status_json) noexcept
 	{
 		if (!plane::services::MQTTService::getInstance().isConnected())
 		{
@@ -187,7 +187,7 @@ namespace plane::services
 				return false;
 			}
 		}
-		catch (const std::exception& ex)
+		catch (const _STD exception& ex)
 		{
 			LOG_ERROR("MQTTService 在'{}' 发布时出现异常: {}", topic, ex.what());
 			return false;

@@ -2,6 +2,7 @@
 
 #include "dji_typedef.h"
 
+#include "define.h"
 #include "protocol/DroneDataClass.h"
 
 #include <string_view>
@@ -10,14 +11,6 @@
 
 namespace plane::services
 {
-#ifndef _NODISCARD
-	#define _NODISCARD [[nodiscard]]
-#endif
-
-#ifndef _MAYBE_UNUSED
-	#define _MAYBE_UNUSED [[maybe_unused]]
-#endif
-
 	class PSDKAdapter
 	{
 	public:
@@ -27,7 +20,7 @@ namespace plane::services
 		_NODISCARD T_DjiReturnCode goHome(void) const noexcept;
 		_NODISCARD T_DjiReturnCode hover(void) const noexcept;
 		_NODISCARD T_DjiReturnCode land(void) const noexcept;
-		_NODISCARD T_DjiReturnCode waypointV3MissionStart(std::string_view kmzFilePath) const noexcept;
+		_NODISCARD T_DjiReturnCode waypointV3MissionStart(_STD string_view kmzFilePath) const noexcept;
 		_NODISCARD T_DjiReturnCode setControlStrategy(int strategyCode) const noexcept;
 		_NODISCARD T_DjiReturnCode flyCircleAroundPoint(const protocol::CircleFlyPayload& circleParams) const noexcept;
 

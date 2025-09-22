@@ -1,5 +1,7 @@
 #pragma once
 
+#include "define.h"
+
 #include "nlohmann/json.hpp"
 
 #include <cstdint>
@@ -13,9 +15,9 @@ namespace plane::protocol
 
 	struct AppConfigData
 	{
-		std::string mqttUrl {};
-		std::string planeSn {};
-		std::string planeCode {};
-		std::string mqttClientId {};
+		_STD string mqttUrl {};
+		_STD string planeSn {};
+		_STD string planeCode {};
+		_STD string mqttClientId {};
 	};
 } // namespace plane::protocol

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "define.h"
+
 #include <string_view>
 #include <atomic>
 #include <string>
@@ -7,10 +9,6 @@
 
 namespace plane::services
 {
-#ifndef _NODISCARD
-	#define _NODISCARD [[nodiscard]]
-#endif
-
 	class TelemetryReporter
 	{
 	public:
@@ -19,13 +17,13 @@ namespace plane::services
 		void					  stop(void) noexcept;
 
 	private:
-		void			  statusReportLoop(void) noexcept;
-		void			  fixedInfoReportLoop(void) noexcept;
-		bool			  publishStatus(std::string_view topic, std::string_view status_json) noexcept;
+		void		statusReportLoop(void) noexcept;
+		void		fixedInfoReportLoop(void) noexcept;
+		bool		publishStatus(_STD string_view topic, _STD string_view status_json) noexcept;
 
-		std::thread		  status_thread_ {};
-		std::thread		  fixed_info_thread_ {};
-		std::atomic<bool> run_ { false };
+		_STD thread status_thread_ {};
+		_STD thread fixed_info_thread_ {};
+		_STD atomic<bool> run_ { false };
 
 		explicit TelemetryReporter(void) noexcept = default;
 		~TelemetryReporter(void) noexcept;

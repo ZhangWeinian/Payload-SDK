@@ -5,6 +5,7 @@
 #include <dji_flight_controller.h>
 
 #include "config/ConfigManager.h"
+#include "define.h"
 #include "services/mqtt/Handler/LogicHandler.h"
 #include "services/mqtt/Service.h"
 #include "services/telemetry/TelemetryReporter.h"
@@ -22,7 +23,7 @@ namespace plane::my_dji
 {
 	namespace
 	{
-		std::atomic<bool> g_should_exit(false);
+		_STD atomic<bool> g_should_exit(false);
 
 		void			  signalHandler(int signum)
 		{
@@ -33,8 +34,8 @@ namespace plane::my_dji
 
 	void runMyApplication(int argc, char** argv)
 	{
-		signal(SIGINT, signalHandler);
-		signal(SIGTERM, signalHandler);
+		_CSTD signal(SIGINT, signalHandler);
+		_CSTD signal(SIGTERM, signalHandler);
 
 		if (plane::utils::isLogLevelDebug())
 		{
@@ -111,7 +112,7 @@ namespace plane::my_dji
 			return;
 		}
 
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		_STD this_thread::sleep_for(_STD chrono::seconds(1));
 		LOG_INFO("==========================================================");
 		LOG_INFO("               应用程序初始化完成, 正在运行中...");
 		LOG_INFO("                    按 Ctrl+C 退出。");
@@ -119,7 +120,7 @@ namespace plane::my_dji
 
 		while (!g_should_exit)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			_STD this_thread::sleep_for(_STD chrono::milliseconds(500));
 		}
 		LOG_INFO("收到退出信号, 正在关闭应用程序...");
 
@@ -127,7 +128,7 @@ namespace plane::my_dji
 
 		plane::services::MQTTService::getInstance().stop();
 
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		_STD this_thread::sleep_for(_STD chrono::seconds(1));
 		LOG_INFO("应用程序已关闭。");
 	}
 } // namespace plane::my_dji

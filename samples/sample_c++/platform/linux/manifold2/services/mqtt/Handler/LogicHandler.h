@@ -1,5 +1,7 @@
 #pragma once
 
+#include "define.h"
+
 #include "nlohmann/json.hpp"
 
 namespace plane::services

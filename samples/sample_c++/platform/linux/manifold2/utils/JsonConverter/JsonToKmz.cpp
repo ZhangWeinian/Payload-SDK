@@ -21,7 +21,7 @@ namespace plane::utils
 	constexpr inline double MATH_PI		   = 3.14159265358979323846;
 	constexpr inline double EARTH_RADIUS_M = 6'371'000.0;
 
-	namespace fs						   = std::filesystem;
+	namespace fs						   = _STD	  filesystem;
 
 	namespace
 	{
@@ -56,7 +56,7 @@ namespace plane::utils
 					}
 
 					fs::path testFile { g_kmzStorageDir / "test_write.tmp" };
-					if (std::ofstream ofs(testFile); !ofs)
+					if (_STD ofstream ofs(testFile); !ofs)
 					{
 						LOG_ERROR("KMZ 目录 '{}' 不可写", g_kmzStorageDir.string());
 						g_kmzStorageDir = "";
@@ -89,7 +89,7 @@ namespace plane::utils
 			return EARTH_RADIUS_M * c;
 		}
 
-		inline double calculateTotalDistance(const std::vector<plane::protocol::Waypoint>& waypoints) noexcept
+		inline double calculateTotalDistance(const _STD vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
 			double totalDistance { 0.0 };
 			for (size_t i { 1 }; i < waypoints.size(); ++i)
@@ -99,7 +99,7 @@ namespace plane::utils
 			return totalDistance;
 		}
 
-		inline double calculateTotalDuration(const std::vector<plane::protocol::Waypoint>& waypoints) noexcept
+		inline double calculateTotalDuration(const _STD vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
 			double totalDuration { 0.0 };
 			for (size_t i { 1 }; i < waypoints.size(); ++i)
@@ -126,15 +126,15 @@ namespace plane::utils
 			return fmod(bearing + 360.0, 360.0);
 		}
 
-		static std::string generateWaylinesWpml(const std::vector<plane::protocol::Waypoint>& waypoints) noexcept
+		static _STD string generateWaylinesWpml(const _STD vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
 			plane::protocol::WpmlRoot wpmlRoot {};
 			wpmlRoot.document.missionConfig.globalTransitionalSpeed = waypoints.empty() ? 5.0 : waypoints[0].SD;
 			wpmlRoot.document.folder.templateId						= 0;
 			wpmlRoot.document.folder.executeHeightMode				= "relativeToStartPoint";
 			wpmlRoot.document.folder.waylineId						= 0;
-			wpmlRoot.document.folder.distance						= std::stod(fmt::format("{:.2f}", calculateTotalDistance(waypoints)));
-			wpmlRoot.document.folder.duration						= std::stod(fmt::format("{:.2f}", calculateTotalDuration(waypoints)));
+			wpmlRoot.document.folder.distance						= _STD stod(fmt::format("{:.2f}", calculateTotalDistance(waypoints)));
+			wpmlRoot.document.folder.duration						= _STD stod(fmt::format("{:.2f}", calculateTotalDuration(waypoints)));
 			wpmlRoot.document.folder.autoFlightSpeed				= wpmlRoot.document.missionConfig.globalTransitionalSpeed;
 
 			if (!waypoints.empty())
@@ -184,12 +184,12 @@ namespace plane::utils
 				plane::protocol::WpmlPlacemark placemark {};
 				placemark.point.longitude		   = wp.JD;
 				placemark.point.latitude		   = wp.WD;
-				placemark.executeHeight			   = std::stod(fmt::format("{:.12f}", wp.GD));
-				placemark.waypointSpeed			   = std::stod(fmt::format("{:.12f}", wp.SD));
+				placemark.executeHeight			   = _STD stod(fmt::format("{:.12f}", wp.GD));
+				placemark.waypointSpeed			   = _STD stod(fmt::format("{:.12f}", wp.SD));
 
 				placemark.headingParam.headingMode = "followWayline";
 				placemark.headingParam.headingAngle =
-					(i < size - 1) ? std::stod(fmt::format("{:.6f}", calculateHeadingAngle(wp, waypoints[i + 1]))) : 0.0;
+					(i < size - 1) ? _STD stod(fmt::format("{:.6f}", calculateHeadingAngle(wp, waypoints[i + 1]))) : 0.0;
 				placemark.headingParam.poiPoint			  = "0.000000,0.000000,0.000000";
 				placemark.headingParam.headingAngleEnable = 1;
 				placemark.headingParam.headingPathMode	  = "followBadArc";
@@ -275,25 +275,25 @@ namespace plane::utils
 
 			pugi::xml_document doc {};
 			wpmlRoot.toXml(doc);
-			std::ostringstream oss {};
+			_STD ostringstream oss {};
 			doc.save(oss, "  ", pugi::format_default, pugi::encoding_utf8);
 			return oss.str();
 		}
 
-		static std::string generateTemplateKml(void) noexcept
+		static _STD string generateTemplateKml(void) noexcept
 		{
 			plane::protocol::TemplateKml tpl {};
 			pugi::xml_document			 doc {};
 			tpl.toXml(doc);
 
-			std::ostringstream oss {};
+			_STD ostringstream oss {};
 			doc.save(oss, "  ", pugi::format_default, pugi::encoding_utf8);
 
 			return oss.str();
 		}
 	} // namespace
 
-	bool JsonToKmzConverter::convertWaypointsToKmz(const std::vector<protocol::Waypoint>& waypoints,
+	bool JsonToKmzConverter::convertWaypointsToKmz(const _STD vector<protocol::Waypoint>& waypoints,
 												   const protocol::WaypointPayload&		  missionInfo) noexcept
 	{
 		g_latestKmzFilePath = "";
@@ -305,19 +305,19 @@ namespace plane::utils
 			return false;
 		}
 
-		std::string		  missionId { missionInfo.RWID.value_or("mission_unknown") };
-		auto			  now { std::chrono::system_clock::now() };
-		auto			  time_t_now { std::chrono::system_clock::to_time_t(now) };
-		std::tm			  tm_now { *std::localtime(&time_t_now) };
-		std::stringstream time_ss {};
-		time_ss << std::put_time(&tm_now, "%Y%m%d_%H%M%S");
-		std::string filename { fmt::format("{}.kmz", time_ss.str()) };
-		fs::path	kmzFilePath { storageDir / filename };
+		_STD string		  missionId { missionInfo.RWID.value_or("mission_unknown") };
+		auto			  now { _STD chrono::system_clock::now() };
+		auto			  time_t_now { _STD chrono::system_clock::to_time_t(now) };
+		_STD tm			  tm_now { *_STD localtime(&time_t_now) };
+		_STD stringstream time_ss {};
+		time_ss << _STD	  put_time(&tm_now, "%Y%m%d_%H%M%S");
+		_STD string		  filename { fmt::format("{}.kmz", time_ss.str()) };
+		fs::path		  kmzFilePath { storageDir / filename };
 
 		LOG_DEBUG("开始生成 KMZ 文件, 任务 ID: {}, 路径: {}", missionId, kmzFilePath.string());
 
-		std::string waylinesWpml { generateWaylinesWpml(waypoints) };
-		std::string templateKml { generateTemplateKml() };
+		_STD string waylinesWpml { generateWaylinesWpml(waypoints) };
+		_STD string templateKml { generateTemplateKml() };
 
 		int			error { 0 };
 		zip_t*		archive { zip_open(kmzFilePath.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &error) };
@@ -371,7 +371,7 @@ namespace plane::utils
 		return true;
 	}
 
-	std::string JsonToKmzConverter::getKmzFilePath(void) noexcept
+	_STD string JsonToKmzConverter::getKmzFilePath(void) noexcept
 	{
 		return g_latestKmzFilePath.string();
 	}

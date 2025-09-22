@@ -8,10 +8,10 @@ namespace plane::utils
 {
 	namespace
 	{
-		constexpr inline bool isEnvVarSetToOne(std::string_view envVarName) noexcept
+		constexpr inline bool isEnvVarSetToOne(_STD string_view envVarName) noexcept
 		{
-			const char* envValue { std::getenv(envVarName.data()) };
-			return (envValue != nullptr) && (std::string(envValue) == "1");
+			const char* envValue { _STD getenv(envVarName.data()) };
+			return (envValue != nullptr) && (_STD string(envValue) == "1");
 		}
 	} // namespace
 

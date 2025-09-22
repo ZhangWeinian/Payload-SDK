@@ -140,7 +140,7 @@ namespace plane::services
 		}
 	}
 
-	T_DjiReturnCode PSDKAdapter::waypointV3MissionStart(std::string_view kmzFilePath) const noexcept
+	T_DjiReturnCode PSDKAdapter::waypointV3MissionStart(_STD string_view kmzFilePath) const noexcept
 	{
 		try
 		{

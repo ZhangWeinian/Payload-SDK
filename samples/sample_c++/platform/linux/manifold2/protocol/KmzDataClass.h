@@ -1,5 +1,7 @@
 #pragma once
 
+#include "define.h"
+
 #include "fmt/format.h"
 #include "pugixml.hpp"
 
@@ -23,11 +25,11 @@ namespace plane::protocol
 
 	struct KmlWaypointHeadingParam
 	{
-		std::string headingMode { "followWayline" };
+		_STD string headingMode { "followWayline" };
 		double		headingAngle { 0.0 };
-		std::string poiPoint { "0.000000,0.000000,0.000000" };
+		_STD string poiPoint { "0.000000,0.000000,0.000000" };
 		int			headingAngleEnable { 1 };
-		std::string headingPathMode { "followBadArc" };
+		_STD string headingPathMode { "followBadArc" };
 		int			headingPoiIndex { 0 };
 
 		void		toXml(pugi::xml_node& parent) const
@@ -44,7 +46,7 @@ namespace plane::protocol
 
 	struct KmlWaypointTurnParam
 	{
-		std::string turnMode {};
+		_STD string turnMode {};
 		int			turnDampingDist { 0 };
 
 		void		toXml(pugi::xml_node& parent) const
@@ -70,23 +72,23 @@ namespace plane::protocol
 
 	struct WpmlActionActuatorFuncParam
 	{
-		std::optional<double>	   gimbalPitchRotateAngle {};
-		std::optional<double>	   hoverTime {};
-		std::optional<int>		   payloadPositionIndex {};
-		std::optional<int>		   useGlobalPayloadLensIndex {};
-		std::optional<std::string> payloadLensIndex {};
-		std::optional<double>	   minShootInterval {};
-		std::optional<std::string> gimbalHeadingYawBase {};
-		std::optional<std::string> gimbalRotateMode {};
-		std::optional<int>		   gimbalPitchRotateEnable {};
-		std::optional<int>		   gimbalRollRotateEnable {};
-		std::optional<double>	   gimbalRollRotateAngle {};
-		std::optional<int>		   gimbalYawRotateEnable {};
-		std::optional<double>	   gimbalYawRotateAngle {};
-		std::optional<int>		   gimbalRotateTimeEnable {};
-		std::optional<int>		   gimbalRotateTime {};
+		_STD optional<double> gimbalPitchRotateAngle {};
+		_STD optional<double> hoverTime {};
+		_STD optional<int> payloadPositionIndex {};
+		_STD optional<int> useGlobalPayloadLensIndex {};
+		_STD optional<_STD string> payloadLensIndex {};
+		_STD optional<double> minShootInterval {};
+		_STD optional<_STD string> gimbalHeadingYawBase {};
+		_STD optional<_STD string> gimbalRotateMode {};
+		_STD optional<int> gimbalPitchRotateEnable {};
+		_STD optional<int> gimbalRollRotateEnable {};
+		_STD optional<double> gimbalRollRotateAngle {};
+		_STD optional<int> gimbalYawRotateEnable {};
+		_STD optional<double> gimbalYawRotateAngle {};
+		_STD optional<int> gimbalRotateTimeEnable {};
+		_STD optional<int> gimbalRotateTime {};
 
-		void					   toXml(pugi::xml_node& parent) const
+		void			   toXml(pugi::xml_node& parent) const
 		{
 			auto node { parent.append_child("wpml:actionActuatorFuncParam") };
 			if (gimbalHeadingYawBase)
@@ -154,9 +156,9 @@ namespace plane::protocol
 
 	struct WpmlAction
 	{
-		int										   actionId { 0 };
-		std::string								   actuatorFunc {};
-		std::optional<WpmlActionActuatorFuncParam> actuatorFuncParam {};
+		int			actionId { 0 };
+		_STD string actuatorFunc {};
+		_STD optional<WpmlActionActuatorFuncParam> actuatorFuncParam {};
 
 		void									   toXml(pugi::xml_node& parent) const
 		{
@@ -172,12 +174,12 @@ namespace plane::protocol
 
 	struct WpmlActionGroup
 	{
-		int						groupId { 0 };
-		int						startIndex { 0 };
-		int						endIndex { 0 };
-		std::string				mode { "sequence" };
-		std::string				triggerType {};
-		std::vector<WpmlAction> actions {};
+		int			groupId { 0 };
+		int			startIndex { 0 };
+		int			endIndex { 0 };
+		_STD string mode { "sequence" };
+		_STD string triggerType {};
+		_STD vector<WpmlAction> actions {};
 
 		void					toXml(pugi::xml_node& parent, bool isStartActionGroup = false) const
 		{
@@ -200,14 +202,14 @@ namespace plane::protocol
 
 	struct WpmlPlacemark
 	{
-		KmlPoint					 point {};
-		int							 index { 0 };
-		double						 executeHeight { 0.0 };
-		double						 waypointSpeed { 5.0 };
-		KmlWaypointHeadingParam		 headingParam {};
-		KmlWaypointTurnParam		 turnParam {};
-		int							 useStraightLine { 1 };
-		std::vector<WpmlActionGroup> actionGroups {};
+		KmlPoint				point {};
+		int						index { 0 };
+		double					executeHeight { 0.0 };
+		double					waypointSpeed { 5.0 };
+		KmlWaypointHeadingParam headingParam {};
+		KmlWaypointTurnParam	turnParam {};
+		int						useStraightLine { 1 };
+		_STD vector<WpmlActionGroup> actionGroups {};
 		KmlGimbalHeadingParam		 gimbalHeadingParam {};
 		int							 isRisky { 0 };
 		int							 workType { 0 };
@@ -234,16 +236,16 @@ namespace plane::protocol
 
 	struct KmlFolder
 	{
-		int							 templateId { 0 };
-		std::string					 executeHeightMode { "relativeToStartPoint" };
-		int							 waylineId { 0 };
-		double						 distance { 0.0 };
-		double						 duration { 0.0 };
-		double						 autoFlightSpeed { 5.0 };
-		std::vector<WpmlActionGroup> startActionGroups;
-		std::vector<WpmlPlacemark>	 placemarks;
+		int			templateId { 0 };
+		_STD string executeHeightMode { "relativeToStartPoint" };
+		int			waylineId { 0 };
+		double		distance { 0.0 };
+		double		duration { 0.0 };
+		double		autoFlightSpeed { 5.0 };
+		_STD vector<WpmlActionGroup> startActionGroups;
+		_STD vector<WpmlPlacemark> placemarks;
 
-		void						 toXml(pugi::xml_node& parent) const
+		void					   toXml(pugi::xml_node& parent) const
 		{
 			auto node { parent.append_child("Folder") };
 			node.append_child("wpml:templateId").text().set(templateId);
@@ -265,10 +267,10 @@ namespace plane::protocol
 
 	struct KmlMissionConfig
 	{
-		std::string flyToWaylineMode { "safely" };
-		std::string finishAction { "noAction" };
-		std::string exitOnRCLost { "executeLostAction" };
-		std::string executeRCLostAction { "goBack" };
+		_STD string flyToWaylineMode { "safely" };
+		_STD string finishAction { "noAction" };
+		_STD string exitOnRCLost { "executeLostAction" };
+		_STD string executeRCLostAction { "goBack" };
 		int			takeOffSecurityHeight { 20 };
 		double		globalTransitionalSpeed { 5.0 };
 
@@ -335,10 +337,10 @@ namespace plane::protocol
 
 	struct WpmlRoot
 	{
-		std::string xml_version { "1.0" };
-		std::string encoding { "UTF-8" };
-		std::string xmlns { "http://www.opengis.net/kml/2.2" };
-		std::string xmlns_wpml { "http://www.dji.com/wpmz/1.0.6" };
+		_STD string xml_version { "1.0" };
+		_STD string encoding { "UTF-8" };
+		_STD string xmlns { "http://www.opengis.net/kml/2.2" };
+		_STD string xmlns_wpml { "http://www.dji.com/wpmz/1.0.6" };
 		KmlDocument document {};
 
 		void		toXml(pugi::xml_document& doc) const
@@ -357,17 +359,17 @@ namespace plane::protocol
 
 	struct TemplateKml
 	{
-		std::string author { "cy_psdk" };
-		std::string createTime {};
-		std::string updateTime {};
+		_STD string author { "cy_psdk" };
+		_STD string createTime {};
+		_STD string updateTime {};
 
 		explicit TemplateKml(void) noexcept
 		{
-			auto	now { std::chrono::system_clock::now() };
-			auto	time_t_now { std::chrono::system_clock::to_time_t(now) };
-			std::tm tm_now { *std::localtime(&time_t_now) };
+			auto	now { _STD chrono::system_clock::now() };
+			auto	time_t_now { _STD chrono::system_clock::to_time_t(now) };
+			_STD tm tm_now { *_STD localtime(&time_t_now) };
 			char	buf[32] {};
-			std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_now);
+			_STD	strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_now);
 			createTime = buf;
 			updateTime = buf;
 		}

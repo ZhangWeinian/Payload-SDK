@@ -23,24 +23,24 @@ namespace plane::utils
 {
 	namespace
 	{
-		using namespace std::string_view_literals;
+		using namespace _STD string_view_literals;
 
-		constexpr auto LOOPBACK_INTERFACE { "lo"sv };
-		constexpr auto WLAN_PREFIXES = std::array { "wlan"sv, "wlp"sv, "wlo"sv };
-		constexpr auto ETH_PREFIXES	 = std::array { "eth"sv, "en"sv, "eno"sv, "ens"sv, "enp"sv };
-		constexpr auto INVALID_IP { "0.0.0.0"sv };
+		constexpr auto		 LOOPBACK_INTERFACE { "lo"sv };
+		constexpr auto WLAN_PREFIXES = _STD array { "wlan"sv, "wlp"sv, "wlo"sv };
+		constexpr auto ETH_PREFIXES	 = _STD array { "eth"sv, "en"sv, "eno"sv, "ens"sv, "enp"sv };
+		constexpr auto					   INVALID_IP { "0.0.0.0"sv };
 
 		struct CachedResult
 		{
-			std::string							  ip {};
-			std::chrono::steady_clock::time_point timestamp {};
+			_STD string ip {};
+			_STD chrono::steady_clock::time_point timestamp {};
 		};
 
-		static std::optional<CachedResult>	  cachedIp {};
-		static std::mutex					  cacheMutex {};
-		constexpr static std::chrono::minutes CACHE_DURATION { 5 };
+		static _STD optional<CachedResult> cachedIp {};
+		static _STD mutex				   cacheMutex {};
+		constexpr static _STD chrono::minutes CACHE_DURATION { 5 };
 
-		bool								  isSiteLocalAddress(std::string_view ip) noexcept
+		bool								  isSiteLocalAddress(_STD string_view ip) noexcept
 		{
 			if (ip.starts_with("192.168."sv) || ip.starts_with("10."sv))
 			{
@@ -49,9 +49,9 @@ namespace plane::utils
 
 			if (ip.starts_with("172."sv))
 			{
-				if (auto dot_pos { ip.find('.', 4) }; dot_pos != std::string_view::npos)
+				if (auto dot_pos { ip.find('.', 4) }; dot_pos != _STD string_view::npos)
 				{
-					std::string_view segment { ip.substr(4, dot_pos - 4) };
+					_STD string_view segment { ip.substr(4, dot_pos - 4) };
 					int				 value { 0 };
 					for (char c : segment)
 					{
@@ -68,7 +68,7 @@ namespace plane::utils
 			return false;
 		}
 
-		bool isHighPriorityInterface(std::string_view name) noexcept
+		bool isHighPriorityInterface(_STD string_view name) noexcept
 		{
 			for (auto prefix : WLAN_PREFIXES)
 			{
@@ -90,17 +90,17 @@ namespace plane::utils
 		}
 	} // namespace
 
-	std::optional<std::string> NetworkUtils::getDeviceIpv4AddressImpl(void) noexcept
+	_STD optional<_STD string> NetworkUtils::getDeviceIpv4AddressImpl(void) noexcept
 	{
 		struct ifaddrs* ifaddr {};
 		if (getifaddrs(&ifaddr) == -1)
 		{
-			LOG_WARN("getifaddrs() 失败: {}", std::system_error(errno, std::system_category()).what());
-			return std::nullopt;
+			LOG_WARN("getifaddrs() 失败: {}", _STD system_error(errno, _STD system_category()).what());
+			return _STD nullopt;
 		}
 
-		auto ifaddr_guard { std::unique_ptr<struct ifaddrs, decltype(&freeifaddrs)>(ifaddr, freeifaddrs) };
-		std::vector<std::pair<std::string, std::string>> addresses {};
+		auto ifaddr_guard { _STD unique_ptr<struct ifaddrs, decltype(&freeifaddrs)>(ifaddr, freeifaddrs) };
+		_STD vector<_STD pair<_STD string, _STD string>> addresses {};
 
 		for (struct ifaddrs* ifa { ifaddr }; ifa != nullptr; ifa = ifa->ifa_next)
 		{
@@ -113,32 +113,32 @@ namespace plane::utils
 			char				ip[INET_ADDRSTRLEN] {};
 			inet_ntop(AF_INET, &addr->sin_addr, ip, INET_ADDRSTRLEN);
 
-			std::string name_str(ifa->ifa_name);
-			std::string ip_str(ip);
+			_STD string name_str(ifa->ifa_name);
+			_STD string ip_str(ip);
 
 			if (name_str == LOOPBACK_INTERFACE || ip_str.empty() || ip_str == INVALID_IP)
 			{
 				continue;
 			}
 
-			addresses.emplace_back(std::move(name_str), std::move(ip_str));
+			addresses.emplace_back(_STD move(name_str), _STD move(ip_str));
 		}
 
 		if (addresses.empty())
 		{
 			LOG_WARN("未找到任何有效的 IPv4 地址。");
-			return std::nullopt;
+			return _STD nullopt;
 		}
 
-		std::string log_message { "扫描到的有效 IP 地址:\n" };
+		_STD string log_message { "扫描到的有效 IP 地址:\n" };
 		int			index { 0 };
 		for (const auto& [name, ip] : addresses)
 		{
-			log_message += std::format("  {}. 接口名: {}, IP: {}\n", ++index, name, ip);
+			log_message += _STD format("  {}. 接口名: {}, IP: {}\n", ++index, name, ip);
 		}
 		LOG_INFO("{}", log_message);
 
-		auto highPriorityIt = std::find_if(addresses.begin(),
+		auto highPriorityIt = _STD find_if(addresses.begin(),
 										   addresses.end(),
 										   [](const auto& name_ip)
 										   {
@@ -153,7 +153,7 @@ namespace plane::utils
 			return ip;
 		}
 
-		auto siteLocalIt = std::find_if(addresses.begin(),
+		auto siteLocalIt = _STD find_if(addresses.begin(),
 										addresses.end(),
 										[](const auto& name_ip)
 										{
@@ -173,10 +173,10 @@ namespace plane::utils
 		return ip;
 	}
 
-	std::optional<std::string> NetworkUtils::getDeviceIpv4Address(void) noexcept
+	_STD optional<_STD string> NetworkUtils::getDeviceIpv4Address(void) noexcept
 	{
-		std::lock_guard<std::mutex> lock(cacheMutex);
-		auto						now { std::chrono::steady_clock::now() };
+		_STD lock_guard<_STD mutex> lock(cacheMutex);
+		auto						now { _STD chrono::steady_clock::now() };
 
 		if (cachedIp && (now - cachedIp->timestamp) < CACHE_DURATION)
 		{

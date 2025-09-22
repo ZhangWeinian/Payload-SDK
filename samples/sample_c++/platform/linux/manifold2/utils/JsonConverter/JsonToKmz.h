@@ -1,5 +1,6 @@
 #pragma once
 
+#include "define.h"
 #include "protocol/DroneDataClass.h"
 
 #include <string>
@@ -7,16 +8,12 @@
 
 namespace plane::utils
 {
-#ifndef _NODISCARD
-	#define _NODISCARD [[nodiscard]]
-#endif
-
 	class JsonToKmzConverter
 	{
 	public:
-		_NODISCARD static bool		  convertWaypointsToKmz(const std::vector<plane::protocol::Waypoint>& waypoints,
+		_NODISCARD static bool		  convertWaypointsToKmz(const _STD vector<plane::protocol::Waypoint>& waypoints,
 															const plane::protocol::WaypointPayload&		  missionInfo = {}) noexcept;
 
-		_NODISCARD static std::string getKmzFilePath(void) noexcept;
+		_NODISCARD static _STD string getKmzFilePath(void) noexcept;
 	};
 } // namespace plane::utils

@@ -17,7 +17,7 @@ namespace plane::services
 		// TODO: 调用 PSDK 的单点飞行 API
 	}
 
-	void FlyManager::waypointFly(std::string_view kmzFilePath) const noexcept
+	void FlyManager::waypointFly(_STD string_view kmzFilePath) const noexcept
 	{
 		if (T_DjiReturnCode rc { plane::services::PSDKAdapter::getInstance().waypointV3MissionStart(kmzFilePath) };
 			rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
@@ -109,7 +109,7 @@ namespace plane::services
 		// TODO: 调用 PSDK 的相机变焦 API
 	}
 
-	void FlyManager::setCameraStreamSource(std::string_view source) const noexcept
+	void FlyManager::setCameraStreamSource(_STD string_view source) const noexcept
 	{
 		LOG_INFO("执行【切换视频源】: Source={}", source);
 		// TODO: 调用 PSDK 的相机视频源切换 API

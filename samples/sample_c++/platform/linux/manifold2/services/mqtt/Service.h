@@ -1,5 +1,7 @@
 #pragma once
 
+#include "define.h"
+
 #include "mqtt/async_client.h"
 
 #include <string_view>
@@ -11,22 +13,18 @@
 
 namespace plane::services
 {
-#ifndef _NODISCARD
-	#define _NODISCARD [[nodiscard]]
-#endif
-
 	class MQTTService
 	{
 	protected:
 		struct Impl
 		{
-			std::unique_ptr<mqtt::async_client>	  client {};
-			std::shared_ptr<class MqttCallback>	  callback {};
-			std::string							  serverURI {};
-			std::string							  clientId {};
-			int									  reconnectAttempts { 0 };
-			std::chrono::steady_clock::time_point lastDisconnectTime {};
-			std::chrono::steady_clock::time_point lastConnectTime {};
+			_STD unique_ptr<mqtt::async_client> client {};
+			_STD shared_ptr<class MqttCallback> callback {};
+			_STD string							serverURI {};
+			_STD string							clientId {};
+			int									reconnectAttempts { 0 };
+			_STD chrono::steady_clock::time_point lastDisconnectTime {};
+			_STD chrono::steady_clock::time_point lastConnectTime {};
 			bool								  manualDisconnect { false };
 
 			explicit Impl(void) noexcept		  = default;
@@ -39,12 +37,12 @@ namespace plane::services
 
 	public:
 		static MQTTService& getInstance(void) noexcept;
-		_NODISCARD bool		start(std::string_view serverURI = "", std::string_view clientId = "") noexcept;
+		_NODISCARD bool		start(_STD string_view serverURI = "", _STD string_view clientId = "") noexcept;
 		void				stop(void) noexcept;
-		void				restart(std::string_view serverURI, std::string_view clientId) noexcept;
-		_NODISCARD bool		publish(std::string_view topic, std::string_view payload) noexcept;
+		void				restart(_STD string_view serverURI, _STD string_view clientId) noexcept;
+		_NODISCARD bool		publish(_STD string_view topic, _STD string_view payload) noexcept;
 		_NODISCARD bool		isConnected(void) const noexcept;
-		void				subscribe(std::string_view topic) noexcept;
+		void				subscribe(_STD string_view topic) noexcept;
 		void				setConnected(bool status) noexcept;
 
 		Impl&				getImpl(void) noexcept
@@ -60,9 +58,9 @@ namespace plane::services
 		}
 
 	private:
-		std::unique_ptr<Impl> impl_ { std::make_unique<Impl>() };
-		std::atomic<bool>	  connected_ { false };
-		std::mutex			  mutex_ {};
+		_STD unique_ptr<Impl> impl_ { _STD make_unique<Impl>() };
+		_STD atomic<bool> connected_ { false };
+		_STD mutex		  mutex_ {};
 
 		explicit MQTTService(void) noexcept = default;
 		~MQTTService(void) noexcept;

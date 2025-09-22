@@ -1,5 +1,6 @@
 #pragma once
 
+#include "define.h"
 #include "protocol/DroneDataClass.h"
 
 #include <string_view>
@@ -8,17 +9,13 @@
 
 namespace plane::utils
 {
-#ifndef _NODISCARD
-	#define _NODISCARD [[nodiscard]]
-#endif
-
 	class JsonConverter
 	{
 	public:
-		_NODISCARD static std::string buildStatusReportJson(const protocol::StatusPayload& payload) noexcept;
-		_NODISCARD static std::string buildMissionInfoJson(const protocol::MissionInfoPayload& payload) noexcept;
-		_NODISCARD static std::string buildHealthStatusJson(const std::vector<protocol::HealthAlertPayload>& alerts) noexcept;
+		_NODISCARD static _STD string buildStatusReportJson(const protocol::StatusPayload& payload) noexcept;
+		_NODISCARD static _STD string buildMissionInfoJson(const protocol::MissionInfoPayload& payload) noexcept;
+		_NODISCARD static _STD string buildHealthStatusJson(const _STD vector<protocol::HealthAlertPayload>& alerts) noexcept;
 
-		static void					  parseAndRouteMessage(std::string_view topic, std::string_view jsonString) noexcept;
+		static void					  parseAndRouteMessage(_STD string_view topic, _STD string_view jsonString) noexcept;
 	};
 } // namespace plane::utils

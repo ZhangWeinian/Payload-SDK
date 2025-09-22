@@ -21,11 +21,11 @@ namespace plane::utils
 
 		try
 		{
-			auto console_sink { std::make_shared<spdlog::sinks::stdout_color_sink_mt>() };
+			auto console_sink { _STD make_shared<spdlog::sinks::stdout_color_sink_mt>() };
 			console_sink->set_level(console_level);
 			console_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] [%s:%#] %v");
 
-			logger_ = std::make_shared<spdlog::logger>("psdk_logger", console_sink);
+			logger_ = _STD make_shared<spdlog::logger>("psdk_logger", console_sink);
 			logger_->set_level(spdlog::level::trace);
 
 			spdlog::set_default_logger(logger_);
@@ -34,9 +34,9 @@ namespace plane::utils
 		}
 		catch (const spdlog::spdlog_ex& ex)
 		{
-			std::cerr << "====================================" << std::endl;
-			std::cerr << "           日志初始化失败：" << ex.what() << std::endl;
-			std::cerr << "====================================" << std::endl;
+			_STD cerr << "====================================" << _STD endl;
+			_STD cerr << "           日志初始化失败：" << ex.what() << _STD endl;
+			_STD cerr << "====================================" << _STD endl;
 		}
 	}
 } // namespace plane::utils
