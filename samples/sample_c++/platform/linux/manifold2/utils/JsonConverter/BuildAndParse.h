@@ -2,6 +2,7 @@
 
 #include "protocol/DroneDataClass.h"
 
+#include <string_view>
 #include <string>
 #include <vector>
 
@@ -18,6 +19,6 @@ namespace plane::utils
 		_NODISCARD static std::string buildMissionInfoJson(const protocol::MissionInfoPayload& payload) noexcept;
 		_NODISCARD static std::string buildHealthStatusJson(const std::vector<protocol::HealthAlertPayload>& alerts) noexcept;
 
-		static void					  parseAndRouteMessage(const std::string& topic, const std::string& jsonString) noexcept;
+		static void					  parseAndRouteMessage(std::string_view topic, std::string_view jsonString) noexcept;
 	};
 } // namespace plane::utils

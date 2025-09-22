@@ -44,8 +44,8 @@ namespace plane::my_dji
 		else
 		{
 			plane::utils::Logger::getInstance().init(spdlog::level::info);
-			LOG_INFO("日志级别设置为 INFO");
-			LOG_INFO("如需调试日志，请设置环境变量: export LOG_DEBUG=1");
+			LOG_DEBUG("日志级别设置为 INFO");
+			LOG_DEBUG("如需调试日志, 请设置环境变量: export LOG_DEBUG=1");
 		}
 
 		LOG_INFO("==========================================================");
@@ -59,7 +59,7 @@ namespace plane::my_dji
 			if (T_DjiReturnCode returnCode { DjiFlightController_SetRCLostActionEnableStatus(DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
 				returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
-				LOG_WARN("禁用 RC 失败，无法支持无遥控器飞行，错误码: 0x{:08X}", returnCode);
+				LOG_WARN("禁用 RC 失败, 无法支持无遥控器飞行, 错误码: 0x{:08X}", returnCode);
 			}
 			else
 			{
@@ -68,7 +68,7 @@ namespace plane::my_dji
 		}
 		else
 		{
-			LOG_WARN("未启用标准作业流程，无法支持无遥控器飞行。如需启用，请设置环境变量: export FULL_PSDK=1");
+			LOG_WARN("未启用标准作业流程, 无法支持无遥控器飞行。如需启用, 请设置环境变量: export FULL_PSDK=1");
 		}
 
 		if (plane::config::ConfigManager::getInstance().loadAndCheck("config.yml"))
@@ -77,7 +77,7 @@ namespace plane::my_dji
 		}
 		else
 		{
-			LOG_ERROR("错误: 配置文件加载失败，请检查 'config.yml' 是否存在且格式正确。");
+			LOG_ERROR("错误: 配置文件加载失败, 请检查 'config.yml' 是否存在且格式正确。");
 			return;
 		}
 
@@ -87,7 +87,7 @@ namespace plane::my_dji
 		}
 		else
 		{
-			LOG_ERROR("错误: MQTT 服务启动失败，请检查配置文件中的 MQTT 设置是否正确。");
+			LOG_ERROR("错误: MQTT 服务启动失败, 请检查配置文件中的 MQTT 设置是否正确。");
 			return;
 		}
 
@@ -113,7 +113,7 @@ namespace plane::my_dji
 
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 		LOG_INFO("==========================================================");
-		LOG_INFO("               应用程序初始化完成，正在运行中...");
+		LOG_INFO("               应用程序初始化完成, 正在运行中...");
 		LOG_INFO("                    按 Ctrl+C 退出。");
 		LOG_INFO("==========================================================");
 
@@ -121,7 +121,7 @@ namespace plane::my_dji
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
-		LOG_INFO("收到退出信号，正在关闭应用程序...");
+		LOG_INFO("收到退出信号, 正在关闭应用程序...");
 
 		plane::services::TelemetryReporter::getInstance().stop();
 

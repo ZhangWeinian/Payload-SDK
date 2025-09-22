@@ -27,7 +27,7 @@ namespace plane::services
 	{
 		if (run_.exchange(true, std::memory_order_relaxed))
 		{
-			LOG_DEBUG("TelemetryReporter 已经启动，请勿重复调用 start() 。");
+			LOG_DEBUG("TelemetryReporter 已经启动, 请勿重复调用 start() 。");
 			return false;
 		}
 
@@ -47,7 +47,7 @@ namespace plane::services
 				LOG_DEBUG("[start] fixedInfoReportLoop 线程启动");
 			});
 
-		LOG_DEBUG("[start] 线程已创建，服务启动完成");
+		LOG_DEBUG("后台线程已创建, 服务启动完成");
 		return true;
 	}
 
@@ -55,7 +55,7 @@ namespace plane::services
 	{
 		if (!run_.exchange(false, std::memory_order_release))
 		{
-			LOG_DEBUG("已经停止，无需重复");
+			LOG_DEBUG("已经停止, 无需重复");
 			return;
 		}
 
@@ -69,13 +69,13 @@ namespace plane::services
 			fixed_info_thread_.join();
 		}
 
-		LOG_DEBUG("所有线程已结束，服务完全停止");
+		LOG_DEBUG("所有线程已结束, 服务完全停止");
 	}
 
 	void TelemetryReporter::statusReportLoop(void) noexcept
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		LOG_DEBUG("线程启动，MQTTService instance addr: {}", (void*)&plane::services::MQTTService::getInstance());
+		LOG_DEBUG("线程启动, MQTTService instance addr: {}", (void*)&plane::services::MQTTService::getInstance());
 
 		const auto&					   ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
 		plane::protocol::StatusPayload status_payload {};
@@ -118,7 +118,7 @@ namespace plane::services
 		{
 			if (!plane::services::MQTTService::getInstance().isConnected())
 			{
-				LOG_DEBUG("MQTTService 未连接，sleep 1s 后重试");
+				LOG_DEBUG("MQTTService 未连接, 1s 后重试");
 				std::this_thread::sleep_for(std::chrono::seconds(1));
 				continue;
 			}
@@ -130,21 +130,8 @@ namespace plane::services
 			}
 
 			std::string status_json { plane::utils::JsonConverter::buildStatusReportJson(status_payload) };
-			try
-			{
-				if (!plane::services::MQTTService::getInstance().publish(plane::services::TOPIC_DRONE_STATUS, status_json))
-				{
-					LOG_ERROR("MQTTService 在'{}' publish 失败", plane::services::TOPIC_DRONE_STATUS);
-				}
-			}
-			catch (const std::exception& ex)
-			{
-				LOG_ERROR("MQTTService 在'{}' publish 异常: {}", plane::services::TOPIC_DRONE_STATUS, ex.what());
-			}
-			catch (...)
-			{
-				LOG_ERROR("MQTTService 在'{}' publish 未知异常", plane::services::TOPIC_DRONE_STATUS);
-			}
+			publishStatus(plane::services::TOPIC_DRONE_STATUS, status_json);
+
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		LOG_DEBUG("状态上报线程已停止。");
@@ -163,38 +150,53 @@ namespace plane::services
 		{
 			if (!plane::services::MQTTService::getInstance().isConnected())
 			{
-				LOG_DEBUG("MQTTService 未连接，sleep 1s 后重试");
+				LOG_DEBUG("MQTTService 未连接, 1s 后重试");
 				std::this_thread::sleep_for(std::chrono::seconds(1));
 				continue;
 			}
 
 			std::string info_json { plane::utils::JsonConverter::buildMissionInfoJson(info_payload) };
-			try
-			{
-				if (!plane::services::MQTTService::getInstance().publish(plane::services::TOPIC_FIXED_INFO, info_json))
-				{
-					LOG_ERROR("MQTTService 在'{}'发布失败", plane::services::TOPIC_FIXED_INFO);
-				}
-			}
-			catch (const std::exception& ex)
-			{
-				LOG_ERROR("MQTTService 在'{}' publish 异常: {}", plane::services::TOPIC_FIXED_INFO, ex.what());
-			}
-			catch (...)
-			{
-				LOG_ERROR("MQTTService 在'{}' publish 未知异常", plane::services::TOPIC_FIXED_INFO);
-			}
+			publishStatus(plane::services::TOPIC_FIXED_INFO, info_json);
 
 			for (size_t i { 0 }; i < 10; ++i)
 			{
 				if (!run_.load(std::memory_order_acquire))
 				{
-					LOG_DEBUG("MQTTService 在'{}' run_ 已停止，提前 break", plane::services::TOPIC_FIXED_INFO);
+					LOG_DEBUG("MQTTService 在'{}' run_ 已停止, 提前 break", plane::services::TOPIC_FIXED_INFO);
 					break;
 				}
 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
 		}
 		LOG_DEBUG("固定信息上报线程已停止。");
+	}
+
+	bool TelemetryReporter::publishStatus(std::string_view topic, std::string_view status_json) noexcept
+	{
+		if (!plane::services::MQTTService::getInstance().isConnected())
+		{
+			LOG_DEBUG("MQTTService 未连接, 无法发布");
+			return false;
+		}
+
+		try
+		{
+			if (!plane::services::MQTTService::getInstance().publish(topic, status_json))
+			{
+				LOG_DEBUG("MQTTService 在'{}' 发布失败", topic);
+				return false;
+			}
+		}
+		catch (const std::exception& ex)
+		{
+			LOG_ERROR("MQTTService 在'{}' 发布时出现异常: {}", topic, ex.what());
+			return false;
+		}
+		catch (...)
+		{
+			LOG_ERROR("MQTTService 在'{}' 发布时出现未知异常", topic);
+			return false;
+		}
+		return true;
 	}
 } // namespace plane::services

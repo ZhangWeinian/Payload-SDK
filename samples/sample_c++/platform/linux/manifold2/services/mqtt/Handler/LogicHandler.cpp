@@ -58,7 +58,7 @@ namespace plane::services
 			}
 			else
 			{
-				LOG_INFO("[MQTT] 收到并准备执行【航线任务】，共 {} 个航点", payload.HDJ.size());
+				LOG_INFO("[MQTT] 收到并准备执行【航线任务】, 共 {} 个航点", payload.HDJ.size());
 				if (!plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload))
 				{
 					LOG_ERROR("生成 KMZ 文件失败！任务中止。");
@@ -94,7 +94,7 @@ namespace plane::services
 
 	void LogicHandler::handleLand(const n_json& payloadJson) noexcept
 	{
-		LOG_INFO("[MQTT] 收到【降落】指令，准备执行...");
+		LOG_INFO("[MQTT] 收到【降落】指令, 准备执行...");
 		plane::services::FlyManager::getInstance().land();
 	}
 
@@ -105,7 +105,7 @@ namespace plane::services
 		{
 			LOG_INFO("[MQTT] 收到【云台控制策略切换】指令, 策略代码: {}", *payload.YTJSCL);
 			// TODO: 根据 *payload.YTJSCL (0,1,2) 映射到 C++ 枚举或类型
-			// TODO: 调用 FlyManager 的 setControlStrategy(...)，并处理成功/失败回调
+			// TODO: 调用 FlyManager 的 setControlStrategy(...), 并处理成功/失败回调
 		}
 	}
 
@@ -163,7 +163,7 @@ namespace plane::services
 	{
 		auto payload { payloadJson.get<plane::protocol::StickModeSwitchPayload>() };
 		LOG_INFO("[MQTT] 收到【虚拟摇杆模式切换】指令: mode={}", payload.YGMS);
-		// TODO: 根据 payload.stickMode (0,1,2) 调用 FlyManager 的 enable/disableVirtualStick，并处理回调
+		// TODO: 根据 payload.stickMode (0,1,2) 调用 FlyManager 的 enable/disableVirtualStick, 并处理回调
 	}
 
 	void LogicHandler::handleNedVelocity(const n_json& payloadJson) noexcept

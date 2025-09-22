@@ -99,7 +99,7 @@ namespace plane::config
 					configNode["mqtt"]["client_id"] = clientId;
 					if (!saveConfigToFile(configFilePath))
 					{
-						LOG_WARN("无法写回配置文件，但继续使用生成的 client_id: {}", clientId);
+						LOG_WARN("无法写回配置文件, 但继续使用生成的 client_id: {}", clientId);
 					}
 					else
 					{
@@ -124,7 +124,7 @@ namespace plane::config
 
 				if (!saveConfigToFile(configFilePath))
 				{
-					LOG_WARN("无法写回配置文件，但继续使用生成的 client_id: {}", clientId);
+					LOG_WARN("无法写回配置文件, 但继续使用生成的 client_id: {}", clientId);
 				}
 				else
 				{
@@ -198,7 +198,7 @@ namespace plane::config
 		{
 			return appConfig.mqttUrl;
 		}
-		LOG_WARN("配置未加载或 MQTT URL 无效，返回空字符串");
+		LOG_WARN("配置未加载或 MQTT URL 无效, 返回空字符串");
 		return "";
 	}
 
@@ -208,7 +208,7 @@ namespace plane::config
 		{
 			return appConfig.mqttClientId;
 		}
-		LOG_WARN("配置未加载或 MQTT Client ID 无效，返回空字符串");
+		LOG_WARN("配置未加载或 MQTT Client ID 无效, 返回空字符串");
 		return "";
 	}
 
@@ -218,7 +218,7 @@ namespace plane::config
 		{
 			return appConfig.planeCode;
 		}
-		LOG_WARN("配置未加载或 Plane Code 无效，返回空字符串");
+		LOG_WARN("配置未加载或 Plane Code 无效, 返回空字符串");
 		return "";
 	}
 } // namespace plane::config

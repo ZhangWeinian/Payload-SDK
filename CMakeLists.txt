@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.12)
 project (DJI_PSDK_APP_TOPLEVEL CXX C)
 
 if (NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE Debug CACHE STRING "构建类型（Release，Debug 等）")
+	set (CMAKE_BUILD_TYPE Debug CACHE STRING "构建类型（Release, Debug 等）")
 endif ()
 
 # 1. 设置全局项目路径和选项

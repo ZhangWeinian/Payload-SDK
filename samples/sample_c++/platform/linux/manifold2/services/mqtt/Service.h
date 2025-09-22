@@ -2,6 +2,7 @@
 
 #include "mqtt/async_client.h"
 
+#include <string_view>
 #include <atomic>
 #include <cassert>
 #include <memory>
@@ -38,12 +39,12 @@ namespace plane::services
 
 	public:
 		static MQTTService& getInstance(void) noexcept;
-		_NODISCARD bool		start(const std::string& serverURI = "", const std::string& clientId = "") noexcept;
+		_NODISCARD bool		start(std::string_view serverURI = "", std::string_view clientId = "") noexcept;
 		void				stop(void) noexcept;
-		void				restart(const std::string& serverURI, const std::string& clientId) noexcept;
-		_NODISCARD bool		publish(const std::string& topic, const std::string& payload) noexcept;
+		void				restart(std::string_view serverURI, std::string_view clientId) noexcept;
+		_NODISCARD bool		publish(std::string_view topic, std::string_view payload) noexcept;
 		_NODISCARD bool		isConnected(void) const noexcept;
-		void				subscribe(const std::string& topic) noexcept;
+		void				subscribe(std::string_view topic) noexcept;
 		void				setConnected(bool status) noexcept;
 
 		Impl&				getImpl(void) noexcept

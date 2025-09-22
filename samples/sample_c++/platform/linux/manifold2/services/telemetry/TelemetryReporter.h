@@ -1,6 +1,8 @@
 #pragma once
 
+#include <string_view>
 #include <atomic>
+#include <string>
 #include <thread>
 
 namespace plane::services
@@ -19,6 +21,7 @@ namespace plane::services
 	private:
 		void			  statusReportLoop(void) noexcept;
 		void			  fixedInfoReportLoop(void) noexcept;
+		bool			  publishStatus(std::string_view topic, std::string_view status_json) noexcept;
 
 		std::thread		  status_thread_ {};
 		std::thread		  fixed_info_thread_ {};

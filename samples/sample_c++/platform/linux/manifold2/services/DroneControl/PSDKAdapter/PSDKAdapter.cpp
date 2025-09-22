@@ -25,6 +25,7 @@
 #include <power_management/test_power_management.h>
 #include <waypoint_v3/test_waypoint_v3.h>
 
+#include "utils/EnvironmentCheck/EnvironmentCheck.h"
 #include "utils/Logger/Logger.h"
 
 namespace plane::services
@@ -37,66 +38,179 @@ namespace plane::services
 
 	T_DjiReturnCode PSDKAdapter::takeoff(const protocol::TakeoffPayload& takeoffParams) const noexcept
 	{
-		T_DjiReturnCode returnCode { DjiFlightController_StartTakeoff() };
-		if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		try
 		{
-			LOG_ERROR("PSDK API DjiFlightController_StartTakeoff() 调用失败，错误码: 0x{:08X}", returnCode);
+			if (plane::utils::isStandardProceduresEnabled())
+			{
+				T_DjiReturnCode returnCode { DjiFlightController_StartTakeoff() };
+				if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_ERROR("PSDK API DjiFlightController_StartTakeoff() 调用失败, 错误码: 0x{:08X}", returnCode);
+				}
+				return returnCode;
+			}
+			else
+			{
+				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 起飞操作被禁止。");
+				return DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+			}
 		}
-		return returnCode;
+		catch (...)
+		{
+			LOG_ERROR("PSDKAdapter::takeoff() 调用失败, 发生未知异常");
+			return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+		}
 	}
 
 	T_DjiReturnCode PSDKAdapter::goHome(void) const noexcept
 	{
-		T_DjiReturnCode returnCode { DjiFlightController_StartGoHome() };
-		if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		try
 		{
-			LOG_ERROR("PSDK API DjiFlightController_StartGoHome() 调用失败，错误码: 0x{:08X}", returnCode);
+			if (plane::utils::isStandardProceduresEnabled())
+			{
+				T_DjiReturnCode returnCode { DjiFlightController_StartGoHome() };
+				if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_ERROR("PSDK API DjiFlightController_StartGoHome() 调用失败, 错误码: 0x{:08X}", returnCode);
+				}
+				return returnCode;
+			}
+			else
+			{
+				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 返航操作被禁止。");
+				return DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+			}
 		}
-		return returnCode;
+		catch (...)
+		{
+			LOG_ERROR("PSDKAdapter::goHome() 调用失败, 发生未知异常");
+			return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+		}
 	}
 
 	T_DjiReturnCode PSDKAdapter::hover(void) const noexcept
 	{
-		T_DjiReturnCode returnCode { DjiTest_FlightControlRunSample(E_DJI_TEST_FLIGHT_CTRL_SAMPLE_SELECT_ARREST_FLYING) };
-		if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		try
 		{
-			LOG_ERROR("PSDK API DjiTest_FlightControlRunSample() 调用失败，错误码: 0x{:08X}", returnCode);
+			if (plane::utils::isStandardProceduresEnabled())
+			{
+				T_DjiReturnCode returnCode { DjiFlightController_ExecuteEmergencyBrakeAction() };
+				if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_ERROR("PSDK API DjiFlightController_ExecuteEmergencyBrakeAction() 调用失败, 错误码: 0x{:08X}", returnCode);
+				}
+				return returnCode;
+			}
+			else
+			{
+				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 悬停操作被禁止。");
+				return DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+			}
 		}
-		return returnCode;
+		catch (...)
+		{
+			LOG_ERROR("PSDKAdapter::hover() 调用失败, 发生未知异常");
+			return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+		}
 	}
 
 	T_DjiReturnCode PSDKAdapter::land(void) const noexcept
 	{
-		T_DjiReturnCode returnCode { DjiFlightController_StartLanding() };
-		if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		try
 		{
-			LOG_ERROR("PSDK API DjiFlightController_StartLanding() 调用失败，错误码: 0x{:08X}", returnCode);
+			if (plane::utils::isStandardProceduresEnabled())
+			{
+				T_DjiReturnCode returnCode { DjiFlightController_StartLanding() };
+				if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_ERROR("PSDK API DjiFlightController_StartLanding() 调用失败, 错误码: 0x{:08X}", returnCode);
+				}
+				return returnCode;
+			}
+			else
+			{
+				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 降落操作被禁止。");
+				return DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+			}
 		}
-		return returnCode;
+		catch (...)
+		{
+			LOG_ERROR("PSDKAdapter::land() 调用失败, 发生未知异常");
+			return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+		}
 	}
 
-	T_DjiReturnCode PSDKAdapter::waypointV3MissionStart(const std::string& kmzFilePath) const noexcept
+	T_DjiReturnCode PSDKAdapter::waypointV3MissionStart(std::string_view kmzFilePath) const noexcept
 	{
-		T_DjiReturnCode returnCode { DjiTest_WaypointV3RunSampleWithKmzFilePath(kmzFilePath.c_str()) };
-		if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		try
 		{
-			LOG_ERROR("PSDK API DjiTest_WaypointV3RunSampleWithKmzFilePath() 调用失败，错误码: 0x{:08X}", returnCode);
+			if (plane::utils::isStandardProceduresEnabled())
+			{
+				LOG_INFO("PSDK Adapter: 调用 DjiTest_WaypointV3RunSampleWithKmzFilePath(...)");
+				return DjiTest_WaypointV3RunSampleWithKmzFilePath(kmzFilePath.data());
+			}
+			else
+			{
+				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 航点任务操作被禁止。");
+				return DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+			}
 		}
-		return returnCode;
+		catch (...)
+		{
+			LOG_ERROR("PSDKAdapter::waypointV3MissionStart() 调用失败, 发生未知异常");
+			return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+		}
 	}
 
 	T_DjiReturnCode PSDKAdapter::setControlStrategy(int strategyCode) const noexcept
 	{
-		LOG_INFO("PSDK Adapter: 调用 DjiGimbal_SetControlMode(...)"); // 伪代码
-		// ...
-		return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+		try
+		{
+			if (plane::utils::isStandardProceduresEnabled())
+			{
+				LOG_INFO("PSDK Adapter: 设置云台控制策略, 策略代码: {}", strategyCode);
+				// ...
+				return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+			}
+			else
+			{
+				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 云台控制策略切换操作被禁止。");
+				return DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+			}
+		}
+		catch (...)
+		{
+			LOG_ERROR("PSDKAdapter::setControlStrategy() 调用失败, 发生未知异常");
+			return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+		}
 	}
 
 	T_DjiReturnCode PSDKAdapter::flyCircleAroundPoint(const protocol::CircleFlyPayload& circleParams) const noexcept
 	{
-		LOG_INFO("PSDK Adapter: 调用 DjiHotpoint_Start(...)"); // 伪代码
-		// ...
-		return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+		try
+		{
+			if (plane::utils::isStandardProceduresEnabled())
+			{
+				LOG_INFO("PSDK Adapter: 调用智能环绕, 参数: lat={}, lon={}, alt={}, r={}, spd={}",
+						 circleParams.WD,
+						 circleParams.JD,
+						 circleParams.GD,
+						 circleParams.BJ,
+						 circleParams.SD);
+				// ...
+				return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+			}
+			else
+			{
+				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 智能环绕操作被禁止。");
+				return DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+			}
+		}
+		catch (...)
+		{
+			LOG_ERROR("PSDKAdapter::flyCircleAroundPoint() 调用失败, 发生未知异常");
+			return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+		}
 	}
 
 	// ... 在这里实现所有其他 PSDK API 的封装 ...

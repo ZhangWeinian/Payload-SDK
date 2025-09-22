@@ -90,30 +90,29 @@ namespace plane::utils
 		return jValue.dump();
 	}
 
-	void JsonConverter::parseAndRouteMessage(const std::string& topic, const std::string& jsonString) noexcept
+	void JsonConverter::parseAndRouteMessage(std::string_view topic, std::string_view jsonString) noexcept
 	{
 		try
 		{
 			n_json j = n_json::parse(jsonString);
-
 			if (j.contains("ZBID"))
 			{
 				std::string targetPlaneCode { j.at("ZBID").get<std::string>() };
 				std::string localPlaneCode { config::ConfigManager::getInstance().getPlaneCode() };
 				if (targetPlaneCode != localPlaneCode)
 				{
-					LOG_DEBUG("收到发往其他设备 ({}) 的消息，本机 ({}) 已忽略。", targetPlaneCode, localPlaneCode);
+					LOG_DEBUG("收到发往其他设备 ({}) 的消息, 本机 ({}) 已忽略。", targetPlaneCode, localPlaneCode);
 					return;
 				}
 			}
 			else
 			{
-				LOG_WARN("收到的消息缺少 ZBID 字段，无法验证目标设备。");
+				LOG_WARN("收到的消息缺少 ZBID 字段, 无法验证目标设备。");
 				return;
 			}
 
 			std::string messageType { j.at("XXLX").get<std::string>() };
-			n_json		payloadJson = j.at("XXXX");
+			n_json		payloadJson = j.value("XXXX", n_json {});
 			plane::services::MqttMessageHandler::getInstance().routeMessage(topic, messageType, payloadJson);
 		}
 		catch (const n_json::exception& e)

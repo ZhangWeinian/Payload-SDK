@@ -2,6 +2,8 @@
 
 #include "protocol/DroneDataClass.h"
 
+#include <string_view>
+#include <string>
 #include <vector>
 
 namespace plane::services
@@ -20,14 +22,14 @@ namespace plane::services
 		void			   goHome(void) const noexcept;
 		void			   hover(void) const noexcept;
 		void			   land(void) const noexcept;
-		void			   waypointFly(const std::string& kmzFilePath) const noexcept;
+		void			   waypointFly(std::string_view kmzFilePath) const noexcept;
 		void			   setControlStrategy(int strategyCode) const noexcept;
 		void			   flyCircleAroundPoint(const protocol::CircleFlyPayload& circleParams) const noexcept;
 
 		void			   rotateGimbal(double pitch, double yaw) const noexcept;
 		void			   rotateGimbalBySpeed(double pitchSpeed, double yawSpeed, double rollSpeed) const noexcept;
 		void			   setCameraZoomFactor(const protocol::ZoomControlPayload& zoomParams) const noexcept;
-		void			   setCameraStreamSource(const std::string& source) const noexcept;
+		void			   setCameraStreamSource(std::string_view source) const noexcept;
 
 		void			   sendRawStickData(int throttle, int yaw, int pitch, int roll) const noexcept;
 		void			   enableVirtualStick(bool advancedMode) const noexcept;

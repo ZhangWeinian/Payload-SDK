@@ -2,6 +2,7 @@
 
 #include "protocol/DroneDataClass.h"
 
+#include <string_view>
 #include <functional>
 #include <map>
 #include <mutex>
@@ -16,14 +17,14 @@ namespace plane::services
 		using LogicHandler = std::function<void(const n_json&)>;
 
 		static MqttMessageHandler& getInstance(void) noexcept;
-		void					   registerHandler(const std::string& topic, const std::string& messageType, LogicHandler handler) noexcept;
-		void					   routeMessage(const std::string& topic, const std::string& messageType, const n_json& payloadJson) noexcept;
+		void					   registerHandler(std::string_view topic, std::string_view messageType, LogicHandler handler) noexcept;
+		void					   routeMessage(std::string_view topic, std::string_view messageType, const n_json& payloadJson) noexcept;
 
 	private:
 		explicit MqttMessageHandler(void) noexcept = default;
 		~MqttMessageHandler(void) noexcept		   = default;
 
-		std::map<std::string, std::map<std::string, LogicHandler>> handler_map_ {};
-		std::mutex												   handler_mutex_ {};
+		std::map<std::string_view, std::map<std::string_view, LogicHandler>> handler_map_ {};
+		std::mutex															 handler_mutex_ {};
 	};
 } // namespace plane::services

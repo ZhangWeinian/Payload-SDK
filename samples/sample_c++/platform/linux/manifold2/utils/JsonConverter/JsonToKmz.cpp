@@ -43,7 +43,7 @@ namespace plane::utils
 				}
 				else
 				{
-					LOG_WARN("无法获取可执行文件路径，使用当前工作目录");
+					LOG_WARN("无法获取可执行文件路径, 使用当前工作目录");
 					g_kmzStorageDir = fs::absolute(fs::current_path() / "kmz_files");
 				}
 
@@ -105,7 +105,7 @@ namespace plane::utils
 			for (size_t i { 1 }; i < waypoints.size(); ++i)
 			{
 				double distance { calculateDistance(waypoints[i - 1], waypoints[i]) };
-				double speed { waypoints[i].SD.value_or(5.0) };
+				double speed { waypoints[i].SD };
 				if (speed < 0.1)
 				{
 					speed = 5.0;
@@ -129,7 +129,7 @@ namespace plane::utils
 		static std::string generateWaylinesKml(const std::vector<protocol::Waypoint>& waypoints) noexcept
 		{
 			protocol::KmlRoot kmlRoot {};
-			kmlRoot.document.missionConfig.globalTransitionalSpeed = waypoints.empty() ? 5.0 : waypoints[0].SD.value_or(5.0);
+			kmlRoot.document.missionConfig.globalTransitionalSpeed = waypoints.empty() ? 5.0 : waypoints[0].SD;
 			kmlRoot.document.folder.templateId					   = 0;
 			kmlRoot.document.folder.executeHeightMode			   = "relativeToStartPoint";
 			kmlRoot.document.folder.waylineId					   = 0;
@@ -187,8 +187,7 @@ namespace plane::utils
 				placemark.point.longitude		   = wp.JD;
 				placemark.point.latitude		   = wp.WD;
 				placemark.executeHeight			   = std::stod(fmt::format("{:.12f}", wp.GD));
-				placemark.waypointSpeed			   = std::stod(fmt::format("{:.12f}", wp.SD.value_or(5.0)));
-				placemark.waypointSpeed			   = wp.SD.value_or(5.0);
+				placemark.waypointSpeed			   = std::stod(fmt::format("{:.12f}", wp.SD));
 
 				placemark.headingParam.headingMode = "followWayline";
 				placemark.headingParam.headingAngle =
@@ -335,7 +334,7 @@ namespace plane::utils
 		const fs::path& storageDir { getKmzStorageDir() };
 		if (waypoints.empty() || storageDir.empty())
 		{
-			LOG_ERROR("无法生成 KMZ 文件，因为航点列表为空或存储目录无效。");
+			LOG_ERROR("无法生成 KMZ 文件, 因为航点列表为空或存储目录无效。");
 			return false;
 		}
 
@@ -348,7 +347,7 @@ namespace plane::utils
 		std::string filename { fmt::format("{}.kmz", time_ss.str()) };
 		fs::path	kmzFilePath { storageDir / filename };
 
-		LOG_DEBUG("开始生成 KMZ 文件，任务 ID: {}, 路径: {}", missionId, kmzFilePath.string());
+		LOG_DEBUG("开始生成 KMZ 文件, 任务 ID: {}, 路径: {}", missionId, kmzFilePath.string());
 
 		std::string waylinesKml { generateWaylinesKml(waypoints) };
 		std::string templateKml { generateTemplateKml() };
@@ -406,7 +405,7 @@ namespace plane::utils
 		return true;
 	}
 
-	std::string JsonToKmzConverter::getKmzFilePath(void) noexcept
+	std::string_view JsonToKmzConverter::getKmzFilePath(void) noexcept
 	{
 		return g_latestKmzFilePath.string();
 	}

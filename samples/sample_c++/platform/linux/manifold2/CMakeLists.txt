@@ -9,7 +9,7 @@ function (pretty_message TITLE CONTENT)
 endfunction ()
 
 if (NOT CMAKE_BUILD_TYPE)
-	set (CMAKE_BUILD_TYPE Debug CACHE STRING "构建类型（Release，Debug 等）")
+	set (CMAKE_BUILD_TYPE Debug CACHE STRING "构建类型（Release, Debug 等）")
 endif ()
 
 # 1. 定义核心路径变量
@@ -119,7 +119,7 @@ function (find_static_library TARGET_VAR LIB_NAME)
 	)
 
 	if (NOT ${TARGET_VAR})
-		message (WARNING "找不到自定义编译的库 'lib${LIB_NAME}.a'。如果这是第一次构建，请先运行 'make deps'。")
+		message (WARNING "找不到自定义编译的库 'lib${LIB_NAME}.a'。如果这是第一次构建, 请先运行 'make deps'。")
 		set (${TARGET_VAR} "" PARENT_SCOPE)
 	else ()
 		message (STATUS "  [✓] 成功找到 ${LIB_NAME}: ${${TARGET_VAR}}")

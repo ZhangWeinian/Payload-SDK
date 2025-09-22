@@ -168,14 +168,14 @@ namespace plane::protocol
 
 	struct Waypoint
 	{
-		double									   JD {};	 // 经度
-		double									   WD {};	 // 维度
-		double									   GD {};	 // 高度
-		std::optional<double>					   SD {};	 // 速度
-		std::optional<double>					   YTFYJ {}; // 云台俯仰角
-		std::optional<double>					   PHJ {};	 // 偏航角
-		std::optional<bool>						   SFTY {};	 // SFTY
-		std::optional<std::vector<WaypointAction>> DZJ {};	 // 动作集
+		double									   JD {};			// 经度
+		double									   WD {};			// 维度
+		double									   GD {};			// 高度
+		double									   SD { 0.0 };		// 速度
+		std::optional<double>					   YTFYJ { -90.0 }; // 云台俯仰角
+		std::optional<double>					   PHJ {};			// 偏航角
+		std::optional<bool>						   SFTY {};			// 是否飞越
+		std::optional<std::vector<WaypointAction>> DZJ {};			// 动作集
 	};
 
 	struct WaypointPayload
@@ -210,10 +210,10 @@ namespace plane::protocol
 		std::optional<double> MBWD {};	// 目标纬度
 		std::optional<double> MBJD {};	// 目标经度
 		std::optional<double> MBGD {};	// 目标高度
-		int					  FHMS {};	// FHMS
-		std::optional<int>	  FHGD {};	// FHGD
-		std::optional<int>	  ZDMSD {}; // ZDMSD
-		std::optional<int>	  AQJC {};	// AQJC
+		std::optional<int>	  FHMS {};	// 返航模式
+		std::optional<int>	  FHGD {};	// 返航高度
+		std::optional<int>	  ZDMSD {}; // 最大速度
+		std::optional<int>	  AQJC {};	// 安全预检
 	};
 
 	struct FlyToPoint
@@ -225,15 +225,15 @@ namespace plane::protocol
 
 	struct FlyToPayload
 	{
-		std::optional<std::string> FXMBID {}; // FXMBID
-		std::optional<int>		   ZDMSD {};  // ZDMSD
-		std::vector<FlyToPoint>	   MBDS {};	  // MBDS
+		std::optional<std::string> FXMBID {}; // 目标点 ID（年+月日+序号）
+		std::optional<double>	   ZDMSD {};  // 最大速度
+		std::vector<FlyToPoint>	   MBDS {};	  // 目标点坐标集合
 	};
 
 	struct UpdateFlyToPayload
 	{
-		std::optional<int>		ZDMSD;	// ZDMSD
-		std::vector<FlyToPoint> GXMBDS; // GXMBDS
+		std::optional<double>	ZDMSD;	// 飞行最大速度限制
+		std::vector<FlyToPoint> GXMBDS; // 需要更新的航点坐标集合
 	};
 
 	struct TargetCoordinate
@@ -253,15 +253,15 @@ namespace plane::protocol
 
 	struct ControlStrategyPayload
 	{
-		std::optional<int> YTJSCL {}; // YTJSCL
+		std::optional<int> YTJSCL {}; // 云台转身策略
 	};
 
 	struct SmartFollowPayload
 	{
-		std::string						MBLX {}; // MBLX
-		std::optional<TargetCoordinate> MBWZ {}; // MBWZ
-		std::optional<int>				MBSY {}; // MBSY
-		std::optional<TargetRectangle>	MBJX {}; // MBJX
+		std::string						MBLX {}; // 目标类型
+		std::optional<TargetCoordinate> MBWZ {}; // 目标位置
+		std::optional<int>				MBSY {}; // 目标索引
+		std::optional<TargetRectangle>	MBJX {}; // 目标矩形
 	};
 
 	struct CircleFlyPayload
@@ -283,9 +283,9 @@ namespace plane::protocol
 
 	struct ZoomControlPayload
 	{
-		std::optional<std::string> XJSY {}; // XJSY
-		std::optional<std::string> XJLX {}; // XJLX
-		std::optional<double>	   BJB {};	// BJB
+		std::optional<std::string> XJSY {}; // 相机索引
+		std::optional<std::string> XJLX {}; // 相机类型
+		std::optional<double>	   BJB {};	// 变焦倍数
 	};
 
 	struct StickDataPayload
