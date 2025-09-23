@@ -1,3 +1,5 @@
+// manifold2/protocol/KmzDataClass.h
+
 #pragma once
 
 #include "define.h"
@@ -11,188 +13,72 @@
 
 namespace plane::protocol
 {
-	struct KmlPoint
-	{
-		double longitude { 0.0 };
-		double latitude { 0.0 };
-
-		void   toXml(pugi::xml_node& parent) const
-		{
-			auto pointNode { parent.append_child("Point") };
-			pointNode.append_child("coordinates").text().set(fmt::format("{:.12f},{:.12f}", longitude, latitude));
-		}
-	};
-
-	struct KmlWaypointHeadingParam
-	{
-		_STD string headingMode { "followWayline" };
-		double		headingAngle { 0.0 };
-		_STD string poiPoint { "0.000000,0.000000,0.000000" };
-		int			headingAngleEnable { 1 };
-		_STD string headingPathMode { "followBadArc" };
-		int			headingPoiIndex { 0 };
-
-		void		toXml(pugi::xml_node& parent) const
-		{
-			auto node { parent.append_child("wpml:waypointHeadingParam") };
-			node.append_child("wpml:waypointHeadingMode").text().set(headingMode);
-			node.append_child("wpml:waypointHeadingAngle").text().set(headingAngle);
-			node.append_child("wpml:waypointPoiPoint").text().set(poiPoint);
-			node.append_child("wpml:waypointHeadingAngleEnable").text().set(headingAngleEnable);
-			node.append_child("wpml:waypointHeadingPathMode").text().set(headingPathMode);
-			node.append_child("wpml:waypointHeadingPoiIndex").text().set(headingPoiIndex);
-		}
-	};
-
-	struct KmlWaypointTurnParam
-	{
-		_STD string turnMode {};
-		int			turnDampingDist { 0 };
-
-		void		toXml(pugi::xml_node& parent) const
-		{
-			auto node { parent.append_child("wpml:waypointTurnParam") };
-			node.append_child("wpml:waypointTurnMode").text().set(turnMode);
-			node.append_child("wpml:waypointTurnDampingDist").text().set(turnDampingDist);
-		}
-	};
-
-	struct KmlGimbalHeadingParam
-	{
-		double gimbalPitchAngle { 0.0 };
-		double gimbalYawAngle { 0.0 };
-
-		void   toXml(pugi::xml_node& parent) const
-		{
-			auto node { parent.append_child("wpml:waypointGimbalHeadingParam") };
-			node.append_child("wpml:waypointGimbalPitchAngle").text().set(gimbalPitchAngle);
-			node.append_child("wpml:waypointGimbalYawAngle").text().set(gimbalYawAngle);
-		}
-	};
-
 	struct WpmlActionActuatorFuncParam
 	{
-		_STD optional<double> gimbalPitchRotateAngle {};
-		_STD optional<double> hoverTime {};
-		_STD optional<int> payloadPositionIndex {};
-		_STD optional<int> useGlobalPayloadLensIndex {};
-		_STD optional<_STD string> payloadLensIndex {};
-		_STD optional<double> minShootInterval {};
-		_STD optional<_STD string> gimbalHeadingYawBase {};
-		_STD optional<_STD string> gimbalRotateMode {};
-		_STD optional<int> gimbalPitchRotateEnable {};
-		_STD optional<int> gimbalRollRotateEnable {};
-		_STD optional<double> gimbalRollRotateAngle {};
-		_STD optional<int> gimbalYawRotateEnable {};
-		_STD optional<double> gimbalYawRotateAngle {};
-		_STD optional<int> gimbalRotateTimeEnable {};
-		_STD optional<int> gimbalRotateTime {};
+		_STD string gimbalHeadingYawBase { "aircraft" };
+		_STD string gimbalRotateMode { "absoluteAngle" };
+		int			gimbalPitchRotateEnable { 1 };
+		double		gimbalPitchRotateAngle { -90 };
+		int			gimbalRollRotateEnable { 0 };
+		double		gimbalRollRotateAngle { 0 };
+		int			gimbalYawRotateEnable { 0 };
+		double		gimbalYawRotateAngle { 0 };
+		int			gimbalRotateTimeEnable { 0 };
+		int			gimbalRotateTime { 10 };
+		int			payloadPositionIndex { 0 };
 
-		void			   toXml(pugi::xml_node& parent) const
+		void		toXml(pugi::xml_node& parent) const
 		{
 			auto node { parent.append_child("wpml:actionActuatorFuncParam") };
-			if (gimbalHeadingYawBase)
-			{
-				node.append_child("wpml:gimbalHeadingYawBase").text().set(gimbalHeadingYawBase.value_or(""));
-			}
-			if (gimbalRotateMode)
-			{
-				node.append_child("wpml:gimbalRotateMode").text().set(gimbalRotateMode.value_or(""));
-			}
-			if (gimbalPitchRotateEnable)
-			{
-				node.append_child("wpml:gimbalPitchRotateEnable").text().set(*gimbalPitchRotateEnable);
-			}
-			if (gimbalPitchRotateAngle)
-			{
-				node.append_child("wpml:gimbalPitchRotateAngle").text().set(fmt::format("{:.2f}", *gimbalPitchRotateAngle));
-			}
-			if (gimbalRollRotateEnable)
-			{
-				node.append_child("wpml:gimbalRollRotateEnable").text().set(*gimbalRollRotateEnable);
-			}
-			if (gimbalRollRotateAngle)
-			{
-				node.append_child("wpml:gimbalRollRotateAngle").text().set(fmt::format("{:.2f}", *gimbalRollRotateAngle));
-			}
-			if (gimbalYawRotateEnable)
-			{
-				node.append_child("wpml:gimbalYawRotateEnable").text().set(*gimbalYawRotateEnable);
-			}
-			if (gimbalYawRotateAngle)
-			{
-				node.append_child("wpml:gimbalYawRotateAngle").text().set(fmt::format("{:.2f}", *gimbalYawRotateAngle));
-			}
-			if (gimbalRotateTimeEnable)
-			{
-				node.append_child("wpml:gimbalRotateTimeEnable").text().set(*gimbalRotateTimeEnable);
-			}
-			if (gimbalRotateTime)
-			{
-				node.append_child("wpml:gimbalRotateTime").text().set(*gimbalRotateTime);
-			}
-			if (hoverTime)
-			{
-				node.append_child("wpml:hoverTime").text().set(fmt::format("{:.1f}", *hoverTime));
-			}
-			if (payloadPositionIndex)
-			{
-				node.append_child("wpml:payloadPositionIndex").text().set(*payloadPositionIndex);
-			}
-			if (useGlobalPayloadLensIndex)
-			{
-				node.append_child("wpml:useGlobalPayloadLensIndex").text().set(*useGlobalPayloadLensIndex);
-			}
-			if (payloadLensIndex)
-			{
-				node.append_child("wpml:payloadLensIndex").text().set(payloadLensIndex.value_or(""));
-			}
-			if (minShootInterval)
-			{
-				node.append_child("wpml:minShootInterval").text().set(fmt::format("{:.1f}", *minShootInterval));
-			}
+			node.append_child("wpml:gimbalHeadingYawBase").text().set(gimbalHeadingYawBase);
+			node.append_child("wpml:gimbalRotateMode").text().set(gimbalRotateMode);
+			node.append_child("wpml:gimbalPitchRotateEnable").text().set(gimbalPitchRotateEnable);
+			node.append_child("wpml:gimbalPitchRotateAngle").text().set(gimbalPitchRotateAngle);
+			node.append_child("wpml:gimbalRollRotateEnable").text().set(gimbalRollRotateEnable);
+			node.append_child("wpml:gimbalRollRotateAngle").text().set(gimbalRollRotateAngle);
+			node.append_child("wpml:gimbalYawRotateEnable").text().set(gimbalYawRotateEnable);
+			node.append_child("wpml:gimbalYawRotateAngle").text().set(gimbalYawRotateAngle);
+			node.append_child("wpml:gimbalRotateTimeEnable").text().set(gimbalRotateTimeEnable);
+			node.append_child("wpml:gimbalRotateTime").text().set(gimbalRotateTime);
+			node.append_child("wpml:payloadPositionIndex").text().set(payloadPositionIndex);
 		}
 	};
 
 	struct WpmlAction
 	{
-		int			actionId { 0 };
-		_STD string actuatorFunc {};
-		_STD optional<WpmlActionActuatorFuncParam> actuatorFuncParam {};
+		int							actionId { 0 };
+		_STD string					actionActuatorFunc {};
+		WpmlActionActuatorFuncParam actionActuatorFuncParam {};
 
-		void									   toXml(pugi::xml_node& parent) const
+		void						toXml(pugi::xml_node& parent) const
 		{
 			auto node { parent.append_child("wpml:action") };
 			node.append_child("wpml:actionId").text().set(actionId);
-			node.append_child("wpml:actionActuatorFunc").text().set(actuatorFunc);
-			if (actuatorFuncParam)
-			{
-				actuatorFuncParam->toXml(node);
-			}
+			node.append_child("wpml:actionActuatorFunc").text().set(actionActuatorFunc);
+			actionActuatorFuncParam.toXml(node);
 		}
 	};
 
 	struct WpmlActionGroup
 	{
-		int			groupId { 0 };
-		int			startIndex { 0 };
-		int			endIndex { 0 };
-		_STD string mode { "sequence" };
-		_STD string triggerType {};
+		int			actionGroupId { 0 };
+		int			actionGroupStartIndex { 1 };
+		int			actionGroupEndIndex { 1 };
+		_STD string actionGroupMode { "sequence" };
+		_STD string actionTriggerType {};
 		_STD vector<WpmlAction> actions {};
 
-		void					toXml(pugi::xml_node& parent, bool isStartActionGroup = false) const
+		void					toXml(pugi::xml_node& parent) const
 		{
-			auto node = parent.append_child(isStartActionGroup ? "wpml:startActionGroup" : "wpml:actionGroup");
-			if (!isStartActionGroup)
-			{
-				node.append_child("wpml:actionGroupId").text().set(groupId);
-				node.append_child("wpml:actionGroupStartIndex").text().set(startIndex);
-				node.append_child("wpml:actionGroupEndIndex").text().set(endIndex);
-				node.append_child("wpml:actionGroupMode").text().set(mode);
-				auto triggerNode = node.append_child("wpml:actionTrigger");
-				triggerNode.append_child("wpml:actionTriggerType").text().set(triggerType);
-			}
+			auto node { parent.append_child("wpml:actionGroup") };
+			node.append_child("wpml:actionGroupId").text().set(actionGroupId);
+			node.append_child("wpml:actionGroupStartIndex").text().set(actionGroupStartIndex);
+			node.append_child("wpml:actionGroupEndIndex").text().set(actionGroupEndIndex);
+			node.append_child("wpml:actionGroupMode").text().set(actionGroupMode);
+
+			auto triggerNode { node.append_child("wpml:actionTrigger") };
+			triggerNode.append_child("wpml:actionTriggerType").text().set(actionTriggerType);
+
 			for (const auto& action : actions)
 			{
 				action.toXml(node);
@@ -200,50 +86,106 @@ namespace plane::protocol
 		}
 	};
 
+	struct WpmlPoint
+	{
+		double longitude { 0 };
+		double latitude { 0 };
+
+		void   toXml(pugi::xml_node& parent) const
+		{
+			auto node { parent.append_child("Point") };
+			node.append_child("coordinates").text().set(fmt::format("{:.12f},{:.12f}", longitude, latitude));
+		}
+	};
+
+	struct WpmlWaypointHeadingParam
+	{
+		_STD string waypointHeadingMode { "followWayline" };
+		double		waypointHeadingAngle { 0 };
+		_STD string waypointPoiPoint { fmt::format("{:.6f},{:.6f},{:.6f}", .0, .0, .0) };
+		int			waypointHeadingAngleEnable { 0 };
+		int			waypointHeadingPoiIndex { 0 };
+
+		void		toXml(pugi::xml_node& parent) const
+		{
+			auto node { parent.append_child("wpml:waypointHeadingParam") };
+			node.append_child("wpml:waypointHeadingMode").text().set(waypointHeadingMode);
+			node.append_child("wpml:waypointHeadingAngle").text().set(waypointHeadingAngle);
+			node.append_child("wpml:waypointPoiPoint").text().set(waypointPoiPoint);
+			node.append_child("wpml:waypointHeadingAngleEnable").text().set(waypointHeadingAngleEnable);
+			node.append_child("wpml:waypointHeadingPoiIndex").text().set(waypointHeadingPoiIndex);
+		}
+	};
+
+	struct WpmlWaypointTurnParam
+	{
+		_STD string waypointTurnMode { "toPointAndStopWithDiscontinuityCurvature" };
+		double		waypointTurnDampingDist { 0 };
+
+		void		toXml(pugi::xml_node& parent) const
+		{
+			auto node { parent.append_child("wpml:waypointTurnParam") };
+			node.append_child("wpml:waypointTurnMode").text().set(waypointTurnMode);
+			node.append_child("wpml:waypointTurnDampingDist").text().set(waypointTurnDampingDist);
+		}
+	};
+
+	struct KmlGimbalHeadingParam
+	{
+		double waypointGimbalPitchAngle { 0 };
+		double waypointGimbalYawAngle { 0 };
+
+		void   toXml(pugi::xml_node& parent) const
+		{
+			auto node { parent.append_child("wpml:waypointGimbalHeadingParam") };
+			node.append_child("wpml:waypointGimbalPitchAngle").text().set(waypointGimbalPitchAngle);
+			node.append_child("wpml:waypointGimbalYawAngle").text().set(waypointGimbalYawAngle);
+		}
+	};
+
 	struct WpmlPlacemark
 	{
-		KmlPoint				point {};
-		int						index { 0 };
-		double					executeHeight { 0.0 };
-		double					waypointSpeed { 5.0 };
-		KmlWaypointHeadingParam headingParam {};
-		KmlWaypointTurnParam	turnParam {};
-		int						useStraightLine { 1 };
+		WpmlPoint				 point {};
+		int						 index { 0 };
+		double					 executeHeight { 40 };
+		double					 waypointSpeed { 5 };
+		WpmlWaypointHeadingParam waypointHeadingParam {};
+		WpmlWaypointTurnParam	 waypointTurnParam {};
+		int						 useStraightLine { 1 };
 		_STD vector<WpmlActionGroup> actionGroups {};
-		KmlGimbalHeadingParam		 gimbalHeadingParam {};
+		KmlGimbalHeadingParam		 waypointGimbalHeadingParam {};
 		int							 isRisky { 0 };
-		int							 workType { 0 };
+		int							 waypointWorkType { 0 };
 
 		void						 toXml(pugi::xml_node& parent) const
 		{
 			auto node { parent.append_child("Placemark") };
 			point.toXml(node);
 			node.append_child("wpml:index").text().set(index);
-			node.append_child("wpml:executeHeight").text().set(fmt::format("{:.12f}", executeHeight));
-			node.append_child("wpml:waypointSpeed").text().set(fmt::format("{:.12f}", waypointSpeed));
-			headingParam.toXml(node);
-			turnParam.toXml(node);
+			node.append_child("wpml:executeHeight").text().set(executeHeight);
+			node.append_child("wpml:waypointSpeed").text().set(waypointSpeed);
+			waypointHeadingParam.toXml(node);
+			waypointTurnParam.toXml(node);
 			node.append_child("wpml:useStraightLine").text().set(useStraightLine);
 			for (const auto& ag : actionGroups)
 			{
 				ag.toXml(node);
 			}
-			gimbalHeadingParam.toXml(node);
+			waypointGimbalHeadingParam.toXml(node);
 			node.append_child("wpml:isRisky").text().set(isRisky);
-			node.append_child("wpml:waypointWorkType").text().set(workType);
+			node.append_child("wpml:waypointWorkType").text().set(waypointWorkType);
 		}
 	};
 
-	struct KmlFolder
+	struct WpmlFolder
 	{
 		int			templateId { 0 };
 		_STD string executeHeightMode { "relativeToStartPoint" };
 		int			waylineId { 0 };
-		double		distance { 0.0 };
-		double		duration { 0.0 };
-		double		autoFlightSpeed { 5.0 };
-		_STD vector<WpmlActionGroup> startActionGroups;
-		_STD vector<WpmlPlacemark> placemarks;
+		double		distance { 530.481018066406 };
+		double		duration { 149.069183349609 };
+		double		autoFlightSpeed { 5 };
+		_STD vector<WpmlPlacemark> placemarks {};
 
 		void					   toXml(pugi::xml_node& parent) const
 		{
@@ -251,13 +193,9 @@ namespace plane::protocol
 			node.append_child("wpml:templateId").text().set(templateId);
 			node.append_child("wpml:executeHeightMode").text().set(executeHeightMode);
 			node.append_child("wpml:waylineId").text().set(waylineId);
-			node.append_child("wpml:distance").text().set(fmt::format("{:.2f}", distance));
-			node.append_child("wpml:duration").text().set(fmt::format("{:.2f}", duration));
-			node.append_child("wpml:autoFlightSpeed").text().set(fmt::format("{:.2f}", autoFlightSpeed));
-			for (const auto& ag : startActionGroups)
-			{
-				ag.toXml(node);
-			}
+			node.append_child("wpml:distance").text().set(fmt::format("{:.12f}", distance));
+			node.append_child("wpml:duration").text().set(fmt::format("{:.12f}", duration));
+			node.append_child("wpml:autoFlightSpeed").text().set(autoFlightSpeed);
 			for (const auto& pm : placemarks)
 			{
 				pm.toXml(node);
@@ -271,12 +209,11 @@ namespace plane::protocol
 		_STD string finishAction { "noAction" };
 		_STD string exitOnRCLost { "executeLostAction" };
 		_STD string executeRCLostAction { "goBack" };
-		int			takeOffSecurityHeight { 20 };
-		double		globalTransitionalSpeed { 5.0 };
+		double		globalTransitionalSpeed { 10.0 };
 
 		struct DroneInfo
 		{
-			int	 droneEnumValue { 99 };
+			int	 droneEnumValue { 65'535 };
 			int	 droneSubEnumValue { 0 };
 
 			void toXml(pugi::xml_node& parent) const
@@ -287,23 +224,6 @@ namespace plane::protocol
 			}
 		} droneInfo;
 
-		int waylineAvoidLimitAreaMode { 1 };
-
-		struct PayloadInfo
-		{
-			int	 payloadEnumValue { 89 };
-			int	 payloadSubEnumValue { 0 };
-			int	 payloadPositionIndex { 0 };
-
-			void toXml(pugi::xml_node& parent) const
-			{
-				auto node { parent.append_child("wpml:payloadInfo") };
-				node.append_child("wpml:payloadEnumValue").text().set(payloadEnumValue);
-				node.append_child("wpml:payloadSubEnumValue").text().set(payloadSubEnumValue);
-				node.append_child("wpml:payloadPositionIndex").text().set(payloadPositionIndex);
-			}
-		} payloadInfo;
-
 		void toXml(pugi::xml_node& parent) const
 		{
 			auto node { parent.append_child("wpml:missionConfig") };
@@ -311,25 +231,24 @@ namespace plane::protocol
 			node.append_child("wpml:finishAction").text().set(finishAction);
 			node.append_child("wpml:exitOnRCLost").text().set(exitOnRCLost);
 			node.append_child("wpml:executeRCLostAction").text().set(executeRCLostAction);
-			node.append_child("wpml:takeOffSecurityHeight").text().set(takeOffSecurityHeight);
-			node.append_child("wpml:globalTransitionalSpeed").text().set(fmt::format("{:.2f}", globalTransitionalSpeed));
-
+			node.append_child("wpml:globalTransitionalSpeed").text().set(globalTransitionalSpeed);
 			droneInfo.toXml(node);
-
-			node.append_child("wpml:waylineAvoidLimitAreaMode").text().set(waylineAvoidLimitAreaMode);
-
-			payloadInfo.toXml(node);
 		}
 	};
 
-	struct KmlDocument
+	struct WpmlDocument
 	{
+		int				 efficiencyFlightModeEnable { -4 };
 		KmlMissionConfig missionConfig {};
-		KmlFolder		 folder {};
+		WpmlFolder		 folder {};
 
 		void			 toXml(pugi::xml_node& parent) const
 		{
 			auto node { parent.append_child("Document") };
+			if (efficiencyFlightModeEnable)
+			{
+				node.append_child("wpml:efficiencyFlightModeEnable").text().set(efficiencyFlightModeEnable);
+			}
 			missionConfig.toXml(node);
 			folder.toXml(node);
 		}
@@ -337,31 +256,30 @@ namespace plane::protocol
 
 	struct WpmlRoot
 	{
-		_STD string xml_version { "1.0" };
-		_STD string encoding { "UTF-8" };
-		_STD string xmlns { "http://www.opengis.net/kml/2.2" };
-		_STD string xmlns_wpml { "http://www.dji.com/wpmz/1.0.6" };
-		KmlDocument document {};
+		WpmlDocument document {};
 
-		void		toXml(pugi::xml_document& doc) const
+		void		 toXml(pugi::xml_document& doc) const noexcept
 		{
 			auto decl { doc.append_child(pugi::node_declaration) };
-			decl.append_attribute("version")  = xml_version;
-			decl.append_attribute("encoding") = encoding;
+			decl.append_attribute("version")  = "1.0";
+			decl.append_attribute("encoding") = "UTF-8";
 
 			auto kmlNode { doc.append_child("kml") };
-			kmlNode.append_attribute("xmlns")	   = xmlns;
-			kmlNode.append_attribute("xmlns:wpml") = xmlns_wpml;
+			kmlNode.append_attribute("xmlns")	   = "http://www.opengis.net/kml/2.2";
+			kmlNode.append_attribute("xmlns:wpml") = "http://www.dji.com/wpmz/1.0.6";
 
 			document.toXml(kmlNode);
+
+			_STD ostringstream oss {};
+			doc.save(oss, "  ", pugi::format_default, pugi::encoding_utf8);
 		}
 	};
 
 	struct TemplateKml
 	{
 		_STD string author { "cy_psdk" };
-		_STD string createTime {};
-		_STD string updateTime {};
+		_STD string createTime { "" };
+		_STD string updateTime { "" };
 
 		explicit TemplateKml(void) noexcept
 		{

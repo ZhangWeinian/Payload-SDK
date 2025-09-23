@@ -5,6 +5,7 @@
 			"name": "PSDK"
 		},
 		{
+			"name": "LLVM",
 			"path": "../llvm"
 		}
 	],
@@ -107,7 +108,8 @@
 			"coroutine": "cpp",
 			"ranges": "cpp",
 			"typeindex": "cpp",
-			"version": "cpp"
+			"version": "cpp",
+			"filesystem": "cpp"
 		}
 	}
 }

@@ -1,3 +1,5 @@
+// manifold2/services/mqtt/Handler/MessageHandler.h
+
 #pragma once
 
 #include "define.h"
@@ -15,7 +17,7 @@ namespace plane::services
 	{
 	public:
 		using n_json	   = nlohmann::json;
-		using LogicHandler = _STD function<void(const n_json&)>;
+		using LogicHandler = _STD  function<void(const n_json&)>;
 
 		static MqttMessageHandler& getInstance(void) noexcept;
 		void					   registerHandler(_STD string_view topic, _STD string_view messageType, LogicHandler handler) noexcept;

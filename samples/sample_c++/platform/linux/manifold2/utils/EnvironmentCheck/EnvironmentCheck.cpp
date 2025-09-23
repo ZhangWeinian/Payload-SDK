@@ -1,3 +1,5 @@
+// manifold2/utils/EnvironmentCheck/EnvironmentCheck.cpp
+
 #include "utils/EnvironmentCheck/EnvironmentCheck.h"
 
 #include <string_view>
@@ -8,7 +10,7 @@ namespace plane::utils
 {
 	namespace
 	{
-		constexpr inline bool isEnvVarSetToOne(_STD string_view envVarName) noexcept
+		inline bool isEnvVarSetToOne(_STD string_view envVarName) noexcept
 		{
 			const char* envValue { _STD getenv(envVarName.data()) };
 			return (envValue != nullptr) && (_STD string(envValue) == "1");

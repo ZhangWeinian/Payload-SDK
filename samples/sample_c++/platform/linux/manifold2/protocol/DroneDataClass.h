@@ -1,3 +1,5 @@
+// manifold2/protocol/DroneDataClass.h
+
 #pragma once
 
 #include "define.h"
@@ -173,8 +175,8 @@ namespace plane::protocol
 		double JD {};									   // 经度
 		double WD {};									   // 维度
 		double GD {};									   // 高度
-		double SD { 0.0 };								   // 速度
-		_STD optional<double> YTFYJ { -90.0 };			   // 云台俯仰角
+		double SD {};									   // 速度
+		_STD optional<double> YTFYJ { -90 };			   // 云台俯仰角
 		_STD optional<double> PHJ {};					   // 偏航角
 		_STD optional<bool> SFTY {};					   // 是否飞越
 		_STD optional<_STD vector<WaypointAction>> DZJ {}; // 动作集
@@ -305,10 +307,10 @@ namespace plane::protocol
 
 	struct NedVelocityPayload
 	{
-		double SDN { 0.0 }; // 北向速度
-		double SDD { 0.0 }; // 东向速度
-		double SDX { 0.0 }; // 地向速度 (下为正)
-		double PHJ { 0.0 }; // 偏航角速率
+		double SDN { 0 }; // 北向速度
+		double SDD { 0 }; // 东向速度
+		double SDX { 0 }; // 地向速度 (下为正)
+		double PHJ { 0 }; // 偏航角速率
 	};
 
 	struct GpsInfo

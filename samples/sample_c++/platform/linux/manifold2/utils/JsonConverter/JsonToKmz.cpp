@@ -1,3 +1,5 @@
+// manifold2/utils/JsonConverter/JsonToKmz.cpp
+
 #include "utils/JsonConverter/JsonToKmz.h"
 
 #include "protocol/KmzDataClass.h"
@@ -18,17 +20,15 @@
 
 namespace plane::utils
 {
-	constexpr inline double MATH_PI		   = 3.14159265358979323846;
-	constexpr inline double EARTH_RADIUS_M = 6'371'000.0;
-
-	namespace fs						   = _STD	  filesystem;
+	constexpr inline double MATH_PI { 3.14159265358979323846 };
+	constexpr inline double EARTH_RADIUS_M { 6'371'000.0 };
 
 	namespace
 	{
-		static fs::path		   g_latestKmzFilePath {};
-		static fs::path		   g_kmzStorageDir {};
+		static _STD_FS path		   g_latestKmzFilePath {};
+		static _STD_FS path		   g_kmzStorageDir {};
 
-		inline const fs::path& getKmzStorageDir(void) noexcept
+		inline const _STD_FS path& getKmzStorageDir(void) noexcept
 		{
 			if (g_kmzStorageDir.empty())
 			{
@@ -37,25 +37,25 @@ namespace plane::utils
 				if (ssize_t count { readlink("/proc/self/exe", exePath, sizeof(exePath) - 1) }; count != -1)
 				{
 					exePath[count] = '\0';
-					fs::path executablePath(exePath);
-					fs::path executableDir { executablePath.parent_path() };
+					_STD_FS path executablePath(exePath);
+					_STD_FS path executableDir { executablePath.parent_path() };
 					g_kmzStorageDir = executableDir / "kmz_files";
 				}
 				else
 				{
 					LOG_WARN("无法获取可执行文件路径, 使用当前工作目录");
-					g_kmzStorageDir = fs::absolute(fs::current_path() / "kmz_files");
+					g_kmzStorageDir = _STD_FS absolute(_STD_FS current_path() / "kmz_files");
 				}
 
 				try
 				{
-					if (!fs::exists(g_kmzStorageDir))
+					if (!_STD_FS exists(g_kmzStorageDir))
 					{
-						fs::create_directories(g_kmzStorageDir);
+						_STD_FS create_directories(g_kmzStorageDir);
 						LOG_INFO("创建 KMZ 存储目录: {}", g_kmzStorageDir.string());
 					}
 
-					fs::path testFile { g_kmzStorageDir / "test_write.tmp" };
+					_STD_FS path testFile { g_kmzStorageDir / "test_write.tmp" };
 					if (_STD ofstream ofs(testFile); !ofs)
 					{
 						LOG_ERROR("KMZ 目录 '{}' 不可写", g_kmzStorageDir.string());
@@ -64,10 +64,10 @@ namespace plane::utils
 					else
 					{
 						ofs.close();
-						fs::remove(testFile);
+						_STD_FS remove(testFile);
 					}
 				}
-				catch (const fs::filesystem_error& e)
+				catch (const _STD_FS filesystem_error& e)
 				{
 					LOG_ERROR("创建或访问 KMZ 目录 '{}' 失败: {}", g_kmzStorageDir.string(), e.what());
 					g_kmzStorageDir = "";
@@ -128,153 +128,130 @@ namespace plane::utils
 
 		static _STD string generateWaylinesWpml(const _STD vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
-			plane::protocol::WpmlRoot wpmlRoot {};
-			wpmlRoot.document.missionConfig.globalTransitionalSpeed = waypoints.empty() ? 5.0 : waypoints[0].SD;
-			wpmlRoot.document.folder.templateId						= 0;
-			wpmlRoot.document.folder.executeHeightMode				= "relativeToStartPoint";
-			wpmlRoot.document.folder.waylineId						= 0;
-			wpmlRoot.document.folder.distance						= _STD stod(fmt::format("{:.2f}", calculateTotalDistance(waypoints)));
-			wpmlRoot.document.folder.duration						= _STD stod(fmt::format("{:.2f}", calculateTotalDuration(waypoints)));
-			wpmlRoot.document.folder.autoFlightSpeed				= wpmlRoot.document.missionConfig.globalTransitionalSpeed;
+			plane::protocol::WpmlRoot wpml {};
+			size_t					  size { waypoints.size() };
+
+			wpml.document.missionConfig.globalTransitionalSpeed = waypoints.empty() ? 5.0 : waypoints[0].SD;
+			wpml.document.folder.distance						= _STD stod(fmt::format("{:.2f}", calculateTotalDistance(waypoints)));
+			wpml.document.folder.duration						= _STD stod(fmt::format("{:.2f}", calculateTotalDuration(waypoints)));
+			wpml.document.folder.autoFlightSpeed				= wpml.document.missionConfig.globalTransitionalSpeed;
 
 			if (!waypoints.empty())
 			{
-				plane::protocol::WpmlActionGroup startGroup {};
-				startGroup.groupId	   = 0;
-				startGroup.startIndex  = 0;
-				startGroup.endIndex	   = 0;
-				startGroup.mode		   = "sequence";
-				startGroup.triggerType = "takeoff";
+				plane::protocol::WpmlActionGroup takeoffGroup {};
+				takeoffGroup.actionTriggerType = "takeoff";
 
 				plane::protocol::WpmlAction gimbalRotate {};
-				gimbalRotate.actionId	  = 0;
-				gimbalRotate.actuatorFunc = "gimbalRotate";
-
-				plane::protocol::WpmlActionActuatorFuncParam gimbalParam {};
-				gimbalParam.gimbalPitchRotateAngle	= -90.00;
-				gimbalParam.payloadPositionIndex	= 0;
-				gimbalParam.gimbalHeadingYawBase	= "aircraft";
-				gimbalParam.gimbalRotateMode		= "absoluteAngle";
-				gimbalParam.gimbalPitchRotateEnable = 1;
-				gimbalParam.gimbalRollRotateEnable	= 0;
-				gimbalParam.gimbalRollRotateAngle	= 0.00;
-				gimbalParam.gimbalYawRotateEnable	= 1;
-				gimbalParam.gimbalYawRotateAngle	= 0.00;
-				gimbalParam.gimbalRotateTimeEnable	= 0;
-				gimbalParam.gimbalRotateTime		= 10;
-				gimbalRotate.actuatorFuncParam		= gimbalParam;
-				startGroup.actions.push_back(gimbalRotate);
-
-				plane::protocol::WpmlAction hover {};
-				hover.actionId	   = 1;
-				hover.actuatorFunc = "hover";
-
-				plane::protocol::WpmlActionActuatorFuncParam hoverParam {};
-				hoverParam.hoverTime	= 0.5;
-				hover.actuatorFuncParam = hoverParam;
-				startGroup.actions.push_back(hover);
-
-				wpmlRoot.document.folder.startActionGroups.push_back(startGroup);
-			}
-
-			size_t i { 0 };
-			size_t size { waypoints.size() };
-			for (const auto& wp : waypoints)
-			{
-				plane::protocol::WpmlPlacemark placemark {};
-				placemark.point.longitude		   = wp.JD;
-				placemark.point.latitude		   = wp.WD;
-				placemark.executeHeight			   = _STD stod(fmt::format("{:.12f}", wp.GD));
-				placemark.waypointSpeed			   = _STD stod(fmt::format("{:.12f}", wp.SD));
-
-				placemark.headingParam.headingMode = "followWayline";
-				placemark.headingParam.headingAngle =
-					(i < size - 1) ? _STD stod(fmt::format("{:.6f}", calculateHeadingAngle(wp, waypoints[i + 1]))) : 0.0;
-				placemark.headingParam.poiPoint			  = "0.000000,0.000000,0.000000";
-				placemark.headingParam.headingAngleEnable = 1;
-				placemark.headingParam.headingPathMode	  = "followBadArc";
-				placemark.headingParam.headingPoiIndex	  = 0;
-
-				if ((i == 0) || (i == size - 1))
+				gimbalRotate.actionId									   = 0;
+				gimbalRotate.actionActuatorFunc							   = "gimbalRotate";
+				gimbalRotate.actionActuatorFuncParam.payloadPositionIndex  = 0;
+				gimbalRotate.actionActuatorFuncParam.gimbalYawRotateEnable = 1;
+				if (waypoints[0].YTFYJ.has_value())
 				{
-					placemark.turnParam.turnMode		= "toPointAndStopWithDiscontinuityCurvature";
-					placemark.turnParam.turnDampingDist = 0;
+					gimbalRotate.actionActuatorFuncParam.gimbalPitchRotateAngle = _STD stod(fmt::format("{:.6f}", waypoints[0].YTFYJ.value()));
 				}
 				else
 				{
-					placemark.turnParam.turnMode		= "coordinateTurn";
-					placemark.turnParam.turnDampingDist = 10;
+					gimbalRotate.actionActuatorFuncParam.gimbalPitchRotateAngle = -90.0;
+				}
+				takeoffGroup.actions.push_back(gimbalRotate);
+
+				plane::protocol::WpmlAction hover {};
+				hover.actionId			 = 1;
+				hover.actionActuatorFunc = "hover";
+				takeoffGroup.actions.push_back(hover);
+
+				plane::protocol::WpmlPlacemark firstPlacemark {};
+				firstPlacemark.point.longitude = waypoints[0].JD;
+				firstPlacemark.point.latitude  = waypoints[0].WD;
+				firstPlacemark.executeHeight   = _STD stod(fmt::format("{:.12f}", waypoints[0].GD));
+				firstPlacemark.waypointSpeed   = _STD stod(fmt::format("{:.12f}", waypoints[0].SD));
+
+				if (size > 1)
+				{
+					firstPlacemark.waypointHeadingParam.waypointHeadingAngle =
+						_STD stod(fmt::format("{:.6f}", calculateHeadingAngle(waypoints[0], waypoints[1])));
 				}
 
-				placemark.useStraightLine					  = 1;
-				placemark.gimbalHeadingParam.gimbalPitchAngle = 0;
-				placemark.gimbalHeadingParam.gimbalYawAngle	  = 0;
-				placemark.isRisky							  = 0;
-				placemark.workType							  = 0;
+				firstPlacemark.actionGroups.push_back(takeoffGroup);
 
-				// 首航点 actionGroup
-				if (i == 0)
+				wpml.document.folder.placemarks.push_back(firstPlacemark);
+
+				for (size_t i { 1 }; i < size - 1; ++i)
 				{
-					plane::protocol::WpmlActionGroup ag;
-					ag.groupId	   = 0;
-					ag.startIndex  = 0;
-					ag.endIndex	   = size > 1 ? size - 2 : 0;
-					ag.mode		   = "sequence";
-					ag.triggerType = "betweenAdjacentPoints";
+					plane::protocol::WpmlPlacemark placemark {};
+					placemark.point.longitude = waypoints[i].JD;
+					placemark.point.latitude  = waypoints[i].WD;
+					placemark.executeHeight	  = _STD stod(fmt::format("{:.12f}", waypoints[i].GD));
+					placemark.waypointSpeed	  = _STD stod(fmt::format("{:.12f}", waypoints[i].SD));
 
-					plane::protocol::WpmlAction lock;
-					lock.actionId	  = 0;
-					lock.actuatorFunc = "gimbalAngleLock";
-					ag.actions.push_back(lock);
+					placemark.waypointHeadingParam.waypointHeadingAngle =
+						_STD stod(fmt::format("{:.6f}", calculateHeadingAngle(waypoints[i], waypoints[i + 1])));
 
-					plane::protocol::WpmlAction timeLapse;
-					timeLapse.actionId	   = 1;
-					timeLapse.actuatorFunc = "startTimeLapse";
+					if (i == 1)
+					{
+						plane::protocol::WpmlActionGroup ag {};
+						ag.actionGroupEndIndex = size > 2 ? static_cast<int>(size - 2) : 0;
+						ag.actionTriggerType   = "betweenAdjacentPoints";
 
-					plane::protocol::WpmlActionActuatorFuncParam param;
-					param.payloadPositionIndex		= 0;
-					param.useGlobalPayloadLensIndex = 0;
-					param.payloadLensIndex			= "visible";
-					param.minShootInterval			= 2.0;
-					timeLapse.actuatorFuncParam		= param;
-					ag.actions.push_back(timeLapse);
+						plane::protocol::WpmlAction lock {};
+						lock.actionActuatorFunc = "gimbalAngleLock";
+						if (waypoints[i].YTFYJ.has_value())
+						{
+							lock.actionActuatorFuncParam.gimbalPitchRotateAngle = _STD stod(fmt::format("{:.6f}", waypoints[i].YTFYJ.value()));
+						}
+						else
+						{
+							gimbalRotate.actionActuatorFuncParam.gimbalPitchRotateAngle = -90.0;
+						}
+						ag.actions.push_back(lock);
 
-					placemark.actionGroups.push_back(ag);
+						plane::protocol::WpmlAction timeLapse {};
+						timeLapse.actionId									   = 1;
+						timeLapse.actionActuatorFunc						   = "startTimeLapse";
+						timeLapse.actionActuatorFuncParam.payloadPositionIndex = 0;
+						ag.actions.push_back(timeLapse);
+
+						placemark.actionGroups.push_back(ag);
+					}
+
+					wpml.document.folder.placemarks.push_back(placemark);
 				}
 
-				// 末航点 actionGroup
-				if (i == size - 1)
+				if (size > 1)
 				{
-					protocol::WpmlActionGroup ag;
-					ag.groupId	   = 1;
-					ag.startIndex  = i;
-					ag.endIndex	   = i;
-					ag.mode		   = "sequence";
-					ag.triggerType = "reachPoint";
+					const auto&					   lastWp { waypoints.back() };
+					plane::protocol::WpmlPlacemark lastPlacemark {};
+					lastPlacemark.point.longitude							= lastWp.JD;
+					lastPlacemark.point.latitude							= lastWp.WD;
+					lastPlacemark.executeHeight								= _STD stod(fmt::format("{:.12f}", lastWp.GD));
+					lastPlacemark.waypointSpeed								= _STD stod(fmt::format("{:.12f}", lastWp.SD));
+					lastPlacemark.waypointHeadingParam.waypointHeadingAngle = 0.0;
 
-					protocol::WpmlAction stop;
-					stop.actionId	  = 0;
-					stop.actuatorFunc = "stopTimeLapse";
-					protocol::WpmlActionActuatorFuncParam param;
-					param.payloadPositionIndex = 0;
-					param.payloadLensIndex	   = "visible";
-					stop.actuatorFuncParam	   = param;
+					plane::protocol::WpmlActionGroup ag {};
+					ag.actionGroupId		 = 1;
+					ag.actionGroupStartIndex = static_cast<int>(waypoints.size() - 1);
+					ag.actionGroupEndIndex	 = static_cast<int>(waypoints.size() - 1);
+					ag.actionTriggerType	 = "reachPoint";
+
+					plane::protocol::WpmlAction stop {};
+					stop.actionActuatorFunc							  = "stopTimeLapse";
+					stop.actionActuatorFuncParam.payloadPositionIndex = 0;
 					ag.actions.push_back(stop);
 
-					protocol::WpmlAction unlock;
-					unlock.actionId		= 1;
-					unlock.actuatorFunc = "gimbalAngleUnlock";
+					plane::protocol::WpmlAction unlock {};
+					unlock.actionId			  = 1;
+					unlock.actionActuatorFunc = "gimbalAngleUnlock";
 					ag.actions.push_back(unlock);
 
-					placemark.actionGroups.push_back(ag);
-				}
+					lastPlacemark.actionGroups.push_back(ag);
 
-				wpmlRoot.document.folder.placemarks.push_back(placemark);
-				++i;
+					wpml.document.folder.placemarks.push_back(lastPlacemark);
+				}
 			}
 
 			pugi::xml_document doc {};
-			wpmlRoot.toXml(doc);
+			wpml.toXml(doc);
 			_STD ostringstream oss {};
 			doc.save(oss, "  ", pugi::format_default, pugi::encoding_utf8);
 			return oss.str();
@@ -282,23 +259,21 @@ namespace plane::utils
 
 		static _STD string generateTemplateKml(void) noexcept
 		{
-			plane::protocol::TemplateKml tpl {};
+			plane::protocol::TemplateKml kml {};
 			pugi::xml_document			 doc {};
-			tpl.toXml(doc);
-
+			kml.toXml(doc);
 			_STD ostringstream oss {};
 			doc.save(oss, "  ", pugi::format_default, pugi::encoding_utf8);
-
 			return oss.str();
 		}
 	} // namespace
 
-	bool JsonToKmzConverter::convertWaypointsToKmz(const _STD vector<protocol::Waypoint>& waypoints,
-												   const protocol::WaypointPayload&		  missionInfo) noexcept
+	bool JsonToKmzConverter::convertWaypointsToKmz(const _STD vector<plane::protocol::Waypoint>& waypoints,
+												   const plane::protocol::WaypointPayload&		 missionInfo) noexcept
 	{
 		g_latestKmzFilePath = "";
 
-		const fs::path& storageDir { getKmzStorageDir() };
+		const _STD_FS path& storageDir { getKmzStorageDir() };
 		if (waypoints.empty() || storageDir.empty())
 		{
 			LOG_ERROR("无法生成 KMZ 文件, 因为航点列表为空或存储目录无效。");
@@ -312,7 +287,7 @@ namespace plane::utils
 		_STD stringstream time_ss {};
 		time_ss << _STD	  put_time(&tm_now, "%Y%m%d_%H%M%S");
 		_STD string		  filename { fmt::format("{}.kmz", time_ss.str()) };
-		fs::path		  kmzFilePath { storageDir / filename };
+		_STD_FS path	  kmzFilePath { storageDir / filename };
 
 		LOG_DEBUG("开始生成 KMZ 文件, 任务 ID: {}, 路径: {}", missionId, kmzFilePath.string());
 
@@ -323,7 +298,7 @@ namespace plane::utils
 		zip_t*		archive { zip_open(kmzFilePath.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &error) };
 		if (!archive)
 		{
-			zip_error_t ziperror;
+			zip_error_t ziperror {};
 			zip_error_init_with_code(&ziperror, error);
 			LOG_ERROR("无法创建或打开 KMZ 文件 '{}': {}", kmzFilePath.string(), zip_error_strerror(&ziperror));
 			zip_error_fini(&ziperror);
@@ -333,13 +308,13 @@ namespace plane::utils
 		zip_source_t* waylines_source { zip_source_buffer(archive, waylinesWpml.c_str(), waylinesWpml.length(), 0) };
 		if (!waylines_source)
 		{
-			LOG_ERROR("无法创建 waylines.wpml 的 ZIP 源");
+			LOG_ERROR("无法为 waylines.wpml 创建 zip source: {}", zip_strerror(archive));
 			zip_close(archive);
 			return false;
 		}
-		if (zip_file_add(archive, "waylines.wpml", waylines_source, ZIP_FL_ENC_UTF_8) < 0)
+		if (zip_file_add(archive, "wpmz/waylines.wpml", waylines_source, ZIP_FL_ENC_UTF_8) < 0)
 		{
-			LOG_ERROR("无法将 'waylines.wpml' 添加到 KMZ: {}", zip_strerror(archive));
+			LOG_ERROR("无法将 'wpmz/waylines.wpml' 添加到 KMZ: {}", zip_strerror(archive));
 			zip_source_free(waylines_source);
 			zip_close(archive);
 			return false;
@@ -348,25 +323,25 @@ namespace plane::utils
 		zip_source_t* template_source { zip_source_buffer(archive, templateKml.c_str(), templateKml.length(), 0) };
 		if (!template_source)
 		{
-			LOG_ERROR("无法创建 template.kml 的 ZIP 源");
+			LOG_ERROR("无法为 template.kml 创建 zip source: {}", zip_strerror(archive));
 			zip_close(archive);
 			return false;
 		}
-		if (zip_file_add(archive, "template.kml", template_source, ZIP_FL_ENC_UTF_8) < 0)
+		if (zip_file_add(archive, "wpmz/template.kml", template_source, ZIP_FL_ENC_UTF_8) < 0)
 		{
-			LOG_ERROR("无法将 'template.kml' 添加到 KMZ: {}", zip_strerror(archive));
+			LOG_ERROR("无法将 'wpmz/template.kml' 添加到 KMZ: {}", zip_strerror(archive));
 			zip_source_free(template_source);
 			zip_close(archive);
 			return false;
 		}
+
 		if (zip_close(archive) < 0)
 		{
 			LOG_ERROR("关闭 KMZ 文件时出错: {}", zip_strerror(archive));
 			return false;
 		}
 
-		g_latestKmzFilePath = fs::absolute(kmzFilePath);
-
+		g_latestKmzFilePath = _STD_FS absolute(kmzFilePath);
 		LOG_INFO("成功创建 KMZ 文件: {}", g_latestKmzFilePath.string());
 		return true;
 	}

@@ -1,11 +1,11 @@
+// manifold2/utils/NetworkUtils/NetworkUtils.cpp
+
 #include "utils/NetworkUtils/NetworkUtils.h"
 
 #include "utils/Logger/Logger.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <ifaddrs.h>
-
 #include <string_view>
 #include <system_error>
 #include <algorithm>
@@ -13,6 +13,7 @@
 #include <chrono>
 #include <cstring>
 #include <format>
+#include <ifaddrs.h>
 #include <memory>
 #include <mutex>
 #include <ranges>
