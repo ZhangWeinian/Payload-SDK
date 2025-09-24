@@ -39,3 +39,7 @@
 #if __has_include(<zip.h>) && !defined(_LIBZIP)
 	#define _LIBZIP ::
 #endif
+
+#if __has_include(<mqtt/async_client.h>) && !defined(_MQTT)
+	#define _MQTT ::mqtt::
+#endif

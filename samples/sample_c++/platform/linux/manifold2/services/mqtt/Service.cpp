@@ -14,12 +14,10 @@
 
 #include "services/mqtt/Service.h"
 
-using namespace mqtt;
-
 namespace plane::services
 {
-	class MqttCallback: public callback,
-						public iaction_listener
+	class MqttCallback: public _MQTT callback,
+						public _MQTT iaction_listener
 	{
 	public:
 		explicit MqttCallback(MQTTService* service): service_(service) {}
@@ -52,23 +50,23 @@ namespace plane::services
 			service_->setConnected(false);
 		}
 
-		void message_arrived(mqtt::const_message_ptr msg) override
+		void message_arrived(_MQTT const_message_ptr msg) override
 		{
 			LOG_DEBUG("收到消息: topic={}, payload={}", msg->get_topic(), msg->to_string());
 			plane::utils::JsonConverter::parseAndRouteMessage(msg->get_topic(), msg->to_string());
 		}
 
-		void delivery_complete(delivery_token_ptr token) override
+		void delivery_complete(_MQTT delivery_token_ptr token) override
 		{
 			LOG_DEBUG("MQTT 消息发送完成, 令牌: {}", token ? token->get_message_id() : -1);
 		}
 
-		void on_failure(const token& tok) override
+		void on_failure(const _MQTT token& tok) override
 		{
 			LOG_ERROR("MQTT 操作失败, token: {}", tok.get_message_id());
 		}
 
-		void on_success(const token& tok) override
+		void on_success(const _MQTT token& tok) override
 		{
 			LOG_DEBUG("MQTT 操作成功, token: {}", tok.get_message_id());
 		}
@@ -116,13 +114,13 @@ namespace plane::services
 
 		try
 		{
-			auto msg { mqtt::make_message(topic.data(), payload.data()) };
+			auto msg { _MQTT make_message(topic.data(), payload.data()) };
 			msg->set_qos(1);
 			impl_->client->publish(msg);
 			LOG_DEBUG("已向主题 '{}' 发送消息发布请求。", topic);
 			return true;
 		}
-		catch (const mqtt::exception& ex)
+		catch (const _MQTT exception& ex)
 		{
 			LOG_ERROR("向主题 '{}' 发布消息失败: {}, client={}", topic, ex.what(), (void*)impl_->client.get());
 			return false;
@@ -153,7 +151,7 @@ namespace plane::services
 			impl_->client->subscribe(topic.data(), 1);
 			LOG_DEBUG("已发送订阅主题 '{}' 的请求。", topic);
 		}
-		catch (const mqtt::exception& ex)
+		catch (const _MQTT exception& ex)
 		{
 			LOG_ERROR("发起订阅主题 '{}' 的请求失败: {}", topic, ex.what());
 		}
@@ -200,10 +198,10 @@ namespace plane::services
 
 		try
 		{
-			impl_->client	= _STD	 make_unique<mqtt::async_client>(url, cid);
+			impl_->client	= _STD	 make_unique<_MQTT async_client>(url, cid);
 			impl_->callback = _STD make_shared<MqttCallback>(this);
 			impl_->client->set_callback(*impl_->callback);
-			mqtt::connect_options connOpts;
+			_MQTT connect_options connOpts;
 			connOpts.set_keep_alive_interval(30);
 			connOpts.set_clean_session(true);
 			connOpts.set_automatic_reconnect(true);
@@ -212,7 +210,7 @@ namespace plane::services
 			LOG_DEBUG("MQTT 服务启动成功, 等待连接建立...");
 			return true;
 		}
-		catch (const mqtt::exception& ex)
+		catch (const _MQTT exception& ex)
 		{
 			LOG_ERROR("MQTT 客户端初始化或连接失败: {}", ex.what());
 			impl_->client.reset();
@@ -265,7 +263,7 @@ namespace plane::services
 			impl_->callback.reset();
 			LOG_INFO("MQTT 服务已停止");
 		}
-		catch (const mqtt::exception& ex)
+		catch (const _MQTT exception& ex)
 		{
 			LOG_ERROR("MQTTService 停止异常: {}", ex.what());
 		}

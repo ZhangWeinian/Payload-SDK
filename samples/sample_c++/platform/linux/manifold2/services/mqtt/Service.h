@@ -20,7 +20,7 @@ namespace plane::services
 	protected:
 		struct Impl
 		{
-			_STD unique_ptr<mqtt::async_client> client {};
+			_STD unique_ptr<_MQTT async_client> client {};
 			_STD shared_ptr<class MqttCallback> callback {};
 			_STD string							serverURI {};
 			_STD string							clientId {};
