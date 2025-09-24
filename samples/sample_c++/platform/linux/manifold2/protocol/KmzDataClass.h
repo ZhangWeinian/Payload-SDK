@@ -2,14 +2,17 @@
 
 #pragma once
 
-#include "define.h"
-
 #include "fmt/format.h"
 #include "pugixml.hpp"
 
+#include <chrono>
+#include <iomanip>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
+
+#include "define.h"
 
 namespace plane::protocol
 {
@@ -94,7 +97,7 @@ namespace plane::protocol
 		void   toXml(pugi::xml_node& parent) const
 		{
 			auto node { parent.append_child("Point") };
-			node.append_child("coordinates").text().set(fmt::format("{:.12f},{:.12f}", longitude, latitude));
+			node.append_child("coordinates").text().set(_FMT format("{:.12f},{:.12f}", longitude, latitude));
 		}
 	};
 
@@ -102,7 +105,7 @@ namespace plane::protocol
 	{
 		_STD string waypointHeadingMode { "followWayline" };
 		double		waypointHeadingAngle { 0 };
-		_STD string waypointPoiPoint { fmt::format("{:.6f},{:.6f},{:.6f}", .0, .0, .0) };
+		_STD string waypointPoiPoint { _FMT format("{:.6f},{:.6f},{:.6f}", .0, .0, .0) };
 		int			waypointHeadingAngleEnable { 0 };
 		int			waypointHeadingPoiIndex { 0 };
 
@@ -193,8 +196,8 @@ namespace plane::protocol
 			node.append_child("wpml:templateId").text().set(templateId);
 			node.append_child("wpml:executeHeightMode").text().set(executeHeightMode);
 			node.append_child("wpml:waylineId").text().set(waylineId);
-			node.append_child("wpml:distance").text().set(fmt::format("{:.12f}", distance));
-			node.append_child("wpml:duration").text().set(fmt::format("{:.12f}", duration));
+			node.append_child("wpml:distance").text().set(_FMT format("{:.12f}", distance));
+			node.append_child("wpml:duration").text().set(_FMT format("{:.12f}", duration));
 			node.append_child("wpml:autoFlightSpeed").text().set(autoFlightSpeed);
 			for (const auto& pm : placemarks)
 			{
@@ -283,13 +286,13 @@ namespace plane::protocol
 
 		explicit TemplateKml(void) noexcept
 		{
-			auto	now { _STD chrono::system_clock::now() };
-			auto	time_t_now { _STD chrono::system_clock::to_time_t(now) };
-			_STD tm tm_now { *_STD localtime(&time_t_now) };
-			char	buf[32] {};
-			_STD	strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_now);
-			createTime = buf;
-			updateTime = buf;
+			auto			   now { _STD_CHRONO system_clock::now() };
+			auto			   time_t_now { _STD_CHRONO system_clock::to_time_t(now) };
+			_STD tm			   tm_now { *_CSTD localtime(&time_t_now) };
+			_STD ostringstream oss {};
+			oss << _STD		   put_time(&tm_now, "%Y-%m-%d %H:%M:%S");
+			createTime = oss.str();
+			updateTime = createTime;
 		}
 
 		void toXml(pugi::xml_document& doc) const noexcept

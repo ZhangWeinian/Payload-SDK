@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "define.h"
 #include "protocol/DroneDataClass.h"
 
 #include <string_view>
@@ -11,17 +10,19 @@
 #include <mutex>
 #include <string>
 
+#include "define.h"
+
 namespace plane::services
 {
 	class MqttMessageHandler
 	{
 	public:
-		using n_json	   = nlohmann::json;
-		using LogicHandler = _STD  function<void(const n_json&)>;
+		using n_json	   = _NLOHMANN_JSON json;
+		using LogicHandler = _STD	  function<void(const n_json&)>;
 
-		static MqttMessageHandler& getInstance(void) noexcept;
-		void					   registerHandler(_STD string_view topic, _STD string_view messageType, LogicHandler handler) noexcept;
-		void					   routeMessage(_STD string_view topic, _STD string_view messageType, const n_json& payloadJson) noexcept;
+		static MqttMessageHandler&	  getInstance(void) noexcept;
+		void						  registerHandler(_STD string_view topic, _STD string_view messageType, LogicHandler handler) noexcept;
+		void						  routeMessage(_STD string_view topic, _STD string_view messageType, const n_json& payloadJson) noexcept;
 
 	private:
 		explicit MqttMessageHandler(void) noexcept = default;

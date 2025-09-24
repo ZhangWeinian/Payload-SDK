@@ -1,14 +1,12 @@
 // manifold2/utils/JsonConverter/JsonToKmz.cpp
 
-#include "utils/JsonConverter/JsonToKmz.h"
-
 #include "protocol/KmzDataClass.h"
 #include "utils/Logger/Logger.h"
 
 #include "fmt/format.h"
-#include "pugixml.hpp"
 #include "zip.h"
 
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
@@ -17,6 +15,8 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+
+#include "utils/JsonConverter/JsonToKmz.h"
 
 namespace plane::utils
 {
@@ -32,12 +32,12 @@ namespace plane::utils
 		{
 			if (g_kmzStorageDir.empty())
 			{
-				char exePath[PATH_MAX] {};
+				_STD array<char, PATH_MAX> exePath {};
 
-				if (ssize_t count { readlink("/proc/self/exe", exePath, sizeof(exePath) - 1) }; count != -1)
+				if (ssize_t count { _CSTD readlink("/proc/self/exe", exePath.data(), exePath.size() - 1) }; count != -1)
 				{
 					exePath[count] = '\0';
-					_STD_FS path executablePath(exePath);
+					_STD_FS path executablePath(exePath.data());
 					_STD_FS path executableDir { executablePath.parent_path() };
 					g_kmzStorageDir = executableDir / "kmz_files";
 				}
@@ -83,9 +83,9 @@ namespace plane::utils
 			const double lat2Rad { wp2.WD * MATH_PI / 180.0 };
 			const double deltaLatRad { (wp2.WD - wp1.WD) * MATH_PI / 180.0 };
 			const double deltaLonRad { (wp2.JD - wp1.JD) * MATH_PI / 180.0 };
-			const double a { sin(deltaLatRad / 2) * sin(deltaLatRad / 2) +
-							 cos(lat1Rad) * cos(lat2Rad) * sin(deltaLonRad / 2) * sin(deltaLonRad / 2) };
-			const double c { 2 * atan2(sqrt(a), sqrt(1 - a)) };
+			const double a { _CSTD sin(deltaLatRad / 2) * _CSTD sin(deltaLatRad / 2) +
+							 _CSTD cos(lat1Rad) * _CSTD cos(lat2Rad) * _CSTD sin(deltaLonRad / 2) * _CSTD sin(deltaLonRad / 2) };
+			const double c { 2 * _CSTD atan2(_CSTD sqrt(a), _CSTD sqrt(1 - a)) };
 			return EARTH_RADIUS_M * c;
 		}
 
@@ -120,10 +120,10 @@ namespace plane::utils
 			const double deltaLon { (to.JD - from.JD) * MATH_PI / 180.0 };
 			const double fromLatRad { from.WD * MATH_PI / 180.0 };
 			const double toLatRad { to.WD * MATH_PI / 180.0 };
-			const double y { sin(deltaLon) * cos(toLatRad) };
-			const double x { cos(fromLatRad) * sin(toLatRad) - sin(fromLatRad) * cos(toLatRad) * cos(deltaLon) };
-			const double bearing { atan2(y, x) * 180.0 / MATH_PI };
-			return fmod(bearing + 360.0, 360.0);
+			const double y { _CSTD sin(deltaLon) * _CSTD cos(toLatRad) };
+			const double x { _CSTD cos(fromLatRad) * _CSTD sin(toLatRad) - _CSTD sin(fromLatRad) * _CSTD cos(toLatRad) * _CSTD cos(deltaLon) };
+			const double bearing { _CSTD atan2(y, x) * 180.0 / MATH_PI };
+			return _CSTD fmod(bearing + 360.0, 360.0);
 		}
 
 		static _STD string generateWaylinesWpml(const _STD vector<plane::protocol::Waypoint>& waypoints) noexcept
@@ -132,8 +132,8 @@ namespace plane::utils
 			size_t					  size { waypoints.size() };
 
 			wpml.document.missionConfig.globalTransitionalSpeed = waypoints.empty() ? 5.0 : waypoints[0].SD;
-			wpml.document.folder.distance						= _STD stod(fmt::format("{:.2f}", calculateTotalDistance(waypoints)));
-			wpml.document.folder.duration						= _STD stod(fmt::format("{:.2f}", calculateTotalDuration(waypoints)));
+			wpml.document.folder.distance						= _STD stod(_FMT format("{:.2f}", calculateTotalDistance(waypoints)));
+			wpml.document.folder.duration						= _STD stod(_FMT format("{:.2f}", calculateTotalDuration(waypoints)));
 			wpml.document.folder.autoFlightSpeed				= wpml.document.missionConfig.globalTransitionalSpeed;
 
 			if (!waypoints.empty())
@@ -146,9 +146,9 @@ namespace plane::utils
 				gimbalRotate.actionActuatorFunc							   = "gimbalRotate";
 				gimbalRotate.actionActuatorFuncParam.payloadPositionIndex  = 0;
 				gimbalRotate.actionActuatorFuncParam.gimbalYawRotateEnable = 1;
-				if (waypoints[0].YTFYJ.has_value())
+				if (waypoints[0].YTFYJ)
 				{
-					gimbalRotate.actionActuatorFuncParam.gimbalPitchRotateAngle = _STD stod(fmt::format("{:.6f}", waypoints[0].YTFYJ.value()));
+					gimbalRotate.actionActuatorFuncParam.gimbalPitchRotateAngle = _STD stod(_FMT format("{:.6f}", waypoints[0].YTFYJ.value()));
 				}
 				else
 				{
@@ -164,13 +164,13 @@ namespace plane::utils
 				plane::protocol::WpmlPlacemark firstPlacemark {};
 				firstPlacemark.point.longitude = waypoints[0].JD;
 				firstPlacemark.point.latitude  = waypoints[0].WD;
-				firstPlacemark.executeHeight   = _STD stod(fmt::format("{:.12f}", waypoints[0].GD));
-				firstPlacemark.waypointSpeed   = _STD stod(fmt::format("{:.12f}", waypoints[0].SD));
+				firstPlacemark.executeHeight   = _STD stod(_FMT format("{:.12f}", waypoints[0].GD));
+				firstPlacemark.waypointSpeed   = _STD stod(_FMT format("{:.12f}", waypoints[0].SD));
 
 				if (size > 1)
 				{
 					firstPlacemark.waypointHeadingParam.waypointHeadingAngle =
-						_STD stod(fmt::format("{:.6f}", calculateHeadingAngle(waypoints[0], waypoints[1])));
+						_STD stod(_FMT format("{:.6f}", calculateHeadingAngle(waypoints[0], waypoints[1])));
 				}
 
 				firstPlacemark.actionGroups.push_back(takeoffGroup);
@@ -182,11 +182,11 @@ namespace plane::utils
 					plane::protocol::WpmlPlacemark placemark {};
 					placemark.point.longitude = waypoints[i].JD;
 					placemark.point.latitude  = waypoints[i].WD;
-					placemark.executeHeight	  = _STD stod(fmt::format("{:.12f}", waypoints[i].GD));
-					placemark.waypointSpeed	  = _STD stod(fmt::format("{:.12f}", waypoints[i].SD));
+					placemark.executeHeight	  = _STD stod(_FMT format("{:.12f}", waypoints[i].GD));
+					placemark.waypointSpeed	  = _STD stod(_FMT format("{:.12f}", waypoints[i].SD));
 
 					placemark.waypointHeadingParam.waypointHeadingAngle =
-						_STD stod(fmt::format("{:.6f}", calculateHeadingAngle(waypoints[i], waypoints[i + 1])));
+						_STD stod(_FMT format("{:.6f}", calculateHeadingAngle(waypoints[i], waypoints[i + 1])));
 
 					if (i == 1)
 					{
@@ -198,7 +198,7 @@ namespace plane::utils
 						lock.actionActuatorFunc = "gimbalAngleLock";
 						if (waypoints[i].YTFYJ.has_value())
 						{
-							lock.actionActuatorFuncParam.gimbalPitchRotateAngle = _STD stod(fmt::format("{:.6f}", waypoints[i].YTFYJ.value()));
+							lock.actionActuatorFuncParam.gimbalPitchRotateAngle = _STD stod(_FMT format("{:.6f}", waypoints[i].YTFYJ.value()));
 						}
 						else
 						{
@@ -224,8 +224,8 @@ namespace plane::utils
 					plane::protocol::WpmlPlacemark lastPlacemark {};
 					lastPlacemark.point.longitude							= lastWp.JD;
 					lastPlacemark.point.latitude							= lastWp.WD;
-					lastPlacemark.executeHeight								= _STD stod(fmt::format("{:.12f}", lastWp.GD));
-					lastPlacemark.waypointSpeed								= _STD stod(fmt::format("{:.12f}", lastWp.SD));
+					lastPlacemark.executeHeight								= _STD stod(_FMT format("{:.12f}", lastWp.GD));
+					lastPlacemark.waypointSpeed								= _STD stod(_FMT format("{:.12f}", lastWp.SD));
 					lastPlacemark.waypointHeadingParam.waypointHeadingAngle = 0.0;
 
 					plane::protocol::WpmlActionGroup ag {};
@@ -281,12 +281,12 @@ namespace plane::utils
 		}
 
 		_STD string		  missionId { missionInfo.RWID.value_or("mission_unknown") };
-		auto			  now { _STD chrono::system_clock::now() };
-		auto			  time_t_now { _STD chrono::system_clock::to_time_t(now) };
+		auto			  now { _STD_CHRONO system_clock::now() };
+		auto			  time_t_now { _STD_CHRONO system_clock::to_time_t(now) };
 		_STD tm			  tm_now { *_STD localtime(&time_t_now) };
 		_STD stringstream time_ss {};
 		time_ss << _STD	  put_time(&tm_now, "%Y%m%d_%H%M%S");
-		_STD string		  filename { fmt::format("{}.kmz", time_ss.str()) };
+		_STD string		  filename { _FMT format("{}.kmz", time_ss.str()) };
 		_STD_FS path	  kmzFilePath { storageDir / filename };
 
 		LOG_DEBUG("开始生成 KMZ 文件, 任务 ID: {}, 路径: {}", missionId, kmzFilePath.string());
@@ -295,49 +295,49 @@ namespace plane::utils
 		_STD string templateKml { generateTemplateKml() };
 
 		int			error { 0 };
-		zip_t*		archive { zip_open(kmzFilePath.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &error) };
+		zip_t*		archive { _LIBZIP zip_open(kmzFilePath.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &error) };
 		if (!archive)
 		{
 			zip_error_t ziperror {};
-			zip_error_init_with_code(&ziperror, error);
+			_LIBZIP		zip_error_init_with_code(&ziperror, error);
 			LOG_ERROR("无法创建或打开 KMZ 文件 '{}': {}", kmzFilePath.string(), zip_error_strerror(&ziperror));
-			zip_error_fini(&ziperror);
+			_LIBZIP zip_error_fini(&ziperror);
 			return false;
 		}
 
-		zip_source_t* waylines_source { zip_source_buffer(archive, waylinesWpml.c_str(), waylinesWpml.length(), 0) };
+		zip_source_t* waylines_source { _LIBZIP zip_source_buffer(archive, waylinesWpml.c_str(), waylinesWpml.length(), 0) };
 		if (!waylines_source)
 		{
-			LOG_ERROR("无法为 waylines.wpml 创建 zip source: {}", zip_strerror(archive));
-			zip_close(archive);
+			LOG_ERROR("无法为 waylines.wpml 创建 zip source: {}", _LIBZIP zip_strerror(archive));
+			_LIBZIP zip_close(archive);
 			return false;
 		}
-		if (zip_file_add(archive, "wpmz/waylines.wpml", waylines_source, ZIP_FL_ENC_UTF_8) < 0)
+		if (_LIBZIP zip_file_add(archive, "wpmz/waylines.wpml", waylines_source, ZIP_FL_ENC_UTF_8) < 0)
 		{
-			LOG_ERROR("无法将 'wpmz/waylines.wpml' 添加到 KMZ: {}", zip_strerror(archive));
-			zip_source_free(waylines_source);
-			zip_close(archive);
+			LOG_ERROR("无法将 'wpmz/waylines.wpml' 添加到 KMZ: {}", _LIBZIP zip_strerror(archive));
+			_LIBZIP zip_source_free(waylines_source);
+			_LIBZIP zip_close(archive);
 			return false;
 		}
 
-		zip_source_t* template_source { zip_source_buffer(archive, templateKml.c_str(), templateKml.length(), 0) };
+		zip_source_t* template_source { _LIBZIP zip_source_buffer(archive, templateKml.c_str(), templateKml.length(), 0) };
 		if (!template_source)
 		{
-			LOG_ERROR("无法为 template.kml 创建 zip source: {}", zip_strerror(archive));
-			zip_close(archive);
+			LOG_ERROR("无法为 template.kml 创建 zip source: {}", _LIBZIP zip_strerror(archive));
+			_LIBZIP zip_close(archive);
 			return false;
 		}
-		if (zip_file_add(archive, "wpmz/template.kml", template_source, ZIP_FL_ENC_UTF_8) < 0)
+		if (_LIBZIP zip_file_add(archive, "wpmz/template.kml", template_source, ZIP_FL_ENC_UTF_8) < 0)
 		{
-			LOG_ERROR("无法将 'wpmz/template.kml' 添加到 KMZ: {}", zip_strerror(archive));
-			zip_source_free(template_source);
-			zip_close(archive);
+			LOG_ERROR("无法将 'wpmz/template.kml' 添加到 KMZ: {}", _LIBZIP zip_strerror(archive));
+			_LIBZIP zip_source_free(template_source);
+			_LIBZIP zip_close(archive);
 			return false;
 		}
 
-		if (zip_close(archive) < 0)
+		if (_LIBZIP zip_close(archive) < 0)
 		{
-			LOG_ERROR("关闭 KMZ 文件时出错: {}", zip_strerror(archive));
+			LOG_ERROR("关闭 KMZ 文件时出错: {}", _LIBZIP zip_strerror(archive));
 			return false;
 		}
 

@@ -4,12 +4,13 @@
 
 #include "dji_typedef.h"
 
-#include "define.h"
 #include "protocol/DroneDataClass.h"
 
 #include <string_view>
 #include <string>
 #include <vector>
+
+#include "define.h"
 
 namespace plane::services
 {

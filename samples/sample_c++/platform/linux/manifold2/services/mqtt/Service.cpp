@@ -1,7 +1,5 @@
 // manifold2/services/mqtt/Service.cpp
 
-#include "services/mqtt/Service.h"
-
 #include "config/ConfigManager.h"
 #include "services/mqtt/Handler/MessageHandler.h"
 #include "services/mqtt/Topics.h"
@@ -13,6 +11,8 @@
 
 #include <chrono>
 #include <thread>
+
+#include "services/mqtt/Service.h"
 
 using namespace mqtt;
 
@@ -41,7 +41,7 @@ namespace plane::services
 			if (!impl.manualDisconnect)
 			{
 				impl.reconnectAttempts++;
-				impl.lastDisconnectTime = _STD chrono::steady_clock::now();
+				impl.lastDisconnectTime = _STD_CHRONO steady_clock::now();
 				LOG_WARN("MQTT 连接已断开, 原因: {}. 重连尝试次数: {}.", cause, impl.reconnectAttempts);
 			}
 			else
@@ -254,7 +254,7 @@ namespace plane::services
 			{
 				LOG_DEBUG("MQTTService 停止：客户端已连接, 正在发送断开连接请求...");
 				impl_->client->disconnect()->wait();
-				_STD this_thread::sleep_for(_STD chrono::milliseconds(200));
+				_STD this_thread::sleep_for(_STD_CHRONO milliseconds(200));
 			}
 			else
 			{
@@ -284,7 +284,7 @@ namespace plane::services
 		_STD lock_guard<_STD mutex> lock(mutex_);
 		LOG_INFO("重新启动 MQTT 服务...");
 		stop();
-		_STD this_thread::sleep_for(_STD chrono::milliseconds(300));
+		_STD this_thread::sleep_for(_STD_CHRONO milliseconds(300));
 		if (!start(serverURI, clientId))
 		{
 			LOG_ERROR("MQTT restart 启动失败！");

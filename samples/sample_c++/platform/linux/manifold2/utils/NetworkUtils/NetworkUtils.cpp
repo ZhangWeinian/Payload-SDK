@@ -1,7 +1,5 @@
 // manifold2/utils/NetworkUtils/NetworkUtils.cpp
 
-#include "utils/NetworkUtils/NetworkUtils.h"
-
 #include "utils/Logger/Logger.h"
 
 #include <arpa/inet.h>
@@ -20,6 +18,8 @@
 #include <string>
 #include <vector>
 
+#include "utils/NetworkUtils/NetworkUtils.h"
+
 namespace plane::utils
 {
 	namespace
@@ -34,14 +34,14 @@ namespace plane::utils
 		struct CachedResult
 		{
 			_STD string ip {};
-			_STD chrono::steady_clock::time_point timestamp {};
+			_STD_CHRONO steady_clock::time_point timestamp {};
 		};
 
-		static _STD optional<CachedResult> cachedIp {};
-		static _STD mutex				   cacheMutex {};
-		constexpr static _STD chrono::minutes CACHE_DURATION { 5 };
+		static _STD optional<CachedResult>	 cachedIp {};
+		static _STD mutex					 cacheMutex {};
+		constexpr static _STD_CHRONO minutes CACHE_DURATION { 5 };
 
-		bool								  isSiteLocalAddress(_STD string_view ip) noexcept
+		bool								 isSiteLocalAddress(_STD string_view ip) noexcept
 		{
 			if (ip.starts_with("192.168."sv) || ip.starts_with("10."sv))
 			{
@@ -94,7 +94,7 @@ namespace plane::utils
 	_STD optional<_STD string> NetworkUtils::getDeviceIpv4AddressImpl(void) noexcept
 	{
 		struct ifaddrs* ifaddr {};
-		if (getifaddrs(&ifaddr) == -1)
+		if (_CSTD getifaddrs(&ifaddr) == -1)
 		{
 			LOG_WARN("getifaddrs() 失败: {}", _STD system_error(errno, _STD system_category()).what());
 			return _STD nullopt;
@@ -103,19 +103,19 @@ namespace plane::utils
 		auto ifaddr_guard { _STD unique_ptr<struct ifaddrs, decltype(&freeifaddrs)>(ifaddr, freeifaddrs) };
 		_STD vector<_STD pair<_STD string, _STD string>> addresses {};
 
-		for (struct ifaddrs* ifa { ifaddr }; ifa != nullptr; ifa = ifa->ifa_next)
+		for (auto* ifa { ifaddr }; ifa != nullptr; ifa = ifa->ifa_next)
 		{
 			if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET)
 			{
 				continue;
 			}
 
-			struct sockaddr_in* addr { reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr) };
-			char				ip[INET_ADDRSTRLEN] {};
-			inet_ntop(AF_INET, &addr->sin_addr, ip, INET_ADDRSTRLEN);
+			auto* addr { reinterpret_cast<sockaddr_in*>(ifa->ifa_addr) };
+			_STD array<char, INET_ADDRSTRLEN> ip {};
+			_CSTD							  inet_ntop(AF_INET, &addr->sin_addr, ip.data(), ip.size());
 
-			_STD string name_str(ifa->ifa_name);
-			_STD string ip_str(ip);
+			_STD string						  name_str { ifa->ifa_name };
+			_STD string						  ip_str { ip.data() };
 
 			if (name_str == LOOPBACK_INTERFACE || ip_str.empty() || ip_str == INVALID_IP)
 			{
@@ -177,7 +177,7 @@ namespace plane::utils
 	_STD optional<_STD string> NetworkUtils::getDeviceIpv4Address(void) noexcept
 	{
 		_STD lock_guard<_STD mutex> lock(cacheMutex);
-		auto						now { _STD chrono::steady_clock::now() };
+		auto						now { _STD_CHRONO steady_clock::now() };
 
 		if (cachedIp && (now - cachedIp->timestamp) < CACHE_DURATION)
 		{

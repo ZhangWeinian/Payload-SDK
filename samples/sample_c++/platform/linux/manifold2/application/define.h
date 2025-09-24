@@ -20,9 +20,22 @@
 	#define _CSTD ::
 #endif
 
-#ifndef _STD_FS
-	#if !__has_include(<filesystem>)
-		#include <filesystem>
-	#endif
+#if __has_include(<chrono>) && !defined(_STD_CHRONO)
+	#define _STD_CHRONO ::std::chrono::
+#endif
+
+#if __has_include(<filesystem>) && !defined(_STD_FS)
 	#define _STD_FS ::std::filesystem::
+#endif
+
+#if __has_include(<fmt/format.h>) && !defined(_FMT)
+	#define _FMT ::fmt::
+#endif
+
+#if __has_include(<nlohmann/json.hpp>) && !defined(_NLOHMANN_JSON)
+	#define _NLOHMANN_JSON ::nlohmann::
+#endif
+
+#if __has_include(<zip.h>) && !defined(_LIBZIP)
+	#define _LIBZIP ::
 #endif

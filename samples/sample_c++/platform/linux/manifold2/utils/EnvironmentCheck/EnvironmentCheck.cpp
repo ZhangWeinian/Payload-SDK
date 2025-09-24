@@ -1,10 +1,10 @@
 // manifold2/utils/EnvironmentCheck/EnvironmentCheck.cpp
 
-#include "utils/EnvironmentCheck/EnvironmentCheck.h"
-
 #include <string_view>
 #include <cstdlib>
 #include <string>
+
+#include "utils/EnvironmentCheck/EnvironmentCheck.h"
 
 namespace plane::utils
 {

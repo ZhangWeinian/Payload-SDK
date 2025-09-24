@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include "define.h"
-
 #include "mqtt/async_client.h"
 
 #include <string_view>
@@ -12,6 +10,8 @@
 #include <memory>
 #include <mutex>
 #include <string>
+
+#include "define.h"
 
 namespace plane::services
 {
@@ -25,9 +25,9 @@ namespace plane::services
 			_STD string							serverURI {};
 			_STD string							clientId {};
 			int									reconnectAttempts { 0 };
-			_STD chrono::steady_clock::time_point lastDisconnectTime {};
-			_STD chrono::steady_clock::time_point lastConnectTime {};
-			bool								  manualDisconnect { false };
+			_STD_CHRONO steady_clock::time_point lastDisconnectTime {};
+			_STD_CHRONO steady_clock::time_point lastConnectTime {};
+			bool								 manualDisconnect { false };
 
 			explicit Impl(void) noexcept		  = default;
 			~Impl(void) noexcept				  = default;

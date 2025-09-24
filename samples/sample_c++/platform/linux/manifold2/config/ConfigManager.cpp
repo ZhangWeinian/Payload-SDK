@@ -1,13 +1,13 @@
 // manifold2/cinfig/ConfigManager.cpp
 
-#include "config/ConfigManager.h"
-
 #include "utils/Logger/Logger.h"
 
 #include <fstream>
 #include <iomanip>
 #include <random>
 #include <sstream>
+
+#include "config/ConfigManager.h"
 
 namespace plane::config
 {

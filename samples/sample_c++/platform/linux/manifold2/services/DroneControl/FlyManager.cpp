@@ -1,9 +1,9 @@
 // manifold2/services/DroneControl/FlyManager.cpp
 
-#include "services/DroneControl/FlyManager.h"
-
 #include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
 #include "utils/Logger/Logger.h"
+
+#include "services/DroneControl/FlyManager.h"
 
 namespace plane::services
 {

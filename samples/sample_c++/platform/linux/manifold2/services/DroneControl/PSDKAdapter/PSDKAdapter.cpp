@@ -1,7 +1,5 @@
 // manifold2/services/DroneControl/PSDKAdapter/PSDKAdapter.cpp
 
-#include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
-
 #include "camera_manager/test_camera_manager_entry.h"
 #include "data_transmission/test_data_transmission.h"
 #include "dji_camera_manager.h"
@@ -29,6 +27,8 @@
 
 #include "utils/EnvironmentCheck/EnvironmentCheck.h"
 #include "utils/Logger/Logger.h"
+
+#include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
 
 namespace plane::services
 {

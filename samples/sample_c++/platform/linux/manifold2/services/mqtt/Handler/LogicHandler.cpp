@@ -1,7 +1,5 @@
 // manifold2/services/mqtt/Handler/LogicHandler.cpp
 
-#include "services/mqtt/Handler/LogicHandler.h"
-
 #include "protocol/DroneDataClass.h"
 #include "services/DroneControl/FlyManager.h"
 #include "services/mqtt/Handler/MessageHandler.h"
@@ -9,11 +7,13 @@
 #include "utils/JsonConverter/JsonToKmz.h"
 #include "utils/Logger/Logger.h"
 
+#include "services/mqtt/Handler/LogicHandler.h"
+
 namespace plane::services
 {
-	using n_json = ::nlohmann::json;
+	using n_json = _NLOHMANN_JSON json;
 
-	bool LogicHandler::init(void) noexcept
+	bool						  LogicHandler::init(void) noexcept
 	{
 		try
 		{
@@ -45,7 +45,7 @@ namespace plane::services
 	{
 		try
 		{
-			auto payload = payloadJson.get<plane::protocol::WaypointPayload>();
+			auto payload { payloadJson.get<plane::protocol::WaypointPayload>() };
 			if (payload.HDJ.empty())
 			{
 				LOG_WARN("[MQTT] 收到的航点任务 (RWID: {}) 中不包含任何航点。", payload.RWID.value_or("N/A"));

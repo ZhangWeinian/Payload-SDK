@@ -1,7 +1,5 @@
 // services/telemetry/TelemetryReporter.cpp
 
-#include "services/telemetry/TelemetryReporter.h"
-
 #include "config/ConfigManager.h"
 #include "protocol/DroneDataClass.h"
 #include "services/mqtt/Service.h"
@@ -11,6 +9,8 @@
 #include "utils/NetworkUtils/NetworkUtils.h"
 
 #include "fmt/format.h"
+
+#include "services/telemetry/TelemetryReporter.h"
 
 namespace plane::services
 {
@@ -76,7 +76,7 @@ namespace plane::services
 
 	void TelemetryReporter::statusReportLoop(void) noexcept
 	{
-		_STD this_thread::sleep_for(_STD chrono::milliseconds(100));
+		_STD this_thread::sleep_for(_STD_CHRONO milliseconds(100));
 		LOG_DEBUG("线程启动, MQTTService instance addr: {}", (void*)&plane::services::MQTTService::getInstance());
 
 		const auto&					   ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
@@ -106,7 +106,7 @@ namespace plane::services
 		status_payload.ZHD	  = 0;
 		status_payload.JGCJ	  = 0.0;
 		status_payload.WZT	  = {
-			   plane::protocol::VideoSource { .SPURL = fmt::format("rtsp://admin:1@{}:8554/streaming/live/1", ipAddresses),
+			   plane::protocol::VideoSource { .SPURL = _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ipAddresses),
 										  .SPXY	 = "RTSP",
 										  .ZBZT	 = 1 }
 		};
@@ -121,7 +121,7 @@ namespace plane::services
 			if (!plane::services::MQTTService::getInstance().isConnected())
 			{
 				LOG_DEBUG("MQTTService 未连接, 1s 后重试");
-				_STD this_thread::sleep_for(_STD chrono::seconds(1));
+				_STD this_thread::sleep_for(_STD_CHRONO seconds(1));
 				continue;
 			}
 
@@ -134,26 +134,26 @@ namespace plane::services
 			_STD string status_json { plane::utils::JsonConverter::buildStatusReportJson(status_payload) };
 			publishStatus(plane::services::TOPIC_DRONE_STATUS, status_json);
 
-			_STD this_thread::sleep_for(_STD chrono::milliseconds(100));
+			_STD this_thread::sleep_for(_STD_CHRONO milliseconds(100));
 		}
 		LOG_DEBUG("状态上报线程已停止。");
 	}
 
 	void TelemetryReporter::fixedInfoReportLoop(void) noexcept
 	{
-		_STD this_thread::sleep_for(_STD chrono::milliseconds(100));
+		_STD this_thread::sleep_for(_STD_CHRONO milliseconds(100));
 		LOG_DEBUG("固定信息上报线程已启动。");
 		const auto&							ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
 		plane::protocol::MissionInfoPayload info_payload { .FJSN   = plane::config::ConfigManager::getInstance().getPlaneCode(),
 														   .YKQIP  = ipAddresses,
-														   .YSRTSP = fmt::format("rtsp://admin:1@{}:8554/streaming/live/1", ipAddresses) };
+														   .YSRTSP = _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ipAddresses) };
 
 		while (run_.load(_STD memory_order_acquire))
 		{
 			if (!plane::services::MQTTService::getInstance().isConnected())
 			{
 				LOG_DEBUG("MQTTService 未连接, 1s 后重试");
-				_STD this_thread::sleep_for(_STD chrono::seconds(1));
+				_STD this_thread::sleep_for(_STD_CHRONO seconds(1));
 				continue;
 			}
 
@@ -167,7 +167,7 @@ namespace plane::services
 					LOG_DEBUG("MQTTService 在'{}' run_ 已停止, 提前 break", plane::services::TOPIC_FIXED_INFO);
 					break;
 				}
-				_STD this_thread::sleep_for(_STD chrono::milliseconds(100));
+				_STD this_thread::sleep_for(_STD_CHRONO milliseconds(100));
 			}
 		}
 		LOG_DEBUG("固定信息上报线程已停止。");

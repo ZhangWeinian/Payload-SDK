@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include "define.h"
-
 #include "spdlog/spdlog.h"
 
 #include <memory>
+
+#include "define.h"
 
 #define LOG_INFO(fmt, ...)                                                                                                                    \
 	plane::utils::Logger::getInstance().log(spdlog::source_loc { __FILE__, __LINE__, __FUNCTION__ }, spdlog::level::info, fmt, ##__VA_ARGS__)

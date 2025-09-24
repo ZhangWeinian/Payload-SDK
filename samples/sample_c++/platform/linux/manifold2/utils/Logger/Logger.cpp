@@ -1,10 +1,10 @@
 // manifold2/utils/Logger/Logger.cpp
 
-#include "utils/Logger/Logger.h"
-
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 #include <iostream>
+
+#include "utils/Logger/Logger.h"
 
 namespace plane::utils
 {

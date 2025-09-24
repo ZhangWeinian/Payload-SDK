@@ -1,24 +1,22 @@
 // manifold2/utils/JsonConverter/BuildAndParse.cpp
 
-#include "utils/JsonConverter/BuildAndParse.h"
-
 #include "config/ConfigManager.h"
 #include "services/mqtt/Handler/MessageHandler.h"
 #include "utils/Logger/Logger.h"
 
-#include "BuildAndParse.h"
 #include <chrono>
 #include <iomanip>
 #include <sstream>
 
+#include "utils/JsonConverter/BuildAndParse.h"
+
 namespace plane::utils
 {
-	using n_json = ::nlohmann::json;
+	using n_json = _NLOHMANN_JSON json;
 
-	static int64_t getCurrentTimestampMs(void) noexcept
+	static int64_t				  getCurrentTimestampMs(void) noexcept
 	{
-		using namespace _STD chrono;
-		return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+		return _STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(_STD_CHRONO system_clock::now().time_since_epoch()).count();
 	}
 
 	static _STD string formatTimestamp(int64_t ms) noexcept

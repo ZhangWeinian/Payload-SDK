@@ -2,13 +2,13 @@
 
 #pragma once
 
-#include "define.h"
-
 #include "nlohmann/json.hpp"
+
+#include "define.h"
 
 namespace plane::services
 {
-	using n_json = ::nlohmann::json;
+	using n_json = _NLOHMANN_JSON json;
 
 	class LogicHandler
 	{

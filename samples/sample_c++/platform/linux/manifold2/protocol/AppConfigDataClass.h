@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include "define.h"
-
 #include "nlohmann/json.hpp"
 
 #include <cstdint>
@@ -11,9 +9,11 @@
 #include <string>
 #include <vector>
 
+#include "define.h"
+
 namespace plane::protocol
 {
-	using n_json = nlohmann::json;
+	using n_json = _NLOHMANN_JSON json;
 
 	struct AppConfigData
 	{
