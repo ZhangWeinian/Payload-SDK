@@ -166,6 +166,8 @@ target_link_libraries (${PROJECT_NAME} PRIVATE
 	m
 	dl
 	pthread
+	bz2
+	zstd
 	z
 	lzma
 

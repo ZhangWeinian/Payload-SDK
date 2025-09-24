@@ -2,6 +2,20 @@
 
 set -e
 
+CLEAN_BUILD=0
+while [ $# -gt 0 ]; do
+	case "$1" in
+		--clean|-c)
+			CLEAN_BUILD=1
+			shift
+			;;
+		*)
+			printf "%s\n" "未知参数: $1" >&2
+			exit 1
+			;;
+	esac
+done
+
 if tput setaf 1 >/dev/null 2>&1; then
 	COLOR_GREEN=$(tput setaf 2)
 	COLOR_YELLOW=$(tput setaf 3)
@@ -75,25 +89,70 @@ build_autotools_project() {
 	NAME="$1"
 	SRC_DIR="$2"
 
-	printf "%s\n" "${COLOR_BLUE}--- [ 检查/构建: ${NAME} ] ---${COLOR_NC}"
-	cd "${SRC_DIR}"
-
-	if [ ! -f "configure" ]; then
-		echo "正在生成 configure 脚本..."
-		./autogen.sh
+	if [ -z "$NAME" ] || [ -z "$SRC_DIR" ]; then
+		printf "%s\n" "${COLOR_RED}错误: build_autotools_project 需要 NAME 和 SRC_DIR 参数${COLOR_NC}" >&2
+		exit 1
 	fi
 
-	if [ ! -f "Makefile" ]; then
-		echo "首次配置 ${NAME}..."
-		./configure --prefix="${INSTALL_DIR}" --disable-shared --enable-static
+	if [ ! -d "$SRC_DIR" ]; then
+		printf "%s\n" "${COLOR_RED}错误: 源码目录 '${SRC_DIR}' 不存在${COLOR_NC}" >&2
+		exit 1
+	fi
+
+	printf "%s\n" "${COLOR_BLUE}--- [ 构建: ${NAME} ] ---${COLOR_NC}"
+	cd "$SRC_DIR"
+
+	if [ "$CLEAN_BUILD" = "1" ]; then
+		echo ">>> 执行 clean 构建，清理旧文件..."
+		if [ -f Makefile ] && command -v make >/dev/null 2>&1; then
+			make distclean >/dev/null 2>&1 || true
+		fi
+		rm -f Makefile config.status config.log libtool
+		rm -rf autom4te.cache
+	fi
+
+	if [ ! -f configure ]; then
+		echo "正在运行 autogen.sh 生成 configure 脚本..."
+		if [ ! -f autogen.sh ]; then
+			printf "%s\n" "${COLOR_RED}错误: ${NAME} 缺少 autogen.sh 或 configure 脚本${COLOR_NC}" >&2
+			exit 1
+		fi
+		./autogen.sh || { printf "%s\n" "${COLOR_RED}错误: autogen.sh 执行失败${COLOR_NC}" >&2; exit 1; }
+	fi
+
+	NEED_RECONFIGURE=0
+	if [ "$CLEAN_BUILD" = "0" ] && [ -f config.status ]; then
+		CURRENT_PREFIX=$(sed -E -n "s/^.*--prefix='([^']+)'.*/\1/p" config.status 2>/dev/null | head -n1)
+		if [ -z "$CURRENT_PREFIX" ]; then
+			CURRENT_PREFIX=$(sed -E -n "s/^.*--prefix=([^ ]+).*/\1/p" config.status 2>/dev/null | head -n1)
+		fi
+		if [ "$CURRENT_PREFIX" != "$INSTALL_DIR" ]; then
+			echo "检测到 configure 使用了错误的 --prefix (${CURRENT_PREFIX})，将重新配置"
+			NEED_RECONFIGURE=1
+		fi
+	elif [ ! -f Makefile ]; then
+		NEED_RECONFIGURE=1
+	fi
+
+	if [ "$NEED_RECONFIGURE" = "1" ] || [ "$CLEAN_BUILD" = "1" ]; then
+		echo "正在配置 ${NAME}..."
+		./configure \
+			--prefix="${INSTALL_DIR}" \
+			--disable-shared \
+			--enable-static \
+			--quiet \
+			|| { printf "%s\n" "${COLOR_RED}错误: configure 失败${COLOR_NC}" >&2; exit 1; }
 	else
-		echo "${NAME} 已配置, 跳过 configure 步骤."
+		echo "${NAME} 已正确配置，跳过 configure 步骤。"
 	fi
 
-	echo "开始编译 ${NAME}..."
-	make -j"$(nproc)"
-	echo "正在安装 ${NAME}..."
-	make install
+	NPROC=$(nproc 2>/dev/null || echo 2)
+	echo "使用 ${NPROC} 线程编译 ${NAME}..."
+	make -j"${NPROC}" || { printf "%s\n" "${COLOR_RED}错误: 编译 ${NAME} 失败${COLOR_NC}" >&2; exit 1; }
+
+	echo "正在安装 ${NAME} 到 ${INSTALL_DIR}..."
+	make install || { printf "%s\n" "${COLOR_RED}错误: 安装 ${NAME} 失败${COLOR_NC}" >&2; exit 1; }
+
 	printf "%s\n" "${COLOR_GREEN}>>> ${NAME} 构建并安装成功!${COLOR_NC}"
 	printf "\n"
 }
@@ -180,7 +239,7 @@ install_header_only_library "CLI11" \
 	"${BASE_DIR}/CLI11" \
 	"include"
 
-install_header_only_library "expected" \
+install_header_only_library "tl" \
 	"${BASE_DIR}/expected" \
 	"include/tl"
 
