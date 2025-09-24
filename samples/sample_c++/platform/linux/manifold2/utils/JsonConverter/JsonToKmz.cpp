@@ -20,8 +20,8 @@
 
 namespace plane::utils
 {
-	constexpr inline double MATH_PI { 3.14159265358979323846 };
-	constexpr inline double EARTH_RADIUS_M { 6'371'000.0 };
+	constexpr inline auto MATH_PI { 3.14159265358979323846 };
+	constexpr inline auto EARTH_RADIUS_M { 6'371'000.0 };
 
 	namespace
 	{

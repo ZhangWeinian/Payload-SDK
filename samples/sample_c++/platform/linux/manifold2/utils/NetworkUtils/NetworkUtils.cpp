@@ -27,9 +27,9 @@ namespace plane::utils
 		using namespace _STD string_view_literals;
 
 		constexpr auto		 LOOPBACK_INTERFACE { "lo"sv };
+		constexpr auto		 INVALID_IP { "0.0.0.0"sv };
 		constexpr auto WLAN_PREFIXES = _STD array { "wlan"sv, "wlp"sv, "wlo"sv };
 		constexpr auto ETH_PREFIXES	 = _STD array { "eth"sv, "en"sv, "eno"sv, "ens"sv, "enp"sv };
-		constexpr auto					   INVALID_IP { "0.0.0.0"sv };
 
 		struct CachedResult
 		{
