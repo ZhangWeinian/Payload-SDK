@@ -9,6 +9,7 @@
 #include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
 #include "services/MQTT/Service.h"
 #include "services/MQTT/Topics.h"
+#include "utils/EnvironmentCheck.h"
 #include "utils/JsonConverter/BuildAndParse.h"
 #include "utils/Logger.h"
 #include "utils/NetworkUtils/NetworkUtils.h"
@@ -86,6 +87,12 @@ namespace plane::services
 																.SPXY  = "RTSP",
 																.ZBZT  = 1 };
 
+		const bool						   psdk_enabled { plane::utils::isStandardProceduresEnabled() };
+		if (!psdk_enabled)
+		{
+			LOG_WARN("PSDK 未启用 (FULL_PSDK!=1)，遥测上报将使用模拟数据。");
+		}
+
 		while (run_.load(_STD memory_order_acquire))
 		{
 			if (!plane::services::MQTTService::getInstance().isConnected())
@@ -95,9 +102,13 @@ namespace plane::services
 				continue;
 			}
 
-			plane::protocol::StatusPayload status_payload { PSDKAdapter::getInstance().getLatestStatusPayload() };
-			status_payload.WZT = { defaultVideoSource };
+			plane::protocol::StatusPayload status_payload {};
+			if (psdk_enabled)
+			{
+				status_payload = PSDKAdapter::getInstance().getLatestStatusPayload();
+			}
 
+			status_payload.WZT = { defaultVideoSource };
 			_STD string status_json { plane::utils::JsonConverter::buildStatusReportJson(status_payload) };
 			publishStatus(plane::services::TOPIC_DRONE_STATUS, status_json);
 

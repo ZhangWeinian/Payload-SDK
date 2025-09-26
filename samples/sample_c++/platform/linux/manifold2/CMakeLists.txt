@@ -1,6 +1,8 @@
 cmake_minimum_required (VERSION 3.12)
 project (cy_psdk CXX C)
 
+set (CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
+
 function (pretty_message TITLE CONTENT)
 	message (STATUS "=============== ${TITLE} ===============")
 	message (STATUS "${CONTENT}")
@@ -206,38 +208,45 @@ endif ()
 set (MAIN_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
 set_target_properties (${MAIN_TARGET_NAME} PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${MAIN_OUTPUT_PATH}
-	OUTPUT_NAME "${PROJECT_NAME}" # 确保名称简单
+	OUTPUT_NAME "${PROJECT_NAME}"
 )
 
-# 14. 构建后命令 - 复制到版本化目录并创建带git哈希的版本
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+# 14. 构建后命令 - 调用外部脚本来完成
+set (POST_BUILD_SCRIPT "${PROJECT_ROOT_DIR}/bash/post_build.sh")
+string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
+
+if (CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
 	set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/debug")
 	set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${GIT_COMMIT_HASH}")
-elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
+elseif (CMAKE_BUILD_TYPE_UPPER STREQUAL "RELEASE")
 	set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/release")
 	set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${GIT_COMMIT_HASH}")
 else ()
-	set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}")
-	set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${CMAKE_BUILD_TYPE}_${GIT_COMMIT_HASH}")
+    if (CMAKE_BUILD_TYPE)
+	    set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}")
+	    set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${CMAKE_BUILD_TYPE}_${GIT_COMMIT_HASH}")
+    else()
+        message(WARNING "CMAKE_BUILD_TYPE 未定义，将回退到 'debug' 目录。")
+        set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/debug")
+	    set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${GIT_COMMIT_HASH}")
+    endif()
 endif ()
 
-add_custom_command (
-	TARGET ${MAIN_TARGET_NAME} POST_BUILD
+add_custom_command(
+    TARGET ${MAIN_TARGET_NAME} POST_BUILD
 
-	COMMAND ${CMAKE_COMMAND} -E make_directory ${VERSIONED_OUTPUT_PATH}
+    COMMAND /bin/bash ${POST_BUILD_SCRIPT}
+        "$<TARGET_FILE:${MAIN_TARGET_NAME}>"
+        "${VERSIONED_OUTPUT_PATH}"
+        "${VERSIONED_EXE_NAME}"
+        "${PROJECT_ROOT_DIR}/system_libs"
+        "${MAIN_OUTPUT_PATH}/libs"
+        "${MAIN_OUTPUT_PATH}"
+        "${PROJECT_ROOT_DIR}/config/config.yml"
+        "${PROJECT_ROOT_DIR}/bash/run.sh"
 
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-	"$<TARGET_FILE:${MAIN_TARGET_NAME}>"
-	"${VERSIONED_OUTPUT_PATH}/${VERSIONED_EXE_NAME}"
-
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-	"${PROJECT_ROOT_DIR}/config/config.yml"
-	"${VERSIONED_OUTPUT_PATH}/config.yml"
-
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-	"${PROJECT_ROOT_DIR}/config/config.yml"
-	"${MAIN_OUTPUT_PATH}/config.yml"
-	COMMENT "正在复制可执行文件和配置文件到输出目录"
+    COMMENT "正在执行构建后脚本来复制所有文件..."
+    VERBATIM
 )
 
 # 15. 显示构建信息

@@ -42,36 +42,36 @@ namespace plane::protocol
 
 	struct StatusPayload
 	{
-		GpsInfo		SXZT {};				// 搜星状态
-		BatteryInfo DCXX {};				// 电池信息
-		double		YTFY {};				// 云台俯仰
-		double		YTHG {};				// 云台横滚
-		double		YTPH {};				// 云台偏航
-		double		FJFYJ {};				// 飞机俯仰角
-		double		FJHGJ {};				// 飞机横滚角
-		double		FJPHJ {};				// 飞机偏航角
-		double		JJD {};					// Home 点经度
-		double		JWD {};					// Home 点纬度
-		double		JHB {};					// Home 点海拔
-		double		JXDGD {};				// Home 点相对高度
-		double		DQWD {};				// 当前纬度
-		double		DQJD {};				// 当前经度
-		double		XDQFGD {};				// 相对起飞点高度
-		double		JDGD {};				// 绝对高度 (海拔)
-		double		CZSD {};				// 垂直速度
-		double		SPSD {};				// 水平速度
-		double		VX {};					// 东向速度
-		double		VY {};					// 北向速度
-		double		VZ {};					// 地向速度 (下为正)
-		int			DQHD {};				// 当前航点
-		int			ZHD {};					// 总航点
-		double		JGCJ {};				// 激光测距
-		_STD vector<VideoSource> WZT {};	// 视频源
-		_STD string				 CJ {};		// 厂家
-		_STD string				 XH {};		// 型号
-		_STD optional<_STD string> MODE {}; // 飞行模式 (可选)
-		int						   VSE {};	// 虚拟摇杆启用
-		int						   AME {};	// 高级模式启用
+		GpsInfo		SXZT {};					// 搜星状态
+		BatteryInfo DCXX {};					// 电池信息
+		double		YTFY {};					// 云台俯仰
+		double		YTHG {};					// 云台横滚
+		double		YTPH {};					// 云台偏航
+		double		FJFYJ {};					// 飞机俯仰角
+		double		FJHGJ {};					// 飞机横滚角
+		double		FJPHJ {};					// 飞机偏航角
+		double		JJD {};						// Home 点经度
+		double		JWD {};						// Home 点纬度
+		double		JHB {};						// Home 点海拔
+		double		JXDGD {};					// Home 点相对高度
+		double		DQWD {};					// 当前纬度
+		double		DQJD {};					// 当前经度
+		double		XDQFGD {};					// 相对起飞点高度
+		double		JDGD {};					// 绝对高度 (海拔)
+		double		CZSD {};					// 垂直速度
+		double		SPSD {};					// 水平速度
+		double		VX {};						// 东向速度
+		double		VY {};						// 北向速度
+		double		VZ {};						// 地向速度 (下为正)
+		int			DQHD {};					// 当前航点
+		int			ZHD {};						// 总航点
+		double		JGCJ {};					// 激光测距
+		_STD vector<VideoSource> WZT {};		// 视频源
+		_STD string				 CJ {};			// 厂家
+		_STD string				 XH {};			// 型号
+		_STD optional<_STD string> MODE { "" }; // 飞行模式 (可选)
+		int						   VSE {};		// 虚拟摇杆启用
+		int						   AME {};		// 高级模式启用
 	};
 
 	struct MissionInfoPayload
