@@ -1,4 +1,4 @@
-// manifold2/services/telemetry/TelemetryReporter.h
+// manifold2/services/Telemetry/TelemetryReporter.h
 
 #pragma once
 

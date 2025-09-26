@@ -1,6 +1,6 @@
 // manifold2/utils/NetworkUtils/NetworkUtils.cpp
 
-#include "utils/Logger/Logger.h"
+#include "utils/NetworkUtils/NetworkUtils.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "utils/NetworkUtils/NetworkUtils.h"
+#include "utils/Logger.h"
 
 namespace plane::utils
 {
@@ -170,7 +170,10 @@ namespace plane::utils
 		}
 
 		const auto& [name, ip] = addresses.front();
-		LOG_INFO("未找到首选的局域网 IP, 将使用找到的第一个有效 IPv4 地址作为备用: {} ({})", ip, name);
+		LOG_INFO("未找到首选的局域网 IP, 将使用找到的第一个有效 IPv4 地址作为备用: "
+				 "{} ({})",
+				 ip,
+				 name);
 		return ip;
 	}
 

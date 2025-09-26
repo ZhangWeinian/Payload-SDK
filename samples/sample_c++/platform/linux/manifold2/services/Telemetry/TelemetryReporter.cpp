@@ -1,16 +1,16 @@
-// services/telemetry/TelemetryReporter.cpp
+// services/Telemetry/TelemetryReporter.cpp
+
+#include "services/Telemetry/TelemetryReporter.h"
+
+#include <fmt/format.h>
 
 #include "config/ConfigManager.h"
-#include "protocol/DroneDataClass.h"
-#include "services/mqtt/Service.h"
-#include "services/mqtt/Topics.h"
+#include "protocol/HeartbeatDataClass.h"
+#include "services/MQTT/Service.h"
+#include "services/MQTT/Topics.h"
 #include "utils/JsonConverter/BuildAndParse.h"
-#include "utils/Logger/Logger.h"
+#include "utils/Logger.h"
 #include "utils/NetworkUtils/NetworkUtils.h"
-
-#include "fmt/format.h"
-
-#include "services/telemetry/TelemetryReporter.h"
 
 namespace plane::services
 {

@@ -1,11 +1,13 @@
 // manifold2/utils/JsonConverter/BuildAndParse.h
 
 #pragma once
-#include "protocol/DroneDataClass.h"
 
 #include <string_view>
 #include <string>
 #include <vector>
+
+#include "protocol/DroneDataClass.h"
+#include "protocol/HeartbeatDataClass.h"
 
 #include "define.h"
 

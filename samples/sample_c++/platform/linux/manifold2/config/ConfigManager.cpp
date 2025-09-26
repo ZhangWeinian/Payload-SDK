@@ -1,6 +1,6 @@
 // manifold2/cinfig/ConfigManager.cpp
 
-#include "utils/Logger/Logger.h"
+#include "utils/Logger.h"
 
 #include <fstream>
 #include <iomanip>

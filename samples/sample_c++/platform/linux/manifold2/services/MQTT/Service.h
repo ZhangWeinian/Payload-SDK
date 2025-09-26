@@ -1,8 +1,6 @@
-// manifold2/services/mqtt/Service.h
+// manifold2/services/MQTT/Service.h
 
 #pragma once
-
-#include "mqtt/async_client.h"
 
 #include <string_view>
 #include <atomic>
@@ -10,6 +8,8 @@
 #include <memory>
 #include <mutex>
 #include <string>
+
+#include <mqtt/async_client.h>
 
 #include "define.h"
 

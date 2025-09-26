@@ -4,10 +4,10 @@
 
 #include "protocol/AppConfigDataClass.h"
 
-#include "yaml-cpp/yaml.h"
-
 #include <optional>
 #include <string>
+
+#include <yaml-cpp/yaml.h>
 
 #include "define.h"
 

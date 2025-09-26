@@ -1,10 +1,6 @@
 // manifold2/utils/JsonConverter/JsonToKmz.cpp
 
-#include "protocol/KmzDataClass.h"
-#include "utils/Logger/Logger.h"
-
-#include "fmt/format.h"
-#include "zip.h"
+#include "utils/JsonConverter/JsonToKmz.h"
 
 #include <array>
 #include <chrono>
@@ -16,13 +12,14 @@
 #include <iomanip>
 #include <sstream>
 
-#include "utils/JsonConverter/JsonToKmz.h"
+#include <fmt/format.h>
+#include <zip.h>
+
+#include "protocol/KmzDataClass.h"
+#include "utils/Logger.h"
 
 namespace plane::utils
 {
-	constexpr inline auto MATH_PI { 3.14159265358979323846 };
-	constexpr inline auto EARTH_RADIUS_M { 6'371'000.0 };
-
 	namespace
 	{
 		static _STD_FS path		   g_latestKmzFilePath {};

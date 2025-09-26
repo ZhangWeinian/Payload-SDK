@@ -20,6 +20,10 @@
 	#define _CSTD ::
 #endif
 
+#ifndef _DJI
+	#define _DJI ::
+#endif
+
 #if __has_include(<chrono>) && !defined(_STD_CHRONO)
 	#define _STD_CHRONO ::std::chrono::
 #endif
@@ -40,6 +44,13 @@
 	#define _LIBZIP ::
 #endif
 
+#if __has_include(<spdlog/spdlog.h>) && !defined(_SPDLOG)
+	#define _SPDLOG ::spdlog::
+#endif
+
 #if __has_include(<mqtt/async_client.h>) && !defined(_MQTT)
 	#define _MQTT ::mqtt::
 #endif
+
+constexpr inline auto MATH_PI { 3.14159265358979323846 };
+constexpr inline auto EARTH_RADIUS_M { 6'371'000.0 };

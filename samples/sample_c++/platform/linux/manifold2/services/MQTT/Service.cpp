@@ -1,18 +1,18 @@
-// manifold2/services/mqtt/Service.cpp
+// manifold2/services/MQTT/Service.cpp
 
-#include "config/ConfigManager.h"
-#include "services/mqtt/Handler/MessageHandler.h"
-#include "services/mqtt/Topics.h"
-#include "utils/JsonConverter/BuildAndParse.h"
-#include "utils/Logger/Logger.h"
-
-#include "fmt/format.h"
-#include "mqtt/async_client.h"
+#include "services/MQTT/Service.h"
 
 #include <chrono>
 #include <thread>
 
-#include "services/mqtt/Service.h"
+#include <fmt/format.h>
+#include <mqtt/async_client.h>
+
+#include "config/ConfigManager.h"
+#include "services/MQTT/Handler/MessageHandler.h"
+#include "services/MQTT/Topics.h"
+#include "utils/JsonConverter/BuildAndParse.h"
+#include "utils/Logger.h"
 
 namespace plane::services
 {

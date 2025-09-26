@@ -4,21 +4,21 @@
 
 #include "application.hpp"
 
-#include <dji_flight_controller.h>
-
-#include "config/ConfigManager.h"
-#include "services/mqtt/Handler/LogicHandler.h"
-#include "services/mqtt/Service.h"
-#include "services/telemetry/TelemetryReporter.h"
-#include "utils/EnvironmentCheck/EnvironmentCheck.h"
-#include "utils/Logger/Logger.h"
-
 #include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <string>
 #include <thread>
+
+#include <dji_flight_controller.h>
+
+#include "config/ConfigManager.h"
+#include "services/MQTT/Handler/LogicHandler.h"
+#include "services/MQTT/Service.h"
+#include "services/Telemetry/TelemetryReporter.h"
+#include "utils/EnvironmentCheck.h"
+#include "utils/Logger.h"
 
 #include "define.h"
 
@@ -42,12 +42,12 @@ namespace plane::my_dji
 
 		if (plane::utils::isLogLevelDebug())
 		{
-			plane::utils::Logger::getInstance().init(spdlog::level::trace);
+			plane::utils::Logger::getInstance().init(_SPDLOG level::trace);
 			LOG_DEBUG("日志级别设置为 DEBUG");
 		}
 		else
 		{
-			plane::utils::Logger::getInstance().init(spdlog::level::info);
+			plane::utils::Logger::getInstance().init(_SPDLOG level::info);
 			LOG_DEBUG("日志级别设置为 INFO");
 			LOG_DEBUG("如需调试日志, 请设置环境变量: export LOG_DEBUG=1");
 		}
@@ -60,14 +60,21 @@ namespace plane::my_dji
 		{
 			Application application(argc, argv);
 
-			if (T_DjiReturnCode returnCode { DjiFlightController_SetRCLostActionEnableStatus(DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
-				returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			if (plane::utils::isSkipRC())
 			{
-				LOG_WARN("禁用 RC 失败, 无法支持无遥控器飞行, 错误码: 0x{:08X}", returnCode);
+				if (T_DjiReturnCode returnCode { DjiFlightController_SetRCLostActionEnableStatus(DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
+					returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_WARN("禁用 RC 失败, 无法支持无遥控器飞行, 错误码: 0x{:08X}", returnCode);
+				}
+				else
+				{
+					LOG_INFO("禁用 RC 成功");
+				}
 			}
 			else
 			{
-				LOG_INFO("禁用 RC 成功");
+				LOG_INFO("启用标准作业流程, 但没有禁用 RC");
 			}
 		}
 		else
@@ -95,7 +102,7 @@ namespace plane::my_dji
 			return;
 		}
 
-		if (plane::services::LogicHandler::init())
+		if (plane::services::LogicHandler::getInstance().init())
 		{
 			LOG_INFO("业务逻辑处理器注册完毕。");
 		}
