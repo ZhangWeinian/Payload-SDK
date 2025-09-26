@@ -26,15 +26,27 @@ namespace plane::services
 
 		_NODISCARD plane::protocol::StatusPayload getLatestStatusPayload(void) noexcept;
 
-		_NODISCARD T_DjiReturnCode				  takeoff(_MAYBE_UNUSED const protocol::TakeoffPayload& takeoffParams) const noexcept;
-		_NODISCARD T_DjiReturnCode				  goHome(void) const noexcept;
-		_NODISCARD T_DjiReturnCode				  hover(void) const noexcept;
-		_NODISCARD T_DjiReturnCode				  land(void) const noexcept;
-		_NODISCARD T_DjiReturnCode				  waypointV3MissionStart(_STD string_view kmzFilePath) const noexcept;
-		_NODISCARD T_DjiReturnCode				  setControlStrategy(int strategyCode) const noexcept;
-		_NODISCARD T_DjiReturnCode				  flyCircleAroundPoint(const protocol::CircleFlyPayload& circleParams) const noexcept;
+		_NODISCARD _DJI T_DjiReturnCode			  takeoff(_MAYBE_UNUSED const plane::protocol::TakeoffPayload& takeoffParams) const noexcept;
+		_NODISCARD _DJI T_DjiReturnCode			  goHome(void) const noexcept;
+		_NODISCARD _DJI T_DjiReturnCode			  hover(void) const noexcept;
+		_NODISCARD _DJI T_DjiReturnCode			  land(void) const noexcept;
+		_NODISCARD _DJI T_DjiReturnCode			  waypointV3MissionStart(_STD string_view kmzFilePath) const noexcept;
+		_NODISCARD _DJI T_DjiReturnCode			  setControlStrategy(int strategyCode) const noexcept;
+		_NODISCARD _DJI T_DjiReturnCode			  flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams) const noexcept;
 
 	private:
+		struct SubscriptionStatus
+		{
+			bool positionFused { false };
+			bool altitudeFused { false };
+			bool quaternion { false };
+			bool velocity { false };
+			bool batteryInfo { false };
+			bool gimbalAngles { false };
+		};
+
+		SubscriptionStatus m_sub_status {};
+
 		explicit PSDKAdapter(void) noexcept					= default;
 		~PSDKAdapter(void) noexcept							= default;
 		PSDKAdapter(const PSDKAdapter&) noexcept			= delete;

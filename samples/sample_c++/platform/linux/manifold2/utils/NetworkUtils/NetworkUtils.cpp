@@ -24,7 +24,7 @@ namespace plane::utils
 {
 	namespace
 	{
-		using namespace _STD string_view_literals;
+		using namespace _STD literals;
 
 		constexpr auto		 LOOPBACK_INTERFACE { "lo"sv };
 		constexpr auto		 INVALID_IP { "0.0.0.0"sv };

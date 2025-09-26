@@ -171,17 +171,17 @@ message (STATUS "")
 target_link_libraries (${MAIN_TARGET_NAME} PRIVATE
 	"${PSDK_LIB_DIR}/lib/${TOOLCHAIN_NAME}/libpayloadsdk.a"
 
-	${LIBHV_LIB}
-	${LIBUSB_LIB}
-	${OPUS_LIB}
-	${YAMLCPP_LIB}
 	${PAHO_MQTT3_CPP_LIB}
 	${PAHO_MQTT3AS_LIB}
 	${PAHO_MQTTC3CS_LIB}
 	${PAHO_MQTT3A_LIB}
 	${PAHO_MQTT3C_LIB}
-	${SPDLOG_LIB}
+	${YAMLCPP_LIB}
+	${LIBUSB_LIB}
+	${OPUS_LIB}
+	${LIBHV_LIB}
 	${FMT_LIB}
+	${SPDLOG_LIB}
 	${LIBZIP_LIB}
 	${PUGIXML_LIB}
 
@@ -247,6 +247,7 @@ add_custom_command(
         "${PROJECT_ROOT_DIR}/config/config.yml"
         "${PROJECT_ROOT_DIR}/bash/run.sh"
 
+	COMMENT ""
     COMMENT "正在执行构建后脚本来复制所有文件到 artifacts/ 目录..."
     VERBATIM
 )

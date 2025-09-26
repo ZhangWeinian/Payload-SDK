@@ -8,7 +8,7 @@
 
 namespace plane::services
 {
-	using namespace _STD string_view_literals;
+	using namespace _STD literals;
 
 	// 上行主题
 	constexpr inline auto TOPIC_DRONE_STATUS { "/wrgk/uav/status"sv };

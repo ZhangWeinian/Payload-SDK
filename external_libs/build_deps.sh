@@ -200,21 +200,21 @@ build_cmake_project "libhv" \
 	"${BASE_DIR}/libhv" \
 	-DWITH_EXAMPLES=OFF
 
+build_cmake_project "fmt" \
+	"${BASE_DIR}/fmt" \
+	-DFMT_TEST=OFF \
+	-DCMAKE_CXX_STANDARD=${CPP_STANDARD}
+
 build_cmake_project "spdlog" \
 	"${BASE_DIR}/spdlog" \
 	-DSPDLOG_BUILD_SHARED=OFF \
-	-DSPDLOG_FMT_EXTERNAL=OFF \
+	-DSPDLOG_FMT_EXTERNAL=ON \
 	-DCMAKE_CXX_STANDARD=${CPP_STANDARD}
 
 build_cmake_project "nlohmann_json" \
 	"${BASE_DIR}/nlohmann_json" \
 	-DJSON_BuildTests=OFF \
 	-DJSON_Install=ON \
-	-DCMAKE_CXX_STANDARD=${CPP_STANDARD}
-
-build_cmake_project "fmt" \
-	"${BASE_DIR}/fmt" \
-	-DFMT_TEST=OFF \
 	-DCMAKE_CXX_STANDARD=${CPP_STANDARD}
 
 build_cmake_project "gtest" \
