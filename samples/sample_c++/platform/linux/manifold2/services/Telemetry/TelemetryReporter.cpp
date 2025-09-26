@@ -6,6 +6,7 @@
 
 #include "config/ConfigManager.h"
 #include "protocol/HeartbeatDataClass.h"
+#include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
 #include "services/MQTT/Service.h"
 #include "services/MQTT/Topics.h"
 #include "utils/JsonConverter/BuildAndParse.h"
@@ -79,42 +80,11 @@ namespace plane::services
 		_STD this_thread::sleep_for(_STD_CHRONO milliseconds(100));
 		LOG_DEBUG("线程启动, MQTTService instance addr: {}", (void*)&plane::services::MQTTService::getInstance());
 
-		const auto&					   ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
-		plane::protocol::StatusPayload status_payload {};
-		status_payload.SXZT	  = { .GPSSXSL = 15, .SFSL = 5, .SXDW = 5 };
-		status_payload.DCXX	  = { .SYDL = 98, .ZDY = 22'500, .DCXXXX = { { .DCSYSDL = 98, .DY = 22'500 } } };
-		status_payload.YTFY	  = -30.5;
-		status_payload.YTHG	  = 0.1;
-		status_payload.YTPH	  = 120.8;
-		status_payload.FJFYJ  = 2.5;
-		status_payload.FJHGJ  = -1.2;
-		status_payload.FJPHJ  = 122.3;
-		status_payload.JWD	  = 32.067228;
-		status_payload.JJD	  = 118.892591;
-		status_payload.JHB	  = 50.0;
-		status_payload.JXDGD  = 50.0;
-		status_payload.DQWD	  = 32.067228;
-		status_payload.DQJD	  = 118.892591;
-		status_payload.XDQFGD = 120.0;
-		status_payload.JDGD	  = 170.0;
-		status_payload.CZSD	  = 1.5;
-		status_payload.SPSD	  = 8.7;
-		status_payload.VX	  = 3.1;
-		status_payload.VY	  = -2.5;
-		status_payload.VZ	  = -1.5;
-		status_payload.DQHD	  = 0;
-		status_payload.ZHD	  = 0;
-		status_payload.JGCJ	  = 0.0;
-		status_payload.WZT	  = {
-			   plane::protocol::VideoSource { .SPURL = _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ipAddresses),
-										  .SPXY	 = "RTSP",
-										  .ZBZT	 = 1 }
-		};
-		status_payload.CJ	= "DJI";
-		status_payload.XH	= "FC30";
-		status_payload.MODE = "GPS_NORMAL";
-		status_payload.VSE	= 0;
-		status_payload.AME	= 0;
+		const auto&						   ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
+
+		const plane::protocol::VideoSource defaultVideoSource { .SPURL = _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ipAddresses),
+																.SPXY  = "RTSP",
+																.ZBZT  = 1 };
 
 		while (run_.load(_STD memory_order_acquire))
 		{
@@ -125,11 +95,8 @@ namespace plane::services
 				continue;
 			}
 
-			status_payload.FJPHJ += 0.1;
-			if (status_payload.FJPHJ > 180.0)
-			{
-				status_payload.FJPHJ -= 360.0;
-			}
+			plane::protocol::StatusPayload status_payload { PSDKAdapter::getInstance().getLatestStatusPayload() };
+			status_payload.WZT = { defaultVideoSource };
 
 			_STD string status_json { plane::utils::JsonConverter::buildStatusReportJson(status_payload) };
 			publishStatus(plane::services::TOPIC_DRONE_STATUS, status_json);

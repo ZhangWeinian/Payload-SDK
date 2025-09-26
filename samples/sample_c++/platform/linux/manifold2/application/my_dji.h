@@ -14,6 +14,7 @@
 #include <dji_flight_controller.h>
 
 #include "config/ConfigManager.h"
+#include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
 #include "services/MQTT/Handler/LogicHandler.h"
 #include "services/MQTT/Service.h"
 #include "services/Telemetry/TelemetryReporter.h"
@@ -59,6 +60,17 @@ namespace plane::my_dji
 		if (plane::utils::isStandardProceduresEnabled())
 		{
 			Application application(argc, argv);
+			LOG_INFO("DJI PSDK 核心服务初始化完毕。");
+
+			if (!plane::services::PSDKAdapter::getInstance().setup())
+			{
+				LOG_ERROR("PSDK 适配器准备失败！程序将无法获取飞机数据。");
+				return;
+			}
+			else
+			{
+				LOG_INFO("PSDK 适配器准备就绪。");
+			}
 
 			if (plane::utils::isSkipRC())
 			{
@@ -135,8 +147,11 @@ namespace plane::my_dji
 		LOG_INFO("收到退出信号, 正在关闭应用程序...");
 
 		plane::services::TelemetryReporter::getInstance().stop();
-
 		plane::services::MQTTService::getInstance().stop();
+		if (plane::utils::isStandardProceduresEnabled())
+		{
+			plane::services::PSDKAdapter::getInstance().cleanup();
+		}
 
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(1));
 		LOG_INFO("应用程序已关闭。");

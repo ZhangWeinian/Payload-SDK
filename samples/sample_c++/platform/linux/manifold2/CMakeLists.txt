@@ -12,7 +12,26 @@ if (NOT CMAKE_BUILD_TYPE)
 	set (CMAKE_BUILD_TYPE Debug CACHE STRING "构建类型（Release, Debug 等）")
 endif ()
 
-# 1. 定义核心路径变量
+# 1. 获取Git信息
+find_package (Git QUIET)
+
+if (GIT_FOUND)
+	execute_process (
+		COMMAND ${GIT_EXECUTABLE} rev-parse --short=7 HEAD
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		OUTPUT_VARIABLE GIT_COMMIT_HASH
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+		ERROR_QUIET
+	)
+
+	if (NOT GIT_COMMIT_HASH)
+		set (GIT_COMMIT_HASH "unknown")
+	endif ()
+else ()
+	set (GIT_COMMIT_HASH "nogit")
+endif ()
+
+# 2. 定义核心路径变量
 message (STATUS "使用根的子项目（来自父项目）: ${PROJECT_ROOT_DIR}")
 message (STATUS "外部库目录（来自父项目）: ${EXTERNAL_LIBS_DIR}")
 pretty_message ("项目路径设置" "根目录 (由顶层传入): ${PROJECT_ROOT_DIR}\n   第三方库 (由顶层传入): ${EXTERNAL_LIBS_DIR}")
@@ -24,7 +43,7 @@ set (SERVICES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/services")
 set (UTILS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/utils")
 set (PSDK_LIB_DIR "${PROJECT_ROOT_DIR}/psdk_lib")
 
-# 2. 编译器和构建选项
+# 3. 编译器和构建选项
 set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_C_STANDARD 17)
@@ -38,10 +57,14 @@ if (MEMORY_LEAK_CHECK_ON MATCHES TRUE)
 	set (LEAK_SANITIZER_LINK_LIBS "asan")
 endif ()
 
-# 3. 定义可执行文件目标
-add_executable (${PROJECT_NAME})
+# 4. 设置可执行文件名称
+# 主目标名称保持不变
+set (MAIN_TARGET_NAME "${PROJECT_NAME}")
 
-# 4. 收集并添加源文件
+# 5. 定义可执行文件目标
+add_executable (${MAIN_TARGET_NAME})
+
+# 6. 收集并添加源文件
 file (GLOB_RECURSE PSDK_CXX_SAMPLE_SOURCES "${PROJECT_ROOT_DIR}/samples/sample_c++/module_sample/*.cpp")
 file (GLOB_RECURSE PSDK_C_SAMPLE_SOURCES "${PROJECT_ROOT_DIR}/samples/sample_c/module_sample/*.c")
 file (GLOB_RECURSE PLATFORM_SOURCES
@@ -56,14 +79,14 @@ file (GLOB_RECURSE CUSTOM_SOURCES
 	"${UTILS_DIR}/**/*.cpp"
 )
 
-target_sources (${PROJECT_NAME} PRIVATE
+target_sources (${MAIN_TARGET_NAME} PRIVATE
 	${PSDK_CXX_SAMPLE_SOURCES}
 	${PSDK_C_SAMPLE_SOURCES}
 	${PLATFORM_SOURCES}
 	${CUSTOM_SOURCES}
 )
 
-# 5. 平台检测
+# 7. 平台检测
 execute_process (COMMAND uname -m OUTPUT_VARIABLE DEVICE_SYSTEM_ID OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 if (DEVICE_SYSTEM_ID STREQUAL "x86_64")
@@ -76,15 +99,15 @@ else ()
 	message (FATAL_ERROR "错误！检测到不支持的平台： ${DEVICE_SYSTEM_ID}")
 endif ()
 
-# 5.1 查找核心系统依赖
+# 7.1 查找核心系统依赖
 find_package (OpenSSL REQUIRED)
 
 if (OPENSSL_FOUND)
 	pretty_message ("系统依赖检查: OpenSSL" "版本: ${OPENSSL_VERSION}\n   头文件: ${OPENSSL_INCLUDE_DIR}\n   库文件: ${OPENSSL_LIBRARIES}")
 endif ()
 
-# 6. 为目标配置包含目录
-target_include_directories (${PROJECT_NAME} PRIVATE
+# 8. 为目标配置包含目录
+target_include_directories (${MAIN_TARGET_NAME} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}
 	"${CMAKE_CURRENT_SOURCE_DIR}/application"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../common"
@@ -101,13 +124,13 @@ target_include_directories (${PROJECT_NAME} PRIVATE
 	${OPENSSL_INCLUDE_DIR}
 )
 
-# 7. 为目标配置编译定义
-target_compile_definitions (${PROJECT_NAME} PRIVATE
+# 9. 为目标配置编译定义
+target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE
 	_GNU_SOURCE
 	${PLATFORM_ARCH_DEFINE}
 )
 
-# 8. 预先查找并强制指定所有第三方静态库的绝对路径
+# 10. 预先查找并强制指定所有第三方静态库的绝对路径
 set (STATIC_LIB_DIR "${EXTERNAL_LIBS_DIR}/install/lib")
 pretty_message ("第三方静态库查找" "搜索目录: ${STATIC_LIB_DIR}")
 
@@ -142,8 +165,8 @@ find_static_library (LIBZIP_LIB zip)
 find_static_library (PUGIXML_LIB pugixml)
 message (STATUS "")
 
-# 9. 为目标配置链接库
-target_link_libraries (${PROJECT_NAME} PRIVATE
+# 11. 为目标配置链接库
+target_link_libraries (${MAIN_TARGET_NAME} PRIVATE
 	"${PSDK_LIB_DIR}/lib/${TOOLCHAIN_NAME}/libpayloadsdk.a"
 
 	${LIBHV_LIB}
@@ -174,19 +197,56 @@ target_link_libraries (${PROJECT_NAME} PRIVATE
 	${LEAK_SANITIZER_LINK_LIBS}
 )
 
-# 10. 对第三方库构建目标的依赖
+# 12. 对第三方库构建目标的依赖
 if (TARGET deps)
-	add_dependencies (${PROJECT_NAME} deps)
+	add_dependencies (${MAIN_TARGET_NAME} deps)
 endif ()
 
-# 11. 设置输出路径和构建后命令
-set (EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
-set_target_properties (${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
+# 13. 设置输出路径
+set (MAIN_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
+set_target_properties (${MAIN_TARGET_NAME} PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY ${MAIN_OUTPUT_PATH}
+	OUTPUT_NAME "${PROJECT_NAME}" # 确保名称简单
+)
+
+# 14. 构建后命令 - 复制到版本化目录并创建带git哈希的版本
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/debug")
+	set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${GIT_COMMIT_HASH}")
+elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
+	set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/release")
+	set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${GIT_COMMIT_HASH}")
+else ()
+	set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}")
+	set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${CMAKE_BUILD_TYPE}_${GIT_COMMIT_HASH}")
+endif ()
 
 add_custom_command (
-	TARGET ${PROJECT_NAME} POST_BUILD
+	TARGET ${MAIN_TARGET_NAME} POST_BUILD
+
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${VERSIONED_OUTPUT_PATH}
+
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+	"$<TARGET_FILE:${MAIN_TARGET_NAME}>"
+	"${VERSIONED_OUTPUT_PATH}/${VERSIONED_EXE_NAME}"
+
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 	"${PROJECT_ROOT_DIR}/config/config.yml"
-	"$<TARGET_FILE_DIR:${PROJECT_NAME}>/config.yml"
-	COMMENT "正在将 config.yml 复制到输出目录"
+	"${VERSIONED_OUTPUT_PATH}/config.yml"
+
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+	"${PROJECT_ROOT_DIR}/config/config.yml"
+	"${MAIN_OUTPUT_PATH}/config.yml"
+	COMMENT "正在复制可执行文件和配置文件到输出目录"
+)
+
+# 15. 显示构建信息
+pretty_message ("构建配置"
+	"主目标名称: ${MAIN_TARGET_NAME}\n"
+	"构建类型: ${CMAKE_BUILD_TYPE}\n"
+	"Git提交哈希: ${GIT_COMMIT_HASH}\n"
+	"主输出目录: ${MAIN_OUTPUT_PATH}\n"
+	"版本化输出目录: ${VERSIONED_OUTPUT_PATH}\n"
+	"版本化可执行文件: ${VERSIONED_EXE_NAME}\n"
+	"平台架构: ${DEVICE_SYSTEM_ID}"
 )
