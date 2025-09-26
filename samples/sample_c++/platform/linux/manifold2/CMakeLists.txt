@@ -4,10 +4,10 @@ project (cy_psdk CXX C)
 set (CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
 
 function (pretty_message TITLE CONTENT)
-	message (STATUS "=============== ${TITLE} ===============")
+	message (STATUS "===========================================")
+	message (STATUS "${TITLE}:")
 	message (STATUS "${CONTENT}")
-	message (STATUS "========================================================")
-	message (STATUS "")
+	message (STATUS "===========================================")
 endfunction ()
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -211,24 +211,26 @@ set_target_properties (${MAIN_TARGET_NAME} PROPERTIES
 	OUTPUT_NAME "${PROJECT_NAME}"
 )
 
-# 14. 构建后命令 - 调用外部脚本来完成
+# 14. 构建后命令 - 复制到项目根目录下的 artifacts/ 文件夹
 set (POST_BUILD_SCRIPT "${PROJECT_ROOT_DIR}/bash/post_build.sh")
+set (ARTIFACTS_ROOT_DIR "${PROJECT_ROOT_DIR}/artifacts")
+
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
 
 if (CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
-	set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/debug")
-	set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${GIT_COMMIT_HASH}")
+	set (VERSIONED_OUTPUT_PATH "${ARTIFACTS_ROOT_DIR}/debug")
+	set (VERSIONED_EXE_NAME "${PROJECT_NAME}_debug_${GIT_COMMIT_HASH}")
 elseif (CMAKE_BUILD_TYPE_UPPER STREQUAL "RELEASE")
-	set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/release")
-	set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${GIT_COMMIT_HASH}")
+	set (VERSIONED_OUTPUT_PATH "${ARTIFACTS_ROOT_DIR}/release")
+	set (VERSIONED_EXE_NAME "${PROJECT_NAME}_release_${GIT_COMMIT_HASH}")
 else ()
     if (CMAKE_BUILD_TYPE)
-	    set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}")
+	    set (VERSIONED_OUTPUT_PATH "${ARTIFACTS_ROOT_DIR}/${CMAKE_BUILD_TYPE}")
 	    set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${CMAKE_BUILD_TYPE}_${GIT_COMMIT_HASH}")
     else()
-        message(WARNING "CMAKE_BUILD_TYPE 未定义，将回退到 'debug' 目录。")
-        set (VERSIONED_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin/debug")
-	    set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${GIT_COMMIT_HASH}")
+        message(WARNING "CMAKE_BUILD_TYPE 未定义，将回退到 'artifacts/debug' 目录。")
+        set (VERSIONED_OUTPUT_PATH "${ARTIFACTS_ROOT_DIR}/debug")
+	    set (VERSIONED_EXE_NAME "${PROJECT_NAME}_debug_${GIT_COMMIT_HASH}")
     endif()
 endif ()
 
@@ -245,17 +247,16 @@ add_custom_command(
         "${PROJECT_ROOT_DIR}/config/config.yml"
         "${PROJECT_ROOT_DIR}/bash/run.sh"
 
-    COMMENT "正在执行构建后脚本来复制所有文件..."
+    COMMENT "正在执行构建后脚本来复制所有文件到 artifacts/ 目录..."
     VERBATIM
 )
 
 # 15. 显示构建信息
-pretty_message ("构建配置"
-	"主目标名称: ${MAIN_TARGET_NAME}\n"
-	"构建类型: ${CMAKE_BUILD_TYPE}\n"
-	"Git提交哈希: ${GIT_COMMIT_HASH}\n"
-	"主输出目录: ${MAIN_OUTPUT_PATH}\n"
-	"版本化输出目录: ${VERSIONED_OUTPUT_PATH}\n"
-	"版本化可执行文件: ${VERSIONED_EXE_NAME}\n"
-	"平台架构: ${DEVICE_SYSTEM_ID}"
+pretty_message ("构建配置" " 主目标名称: ${MAIN_TARGET_NAME}
+	构建类型: ${CMAKE_BUILD_TYPE}
+	Git提交哈希: ${GIT_COMMIT_HASH}
+	主输出目录: ${MAIN_OUTPUT_PATH}
+	版本化输出目录: ${VERSIONED_OUTPUT_PATH}
+	版本化可执行文件: ${VERSIONED_EXE_NAME}
+	平台架构: ${DEVICE_SYSTEM_ID}"
 )

@@ -52,5 +52,6 @@
 	#define _MQTT ::mqtt::
 #endif
 
-constexpr inline auto MATH_PI { 3.14159265358979323846 };
-constexpr inline auto EARTH_RADIUS_M { 6'371'000.0 };
+constexpr inline auto	MATH_PI { 3.14159265358979323846 };
+constexpr inline auto	EARTH_RADIUS_M { 6'371'000.0 };
+constexpr inline double RAD_TO_DEG { 180.0 / MATH_PI };
