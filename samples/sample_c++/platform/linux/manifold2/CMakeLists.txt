@@ -60,7 +60,6 @@ if (MEMORY_LEAK_CHECK_ON MATCHES TRUE)
 endif ()
 
 # 4. 设置可执行文件名称
-# 主目标名称保持不变
 set (MAIN_TARGET_NAME "${PROJECT_NAME}")
 
 # 5. 定义可执行文件目标

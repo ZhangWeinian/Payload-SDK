@@ -163,12 +163,13 @@ namespace plane::services
 			return true;
 		};
 
-		m_sub_status.positionFused = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED, "POSITION_FUSED"sv);
-		m_sub_status.altitudeFused = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED, "ALTITUDE_FUSED"sv);
-		m_sub_status.quaternion	   = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
-		m_sub_status.velocity	   = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
-		m_sub_status.batteryInfo   = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
-		m_sub_status.gimbalAngles  = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
+		m_sub_status.positionFused		 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED, "POSITION_FUSED"sv);
+		m_sub_status.altitudeFused		 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED, "ALTITUDE_FUSED"sv);
+		m_sub_status.altitudeOfHomepoint = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT, "ALTITUDE_OF_HOMEPOINT"sv);
+		m_sub_status.quaternion			 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
+		m_sub_status.velocity			 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
+		m_sub_status.batteryInfo		 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
+		m_sub_status.gimbalAngles		 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
 
 		LOG_INFO("PSDK 适配器准备就绪。");
 		return true;
@@ -196,6 +197,7 @@ namespace plane::services
 
 		unsubscribe(m_sub_status.positionFused, DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED, "POSITION_FUSED"sv);
 		unsubscribe(m_sub_status.altitudeFused, DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED, "ALTITUDE_FUSED"sv);
+		unsubscribe(m_sub_status.altitudeOfHomepoint, DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT, "ALTITUDE_OF_HOMEPOINT"sv);
 		unsubscribe(m_sub_status.quaternion, DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
 		unsubscribe(m_sub_status.velocity, DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
 		unsubscribe(m_sub_status.batteryInfo, DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
@@ -228,9 +230,15 @@ namespace plane::services
 														  sizeof(fused_alt),
 														  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 		{
-			payload.XDQFGD = fused_alt; // 相对起飞点高度
-
-			LOG_INFO("原始值:{}, 修正值1:{}, 修正值2:{}", payload.XDQFGD, payload.XDQFGD + payload.JDGD, payload.XDQFGD - payload.JDGD);
+			if (_DJI T_DjiFcSubscriptionAltitudeFused hp_alt {};
+				m_sub_status.altitudeOfHomepoint &&
+				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT,
+															  (uint8_t*)&hp_alt,
+															  sizeof(hp_alt),
+															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+			{
+				payload.XDQFGD = fused_alt - hp_alt; // 相对起飞点高度
+			}
 		}
 
 		if (_DJI T_DjiFcSubscriptionQuaternion q {};

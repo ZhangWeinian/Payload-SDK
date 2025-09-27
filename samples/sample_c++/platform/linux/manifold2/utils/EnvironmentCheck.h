@@ -33,4 +33,9 @@ namespace plane::utils
 	{
 		return isEnvVarSetToOne("SKIP_RC");
 	}
+
+	_NODISCARD inline bool isTestKmzFile(void) noexcept
+	{
+		return isEnvVarSetToOne("TEST_KMZ");
+	}
 } // namespace plane::utils

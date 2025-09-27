@@ -2,18 +2,23 @@
 
 #include "services/MQTT/Handler/LogicHandler.h"
 
+#include <string_view>
+#include <filesystem>
 #include <functional>
 
 #include "protocol/DroneDataClass.h"
 #include "services/DroneControl/FlyManager.h"
 #include "services/MQTT/Handler/MessageHandler.h"
 #include "services/MQTT/Topics.h"
+#include "utils/EnvironmentCheck.h"
 #include "utils/JsonConverter/JsonToKmz.h"
 #include "utils/Logger.h"
 
 namespace plane::services
 {
 	using n_json = _NLOHMANN_JSON json;
+
+	using namespace _STD		  literals;
 
 	LogicHandler&				  LogicHandler::getInstance(void) noexcept
 	{
@@ -30,30 +35,30 @@ namespace plane::services
 
 			msg_handler.registerHandler(plane::services::TOPIC_MISSION_CONTROL,
 										"XFHXRW",
-										std::bind_front(&LogicHandler::handleWaypointMission, this));
-			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "QF", std::bind_front(&LogicHandler::handleTakeoff, this));
-			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "FH", std::bind_front(&LogicHandler::handleGoHome, this));
-			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "XT", std::bind_front(&LogicHandler::handleHover, this));
-			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "JL", std::bind_front(&LogicHandler::handleLand, this));
+										_STD bind_front(&LogicHandler::handleWaypointMission, this));
+			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "QF", _STD bind_front(&LogicHandler::handleTakeoff, this));
+			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "FH", _STD bind_front(&LogicHandler::handleGoHome, this));
+			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "XT", _STD bind_front(&LogicHandler::handleHover, this));
+			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "JL", _STD bind_front(&LogicHandler::handleLand, this));
 			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL,
 										"YTJSCL",
-										std::bind_front(&LogicHandler::handleControlStrategySwitch, this));
-			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "ZNHR", std::bind_front(&LogicHandler::handleCircleFly, this));
+										_STD bind_front(&LogicHandler::handleControlStrategySwitch, this));
+			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "ZNHR", _STD bind_front(&LogicHandler::handleCircleFly, this));
 			msg_handler.registerHandler(plane::services::TOPIC_PAYLOAD_CONTROL,
 										"YTKZ",
-										std::bind_front(&LogicHandler::handleGimbalControl, this));
+										_STD bind_front(&LogicHandler::handleGimbalControl, this));
 			msg_handler.registerHandler(plane::services::TOPIC_PAYLOAD_CONTROL,
 										"BJKZ",
-										std::bind_front(&LogicHandler::handleCameraControl, this));
-			msg_handler.registerHandler(plane::services::TOPIC_ROCKER_CONTROL, "YGFXZL", std::bind_front(&LogicHandler::handleStickData, this));
+										_STD bind_front(&LogicHandler::handleCameraControl, this));
+			msg_handler.registerHandler(plane::services::TOPIC_ROCKER_CONTROL, "YGFXZL", _STD bind_front(&LogicHandler::handleStickData, this));
 			msg_handler.registerHandler(plane::services::TOPIC_ROCKER_CONTROL,
 										"YGMSQH",
-										std::bind_front(&LogicHandler::handleStickModeSwitch, this));
+										_STD bind_front(&LogicHandler::handleStickModeSwitch, this));
 			msg_handler.registerHandler(plane::services::TOPIC_VELOCITY_CONTROL,
 										"SDKZ",
-										std::bind_front(&LogicHandler::handleNedVelocity, this));
+										_STD bind_front(&LogicHandler::handleNedVelocity, this));
 		}
-		catch (const std::exception& e)
+		catch (const _STD exception& e)
 		{
 			LOG_ERROR("初始化 MQTT 业务逻辑处理器时发生异常: {}", e.what());
 			return false;
@@ -76,27 +81,42 @@ namespace plane::services
 	void LogicHandler::handleWaypointMission(const n_json& payloadJson) noexcept
 	{
 		HANDLE_PAYLOAD("航线任务", plane::protocol::WaypointPayload, {
-			if (payload.HDJ.empty())
+			if (plane::utils::isTestKmzFile())
 			{
-				LOG_WARN("[MQTT] 收到的航点任务 (RWID: {}) 中不包含任何航点。", payload.RWID.value_or("N/A"));
-				return;
-			}
-
-			if (payload.HDJ.size() == 1)
-			{
-				LOG_INFO("[MQTT] 收到并准备执行【单航点任务】");
-				FlyManager::getInstance().flyToPoint(payload.HDJ[0]);
-			}
-			else
-			{
-				LOG_INFO("[MQTT] 收到并准备执行【航线任务】, 共 {} 个航点", payload.HDJ.size());
-				if (plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload))
+				LOG_INFO("测试指定航线 /tmp/kmz/1.kmz");
+				if (_STD_FS exists("/tmp/kmz/1.kmz"))
 				{
-					FlyManager::getInstance().waypointFly(plane::utils::JsonToKmzConverter::getKmzFilePath());
+					FlyManager::getInstance().waypointFly("/tmp/kmz/1.kmz"sv);
 				}
 				else
 				{
-					LOG_ERROR("生成 KMZ 文件失败！任务中止。");
+					LOG_ERROR("测试指定航线 /tmp/kmz/1.kmz 不存在");
+				}
+			}
+			else
+			{
+				if (payload.HDJ.empty())
+				{
+					LOG_WARN("[MQTT] 收到的航点任务 (RWID: {}) 中不包含任何航点。", payload.RWID.value_or("N/A"));
+					return;
+				}
+
+				if (payload.HDJ.size() == 1)
+				{
+					LOG_INFO("[MQTT] 收到并准备执行【单航点任务】");
+					FlyManager::getInstance().flyToPoint(payload.HDJ[0]);
+				}
+				else
+				{
+					LOG_INFO("[MQTT] 收到并准备执行【航线任务】, 共 {} 个航点", payload.HDJ.size());
+					if (plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload))
+					{
+						FlyManager::getInstance().waypointFly(plane::utils::JsonToKmzConverter::getKmzFilePath());
+					}
+					else
+					{
+						LOG_ERROR("生成 KMZ 文件失败！任务中止。");
+					}
 				}
 			}
 		});

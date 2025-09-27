@@ -67,28 +67,28 @@ T_DjiReturnCode DjiTest_WaypointV3RunSample(void)
 	returnCode = DjiWaypointV3_Init();
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Waypoint v3 init failed.");
+		USER_LOG_ERROR("Waypoint v3 初始化失败。");
 		return returnCode;
 	}
 
 	returnCode = DjiWaypointV3_RegMissionStateCallback(DjiTest_WaypointV3MissionStateCallback);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Register waypoint v3 state callback failed.");
+		USER_LOG_ERROR("注册 Waypoint v3 任务状态回调失败。");
 		goto out;
 	}
 
 	returnCode = DjiWaypointV3_RegActionStateCallback(DjiTest_WaypointV3ActionStateCallback);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Register waypoint v3 action state callback failed.");
+		USER_LOG_ERROR("注册 Waypoint v3 动作状态回调失败。");
 		goto out;
 	}
 
 	returnCode = DjiUserUtil_GetCurrentFileDirPath(__FILE__, DJI_TEST_WAYPOINT_V3_KMZ_FILE_PATH_LEN_MAX, curFileDirPath);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Get file current path error, stat = 0x%08llX", returnCode);
+		USER_LOG_ERROR("获取文件当前路径错误，错误码: 0x%08llX", returnCode);
 		goto out;
 	}
 
@@ -99,35 +99,35 @@ T_DjiReturnCode DjiTest_WaypointV3RunSample(void)
 	kmzFile = fopen(tempPath, "r");
 	if (kmzFile == NULL)
 	{
-		USER_LOG_ERROR("Open kmz file failed.");
+		USER_LOG_ERROR("打开 KMZ 文件失败！请确认 KMZ 文件位于 /tmp/kmz/1.kmz");
 		goto out;
 	}
 
 	returnCode = UtilFile_GetFileSize(kmzFile, &kmzFileSize);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Get kmz file size failed.");
+		USER_LOG_ERROR("获取 KMZ 文件大小失败。");
 		goto close_file;
 	}
 
 	kmzFileBuf = osalHandler->Malloc(kmzFileSize);
 	if (kmzFileBuf == NULL)
 	{
-		USER_LOG_ERROR("Malloc kmz file buf error.");
+		USER_LOG_ERROR("为 KMZ 文件缓冲区分配内存失败。");
 		goto close_file;
 	}
 
 	readLen = fread(kmzFileBuf, 1, kmzFileSize, kmzFile);
 	if (readLen != kmzFileSize)
 	{
-		USER_LOG_ERROR("Read kmz file data failed.");
+		USER_LOG_ERROR("读取 KMZ 文件数据失败。");
 		goto close_file;
 	}
 
 	returnCode = DjiWaypointV3_UploadKmzFile(kmzFileBuf, kmzFileSize);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Upload kmz file failed.");
+		USER_LOG_ERROR("上传 KMZ 文件失败，错误码: 0x%08X");
 		goto close_file;
 	}
 
@@ -136,7 +136,7 @@ T_DjiReturnCode DjiTest_WaypointV3RunSample(void)
 	returnCode = DjiWaypointV3_UploadKmzFile(waypoint_v3_test_file_kmz_fileBinaryArray, waypoint_v3_test_file_kmz_fileSize);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Upload kmz file binary array failed.");
+		USER_LOG_ERROR("上传 KMZ 二进制数组失败，错误码: 0x%08X", returnCode);
 		return returnCode;
 	}
 #endif
@@ -145,7 +145,7 @@ T_DjiReturnCode DjiTest_WaypointV3RunSample(void)
 	returnCode = DjiWaypointV3_Action(DJI_WAYPOINT_V3_ACTION_START);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Execute start action failed.");
+		USER_LOG_ERROR("执行开始动作失败，错误码: 0x%08X", returnCode);
 		goto close_file;
 	}
 
@@ -154,7 +154,7 @@ close_file:
 	returnCode = fclose(kmzFile);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Close KMZ file failed.");
+		USER_LOG_ERROR("关闭 KMZ 文件失败。");
 	}
 	kmzFile = NULL;
 #endif
@@ -162,39 +162,39 @@ close_file:
 	returnCode = DjiFcSubscription_SubscribeTopic(DJI_FC_SUBSCRIPTION_TOPIC_STATUS_FLIGHT, DJI_DATA_SUBSCRIPTION_TOPIC_10_HZ, NULL);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Subscribe topic flight status failed, error code:0x%08llX", returnCode);
+		USER_LOG_ERROR("订阅飞行状态主题失败，错误码: 0x%08llX", returnCode);
 		goto out;
 	}
 
-	USER_LOG_INFO("The aircraft is on the ground and motors are stoped...");
+	USER_LOG_INFO("等待飞机状态：在地面且电机已停止...");
 	returnCode = DjiTest_WaypointV3WaitEndFlightStatus(DJI_FC_SUBSCRIPTION_FLIGHT_STATUS_STOPED);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Wait end flight status error.");
+		USER_LOG_ERROR("等待飞行状态结束时出错。");
 		goto out;
 	}
 
-	USER_LOG_INFO("The aircraft is on the ground and motors are rotating...");
+	USER_LOG_INFO("等待飞机状态：在地面且电机旋转中...");
 	returnCode = DjiTest_WaypointV3WaitEndFlightStatus(DJI_FC_SUBSCRIPTION_FLIGHT_STATUS_ON_GROUND);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Wait end flight status error.");
+		USER_LOG_ERROR("等待飞行状态结束时出错。");
 		goto out;
 	}
 
-	USER_LOG_INFO("The aircraft is in the air...");
+	USER_LOG_INFO("等待飞机状态：在空中...");
 	returnCode = DjiTest_WaypointV3WaitEndFlightStatus(DJI_FC_SUBSCRIPTION_FLIGHT_STATUS_IN_AIR);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Wait end flight status error.");
+		USER_LOG_ERROR("等待飞行状态结束时出错。");
 		goto out;
 	}
 
-	USER_LOG_INFO("The aircraft is on the ground and motors are rotating...");
+	USER_LOG_INFO("等待飞机状态：在地面且电机旋转中...");
 	returnCode = DjiTest_WaypointV3WaitEndFlightStatus(DJI_FC_SUBSCRIPTION_FLIGHT_STATUS_ON_GROUND);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Wait end flight status error.");
+		USER_LOG_ERROR("等待飞行状态结束时出错。");
 		goto out;
 	}
 
@@ -204,17 +204,17 @@ close_file:
 														 &flightStatusTimestamp);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
-		USER_LOG_ERROR("Get value of topic flight status failed, error code:0x%08llX", returnCode);
+		USER_LOG_ERROR("获取飞行状态主题的值失败，错误码: 0x%08llX", returnCode);
 		goto out;
 	}
 
 	if (flightStatus != DJI_FC_SUBSCRIPTION_FLIGHT_STATUS_STOPED)
 	{
-		USER_LOG_ERROR("Aircraft's flight status error, motors are not stoped.");
+		USER_LOG_ERROR("飞机飞行状态不正确，电机未停止。");
 		goto out;
 	}
 
-	USER_LOG_INFO("The aircraft is on the ground now, and motor are stoped.");
+	USER_LOG_INFO("飞机当前在地面，且电机已停止。");
 
 out:
 #ifdef SYSTEM_ARCH_LINUX

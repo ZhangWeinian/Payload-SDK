@@ -39,6 +39,7 @@ namespace plane::services
 		{
 			bool positionFused { false };
 			bool altitudeFused { false };
+			bool altitudeOfHomepoint { false };
 			bool quaternion { false };
 			bool velocity { false };
 			bool batteryInfo { false };
