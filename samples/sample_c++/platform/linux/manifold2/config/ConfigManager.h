@@ -4,12 +4,9 @@
 
 #include "protocol/AppConfigDataClass.h"
 
-#include <optional>
-#include <string>
-
-#include <yaml-cpp/yaml.h>
-
 #include "define.h"
+#include <yaml-cpp/yaml.h>
+#include <string>
 
 namespace plane::config
 {
@@ -23,18 +20,16 @@ namespace plane::config
 		_NODISCARD _STD string getPlaneCode(void) const noexcept;
 
 	private:
-		explicit ConfigManager(void) noexcept						   = default;
+		explicit ConfigManager(void) noexcept;
 		~ConfigManager(void) noexcept								   = default;
 		ConfigManager(const ConfigManager&)							   = delete;
 		ConfigManager&				   operator=(const ConfigManager&) = delete;
 
-		static _STD string			   generateUuidWithoutDashes(void) noexcept;
-		bool						   saveConfigToFile(const _STD string& filepath) const noexcept;
-		bool						   validateAndFixConfig(void) noexcept;
+		static _STD string			   generateUniqueClientId(void) noexcept;
+		bool						   validateConfig(void) noexcept;
 
-		YAML::Node					   configNode {};
+		_YAML Node					   configNode {};
 		bool						   loaded { false };
 		plane::protocol::AppConfigData appConfig {};
-		_STD string					   configFilePath {};
 	};
 } // namespace plane::config

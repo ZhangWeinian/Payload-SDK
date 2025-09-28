@@ -79,11 +79,6 @@ namespace plane::services
 	{
 		try
 		{
-			if (!impl_ || !impl_->client)
-			{
-				return;
-			}
-
 			stop();
 			LOG_DEBUG("[MQTTService::dtor] stop() 完成");
 		}
@@ -105,36 +100,26 @@ namespace plane::services
 
 	bool MQTTService::publish(_STD string_view topic, _STD string_view payload) noexcept
 	{
-		_STD lock_guard<_STD mutex> lock(mutex_);
-		if (!isConnected() || !impl_->client)
+		if (!impl_->runSender_)
 		{
-			LOG_WARN("MQTT 未连接, 发布请求被忽略。");
+			LOG_WARN("MQTT 发送服务未运行, 消息被丢弃。");
 			return false;
 		}
 
-		try
 		{
-			auto msg { _MQTT make_message(topic.data(), payload.data()) };
-			msg->set_qos(1);
-			impl_->client->publish(msg);
-			LOG_DEBUG("已向主题 '{}' 发送消息发布请求。", topic);
-			return true;
+			_STD lock_guard<_STD mutex> lock(impl_->dequeMutex_);
+
+			if (impl_->messageDeque_.size() >= MAX_DEQUE_SIZE)
+			{
+				impl_->messageDeque_.pop_front();
+				LOG_WARN("MQTT 消息队列已满, 丢弃最旧的一条消息。");
+			}
+
+			impl_->messageDeque_.emplace_back(topic, payload);
 		}
-		catch (const _MQTT exception& ex)
-		{
-			LOG_ERROR("向主题 '{}' 发布消息失败: {}, client={}", topic, ex.what(), (void*)impl_->client.get());
-			return false;
-		}
-		catch (const _STD exception& ex)
-		{
-			LOG_ERROR("向主题 '{}' 发布消息发生未知异常: {}, client={}", topic, ex.what(), (void*)impl_->client.get());
-			return false;
-		}
-		catch (...)
-		{
-			LOG_ERROR("向主题 '{}' 发布消息发生未知异常: <non-std exception>, client={}", topic, (void*)impl_->client.get());
-			return false;
-		}
+
+		impl_->dequeCv_.notify_one();
+		return true;
 	}
 
 	void MQTTService::subscribe(_STD string_view topic) noexcept
@@ -193,7 +178,7 @@ namespace plane::services
 		{
 			LOG_DEBUG("清理现有的 MQTT 客户端实例");
 			stop();
-			LOG_DEBUG("[start] stop() 完成, client 已清理");
+			LOG_DEBUG("stop() 完成, client 已清理");
 		}
 
 		try
@@ -201,13 +186,20 @@ namespace plane::services
 			impl_->client	= _STD	 make_unique<_MQTT async_client>(url, cid);
 			impl_->callback = _STD make_shared<MqttCallback>(this);
 			impl_->client->set_callback(*impl_->callback);
-			_MQTT connect_options connOpts;
+
+			_MQTT connect_options connOpts {};
 			connOpts.set_keep_alive_interval(30);
 			connOpts.set_clean_session(true);
 			connOpts.set_automatic_reconnect(true);
 			connOpts.set_mqtt_version(MQTTVERSION_5);
+
 			impl_->client->connect(connOpts);
 			LOG_DEBUG("MQTT 服务启动成功, 等待连接建立...");
+
+			impl_->runSender_	 = true;
+			impl_->senderThread_ = _STD thread(&MQTTService::senderLoop, this);
+			LOG_DEBUG("MQTT 异步发送线程已启动。");
+
 			return true;
 		}
 		catch (const _MQTT exception& ex)
@@ -235,6 +227,16 @@ namespace plane::services
 
 	void MQTTService::stop(void) noexcept
 	{
+		if (impl_->runSender_.exchange(false))
+		{
+			impl_->dequeCv_.notify_one();
+			if (impl_->senderThread_.joinable())
+			{
+				impl_->senderThread_.join();
+				LOG_DEBUG("MQTT 异步发送线程已停止。");
+			}
+		}
+
 		_STD lock_guard<_STD mutex> lock(mutex_);
 
 		impl_->manualDisconnect = true;
@@ -265,7 +267,7 @@ namespace plane::services
 		}
 		catch (const _MQTT exception& ex)
 		{
-			LOG_ERROR("MQTTService 停止异常: {}", ex.what());
+			LOG_ERROR("MQTTService 停止异常（来自 MQTT）: {}", ex.what());
 		}
 		catch (const _STD exception& ex)
 		{
@@ -297,5 +299,60 @@ namespace plane::services
 	bool MQTTService::isConnected(void) const noexcept
 	{
 		return connected_.load(_STD memory_order_acquire);
+	}
+
+	void MQTTService::senderLoop() noexcept
+	{
+		LOG_DEBUG("MQTT 发送者线程循环开始。");
+
+		while (impl_->runSender_)
+		{
+			_STD pair<_STD string, _STD string> message {};
+
+			{
+				_STD unique_lock<_STD mutex> lock(impl_->dequeMutex_);
+				impl_->dequeCv_.wait(lock,
+									 [this]
+									 {
+										 return !impl_->messageDeque_.empty() || !impl_->runSender_;
+									 });
+
+				if (!impl_->runSender_ && impl_->messageDeque_.empty())
+				{
+					break;
+				}
+
+				if (impl_->messageDeque_.empty())
+				{
+					continue;
+				}
+
+				message = _STD move(impl_->messageDeque_.front());
+				impl_->messageDeque_.pop_front();
+			}
+
+			if (!isConnected() || !impl_ || !impl_->client)
+			{
+				LOG_WARN("MQTT 未连接, 队列中的一条消息被丢弃。");
+				continue;
+			}
+
+			try
+			{
+				auto msg { _MQTT make_message(message.first, message.second) };
+				msg->set_qos(1);
+				impl_->client->publish(msg);
+			}
+			catch (const _MQTT exception& ex)
+			{
+				LOG_ERROR("发送者线程发布消息到主题 '{}' 失败，消息被丢弃: {}", message.first, ex.what());
+			}
+			catch (...)
+			{
+				LOG_ERROR("发送者线程发布消息 '{}' 时发生未知异常，消息被丢弃。", message.first);
+			}
+		}
+
+		LOG_INFO("MQTT 发送者线程循环已结束。");
 	}
 } // namespace plane::services

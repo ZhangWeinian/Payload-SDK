@@ -1,5 +1,5 @@
 # 构建产物目录
-build/
+/build/
 /external_libs/install/
 
 # 忽略所有子模块中的 build 目录
@@ -19,6 +19,7 @@ build/
 
 # 临时文件
 *~
+*.swp
 .DS_Store
 
-artifacts/
+/artifacts/

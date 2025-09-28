@@ -52,6 +52,14 @@
 	#define _MQTT ::mqtt::
 #endif
 
+#if __has_include(<yaml-cpp/yaml.h>) && !defined(_YAML)
+	#define _YAML ::YAML::
+#endif
+
+#if __has_include(<pugixml.hpp>) && !defined(_PUGI)
+	#define _PUGI ::pugi::
+#endif
+
 constexpr inline auto	MATH_PI { 3.14159265358979323846 };
 constexpr inline auto	EARTH_RADIUS_M { 6'371'000.0 };
 constexpr inline double RAD_TO_DEG { 180.0 / MATH_PI };

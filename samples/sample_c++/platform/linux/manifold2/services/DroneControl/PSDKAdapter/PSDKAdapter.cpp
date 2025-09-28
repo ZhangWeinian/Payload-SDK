@@ -147,6 +147,37 @@ namespace plane::services
 		return instance;
 	}
 
+	PSDKAdapter::PSDKAdapter(void) noexcept: m_lastUpdateTime(_STD_CHRONO steady_clock::time_point::min()) {}
+
+	PSDKAdapter::~PSDKAdapter(void) noexcept
+	{
+		stop();
+	}
+
+	bool PSDKAdapter::start(void) noexcept
+	{
+		if (m_run.exchange(true))
+		{
+			LOG_DEBUG("PSDKAdapter 数据采集线程已经启动，请勿重复调用 start()。");
+			return false;
+		}
+		LOG_INFO("正在启动 PSDK 数据采集线程...");
+		m_thread = _STD thread(&PSDKAdapter::acquisitionLoop, this);
+		return true;
+	}
+
+	void PSDKAdapter::stop(void) noexcept
+	{
+		if (m_run.exchange(false))
+		{
+			if (m_thread.joinable())
+			{
+				m_thread.join();
+				LOG_INFO("PSDK 数据采集线程已停止。");
+			}
+		}
+	}
+
 	bool PSDKAdapter::setup(void) noexcept
 	{
 		LOG_INFO("正在订阅遥测数据主题...");
@@ -204,97 +235,131 @@ namespace plane::services
 		unsubscribe(m_sub_status.gimbalAngles, DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
 	}
 
-	plane::protocol::StatusPayload PSDKAdapter::getLatestStatusPayload(void) noexcept
+	void PSDKAdapter::acquisitionLoop(void) noexcept
 	{
-		plane::protocol::StatusPayload payload {};
-		_DJI T_DjiDataTimestamp		   timestamp {};
-
-		if (_DJI T_DjiFcSubscriptionPositionFused pos {};
-			m_sub_status.positionFused &&
-			(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED,
-														  (uint8_t*)&pos,
-														  sizeof(pos),
-														  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+		while (m_run)
 		{
-			payload.SXZT.GPSSXSL = pos.visibleSatelliteNumber;
-			payload.DQJD		 = pos.longitude * RAD_TO_DEG; // 当前经度 (度)
-			payload.DQWD		 = pos.latitude * RAD_TO_DEG;  // 当前纬度 (度)
-			payload.JDGD		 = pos.altitude;			   // 海拔高度
-															   // TODO: 根据 pos.gnssFixStatus 和 pos.gpsFixStatus 来填充 SFSL 和 SXDW
-		}
+			auto						   startTime { _STD_CHRONO steady_clock::now() };
+			plane::protocol::StatusPayload current_payload {};
+			_DJI T_DjiDataTimestamp		   timestamp {};
 
-		if (_DJI T_DjiFcSubscriptionAltitudeFused fused_alt {};
-			m_sub_status.altitudeFused &&
-			(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED,
-														  (uint8_t*)&fused_alt,
-														  sizeof(fused_alt),
-														  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
-		{
-			if (_DJI T_DjiFcSubscriptionAltitudeFused hp_alt {};
-				m_sub_status.altitudeOfHomepoint &&
-				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT,
-															  (uint8_t*)&hp_alt,
-															  sizeof(hp_alt),
+			if (_DJI T_DjiFcSubscriptionPositionFused pos {};
+				m_sub_status.positionFused &&
+				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED,
+															  (uint8_t*)&pos,
+															  sizeof(pos),
 															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
-				payload.XDQFGD = fused_alt - hp_alt; // 相对起飞点高度
+				current_payload.SXZT.GPSSXSL = pos.visibleSatelliteNumber;
+				current_payload.DQJD		 = pos.longitude * RAD_TO_DEG; // 当前经度 (度)
+				current_payload.DQWD		 = pos.latitude * RAD_TO_DEG;  // 当前纬度 (度)
+				current_payload.JDGD		 = pos.altitude;			   // 海拔高度
+				// TODO: 根据 pos.gnssFixStatus 和 pos.gpsFixStatus 来填充 SFSL 和 SXDW
+			}
+
+			if (_DJI T_DjiFcSubscriptionAltitudeFused fused_alt {};
+				m_sub_status.altitudeFused &&
+				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED,
+															  (uint8_t*)&fused_alt,
+															  sizeof(fused_alt),
+															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+			{
+				if (_DJI T_DjiFcSubscriptionAltitudeFused hp_alt {};
+					m_sub_status.altitudeOfHomepoint &&
+					(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT,
+																  (uint8_t*)&hp_alt,
+																  sizeof(hp_alt),
+																  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+				{
+					current_payload.XDQFGD = fused_alt - hp_alt; // 相对起飞点高度
+				}
+			}
+
+			if (_DJI T_DjiFcSubscriptionQuaternion q {};
+				m_sub_status.quaternion &&
+				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, (uint8_t*)&q, sizeof(q), &timestamp) ==
+				 _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+			{
+				quaternionToEulerAngle(q, current_payload.FJHGJ, current_payload.FJFYJ, current_payload.FJPHJ);
+			}
+
+			if (_DJI T_DjiFcSubscriptionVelocity vel {};
+				m_sub_status.velocity && (_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY,
+																					   (uint8_t*)&vel,
+																					   sizeof(vel),
+																					   &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+			{
+				current_payload.VY	 = vel.data.x;	// 北向速度 (North)
+				current_payload.VX	 = vel.data.y;	// 东向速度 (East)
+				current_payload.VZ	 = -vel.data.z; // 地向速度 (Down). PSDK z 轴向上为正, 我们的协议下为正, 所以取反.
+				current_payload.SPSD = _STD sqrt(vel.data.x * vel.data.x + vel.data.y * vel.data.y); // 水平速度
+				current_payload.CZSD = vel.data.z;													 // 垂直速度
+			}
+
+			if (_DJI T_DjiFcSubscriptionSingleBatteryInfo batt {};
+				m_sub_status.batteryInfo &&
+				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO,
+															  (uint8_t*)&batt,
+															  sizeof(batt),
+															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+			{
+				current_payload.DCXX.SYDL = batt.batteryCapacityPercent;
+				current_payload.DCXX.ZDY  = batt.currentVoltage;
+			}
+
+			if (_DJI T_DjiFcSubscriptionGimbalAngles gimbalAngle {};
+				m_sub_status.gimbalAngles &&
+				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES,
+															  (uint8_t*)&gimbalAngle,
+															  sizeof(gimbalAngle),
+															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+			{
+				current_payload.YTFY = gimbalAngle.x;
+				current_payload.YTHG = gimbalAngle.y;
+				current_payload.YTPH = gimbalAngle.z;
+			}
+
+			if (_DJI T_DjiAircraftInfoBaseInfo aircraftInfo {};
+				_DJI DjiAircraftInfo_GetBaseInfo(&aircraftInfo) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			{
+				current_payload.XH = aircraftTypeToString(aircraftInfo.aircraftType);
+			}
+			else
+			{
+				current_payload.XH = "N/A";
+			}
+
+			current_payload.CJ = "DJI";
+
+			{
+				_STD lock_guard<_STD mutex> lock(m_payloadMutex);
+				m_latestPayload = current_payload;
+			}
+
+			{
+				_STD lock_guard<_STD mutex>	   lock(m_healthMutex);
+				m_lastUpdateTime = _STD_CHRONO steady_clock::now();
+			}
+
+			auto endTime { _STD_CHRONO steady_clock::now() };
+			if (auto elapsedTime { _STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(endTime - startTime) };
+				elapsedTime < ACQUISITION_INTERVAL)
+			{
+				_STD this_thread::sleep_for(ACQUISITION_INTERVAL - elapsedTime);
 			}
 		}
+	}
 
-		if (_DJI T_DjiFcSubscriptionQuaternion q {};
-			m_sub_status.quaternion &&
-			(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, (uint8_t*)&q, sizeof(q), &timestamp) ==
-			 _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
-		{
-			quaternionToEulerAngle(q, payload.FJHGJ, payload.FJFYJ, payload.FJPHJ);
-		}
+	_STD_CHRONO steady_clock::time_point PSDKAdapter::getLastUpdateTime(void) const noexcept
+	{
+		_STD lock_guard<_STD mutex> lock(m_healthMutex);
+		return m_lastUpdateTime;
+	}
 
-		if (_DJI T_DjiFcSubscriptionVelocity vel {};
-			m_sub_status.velocity &&
-			(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, (uint8_t*)&vel, sizeof(vel), &timestamp) ==
-			 _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
-		{
-			payload.VY	 = vel.data.x;	// 北向速度 (North)
-			payload.VX	 = vel.data.y;	// 东向速度 (East)
-			payload.VZ	 = -vel.data.z; // 地向速度 (Down). PSDK z 轴向上为正, 我们的协议下为正, 所以取反.
-			payload.SPSD = _STD sqrt(vel.data.x * vel.data.x + vel.data.y * vel.data.y); // 水平速度
-			payload.CZSD = vel.data.z;													 // 垂直速度
-		}
-
-		if (_DJI T_DjiFcSubscriptionSingleBatteryInfo batt {};
-			m_sub_status.batteryInfo && (_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO,
-																					  (uint8_t*)&batt,
-																					  sizeof(batt),
-																					  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
-		{
-			payload.DCXX.SYDL = batt.batteryCapacityPercent;
-			payload.DCXX.ZDY  = batt.currentVoltage;
-		}
-
-		if (_DJI T_DjiFcSubscriptionGimbalAngles gimbalAngle {};
-			m_sub_status.gimbalAngles && (_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES,
-																					   (uint8_t*)&gimbalAngle,
-																					   sizeof(gimbalAngle),
-																					   &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
-		{
-			payload.YTFY = gimbalAngle.x;
-			payload.YTHG = gimbalAngle.y;
-			payload.YTPH = gimbalAngle.z;
-		}
-
-		if (_DJI T_DjiAircraftInfoBaseInfo aircraftInfo {};
-			_DJI DjiAircraftInfo_GetBaseInfo(&aircraftInfo) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			payload.XH = aircraftTypeToString(aircraftInfo.aircraftType);
-		}
-		else
-		{
-			payload.XH = "N/A";
-		}
-
-		payload.CJ = "DJI";
-
-		return payload;
+	plane::protocol::StatusPayload PSDKAdapter::getLatestStatusPayload(void) const noexcept
+	{
+		_STD lock_guard<_STD mutex> lock(m_payloadMutex);
+		return m_latestPayload;
 	}
 
 	void PSDKAdapter::quaternionToEulerAngle(const _DJI T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept

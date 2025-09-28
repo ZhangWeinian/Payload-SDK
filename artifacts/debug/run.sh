@@ -54,8 +54,8 @@ echo "动态库路径 (LD_LIBRARY_PATH): ${LD_LIBRARY_PATH}"
 echo "============================================="
 echo ""
 
-export FULL_PSDK=1
-export TEST_KMZ=1
+# export FULL_PSDK=1
+# export TEST_KMZ=1
 # export SKIP_RC=1
 # export LOG_DEBUG=1
 

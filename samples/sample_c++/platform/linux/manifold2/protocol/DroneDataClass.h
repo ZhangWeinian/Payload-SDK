@@ -324,6 +324,44 @@ namespace plane::protocol
 		_STD optional<T> XXXX {};			// 消息信息
 	};
 
+	template<typename T>
+	void to_json(n_json& j, const NetworkMessage<T>& msg)
+	{
+		j = n_json {
+			{ "ZBID", msg.ZBID },
+			{ "XXID", msg.XXID },
+			{ "XXLX", msg.XXLX },
+			{ "SJC",	 msg.SJC	 },
+		};
+
+		if (msg.SBSJ.has_value())
+		{
+			j["SBSJ"] = msg.SBSJ.value();
+		}
+		if (msg.XXXX.has_value())
+		{
+			j["XXXX"] = msg.XXXX.value();
+		}
+	}
+
+	template<typename T>
+	void from_json(const n_json& j, NetworkMessage<T>& msg)
+	{
+		j.at("ZBID").get_to(msg.ZBID);
+		j.at("XXID").get_to(msg.XXID);
+		j.at("XXLX").get_to(msg.XXLX);
+		j.at("SJC").get_to(msg.SJC);
+
+		if (j.contains("SBSJ"))
+		{
+			msg.SBSJ = j.at("SBSJ").get<_STD string>();
+		}
+		if (j.contains("XXXX"))
+		{
+			msg.XXXX = j.at("XXXX").get<T>();
+		}
+	}
+
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Waypoint, JD, WD, GD, SD, YTFYJ, PHJ, SFTY, DZJ);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(WaypointPayload, HDJ, RWID);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(TakeoffPayload, MBWD, MBJD, MBGD, FHMS, FHGD, ZDMSD, AQJC);

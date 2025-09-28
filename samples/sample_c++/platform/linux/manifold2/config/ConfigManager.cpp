@@ -1,5 +1,6 @@
 // manifold2/cinfig/ConfigManager.cpp
 
+#include "config/ConfigManager.h"
 #include "utils/Logger.h"
 
 #include <fstream>
@@ -7,10 +8,14 @@
 #include <random>
 #include <sstream>
 
-#include "config/ConfigManager.h"
-
 namespace plane::config
 {
+	ConfigManager::ConfigManager(void) noexcept
+	{
+		appConfig.mqttClientId = generateUniqueClientId();
+		LOG_DEBUG("运行时 MQTT Client ID 已生成: {}", appConfig.mqttClientId);
+	}
+
 	ConfigManager& ConfigManager::getInstance(void) noexcept
 	{
 		static ConfigManager instance {};
@@ -19,8 +24,7 @@ namespace plane::config
 
 	bool ConfigManager::loadAndCheck(const _STD string& filepath) noexcept
 	{
-		configFilePath = filepath;
-		loaded		   = false;
+		loaded = false;
 
 		try
 		{
@@ -30,10 +34,10 @@ namespace plane::config
 				return false;
 			}
 
-			configNode = YAML::LoadFile(filepath);
+			configNode = _YAML LoadFile(filepath);
 			LOG_DEBUG("成功加载配置文件: {}", filepath);
 
-			if (!validateAndFixConfig())
+			if (!validateConfig())
 			{
 				LOG_ERROR("配置验证失败");
 				return false;
@@ -42,7 +46,7 @@ namespace plane::config
 			loaded = true;
 			return true;
 		}
-		catch (const YAML::Exception& e)
+		catch (const _YAML Exception& e)
 		{
 			LOG_ERROR("解析 YAML 配置文件 '{}' 失败: {}", filepath, e.what());
 			return false;
@@ -54,7 +58,7 @@ namespace plane::config
 		}
 	}
 
-	bool ConfigManager::validateAndFixConfig(void) noexcept
+	bool ConfigManager::validateConfig(void) noexcept
 	{
 		try
 		{
@@ -70,7 +74,7 @@ namespace plane::config
 			}
 			else
 			{
-				LOG_ERROR("配置文件中缺少 MQTT URL");
+				LOG_ERROR("配置文件中缺少 'mqtt.url'");
 				return false;
 			}
 
@@ -86,64 +90,20 @@ namespace plane::config
 			}
 			else
 			{
-				LOG_ERROR("配置文件中缺少 Plane Code");
+				LOG_ERROR("配置文件中缺少 'plane.code'");
 				return false;
-			}
-
-			if (configNode["mqtt"] && configNode["mqtt"]["client_id"])
-			{
-				_STD string clientId { configNode["mqtt"]["client_id"].as<_STD string>() };
-				if (clientId.empty())
-				{
-					clientId						= generateUuidWithoutDashes();
-					appConfig.mqttClientId			= clientId;
-
-					configNode["mqtt"]["client_id"] = clientId;
-					if (!saveConfigToFile(configFilePath))
-					{
-						LOG_WARN("无法写回配置文件, 但继续使用生成的 client_id: {}", clientId);
-					}
-					else
-					{
-						LOG_DEBUG("已生成并保存新的 MQTT Client ID: {}", clientId);
-					}
-				}
-				else
-				{
-					appConfig.mqttClientId = clientId;
-				}
-			}
-			else
-			{
-				_STD string clientId { generateUuidWithoutDashes() };
-				appConfig.mqttClientId = clientId;
-
-				if (!configNode["mqtt"])
-				{
-					configNode["mqtt"] = YAML::Node();
-				}
-				configNode["mqtt"]["client_id"] = clientId;
-
-				if (!saveConfigToFile(configFilePath))
-				{
-					LOG_WARN("无法写回配置文件, 但继续使用生成的 client_id: {}", clientId);
-				}
-				else
-				{
-					LOG_INFO("已生成并保存新的 MQTT Client ID: {}", clientId);
-				}
 			}
 
 			return true;
 		}
 		catch (const _STD exception& e)
 		{
-			LOG_ERROR("验证和修复配置时发生异常: {}", e.what());
+			LOG_ERROR("验证配置时发生异常: {}", e.what());
 			return false;
 		}
 	}
 
-	_STD string ConfigManager::generateUuidWithoutDashes(void) noexcept
+	_STD string ConfigManager::generateUniqueClientId(void) noexcept
 	{
 		_STD random_device rd {};
 		_STD mt19937	   gen(rd());
@@ -155,11 +115,6 @@ namespace plane::config
 
 		for (int i { 0 }; i < 32; i++)
 		{
-			if (i == 8 || i == 12 || i == 16 || i == 20)
-			{
-				continue;
-			}
-
 			if (i == 12)
 			{
 				ss << 4;
@@ -177,26 +132,9 @@ namespace plane::config
 		return "cv_" + ss.str();
 	}
 
-	bool ConfigManager::saveConfigToFile(const _STD string& filepath) const noexcept
-	{
-		try
-		{
-			_STD ofstream fout(filepath);
-			fout << configNode;
-			fout.close();
-			LOG_DEBUG("配置已写回文件: {}", filepath);
-			return true;
-		}
-		catch (const _STD exception& e)
-		{
-			LOG_ERROR("写回配置文件失败: {}", e.what());
-			return false;
-		}
-	}
-
 	_STD string ConfigManager::getMqttUrl(void) const noexcept
 	{
-		if (loaded && !appConfig.mqttUrl.empty())
+		if (loaded)
 		{
 			return appConfig.mqttUrl;
 		}
@@ -206,21 +144,16 @@ namespace plane::config
 
 	_STD string ConfigManager::getMqttClientId(void) const noexcept
 	{
-		if (loaded && !appConfig.mqttClientId.empty())
-		{
-			return appConfig.mqttClientId;
-		}
-		LOG_WARN("配置未加载或 MQTT Client ID 无效, 返回空字符串");
-		return "";
+		return appConfig.mqttClientId;
 	}
 
 	_STD string ConfigManager::getPlaneCode(void) const noexcept
 	{
-		if (loaded && !appConfig.planeCode.empty())
+		if (loaded)
 		{
 			return appConfig.planeCode;
 		}
-		LOG_WARN("配置未加载或 Plane Code 无效, 返回空字符串");
+		LOG_WARN("配置未加载或 PlaneCode 无效, 返回空字符串");
 		return "";
 	}
 } // namespace plane::config

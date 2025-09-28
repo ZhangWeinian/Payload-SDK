@@ -73,6 +73,16 @@ namespace plane::my_dji
 				LOG_INFO("PSDK 适配器准备就绪。");
 			}
 
+			if (!plane::services::PSDKAdapter::getInstance().start())
+			{
+				LOG_ERROR("PSDK 适配器数据采集线程启动失败！");
+				return;
+			}
+			else
+			{
+				LOG_INFO("PSDK 适配器数据采集线程已启动。");
+			}
+
 			if (plane::utils::isSkipRC())
 			{
 				if (T_DjiReturnCode returnCode { DjiFlightController_SetRCLostActionEnableStatus(DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
@@ -148,10 +158,16 @@ namespace plane::my_dji
 		LOG_INFO("收到退出信号, 正在关闭应用程序...");
 
 		plane::services::TelemetryReporter::getInstance().stop();
+		LOG_DEBUG("遥测上报服务已停止。");
+
 		plane::services::MQTTService::getInstance().stop();
+		LOG_DEBUG("MQTT 服务已停止。");
+
 		if (plane::utils::isStandardProceduresEnabled())
 		{
+			plane::services::PSDKAdapter::getInstance().stop();
 			plane::services::PSDKAdapter::getInstance().cleanup();
+			LOG_DEBUG("PSDK 适配器已清理。");
 		}
 
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(1));

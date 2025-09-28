@@ -2,12 +2,17 @@
 
 #pragma once
 
+#include <condition_variable>
 #include <string_view>
 #include <atomic>
 #include <cassert>
+#include <deque>
 #include <memory>
 #include <mutex>
+#include <queue>
 #include <string>
+#include <thread>
+#include <utility>
 
 #include <mqtt/async_client.h>
 
@@ -28,6 +33,11 @@ namespace plane::services
 			_STD_CHRONO steady_clock::time_point lastDisconnectTime {};
 			_STD_CHRONO steady_clock::time_point lastConnectTime {};
 			bool								 manualDisconnect { false };
+			_STD deque<_STD pair<_STD string, _STD string>> messageDeque_ {};
+			_STD mutex										dequeMutex_ {};
+			_STD condition_variable							dequeCv_ {};
+			_STD thread										senderThread_ {};
+			_STD atomic<bool> runSender_ { false };
 
 			explicit Impl(void) noexcept		  = default;
 			~Impl(void) noexcept				  = default;
@@ -61,12 +71,15 @@ namespace plane::services
 
 	private:
 		_STD unique_ptr<Impl> impl_ { _STD make_unique<Impl>() };
-		_STD atomic<bool> connected_ { false };
-		_STD mutex		  mutex_ {};
+		_STD atomic<bool>			   connected_ { false };
+		_STD mutex					   mutex_ {};
+		constexpr static inline size_t MAX_DEQUE_SIZE { 30 };
 
 		explicit MQTTService(void) noexcept = default;
 		~MQTTService(void) noexcept;
 		MQTTService(const MQTTService&) noexcept			= delete;
 		MQTTService& operator=(const MQTTService&) noexcept = delete;
+
+		void		 senderLoop(void) noexcept;
 	};
 } // namespace plane::services

@@ -15,7 +15,9 @@ extern "C"
 	"pJVn8u1UbH5GOCj2qrzzR9pW2UJiboIcZPSA5N0ygDHg+A4MdFWuRBHxIOIKPOR0MdHf1x2P1VVoOiJCvwcOm98ztlOzaCrWXPdutyPJynGyHQrBNA3ZdpdnmCt7+" \
 	"hCo17lhXxUa+3jFxWDSA9aaf3KM9ZlBdC0daaGzT3QAs3Rkj42w=="
 #define USER_DEVELOPER_ACCOUNT "accepted"
+
 #define USER_BAUD_RATE		   "460800"
+	// #define USER_BAUD_RATE "115200"
 
 #ifdef __cplusplus
 }

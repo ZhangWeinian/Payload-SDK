@@ -3,6 +3,10 @@ project (cy_psdk CXX C)
 
 set (CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
 
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	message (FATAL_ERROR "此项目被配置为仅在 Linux 系统上构建。")
+endif ()
+
 function (pretty_message TITLE CONTENT)
 	message (STATUS "===========================================")
 	message (STATUS "${TITLE}:")
@@ -210,7 +214,59 @@ set_target_properties (${MAIN_TARGET_NAME} PROPERTIES
 	OUTPUT_NAME "${PROJECT_NAME}"
 )
 
-# 14. 构建后命令 - 复制到项目根目录下的 artifacts/ 文件夹
+# 14. 运行时文件复制
+set (CONFIG_SOURCE_FILE "${PROJECT_ROOT_DIR}/config/config.yml")
+set (RUN_SCRIPT_SOURCE_FILE "${PROJECT_ROOT_DIR}/bash/run.sh")
+
+set (CONFIG_DEST_FILE "${MAIN_OUTPUT_PATH}/config.yml")
+set (RUN_SCRIPT_DEST_FILE "${MAIN_OUTPUT_PATH}/run.sh")
+
+add_custom_command(
+	OUTPUT ${CONFIG_DEST_FILE}
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CONFIG_SOURCE_FILE} ${CONFIG_DEST_FILE}
+	DEPENDS ${CONFIG_SOURCE_FILE}
+	COMMENT "正在复制配置文件到构建目录..."
+)
+
+add_custom_command(
+	OUTPUT ${RUN_SCRIPT_DEST_FILE}
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_SCRIPT_SOURCE_FILE} ${RUN_SCRIPT_DEST_FILE}
+	DEPENDS ${RUN_SCRIPT_SOURCE_FILE}
+	COMMENT "正在复制运行脚本到构建目录..."
+)
+
+add_custom_target(copy_runtime_files ALL
+	DEPENDS
+		${CONFIG_DEST_FILE}
+		${RUN_SCRIPT_DEST_FILE}
+	COMMENT "确保所有运行时文件已复制并是最新版本"
+)
+add_custom_command(
+	TARGET copy_runtime_files POST_BUILD
+	COMMAND chmod +x ${RUN_SCRIPT_DEST_FILE}
+)
+
+add_dependencies(${MAIN_TARGET_NAME} copy_runtime_files)
+
+# 15. 复制系统库
+set (SYSTEM_LIBS_SOURCE_DIR "${PROJECT_ROOT_DIR}/system_libs")
+set (TEMP_LIBS_OUTPUT_DIR "${MAIN_OUTPUT_PATH}/libs")
+
+if (EXISTS ${SYSTEM_LIBS_SOURCE_DIR})
+	file(GLOB LIB_FILES LIST_DIRECTORIES false "${SYSTEM_LIBS_SOURCE_DIR}/*")
+
+	add_custom_target(copy_system_libs
+		SOURCES ${LIB_FILES}
+
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${TEMP_LIBS_OUTPUT_DIR}
+		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${SYSTEM_LIBS_SOURCE_DIR} ${TEMP_LIBS_OUTPUT_DIR}
+		COMMENT "正在复制系统库到构建目录..."
+	)
+
+	add_dependencies(${MAIN_TARGET_NAME} copy_system_libs)
+endif()
+
+# 16. 构建后命令 - 复制到项目根目录下的 artifacts/ 文件夹
 set (POST_BUILD_SCRIPT "${PROJECT_ROOT_DIR}/bash/post_build.sh")
 set (ARTIFACTS_ROOT_DIR "${PROJECT_ROOT_DIR}/artifacts")
 
@@ -223,35 +279,33 @@ elseif (CMAKE_BUILD_TYPE_UPPER STREQUAL "RELEASE")
 	set (VERSIONED_OUTPUT_PATH "${ARTIFACTS_ROOT_DIR}/release")
 	set (VERSIONED_EXE_NAME "${PROJECT_NAME}_release_${GIT_COMMIT_HASH}")
 else ()
-    if (CMAKE_BUILD_TYPE)
-	    set (VERSIONED_OUTPUT_PATH "${ARTIFACTS_ROOT_DIR}/${CMAKE_BUILD_TYPE}")
-	    set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${CMAKE_BUILD_TYPE}_${GIT_COMMIT_HASH}")
-    else()
-        message(WARNING "CMAKE_BUILD_TYPE 未定义，将回退到 'artifacts/debug' 目录。")
-        set (VERSIONED_OUTPUT_PATH "${ARTIFACTS_ROOT_DIR}/debug")
-	    set (VERSIONED_EXE_NAME "${PROJECT_NAME}_debug_${GIT_COMMIT_HASH}")
-    endif()
+	if (CMAKE_BUILD_TYPE)
+		set (VERSIONED_OUTPUT_PATH "${ARTIFACTS_ROOT_DIR}/${CMAKE_BUILD_TYPE}")
+		set (VERSIONED_EXE_NAME "${PROJECT_NAME}_${CMAKE_BUILD_TYPE}_${GIT_COMMIT_HASH}")
+	else()
+		message(WARNING "CMAKE_BUILD_TYPE 未定义，将回退到 'artifacts/debug' 目录。")
+		set (VERSIONED_OUTPUT_PATH "${ARTIFACTS_ROOT_DIR}/debug")
+		set (VERSIONED_EXE_NAME "${PROJECT_NAME}_debug_${GIT_COMMIT_HASH}")
+	endif()
 endif ()
 
 add_custom_command(
-    TARGET ${MAIN_TARGET_NAME} POST_BUILD
+	TARGET ${MAIN_TARGET_NAME} POST_BUILD
 
-    COMMAND /bin/bash ${POST_BUILD_SCRIPT}
-        "$<TARGET_FILE:${MAIN_TARGET_NAME}>"
-        "${VERSIONED_OUTPUT_PATH}"
-        "${VERSIONED_EXE_NAME}"
-        "${PROJECT_ROOT_DIR}/system_libs"
-        "${MAIN_OUTPUT_PATH}/libs"
-        "${MAIN_OUTPUT_PATH}"
-        "${PROJECT_ROOT_DIR}/config/config.yml"
-        "${PROJECT_ROOT_DIR}/bash/run.sh"
+	COMMAND ${CMAKE_COMMAND} -E echo ""
+	COMMAND ${CMAKE_COMMAND} -E echo "正在执行构建后脚本来打包所有文件到 artifacts/ 目录..."
 
-	COMMENT ""
-    COMMENT "正在执行构建后脚本来复制所有文件到 artifacts/ 目录..."
-    VERBATIM
+	COMMAND /bin/bash ${POST_BUILD_SCRIPT}
+		"${MAIN_OUTPUT_PATH}"                # $1: 源目录 (build/bin)
+		"${VERSIONED_OUTPUT_PATH}"           # $2: 目标归档目录
+		"${PROJECT_NAME}"                    # $3: 原始可执行文件名
+		"${VERSIONED_EXE_NAME}"              # $4: 版本化的可执行文件名
+
+	COMMENT "打包构建产物 (Packaging artifacts)"
+	VERBATIM
 )
 
-# 15. 显示构建信息
+# 17. 显示构建信息
 pretty_message ("构建配置" " 主目标名称: ${MAIN_TARGET_NAME}
 	构建类型: ${CMAKE_BUILD_TYPE}
 	Git提交哈希: ${GIT_COMMIT_HASH}

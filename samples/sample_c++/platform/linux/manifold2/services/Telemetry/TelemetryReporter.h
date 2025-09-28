@@ -4,6 +4,7 @@
 
 #include <string_view>
 #include <atomic>
+#include <chrono>
 #include <string>
 #include <thread>
 
@@ -25,7 +26,8 @@ namespace plane::services
 
 		_STD thread status_thread_ {};
 		_STD thread fixed_info_thread_ {};
-		_STD atomic<bool> run_ { false };
+		_STD atomic<bool>	  run_ { false };
+		constexpr static auto PSDK_WATCHDOG_TIMEOUT { _STD_CHRONO seconds(3) };
 
 		explicit TelemetryReporter(void) noexcept = default;
 		~TelemetryReporter(void) noexcept;

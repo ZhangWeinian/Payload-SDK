@@ -102,10 +102,24 @@ namespace plane::services
 				continue;
 			}
 
+			const auto					   now { _STD_CHRONO steady_clock::now() };
+			const auto					   lastUpdate { PSDKAdapter::getInstance().getLastUpdateTime() };
+			const bool					   isDataStale { now - lastUpdate > PSDK_WATCHDOG_TIMEOUT };
+
 			plane::protocol::StatusPayload status_payload {};
-			if (psdk_enabled)
+			if (isDataStale)
 			{
-				status_payload = PSDKAdapter::getInstance().getLatestStatusPayload();
+				LOG_ERROR("PSDK 数据采集线程看门狗超时！数据已超过 {} 秒未更新！", PSDK_WATCHDOG_TIMEOUT.count());
+
+				status_payload				= PSDKAdapter::getInstance().getLatestStatusPayload();
+				status_payload.SXZT.GPSSXSL = -99;
+			}
+			else
+			{
+				if (psdk_enabled)
+				{
+					status_payload = PSDKAdapter::getInstance().getLatestStatusPayload();
+				}
 			}
 
 			status_payload.WZT = { defaultVideoSource };

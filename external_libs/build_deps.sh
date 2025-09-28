@@ -39,7 +39,7 @@ printf "%s\n" "${COLOR_BLUE}====================================================
 printf "           开始构建和安装所有第三方依赖库\n"
 printf "============================================================${COLOR_NC}\n\n"
 echo "源码目录: ${COLOR_YELLOW}${BASE_DIR}${COLOR_NC}"
-echo "安装目标: ${COLOR_YELLOW}${INSTALL_DIR}${COLOR_NC}\n"
+echo "安装目标: ${COLOR_YELLOW}${INSTALL_DIR}${COLOR_NC}"
 
 mkdir -p "${INSTALL_DIR}"
 
