@@ -26,14 +26,14 @@
 #include "hal_uart.h"
 #include <dji_logger.h>
 
-#ifndef CRTSCTS
-	#define CRTSCTS 020000000000
-#endif
-
 /* Private constants ---------------------------------------------------------*/
 #define UART_DEV_NAME_STR_SIZE		   (128)
 #define DJI_SYSTEM_CMD_STR_MAX_SIZE	   (64)
 #define DJI_SYSTEM_RESULT_STR_MAX_SIZE (128)
+
+#ifndef CRTSCTS
+	#define CRTSCTS 020000000000
+#endif
 
 /* Private types -------------------------------------------------------------*/
 typedef struct

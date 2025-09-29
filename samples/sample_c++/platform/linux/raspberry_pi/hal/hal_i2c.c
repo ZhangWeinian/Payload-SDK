@@ -31,7 +31,6 @@
 #include <string.h>
 #include <unistd.h>
 
-
 /* Private constants ---------------------------------------------------------*/
 #define I2C_DEVICE_RESET_TIME_US	(25 * 1000)
 #define I2C_DEVICE_RESET_GPIO_NUM	(4)

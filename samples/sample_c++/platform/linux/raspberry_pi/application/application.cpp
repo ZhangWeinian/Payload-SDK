@@ -30,6 +30,7 @@
 #include <dji_core.h>
 #include <dji_logger.h>
 #include <dji_platform.h>
+#include <dji_power_management.h>
 #include <csignal>
 
 #include "../common/osal/osal.h"
@@ -63,8 +64,7 @@
 
 /* Private types -------------------------------------------------------------*/
 
-/* Private values
- * -------------------------------------------------------------*/
+/* Private values -------------------------------------------------------------*/
 static FILE* s_djiLogFile;
 static FILE* s_djiLogFileCnt;
 
@@ -211,8 +211,7 @@ void Application::DjiUser_SetupEnvironment()
 		throw std::runtime_error("Register hal network handler error");
 	}
 
-	// Attention: if you want to use camera stream view function, please uncomment
-	// it.
+	// Attention: if you want to use camera stream view function, please uncomment it.
 	returnCode = DjiPlatform_RegSocketHandler(&socketHandler);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
@@ -228,8 +227,7 @@ void Application::DjiUser_SetupEnvironment()
 	}
 #endif
 
-	// Attention: if you want to use camera stream view function, please uncomment
-	// it.
+	// Attention: if you want to use camera stream view function, please uncomment it.
 	returnCode = DjiPlatform_RegSocketHandler(&socketHandler);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
@@ -272,8 +270,7 @@ void Application::DjiUser_ApplicationStart()
 			 .debugVersion	= 0,
 	};
 
-	// attention: when the program is hand up ctrl-c will generate the coredump
-	// file
+	// attention: when the program is hand up ctrl-c will generate the coredump file
 	signal(SIGTERM, DjiUser_NormalExitHandler);
 
 	returnCode = DjiUser_FillInUserInfo(&userInfo);
@@ -319,6 +316,8 @@ void Application::DjiUser_ApplicationStart()
 	{
 		throw std::runtime_error("Set alias error.");
 	}
+
+	USER_LOG_INFO("2222222222222222");
 
 #ifdef CONFIG_MODULE_SAMPLE_CAMERA_EMU_ON
 	returnCode = DjiTest_CameraEmuBaseStartService();
@@ -393,6 +392,8 @@ void Application::DjiUser_ApplicationStart()
 		throw std::runtime_error("Start sdk application error.");
 	}
 
+	USER_LOG_INFO("111111111111");
+
 	USER_LOG_INFO("Application start.");
 }
 
@@ -445,9 +446,8 @@ T_DjiReturnCode Application::DjiUser_FillInUserInfo(T_DjiUserInfo* userInfo)
 		!strcmp(USER_BAUD_RATE, "your_app_license") || !strcmp(USER_DEVELOPER_ACCOUNT, "your_developer_account") ||
 		!strcmp(USER_BAUD_RATE, "your_baud_rate"))
 	{
-		USER_LOG_ERROR("Please fill in correct user information to "
-					   "'samples/sample_c++/platform/linux/manifold2/application/"
-					   "dji_sdk_app_info.h' file.");
+		USER_LOG_ERROR(
+			"Please fill in correct user information to 'samples/sample_c++/platform/linux/manifold2/application/dji_sdk_app_info.h' file.");
 		return DJI_ERROR_SYSTEM_MODULE_CODE_INVALID_PARAMETER;
 	}
 

@@ -21,7 +21,8 @@ namespace plane::utils
 
 	_NODISCARD inline bool isStandardProceduresEnabled(void) noexcept
 	{
-		return isEnvVarSetToOne("FULL_PSDK");
+		// return isEnvVarSetToOne("FULL_PSDK");
+		return true;
 	}
 
 	_NODISCARD inline bool isLogLevelDebug(void) noexcept

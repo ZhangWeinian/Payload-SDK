@@ -61,6 +61,7 @@ namespace plane::my_dji
 		if (plane::utils::isStandardProceduresEnabled())
 		{
 			Application application(argc, argv);
+
 			_STD		this_thread::sleep_for(_STD chrono::seconds(5));
 			LOG_INFO("DJI PSDK 核心服务初始化完毕。");
 

@@ -49,9 +49,10 @@ extern "C"
 	#define LINUX_UART_DEV2 ""
 
 	/**
-	 * Use for Eport 2.0, specify the VID and PID of the USB serial port closest to
-	 * the aircraft. FT232    0x0403:0x6001 CP2102   0x10C4:0xEA60 VCOM
-	 * 0x2CA3:0xF002
+	 * Use for Eport 2.0, specify the VID and PID of the USB serial port closest to the aircraft.
+	 * FT232    0x0403:0x6001
+	 * CP2102   0x10C4:0xEA60
+	 * VCOM     0x2CA3:0xF002
 	 */
 	#define USB_UART_CONNECTED_TO_UAV_VID (0x0403)
 	#define USB_UART_CONNECTED_TO_UAV_PID (0x6001)
@@ -71,5 +72,4 @@ extern "C"
 	#endif
 
 #endif // HAL_UART_H
-/************************ (C) COPYRIGHT DJI Innovations *******END OF
- * FILE******/
+/************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/
