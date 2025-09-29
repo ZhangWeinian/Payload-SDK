@@ -71,19 +71,19 @@ T_DjiReturnCode DjiTest_WaypointV3RunSample(void)
 		return returnCode;
 	}
 
-	returnCode = DjiWaypointV3_RegMissionStateCallback(DjiTest_WaypointV3MissionStateCallback);
-	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-	{
-		USER_LOG_ERROR("注册 Waypoint v3 任务状态回调失败。");
-		goto out;
-	}
+	// returnCode = DjiWaypointV3_RegMissionStateCallback(DjiTest_WaypointV3MissionStateCallback);
+	// if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+	// {
+	// 	USER_LOG_ERROR("注册 Waypoint v3 任务状态回调失败。");
+	// 	goto out;
+	// }
 
-	returnCode = DjiWaypointV3_RegActionStateCallback(DjiTest_WaypointV3ActionStateCallback);
-	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-	{
-		USER_LOG_ERROR("注册 Waypoint v3 动作状态回调失败。");
-		goto out;
-	}
+	// returnCode = DjiWaypointV3_RegActionStateCallback(DjiTest_WaypointV3ActionStateCallback);
+	// if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+	// {
+	// 	USER_LOG_ERROR("注册 Waypoint v3 动作状态回调失败。");
+	// 	goto out;
+	// }
 
 	returnCode = DjiUserUtil_GetCurrentFileDirPath(__FILE__, DJI_TEST_WAYPOINT_V3_KMZ_FILE_PATH_LEN_MAX, curFileDirPath);
 	if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)

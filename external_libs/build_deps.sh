@@ -84,7 +84,6 @@ build_cmake_project() {
 	printf "\n"
 }
 
-
 build_autotools_project() {
 	NAME="$1"
 	SRC_DIR="$2"
@@ -102,13 +101,14 @@ build_autotools_project() {
 	printf "%s\n" "${COLOR_BLUE}--- [ 构建: ${NAME} ] ---${COLOR_NC}"
 	cd "$SRC_DIR"
 
+	CONFIG_CACHE_FILE=".prefix_cache"
+
 	if [ "$CLEAN_BUILD" = "1" ]; then
 		echo ">>> 执行 clean 构建，清理旧文件..."
 		if [ -f Makefile ] && command -v make >/dev/null 2>&1; then
 			make distclean >/dev/null 2>&1 || true
 		fi
-		rm -f Makefile config.status config.log libtool
-		rm -rf autom4te.cache
+		rm -rf Makefile config.status config.log libtool autom4te.cache "$CONFIG_CACHE_FILE"
 	fi
 
 	if [ ! -f configure ]; then
@@ -121,16 +121,18 @@ build_autotools_project() {
 	fi
 
 	NEED_RECONFIGURE=0
-	if [ "$CLEAN_BUILD" = "0" ] && [ -f config.status ]; then
-		CURRENT_PREFIX=$(sed -E -n "s/^.*--prefix='([^']+)'.*/\1/p" config.status 2>/dev/null | head -n1)
-		if [ -z "$CURRENT_PREFIX" ]; then
-			CURRENT_PREFIX=$(sed -E -n "s/^.*--prefix=([^ ]+).*/\1/p" config.status 2>/dev/null | head -n1)
-		fi
-		if [ "$CURRENT_PREFIX" != "$INSTALL_DIR" ]; then
-			echo "检测到 configure 使用了错误的 --prefix (${CURRENT_PREFIX})，将重新配置"
+	if [ -f "$CONFIG_CACHE_FILE" ]; then
+		CACHED_PREFIX=$(cat "$CONFIG_CACHE_FILE")
+		if [ "$CACHED_PREFIX" != "$INSTALL_DIR" ]; then
+			echo "检测到安装目录已变更 (旧: ${CACHED_PREFIX} -> 新: ${INSTALL_DIR})，将重新配置"
 			NEED_RECONFIGURE=1
 		fi
-	elif [ ! -f Makefile ]; then
+	else
+		echo "未找到配置缓存，将执行配置"
+		NEED_RECONFIGURE=1
+	fi
+
+	if [ ! -f "Makefile" ]; then
 		NEED_RECONFIGURE=1
 	fi
 
@@ -141,6 +143,7 @@ build_autotools_project() {
 			--disable-shared \
 			--enable-static \
 			--quiet \
+			&& echo "$INSTALL_DIR" > "$CONFIG_CACHE_FILE" \
 			|| { printf "%s\n" "${COLOR_RED}错误: configure 失败${COLOR_NC}" >&2; exit 1; }
 	else
 		echo "${NAME} 已正确配置，跳过 configure 步骤。"

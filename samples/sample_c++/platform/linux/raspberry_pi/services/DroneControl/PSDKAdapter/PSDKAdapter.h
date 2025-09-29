@@ -16,6 +16,7 @@
 
 #include <dji_fc_subscription.h>
 #include <dji_typedef.h>
+#include <dji_waypoint_v3.h>
 
 #include "protocol/DroneDataClass.h"
 #include "protocol/HeartbeatDataClass.h"
@@ -78,6 +79,9 @@ namespace plane::services
 		void		 quaternionToEulerAngle(const _DJI T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept;
 		void		 acquisitionLoop(void) noexcept;
 
-		// 移除了重复的 m_thread 和 m_run
+		void		 missionStateCallback(_DJI T_DjiWaypointV3MissionState missionState);
+		void		 actionStateCallback(_DJI T_DjiWaypointV3ActionState actionState);
+		static _DJI T_DjiReturnCode missionStateCallbackEntry(_DJI T_DjiWaypointV3MissionState missionState);
+		static _DJI T_DjiReturnCode actionStateCallbackEntry(_DJI T_DjiWaypointV3ActionState actionState);
 	};
 } // namespace plane::services

@@ -38,6 +38,8 @@ namespace plane::services
 			_STD condition_variable							dequeCv_ {};
 			_STD thread										senderThread_ {};
 			_STD atomic<bool> runSender_ { false };
+			bool			  isDroppingMessages_ { false };
+			_STD_CHRONO steady_clock::time_point lastDropLogTime_ {};
 
 			explicit Impl(void) noexcept		  = default;
 			~Impl(void) noexcept				  = default;
@@ -74,6 +76,7 @@ namespace plane::services
 		_STD atomic<bool>					connected_ { false };
 		_STD mutex							mutex_ {};
 		constexpr static inline _STD size_t MAX_DEQUE_SIZE { 30 };
+		constexpr static inline auto		LOG_THROTTLE_INTERVAL { _STD_CHRONO seconds(5) };
 
 		explicit MQTTService(void) noexcept = default;
 		~MQTTService(void) noexcept;

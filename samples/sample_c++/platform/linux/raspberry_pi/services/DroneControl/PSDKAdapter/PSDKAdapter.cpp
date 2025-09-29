@@ -8,6 +8,7 @@
 
 #include <dji_aircraft_info.h>
 #include <dji_camera_manager.h>
+#include <dji_error.h>
 #include <dji_flight_controller.h>
 #include <dji_gimbal.h>
 #include <dji_logger.h>
@@ -141,6 +142,68 @@ namespace plane::services
 				}
 			}
 		}
+
+		inline _STD string_view djiMissionStateToString(_DJI E_DjiWaypointV3MissionState state)
+		{
+			switch (state)
+			{
+				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_IDLE:
+				{
+					return "空闲"sv;
+				}
+				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_PREPARE:
+				{
+					return "准备中"sv;
+				}
+				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_TRANS_MISSION:
+				{
+					return "传输中"sv;
+				}
+				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_MISSION:
+				{
+					return "任务执行中"sv;
+				}
+				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_BREAK:
+				{
+					return "任务中断"sv;
+				}
+				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_RESUME:
+				{
+					return "任务恢复中"sv;
+				}
+				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_RETURN_FIRSTPOINT:
+				{
+					return "返回航线起点"sv;
+				}
+				default:
+				{
+					return "未知状态"sv;
+				}
+			}
+		}
+
+		inline _STD string_view djiActionStateToString(_DJI E_DjiWaypointV3ActionState state)
+		{
+			switch (state)
+			{
+				case _DJI DJI_WAYPOINT_V3_ACTION_STATE_IDLE:
+				{
+					return "空闲"sv;
+				}
+				case _DJI DJI_WAYPOINT_V3_ACTION_STATE_RUNNING:
+				{
+					return "正在执行"sv;
+				}
+				case _DJI DJI_WAYPOINT_V3_ACTION_STATE_FINISHED:
+				{
+					return "执行完成"sv;
+				}
+				default:
+				{
+					return "未知状态"sv;
+				}
+			}
+		}
 	} // namespace
 
 	PSDKAdapter& PSDKAdapter::getInstance(void) noexcept
@@ -232,6 +295,18 @@ namespace plane::services
 		m_sub_status.velocity			 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
 		m_sub_status.batteryInfo		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
 		m_sub_status.gimbalAngles		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
+
+		if (_DJI T_DjiReturnCode returnCode { _DJI DjiWaypointV3_RegMissionStateCallback(missionStateCallbackEntry) };
+			returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_ERROR("注册 Waypoint V3 任务状态回调失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+		}
+
+		if (_DJI T_DjiReturnCode returnCode { DjiWaypointV3_RegActionStateCallback(actionStateCallbackEntry) };
+			returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_ERROR("注册 Waypoint V3 动作状态回调失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+		}
 
 		LOG_INFO("PSDK 适配器准备就绪。");
 		return true;
@@ -382,6 +457,35 @@ namespace plane::services
 				_STD this_thread::sleep_for(ACQUISITION_INTERVAL - elapsedTime);
 			}
 		}
+	}
+
+	void PSDKAdapter::missionStateCallback(_DJI T_DjiWaypointV3MissionState missionState)
+	{
+		LOG_INFO("[航线任务状态] 状态: {}, 当前航点: {}, 航线ID: {}",
+				 djiMissionStateToString(missionState.state),
+				 missionState.currentWaypointIndex,
+				 missionState.wayLineId);
+	}
+
+	void PSDKAdapter::actionStateCallback(_DJI T_DjiWaypointV3ActionState actionState)
+	{
+		LOG_INFO("[航线动作状态] 状态: {}, 航点: {}, 动作组: {}, 动作ID: {}",
+				 djiActionStateToString(actionState.state),
+				 actionState.currentWaypointIndex,
+				 actionState.actionGroupId,
+				 actionState.actionId);
+	}
+
+	_DJI T_DjiReturnCode PSDKAdapter::missionStateCallbackEntry(_DJI T_DjiWaypointV3MissionState missionState)
+	{
+		PSDKAdapter::getInstance().missionStateCallback(missionState);
+		return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+	}
+
+	_DJI T_DjiReturnCode PSDKAdapter::actionStateCallbackEntry(_DJI T_DjiWaypointV3ActionState actionState)
+	{
+		PSDKAdapter::getInstance().actionStateCallback(actionState);
+		return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 	}
 
 	_STD_CHRONO steady_clock::time_point PSDKAdapter::getLastUpdateTime(void) const noexcept

@@ -112,7 +112,21 @@ namespace plane::services
 			if (impl_->messageDeque_.size() >= MAX_DEQUE_SIZE)
 			{
 				impl_->messageDeque_.pop_front();
-				LOG_WARN("MQTT 消息队列已满, 丢弃最旧的一条消息。");
+				if (const auto now { _STD_CHRONO steady_clock::now() };
+					!impl_->isDroppingMessages_ || (now - impl_->lastDropLogTime_ > LOG_THROTTLE_INTERVAL))
+				{
+					LOG_WARN("MQTT 消息队列已满, 正在丢弃最旧的消息以保证数据新鲜度。此警告将在 {} 秒内抑制。", LOG_THROTTLE_INTERVAL.count());
+					impl_->isDroppingMessages_ = true;
+					impl_->lastDropLogTime_	   = now;
+				}
+				else
+				{
+					LOG_DEBUG("MQTT 消息队列已满, 丢弃最旧消息 (日志已抑制)。");
+				}
+			}
+			else
+			{
+				impl_->isDroppingMessages_ = false;
 			}
 
 			impl_->messageDeque_.emplace_back(topic, payload);

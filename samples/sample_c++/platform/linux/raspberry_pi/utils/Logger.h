@@ -22,6 +22,9 @@
 #define LOG_DEBUG(fmt, ...)                                                                                                                    \
 	plane::utils::Logger::getInstance().log(_SPDLOG source_loc { __FILE__, __LINE__, __FUNCTION__ }, _SPDLOG level::debug, fmt, ##__VA_ARGS__)
 
+#define LOG_TRACE(fmt, ...)                                                                                                                    \
+	plane::utils::Logger::getInstance().log(_SPDLOG source_loc { __FILE__, __LINE__, __FUNCTION__ }, _SPDLOG level::trace, fmt, ##__VA_ARGS__)
+
 #define LOG_CRITICAL_STDERR(msg) _STD cerr << "CRITICAL ERROR: " << msg << _STD endl
 
 namespace plane::utils
@@ -46,13 +49,11 @@ namespace plane::utils
 			{
 				auto console_sink { _STD make_shared<_SPDLOG sinks::stdout_color_sink_mt>() };
 				console_sink->set_level(console_level);
-				console_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] [%s:%#] %v");
-
+				console_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] [%g:%#] %v");
 				logger_ = _STD make_shared<_SPDLOG logger>("psdk_logger", console_sink);
 				logger_->set_level(_SPDLOG level::trace);
+				logger_->flush_on(_SPDLOG level::trace);
 				_SPDLOG set_default_logger(logger_);
-				_SPDLOG set_level(_SPDLOG level::trace);
-				_SPDLOG flush_on(_SPDLOG level::info);
 			}
 			catch (const _SPDLOG spdlog_ex& ex)
 			{
