@@ -49,7 +49,7 @@ namespace plane::utils
 			{
 				auto console_sink { _STD make_shared<_SPDLOG sinks::stdout_color_sink_mt>() };
 				console_sink->set_level(console_level);
-				console_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] [%g:%#] %v");
+				console_sink->set_pattern("[%m-%d %H:%M:%S.%e] [%^%l%$] [th. %t] [%s:%#] %v");
 				logger_ = _STD make_shared<_SPDLOG logger>("psdk_logger", console_sink);
 				logger_->set_level(_SPDLOG level::trace);
 				logger_->flush_on(_SPDLOG level::trace);

@@ -13,52 +13,93 @@ namespace plane::services
 		return instance;
 	}
 
-	void FlyManager::flyToPoint(const protocol::Waypoint& waypoint) const noexcept
+	void FlyManager::interruptCurrentTask(void)
 	{
-		LOG_INFO("执行【飞向单点】: Lon={}, Lat={}, Alt={}", waypoint.JD, waypoint.WD, waypoint.GD);
+		if (m_taskState == FlyTaskState::RUNNING)
+		{
+			LOG_INFO("检测到有任务正在运行，正在发送中断指令...");
+			plane::services::PSDKAdapter::getInstance().hover();
+			LOG_INFO("中断指令已提交到后台队列。");
+		}
+	}
+
+	template<typename Func, typename... Args>
+	void FlyManager::executeCommand(Func&& command, Args&&... args)
+	{
+		_STD lock_guard<_STD mutex> lock(m_taskMutex);
+
+		// 发送中断指令（如果需要）
+		// interruptCurrentTask();
+
+		LOG_INFO("正在向 PSDKAdapter 提交新任务...");
+		auto commandFuture = _STD invoke(command, plane::services::PSDKAdapter::getInstance(), _STD forward<Args>(args)...);
+		m_taskState		   = FlyTaskState::RUNNING;
+
+		_STD thread(
+			[this, f = _STD move(commandFuture)]() mutable
+			{
+				f.wait();
+
+				FlyTaskState expected { FlyTaskState::RUNNING };
+				if (m_taskState.compare_exchange_strong(expected, FlyTaskState::IDLE))
+				{
+					LOG_INFO("FlyManager: 一个后台 PSDK 任务已执行完毕，状态已更新为 IDLE。");
+				}
+				else
+				{
+					LOG_INFO("FlyManager: 一个后台 PSDK 任务已执行完毕，但状态已被新任务覆盖，无需更新。");
+				}
+			})
+			.detach();
+	}
+
+	void FlyManager::flyToPoint(const plane::protocol::Waypoint& waypoint) noexcept
+	{
+		LOG_INFO("执行【单点飞行】: Lon={}, Lat={}, Alt={}", waypoint.JD, waypoint.WD, waypoint.GD);
 		// TODO: 调用 PSDK 的单点飞行 API
 	}
 
-	void FlyManager::waypointFly(_STD string_view kmzFilePath) const noexcept
+	void FlyManager::waypointFly(_STD string_view kmzFilePath) noexcept
 	{
-		LOG_INFO("正在向 PSDKAdapter 提交 KMZ 航线任务...");
-		PSDKAdapter::getInstance().waypointV3(_STD string(kmzFilePath));
+		LOG_INFO("执行【航线】");
+		executeCommand(&plane::services::PSDKAdapter::waypointV3, _STD string(kmzFilePath));
 	}
 
-	void FlyManager::takeoff(const protocol::TakeoffPayload& takeoffParams) const
+	void FlyManager::takeoff(const plane::protocol::TakeoffPayload& takeoffParams)
 	{
-		LOG_INFO("正在向 PSDKAdapter 提交起飞指令...");
-		PSDKAdapter::getInstance().takeoff(takeoffParams);
+		LOG_INFO("执行【起飞】");
+		executeCommand(&plane::services::PSDKAdapter::takeoff, takeoffParams);
 	}
 
-	void FlyManager::goHome(void) const noexcept
+	void FlyManager::goHome(void) noexcept
 	{
-		LOG_INFO("正在向 PSDKAdapter 提交返航指令...");
-		PSDKAdapter::getInstance().goHome();
+		LOG_INFO("执行【返航】");
+		executeCommand(&plane::services::PSDKAdapter::goHome);
 	}
 
-	void FlyManager::hover(void) const noexcept
+	void FlyManager::hover(void) noexcept
 	{
-		LOG_INFO("正在向 PSDKAdapter 提交悬停指令...");
-		PSDKAdapter::getInstance().hover();
+		LOG_INFO("执行【悬停】");
+		_STD lock_guard<_STD mutex> lock(m_taskMutex);
+		interruptCurrentTask();
 	}
 
-	void FlyManager::land(void) const noexcept
+	void FlyManager::land(void) noexcept
 	{
-		LOG_INFO("正在向 PSDKAdapter 提交降落指令...");
-		PSDKAdapter::getInstance().land();
+		LOG_INFO("执行【降落】");
+		executeCommand(&plane::services::PSDKAdapter::land);
 	}
 
-	void FlyManager::setControlStrategy(int strategyCode) const noexcept
+	void FlyManager::setControlStrategy(int strategyCode) noexcept
 	{
 		LOG_INFO("执行【设置云台控制策略】, 策略代码: {}", strategyCode);
-		PSDKAdapter::getInstance().setControlStrategy(strategyCode);
+		executeCommand(&plane::services::PSDKAdapter::setControlStrategy, strategyCode);
 	}
 
-	void FlyManager::flyCircleAroundPoint(const protocol::CircleFlyPayload& circleParams) const noexcept
+	void FlyManager::flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams) noexcept
 	{
 		LOG_INFO("执行【环绕飞行】");
-		PSDKAdapter::getInstance().flyCircleAroundPoint(circleParams);
+		executeCommand(&plane::services::PSDKAdapter::flyCircleAroundPoint, circleParams);
 	}
 
 	void FlyManager::rotateGimbal(double pitch, double yaw) const noexcept
@@ -73,7 +114,7 @@ namespace plane::services
 		// TODO: 调用 PSDK 的云台速度控制 API
 	}
 
-	void FlyManager::setCameraZoomFactor(const protocol::ZoomControlPayload& zoomParams) const noexcept
+	void FlyManager::setCameraZoomFactor(const plane::protocol::ZoomControlPayload& zoomParams) const noexcept
 	{
 		LOG_INFO("执行【相机变焦】: Factor={}", zoomParams.BJB.value_or(1.0));
 		// TODO: 调用 PSDK 的相机变焦 API
@@ -103,7 +144,7 @@ namespace plane::services
 		// TODO: 调用 PSDK 的关闭虚拟摇杆 API
 	}
 
-	void FlyManager::sendNedVelocityCommand(const protocol::NedVelocityPayload& velocityParams) const noexcept
+	void FlyManager::sendNedVelocityCommand(const plane::protocol::NedVelocityPayload& velocityParams) const noexcept
 	{
 		LOG_DEBUG("发送【NED 速度指令】: N:{:.2f}, E:{:.2f}, D:{:.2f}, Yaw:{:.2f}",
 				  velocityParams.SDN,

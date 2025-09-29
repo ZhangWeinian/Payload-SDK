@@ -83,5 +83,9 @@ namespace plane::services
 		void		 actionStateCallback(_DJI T_DjiWaypointV3ActionState actionState);
 		static _DJI T_DjiReturnCode missionStateCallbackEntry(_DJI T_DjiWaypointV3MissionState missionState);
 		static _DJI T_DjiReturnCode actionStateCallbackEntry(_DJI T_DjiWaypointV3ActionState actionState);
+
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> stopWaypointMission(void);
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> pauseWaypointMission(void);
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> resumeWaypointMission(void);
 	};
 } // namespace plane::services

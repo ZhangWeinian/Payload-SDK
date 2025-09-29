@@ -33,6 +33,7 @@
 #include "widget/test_widget.h"
 #include "widget/test_widget_speaker.h"
 
+#include "PSDKAdapter.h"
 #include "utils/DjiErrorUtils.h"
 #include "utils/EnvironmentCheck.h"
 #include "utils/Logger.h"
@@ -488,6 +489,75 @@ namespace plane::services
 		return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 	}
 
+	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::stopWaypointMission(void)
+	{
+		return m_commandPool->enqueue(
+			[this]() -> _DJI T_DjiReturnCode
+			{
+				_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+				LOG_INFO("线程池任务：发送停止航线指令...");
+				return _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_STOP);
+			});
+	}
+
+	_STD future<T_DjiReturnCode> PSDKAdapter::pauseWaypointMission(void)
+	{
+		return m_commandPool->enqueue(
+			[this]() -> _DJI T_DjiReturnCode
+			{
+				try
+				{
+					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					LOG_INFO("线程池任务：发送暂停航线指令...");
+					_DJI T_DjiReturnCode returnCode { _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_PAUSE) };
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("发送暂停航线指令失败, 错误: {} (0x{:08X})", plane::utils::djiReturnCodeToString(returnCode), returnCode);
+					}
+					return returnCode;
+				}
+				catch (const _STD exception& e)
+				{
+					LOG_ERROR("PSDKAdapter::pauseWaypointMission 任务捕获到标准异常: {}", e.what());
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+				catch (...)
+				{
+					LOG_ERROR("PSDKAdapter::pauseWaypointMission 任务捕获到未知异常！");
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+			});
+	}
+
+	_STD future<T_DjiReturnCode> PSDKAdapter::resumeWaypointMission(void)
+	{
+		return m_commandPool->enqueue(
+			[this]() -> _DJI T_DjiReturnCode
+			{
+				try
+				{
+					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					LOG_INFO("线程池任务：发送恢复航线指令...");
+					_DJI T_DjiReturnCode returnCode { _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_RESUME) };
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("发送恢复航线指令失败, 错误: {} (0x{:08X})", plane::utils::djiReturnCodeToString(returnCode), returnCode);
+					}
+					return returnCode;
+				}
+				catch (const _STD exception& e)
+				{
+					LOG_ERROR("PSDKAdapter::resumeWaypointMission 任务捕获到标准异常: {}", e.what());
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+				catch (...)
+				{
+					LOG_ERROR("PSDKAdapter::resumeWaypointMission 任务捕获到未知异常！");
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+			});
+	}
+
 	_STD_CHRONO steady_clock::time_point PSDKAdapter::getLastUpdateTime(void) const noexcept
 	{
 		_STD lock_guard<_STD mutex> lock(m_healthMutex);
@@ -700,7 +770,7 @@ namespace plane::services
 					}
 
 					LOG_INFO("线程池任务：开始执行航线任务, 文件: {}", path);
-					T_DjiReturnCode returnCode { DjiTest_WaypointV3RunSampleWithKmzFilePath(path.c_str()) };
+					T_DjiReturnCode returnCode { _DJI DjiTest_WaypointV3RunSampleWithKmzFilePath(path.c_str()) };
 					if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 					{
 						LOG_ERROR("航线任务 '{}' 执行失败或被中断，最终返回错误: {} (0x{:08X})",
