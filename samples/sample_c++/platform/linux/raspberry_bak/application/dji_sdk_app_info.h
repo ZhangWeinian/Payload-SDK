@@ -1,8 +1,8 @@
 /**
  ********************************************************************
- * @file    hal_i2c.h
- * @brief   This is the header file for "hal_i2c.c", defining the structure and
- * (exported) function prototypes.
+ * @file    dji_sdk_app_info.h
+ * @brief   This is the header file for defining the structure and (exported)
+ * function prototypes.
  *
  * @copyright (c) 2018 DJI. All rights reserved.
  *
@@ -24,11 +24,10 @@
  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef HAL_I2C_H
-	#define HAL_I2C_H
+#ifndef DJI_SDK_APP_INFO_H
+	#define DJI_SDK_APP_INFO_H
 
-	/* Includes ------------------------------------------------------------------*/
-	#include "dji_platform.h"
+/* Includes ------------------------------------------------------------------*/
 
 	#ifdef __cplusplus
 extern "C"
@@ -36,19 +35,28 @@ extern "C"
 	#endif
 
 	/* Exported constants --------------------------------------------------------*/
-	#define LINUX_I2C_DEV1 "/dev/i2c-1"
+	// ATTENTION: User must goto https://developer.dji.com/user/apps/#all to create
+	// your own dji sdk application, get dji sdk application information then fill
+	// in the application information here.
+	#define USER_APP_NAME "test"
+	#define USER_APP_ID	  "168809"
+	#define USER_APP_KEY  "fa42c26a9253e8d492b12e0baf83fdb"
+	#define USER_APP_LICENSE                                                                                                            \
+		"yEduca4jloV78YzpEXaJ2W9Ys6VWMpRkTX3nOO4OyWdZBnDV59xyWm5kkvg+"                                                                  \
+		"zyBibGjIc2PuAoRxAzOXIMWXahiG0cfR17naHK1MeQgmsJKDQPi7tbOehUges3m4ib71tZ3sO4TFEZGRsz8MJWrPRTqsnNgzqnkhh7lAq+"                    \
+		"pJVn8u1UbH5GOCj2qrzzR9pW2UJiboIcZPSA5N0ygDHg+A4MdFWuRBHxIOIKPOR0MdHf1x2P1VVoOiJCvwcOm98ztlOzaCrWXPdutyPJynGyHQrBNA3ZdpdnmCt7+" \
+		"hCo17lhXxUa+3jFxWDSA9aaf3KM9ZlBdC0daaGzT3QAs3Rkj42w=="
+	#define USER_DEVELOPER_ACCOUNT "accepted"
+	#define USER_BAUD_RATE		   "460800"
 
 	/* Exported types ------------------------------------------------------------*/
 
 	/* Exported functions --------------------------------------------------------*/
-	T_DjiReturnCode HalI2c_Init(T_DjiHalI2cConfig i2cConfig, T_DjiI2cHandle* i2cHandle);
-	T_DjiReturnCode HalI2c_DeInit(T_DjiI2cHandle i2cHandle);
-	T_DjiReturnCode HalI2c_WriteData(T_DjiI2cHandle i2cHandle, uint16_t devAddress, const uint8_t* buf, uint32_t len, uint32_t* realLen);
-	T_DjiReturnCode HalI2c_ReadData(T_DjiI2cHandle i2cHandle, uint16_t devAddress, uint8_t* buf, uint32_t len, uint32_t* realLen);
 
 	#ifdef __cplusplus
 }
 	#endif
 
-#endif // HAL_I2C_H
-/************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/
+#endif // DJI_SDK_APP_INFO_H
+/************************ (C) COPYRIGHT DJI Innovations *******END OF
+ * FILE******/

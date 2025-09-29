@@ -1,7 +1,7 @@
 /**
  ********************************************************************
- * @file    dji_application.hpp
- * @brief   This is the header file for "dji_application.cpp", defining the structure and
+ * @file    hal_uart.h
+ * @brief   This is the header file for "hal_uart.c", defining the structure and
  * (exported) function prototypes.
  *
  * @copyright (c) 2021 DJI. All rights reserved.
@@ -24,14 +24,19 @@
  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef APPLICATION_H
-	#define APPLICATION_H
+#ifndef HAL_UART_H
+	#define HAL_UART_H
 
 	/* Includes ------------------------------------------------------------------*/
-	#include "dji_core.h"
-	#include "dji_typedef.h"
-	#include <fstream>
-	#include <iostream>
+	#include "stdint.h"
+	#include "stdlib.h"
+	#include <fcntl.h>
+	#include <stdio.h>
+	#include <string.h>
+	#include <termios.h>
+	#include <unistd.h>
+
+	#include "dji_platform.h"
 
 	#ifdef __cplusplus
 extern "C"
@@ -39,30 +44,32 @@ extern "C"
 	#endif
 
 	/* Exported constants --------------------------------------------------------*/
+	// User can config dev based on there environmental conditions
+	#define LINUX_UART_DEV1 "/dev/ttyUSB0"
+	#define LINUX_UART_DEV2 ""
+
+	/**
+	 * Use for Eport 2.0, specify the VID and PID of the USB serial port closest to
+	 * the aircraft. FT232    0x0403:0x6001 CP2102   0x10C4:0xEA60 VCOM
+	 * 0x2CA3:0xF002
+	 */
+	#define USB_UART_CONNECTED_TO_UAV_VID (0x0403)
+	#define USB_UART_CONNECTED_TO_UAV_PID (0x6001)
 
 	/* Exported types ------------------------------------------------------------*/
-	using namespace std;
-
-	class Application
-	{
-	public:
-		Application(int argc, char** argv);
-		~Application();
-
-	private:
-		static void			   DjiUser_SetupEnvironment();
-		static void			   DjiUser_ApplicationStart();
-		static T_DjiReturnCode DjiUser_PrintConsole(const uint8_t* data, uint16_t dataLen);
-		static T_DjiReturnCode DjiUser_LocalWrite(const uint8_t* data, uint16_t dataLen);
-		static T_DjiReturnCode DjiUser_FillInUserInfo(T_DjiUserInfo* userInfo);
-		static T_DjiReturnCode DjiUser_LocalWriteFsInit(const char* path);
-	};
 
 	/* Exported functions --------------------------------------------------------*/
+	T_DjiReturnCode HalUart_Init(E_DjiHalUartNum uartNum, uint32_t baudRate, T_DjiUartHandle* uartHandle);
+	T_DjiReturnCode HalUart_DeInit(T_DjiUartHandle uartHandle);
+	T_DjiReturnCode HalUart_WriteData(T_DjiUartHandle uartHandle, const uint8_t* buf, uint32_t len, uint32_t* realLen);
+	T_DjiReturnCode HalUart_ReadData(T_DjiUartHandle uartHandle, uint8_t* buf, uint32_t len, uint32_t* realLen);
+	T_DjiReturnCode HalUart_GetStatus(E_DjiHalUartNum uartNum, T_DjiUartStatus* status);
+	T_DjiReturnCode HalUart_GetDeviceInfo(T_DjiHalUartDeviceInfo* deviceInfo);
 
 	#ifdef __cplusplus
 }
 	#endif
 
-#endif // APPLICATION_H
-/************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/
+#endif // HAL_UART_H
+/************************ (C) COPYRIGHT DJI Innovations *******END OF
+ * FILE******/

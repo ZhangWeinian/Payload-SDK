@@ -61,7 +61,7 @@ set (
 
 if(USE_SYSTEM_ARCH MATCHES LINUX)
 	add_compile_definitions (SYSTEM_ARCH_LINUX)
-	add_subdirectory (samples/sample_c++/platform/linux/manifold2)
+	add_subdirectory (samples/sample_c++/platform/linux/raspberry_pi)
 elseif(USE_SYSTEM_ARCH MATCHES RTOS)
 	add_compile_definitions (SYSTEM_ARCH_RTOS)
 else()

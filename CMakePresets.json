@@ -3,8 +3,8 @@
     "configurePresets": [
         {
             "name": "default",
-            "displayName": "Default Config",
-            "description": "Default build settings",
+            "displayName": "默认配置",
+            "description": "使用编译器的默认定义和包含路径。",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
@@ -13,8 +13,8 @@
         },
         {
             "name": "release",
-            "displayName": "Release Build",
-            "description": "Optimized release build",
+            "displayName": "构建 Release",
+            "description": "使用 Release 级别的构建配置。",
             "inherits": "default",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
