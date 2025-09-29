@@ -247,6 +247,9 @@ install_header_only_library "range-v3" \
 	"${BASE_DIR}/range-v3" \
 	"include"
 
+install_header_only_library "ThreadPool" \
+    "${BASE_DIR}/ThreadPool" \
+
 printf "%s\n" "${COLOR_GREEN}============================================================"
 printf "                  所有依赖库已成功构建并安装!\n"
 printf "============================================================${COLOR_NC}\n"

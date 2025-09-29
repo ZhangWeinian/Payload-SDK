@@ -1,6 +1,14 @@
+// manifold2/application/dji_demo.h
+
 #pragma once
 
 #include "application.hpp"
+
+#include <atomic>
+#include <chrono>
+#include <csignal>
+#include <iostream>
+#include <thread>
 
 #include "camera_manager/test_camera_manager_entry.h"
 #include "data_transmission/test_data_transmission.h"
@@ -22,12 +30,6 @@
 #include <perception/test_radar_entry.hpp>
 #include <positioning/test_positioning.h>
 #include <power_management/test_power_management.h>
-
-#include <atomic>
-#include <chrono>
-#include <csignal>
-#include <iostream>
-#include <thread>
 
 namespace plane::dji_demo
 {

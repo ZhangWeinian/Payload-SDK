@@ -125,6 +125,7 @@ target_include_directories (${MAIN_TARGET_NAME} PRIVATE
 	"${EXTERNAL_LIBS_DIR}/install/include/CLI11"
 	"${EXTERNAL_LIBS_DIR}/install/include/libusb-1.0"
 	"${EXTERNAL_LIBS_DIR}/install/include/range-v3"
+	"${EXTERNAL_LIBS_DIR}/install/include/ThreadPool"
 
 	${OPENSSL_INCLUDE_DIR}
 )
