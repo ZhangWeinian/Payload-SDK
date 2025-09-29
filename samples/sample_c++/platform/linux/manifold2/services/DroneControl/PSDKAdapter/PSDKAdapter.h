@@ -5,10 +5,14 @@
 #include <string_view>
 #include <atomic>
 #include <chrono>
+#include <future>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
+
+#include <ThreadPool.h>
 
 #include <dji_fc_subscription.h>
 #include <dji_typedef.h>
@@ -26,7 +30,7 @@ namespace plane::services
 		static PSDKAdapter& getInstance(void) noexcept;
 
 		_NODISCARD bool		start(void) noexcept;
-		void				stop(void) noexcept;
+		void				stop(_STD_CHRONO milliseconds timeout = _STD_CHRONO seconds(5)) noexcept;
 
 		_NODISCARD bool		setup(void) noexcept;
 		void				cleanup(void) noexcept;
@@ -34,13 +38,13 @@ namespace plane::services
 		_NODISCARD plane::protocol::StatusPayload getLatestStatusPayload(void) const noexcept;
 		_NODISCARD _STD_CHRONO steady_clock::time_point getLastUpdateTime(void) const noexcept;
 
-		_NODISCARD _DJI T_DjiReturnCode takeoff(_MAYBE_UNUSED const plane::protocol::TakeoffPayload& takeoffParams) const noexcept;
-		_NODISCARD _DJI T_DjiReturnCode goHome(void) const noexcept;
-		_NODISCARD _DJI T_DjiReturnCode hover(void) const noexcept;
-		_NODISCARD _DJI T_DjiReturnCode land(void) const noexcept;
-		_NODISCARD _DJI T_DjiReturnCode waypointV3MissionStart(_STD string_view kmzFilePath) const noexcept;
-		_NODISCARD _DJI T_DjiReturnCode setControlStrategy(int strategyCode) const noexcept;
-		_NODISCARD _DJI T_DjiReturnCode flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams) const noexcept;
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> takeoff(_MAYBE_UNUSED const plane::protocol::TakeoffPayload& takeoffParams);
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> goHome(void);
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> hover(void);
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> land(void);
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> waypointV3(_STD string kmzFilePath);
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> setControlStrategy(int strategyCode);
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams);
 
 	private:
 		struct SubscriptionStatus
@@ -54,9 +58,12 @@ namespace plane::services
 			bool gimbalAngles { false };
 		};
 
-		SubscriptionStatus m_sub_status {};
-		_STD thread		   m_thread {};
-		_STD atomic<bool>			   m_run { false };
+		_STD unique_ptr<ThreadPool> m_commandPool;
+		_STD mutex					m_psdkCommandMutex;
+		_STD thread					m_acquisitionThread {};
+		_STD atomic<bool> m_runAcquisition { false };
+		_STD atomic<bool>			   m_isStopping { false };
+		SubscriptionStatus			   m_sub_status {};
 		mutable _STD mutex			   m_payloadMutex {};
 		plane::protocol::StatusPayload m_latestPayload {};
 		mutable _STD mutex			   m_healthMutex {};
@@ -70,5 +77,7 @@ namespace plane::services
 
 		void		 quaternionToEulerAngle(const _DJI T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept;
 		void		 acquisitionLoop(void) noexcept;
+
+		// 移除了重复的 m_thread 和 m_run
 	};
 } // namespace plane::services

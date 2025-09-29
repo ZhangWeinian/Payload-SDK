@@ -18,7 +18,7 @@ namespace plane::services
 		static FlyManager& getInstance(void) noexcept;
 
 		void			   flyToPoint(const protocol::Waypoint& waypoint) const noexcept;
-		void			   takeoff(const protocol::TakeoffPayload& takeoffParams) const noexcept;
+		void			   takeoff(const protocol::TakeoffPayload& takeoffParams) const;
 		void			   goHome(void) const noexcept;
 		void			   hover(void) const noexcept;
 		void			   land(void) const noexcept;

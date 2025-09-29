@@ -21,76 +21,44 @@ namespace plane::services
 
 	void FlyManager::waypointFly(_STD string_view kmzFilePath) const noexcept
 	{
-		if (T_DjiReturnCode rc { plane::services::PSDKAdapter::getInstance().waypointV3MissionStart(kmzFilePath) };
-			rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			LOG_INFO("KMZ 航线任务已成功启动。");
-		}
-		else
-		{
-			LOG_ERROR("启动 KMZ 航线任务失败！PSDK 返回错误码: 0x{:08X}", rc);
-		}
+		LOG_INFO("正在向 PSDKAdapter 提交 KMZ 航线任务...");
+		PSDKAdapter::getInstance().waypointV3(_STD string(kmzFilePath));
 	}
 
-	void FlyManager::takeoff(const protocol::TakeoffPayload& takeoffParams) const noexcept
+	void FlyManager::takeoff(const protocol::TakeoffPayload& takeoffParams) const
 	{
-		if (T_DjiReturnCode rc { plane::services::PSDKAdapter::getInstance().takeoff(takeoffParams) };
-			rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			LOG_INFO("起飞指令已成功发送至飞机。");
-		}
-		else
-		{
-			LOG_ERROR("起飞指令发送失败！");
-		}
+		LOG_INFO("正在向 PSDKAdapter 提交起飞指令...");
+		PSDKAdapter::getInstance().takeoff(takeoffParams);
 	}
 
 	void FlyManager::goHome(void) const noexcept
 	{
-		if (T_DjiReturnCode rc { plane::services::PSDKAdapter::getInstance().goHome() }; rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			LOG_INFO("返航指令已成功发送至飞机。");
-		}
-		else
-		{
-			LOG_ERROR("返航指令发送失败！");
-		}
+		LOG_INFO("正在向 PSDKAdapter 提交返航指令...");
+		PSDKAdapter::getInstance().goHome();
 	}
 
 	void FlyManager::hover(void) const noexcept
 	{
-		if (T_DjiReturnCode rc { plane::services::PSDKAdapter::getInstance().hover() }; rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			LOG_INFO("悬停指令已成功发送至飞机。");
-		}
-		else
-		{
-			LOG_ERROR("悬停指令发送失败！");
-		}
+		LOG_INFO("正在向 PSDKAdapter 提交悬停指令...");
+		PSDKAdapter::getInstance().hover();
 	}
 
 	void FlyManager::land(void) const noexcept
 	{
-		if (T_DjiReturnCode rc { plane::services::PSDKAdapter::getInstance().land() }; rc == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			LOG_INFO("降落指令已成功发送至飞机。");
-		}
-		else
-		{
-			LOG_ERROR("降落指令发送失败！");
-		}
+		LOG_INFO("正在向 PSDKAdapter 提交降落指令...");
+		PSDKAdapter::getInstance().land();
 	}
 
 	void FlyManager::setControlStrategy(int strategyCode) const noexcept
 	{
 		LOG_INFO("执行【设置云台控制策略】, 策略代码: {}", strategyCode);
-		// TODO: 调用 PSDK 的 setControlStrategy API
+		PSDKAdapter::getInstance().setControlStrategy(strategyCode);
 	}
 
 	void FlyManager::flyCircleAroundPoint(const protocol::CircleFlyPayload& circleParams) const noexcept
 	{
 		LOG_INFO("执行【环绕飞行】");
-		// TODO: 调用 PSDK 的热点环绕或兴趣点环绕 API
+		PSDKAdapter::getInstance().flyCircleAroundPoint(circleParams);
 	}
 
 	void FlyManager::rotateGimbal(double pitch, double yaw) const noexcept

@@ -18,6 +18,7 @@
 #include "services/MQTT/Handler/LogicHandler.h"
 #include "services/MQTT/Service.h"
 #include "services/Telemetry/TelemetryReporter.h"
+#include "utils/DjiErrorUtils.h"
 #include "utils/EnvironmentCheck.h"
 #include "utils/Logger.h"
 
@@ -89,7 +90,9 @@ namespace plane::my_dji
 						_DJI DjiFlightController_SetRCLostActionEnableStatus(_DJI DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
 					returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 				{
-					LOG_WARN("禁用 RC 失败, 无法支持无遥控器飞行, 错误码: 0x{:08X}", returnCode);
+					LOG_WARN("禁用 RC 失败, 无法支持无遥控器飞行, 错误: {}, 错误码: 0x{:08X}",
+							 plane::utils::djiReturnCodeToString(returnCode),
+							 returnCode);
 				}
 				else
 				{

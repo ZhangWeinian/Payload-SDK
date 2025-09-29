@@ -4,6 +4,7 @@
 
 #include <string_view>
 #include <cmath>
+#include <filesystem>
 
 #include <dji_aircraft_info.h>
 #include <dji_camera_manager.h>
@@ -31,6 +32,7 @@
 #include "widget/test_widget.h"
 #include "widget/test_widget_speaker.h"
 
+#include "utils/DjiErrorUtils.h"
 #include "utils/EnvironmentCheck.h"
 #include "utils/Logger.h"
 
@@ -147,7 +149,10 @@ namespace plane::services
 		return instance;
 	}
 
-	PSDKAdapter::PSDKAdapter(void) noexcept: m_lastUpdateTime(_STD_CHRONO steady_clock::time_point::min()) {}
+	PSDKAdapter::PSDKAdapter(void) noexcept:
+		m_commandPool(_STD make_unique<ThreadPool>(2)),
+		m_lastUpdateTime(_STD_CHRONO steady_clock::time_point::min())
+	{}
 
 	PSDKAdapter::~PSDKAdapter(void) noexcept
 	{
@@ -156,24 +161,47 @@ namespace plane::services
 
 	bool PSDKAdapter::start(void) noexcept
 	{
-		if (m_run.exchange(true))
+		m_isStopping = false;
+		if (m_runAcquisition.exchange(true))
 		{
-			LOG_DEBUG("PSDKAdapter 数据采集线程已经启动，请勿重复调用 start()。");
+			LOG_WARN("PSDKAdapter 数据采集线程已经启动，请勿重复调用 start()。");
 			return false;
 		}
 		LOG_INFO("正在启动 PSDK 数据采集线程...");
-		m_thread = _STD thread(&PSDKAdapter::acquisitionLoop, this);
+		m_acquisitionThread = _STD thread(&PSDKAdapter::acquisitionLoop, this);
 		return true;
 	}
 
-	void PSDKAdapter::stop(void) noexcept
+	void PSDKAdapter::stop(_STD chrono::milliseconds timeout) noexcept
 	{
-		if (m_run.exchange(false))
+		m_isStopping = true;
+		LOG_INFO("PSDKAdapter 开始停止流程，超时时间: {}ms...", timeout.count());
+
+		if (m_runAcquisition.exchange(false))
 		{
-			if (m_thread.joinable())
+			if (m_acquisitionThread.joinable())
 			{
-				m_thread.join();
+				m_acquisitionThread.join();
 				LOG_INFO("PSDK 数据采集线程已停止。");
+			}
+		}
+
+		if (m_commandPool)
+		{
+			auto future = _STD async(_STD launch::async,
+									 [this]()
+									 {
+										 m_commandPool.reset();
+									 });
+
+			LOG_INFO("正在等待命令线程池中的任务完成...");
+			if (future.wait_for(timeout) == _STD future_status::timeout)
+			{
+				LOG_ERROR("关闭 PSDK 命令线程池超时！可能有一个任务（如航线飞行）仍在运行。将强制退出。");
+			}
+			else
+			{
+				LOG_INFO("PSDK 命令执行线程池已成功关闭。");
 			}
 		}
 	}
@@ -188,19 +216,22 @@ namespace plane::services
 					_DJI DjiFcSubscription_SubscribeTopic(topic, _DJI DJI_DATA_SUBSCRIPTION_TOPIC_10_HZ, nullptr) };
 				returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
-				LOG_WARN("订阅主题 '{}' 失败 (飞机不支持?), 错误码: {:#08x}", topicName, returnCode);
+				LOG_WARN("订阅主题 '{}' 失败 (飞机不支持?), 错误: {}, 错误码: {:#08x}",
+						 topicName,
+						 plane::utils::djiReturnCodeToString(returnCode),
+						 returnCode);
 				return false;
 			}
 			return true;
 		};
 
-		m_sub_status.positionFused		 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED, "POSITION_FUSED"sv);
-		m_sub_status.altitudeFused		 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED, "ALTITUDE_FUSED"sv);
-		m_sub_status.altitudeOfHomepoint = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT, "ALTITUDE_OF_HOMEPOINT"sv);
-		m_sub_status.quaternion			 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
-		m_sub_status.velocity			 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
-		m_sub_status.batteryInfo		 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
-		m_sub_status.gimbalAngles		 = subscribe(DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
+		m_sub_status.positionFused		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED, "POSITION_FUSED"sv);
+		m_sub_status.altitudeFused		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED, "ALTITUDE_FUSED"sv);
+		m_sub_status.altitudeOfHomepoint = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT, "ALTITUDE_OF_HOMEPOINT"sv);
+		m_sub_status.quaternion			 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
+		m_sub_status.velocity			 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
+		m_sub_status.batteryInfo		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
+		m_sub_status.gimbalAngles		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
 
 		LOG_INFO("PSDK 适配器准备就绪。");
 		return true;
@@ -217,7 +248,10 @@ namespace plane::services
 				if (_DJI T_DjiReturnCode returnCode { _DJI DjiFcSubscription_UnSubscribeTopic(topic) };
 					returnCode != _DJI	 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 				{
-					LOG_WARN("取消订阅主题 '{}' 失败, 错误码: {:#08x}", topicName, returnCode);
+					LOG_WARN("取消订阅主题 '{}' 失败, 错误: {}, 错误码: {:#08x}",
+							 topicName,
+							 plane::utils::djiReturnCodeToString(returnCode),
+							 returnCode);
 				}
 				else
 				{
@@ -226,18 +260,18 @@ namespace plane::services
 			}
 		};
 
-		unsubscribe(m_sub_status.positionFused, DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED, "POSITION_FUSED"sv);
-		unsubscribe(m_sub_status.altitudeFused, DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED, "ALTITUDE_FUSED"sv);
-		unsubscribe(m_sub_status.altitudeOfHomepoint, DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT, "ALTITUDE_OF_HOMEPOINT"sv);
-		unsubscribe(m_sub_status.quaternion, DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
-		unsubscribe(m_sub_status.velocity, DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
-		unsubscribe(m_sub_status.batteryInfo, DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
-		unsubscribe(m_sub_status.gimbalAngles, DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
+		unsubscribe(m_sub_status.positionFused, _DJI DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED, "POSITION_FUSED"sv);
+		unsubscribe(m_sub_status.altitudeFused, _DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED, "ALTITUDE_FUSED"sv);
+		unsubscribe(m_sub_status.altitudeOfHomepoint, _DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT, "ALTITUDE_OF_HOMEPOINT"sv);
+		unsubscribe(m_sub_status.quaternion, _DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
+		unsubscribe(m_sub_status.velocity, _DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
+		unsubscribe(m_sub_status.batteryInfo, _DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
+		unsubscribe(m_sub_status.gimbalAngles, _DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
 	}
 
 	void PSDKAdapter::acquisitionLoop(void) noexcept
 	{
-		while (m_run)
+		while (m_runAcquisition)
 		{
 			auto						   startTime { _STD_CHRONO steady_clock::now() };
 			plane::protocol::StatusPayload current_payload {};
@@ -383,181 +417,261 @@ namespace plane::services
 		yaw = _STD	 atan2(siny_cosp, cosy_cosp) * 180.0 / MATH_PI;
 	}
 
-	_DJI T_DjiReturnCode PSDKAdapter::takeoff(const plane::protocol::TakeoffPayload& takeoffParams) const noexcept
+	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::takeoff(const plane::protocol::TakeoffPayload& takeoffParams)
 	{
-		try
-		{
-			if (plane::utils::isStandardProceduresEnabled())
+		return m_commandPool->enqueue(
+			[this]() -> _DJI T_DjiReturnCode
 			{
-				_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_StartTakeoff() };
-				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				try
 				{
-					LOG_ERROR("PSDK API DjiFlightController_StartTakeoff() 调用失败, 错误码: 0x{:08X}", returnCode);
-				}
-				return returnCode;
-			}
-			else
-			{
-				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 起飞操作被禁止。");
-				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
-			}
-		}
-		catch (...)
-		{
-			LOG_ERROR("PSDKAdapter::takeoff() 调用失败, 发生未知异常");
-			return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
-		}
-	}
+					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
 
-	_DJI T_DjiReturnCode PSDKAdapter::goHome(void) const noexcept
-	{
-		try
-		{
-			if (plane::utils::isStandardProceduresEnabled())
-			{
-				_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_StartGoHome() };
-				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					if (!plane::utils::isStandardProceduresEnabled())
+					{
+						LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 起飞操作被禁止。");
+						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+					}
+
+					LOG_INFO("线程池任务：执行起飞...");
+					_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_StartTakeoff() };
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("PSDK API DjiFlightController_StartTakeoff() 调用失败, 错误: {}, 错误码: 0x{:08X}",
+								  plane::utils::djiReturnCodeToString(returnCode),
+								  returnCode);
+					}
+					return returnCode;
+				}
+				catch (const _STD exception& e)
 				{
-					LOG_ERROR("PSDK API DjiFlightController_StartGoHome() 调用失败, 错误码: 0x{:08X}", returnCode);
+					LOG_ERROR("PSDKAdapter::takeoff 任务在线程池中捕获到标准异常: {}", e.what());
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
 				}
-				return returnCode;
-			}
-			else
-			{
-				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 返航操作被禁止。");
-				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
-			}
-		}
-		catch (...)
-		{
-			LOG_ERROR("PSDKAdapter::goHome() 调用失败, 发生未知异常");
-			return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
-		}
-	}
-
-	_DJI T_DjiReturnCode PSDKAdapter::hover(void) const noexcept
-	{
-		try
-		{
-			if (plane::utils::isStandardProceduresEnabled())
-			{
-				_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_ExecuteEmergencyBrakeAction() };
-				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				catch (...)
 				{
-					LOG_ERROR("PSDK API DjiFlightController_ExecuteEmergencyBrakeAction() 调用失败, 错误码: 0x{:08X}", returnCode);
+					LOG_ERROR("PSDKAdapter::takeoff 任务在线程池中捕获到未知异常！");
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
 				}
-				return returnCode;
-			}
-			else
-			{
-				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 悬停操作被禁止。");
-				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
-			}
-		}
-		catch (...)
-		{
-			LOG_ERROR("PSDKAdapter::hover() 调用失败, 发生未知异常");
-			return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
-		}
+			});
 	}
 
-	_DJI T_DjiReturnCode PSDKAdapter::land(void) const noexcept
+	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::goHome(void)
 	{
-		try
-		{
-			if (plane::utils::isStandardProceduresEnabled())
+		return m_commandPool->enqueue(
+			[this]() -> _DJI T_DjiReturnCode
 			{
-				_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_StartLanding() };
-				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				try
 				{
-					LOG_ERROR("PSDK API DjiFlightController_StartLanding() 调用失败, 错误码: 0x{:08X}", returnCode);
+					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					if (!plane::utils::isStandardProceduresEnabled())
+					{
+						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+					}
+
+					LOG_INFO("线程池任务：执行返航...");
+					_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_StartGoHome() };
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("PSDK API DjiFlightController_StartGoHome() 调用失败, 错误: {}, 错误码: 0x{:08X}",
+								  plane::utils::djiReturnCodeToString(returnCode),
+								  returnCode);
+					}
+					return returnCode;
 				}
-				return returnCode;
-			}
-			else
-			{
-				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 降落操作被禁止。");
-				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
-			}
-		}
-		catch (...)
-		{
-			LOG_ERROR("PSDKAdapter::land() 调用失败, 发生未知异常");
-			return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
-		}
+				catch (const _STD exception& e)
+				{
+					LOG_ERROR("PSDKAdapter::goHome 任务在线程池中捕获到标准异常: {}", e.what());
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+				catch (...)
+				{
+					LOG_ERROR("PSDKAdapter::goHome 任务在线程池中捕获到未知异常！");
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+			});
 	}
 
-	_DJI T_DjiReturnCode PSDKAdapter::waypointV3MissionStart(_STD string_view kmzFilePath) const noexcept
+	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::hover(void)
 	{
-		try
-		{
-			if (plane::utils::isStandardProceduresEnabled())
+		return m_commandPool->enqueue(
+			[this]() -> _DJI T_DjiReturnCode
 			{
-				LOG_INFO("PSDK Adapter: 调用 DjiTest_WaypointV3RunSampleWithKmzFilePath(...)");
-				return _DJI DjiTest_WaypointV3RunSampleWithKmzFilePath(kmzFilePath.data());
-			}
-			else
-			{
-				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 航点任务操作被禁止。");
-				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
-			}
-		}
-		catch (...)
-		{
-			LOG_ERROR("PSDKAdapter::waypointV3MissionStart() 调用失败, 发生未知异常");
-			return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
-		}
+				try
+				{
+					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					if (!plane::utils::isStandardProceduresEnabled())
+					{
+						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+					}
+
+					LOG_INFO("线程池任务：执行悬停...");
+					_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_ExecuteEmergencyBrakeAction() };
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("PSDK API DjiFlightController_ExecuteEmergencyBrakeAction() 调用失败, 错误: {}, 错误码: 0x{:08X}",
+								  plane::utils::djiReturnCodeToString(returnCode),
+								  returnCode);
+					}
+					return returnCode;
+				}
+				catch (const _STD exception& e)
+				{
+					LOG_ERROR("PSDKAdapter::hover 任务在线程池中捕获到标准异常: {}", e.what());
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+				catch (...)
+				{
+					LOG_ERROR("PSDKAdapter::hover 任务在线程池中捕获到未知异常！");
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+			});
 	}
 
-	_DJI T_DjiReturnCode PSDKAdapter::setControlStrategy(int strategyCode) const noexcept
+	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::land(void)
 	{
-		try
-		{
-			if (plane::utils::isStandardProceduresEnabled())
+		return m_commandPool->enqueue(
+			[this]() -> _DJI T_DjiReturnCode
 			{
-				LOG_INFO("PSDK Adapter: 设置云台控制策略, 策略代码: {}", strategyCode);
-				// ...
-				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
-			}
-			else
-			{
-				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 云台控制策略切换操作被禁止。");
-				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
-			}
-		}
-		catch (...)
-		{
-			LOG_ERROR("PSDKAdapter::setControlStrategy() 调用失败, 发生未知异常");
-			return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
-		}
+				try
+				{
+					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					if (!plane::utils::isStandardProceduresEnabled())
+					{
+						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+					}
+
+					LOG_INFO("线程池任务：执行降落...");
+					_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_StartLanding() };
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("PSDK API DjiFlightController_StartLanding() 调用失败, 错误: {}, 错误码: 0x{:08X}",
+								  plane::utils::djiReturnCodeToString(returnCode),
+								  returnCode);
+					}
+					return returnCode;
+				}
+				catch (const _STD exception& e)
+				{
+					LOG_ERROR("PSDKAdapter::land 任务在线程池中捕获到标准异常: {}", e.what());
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+				catch (...)
+				{
+					LOG_ERROR("PSDKAdapter::land 任务在线程池中捕获到未知异常！");
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+			});
 	}
 
-	T_DjiReturnCode PSDKAdapter::flyCircleAroundPoint(const protocol::CircleFlyPayload& circleParams) const noexcept
+	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::waypointV3(_STD string kmzFilePath)
 	{
-		try
-		{
-			if (plane::utils::isStandardProceduresEnabled())
+		return m_commandPool->enqueue(
+			[this, path = _STD move(kmzFilePath)]() -> _DJI T_DjiReturnCode
 			{
-				LOG_INFO("PSDK Adapter: 调用智能环绕, 参数: lat={}, lon={}, alt={}, r={}, spd={}",
-						 circleParams.WD,
-						 circleParams.JD,
-						 circleParams.GD,
-						 circleParams.BJ,
-						 circleParams.SD);
-				// ...
-				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
-			}
-			else
+				try
+				{
+					if (m_isStopping)
+					{
+						LOG_WARN("应用程序正在关闭，航线任务 '{}' 被取消。", path);
+						return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
+					}
+
+					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					if (m_isStopping)
+					{
+						LOG_WARN("应用程序正在关闭，航线任务 '{}' 被取消。", path);
+						return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
+					}
+
+					if (!plane::utils::isStandardProceduresEnabled())
+					{
+						LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 航点任务操作被禁止。");
+						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+					}
+
+					if (!_STD_FS exists(path))
+					{
+						LOG_ERROR("航线任务失败：KMZ 文件不存在: {}", path);
+						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_INVALID_PARAMETER;
+					}
+
+					LOG_INFO("线程池任务：开始执行航线任务, 文件: {}", path);
+					return _DJI DjiTest_WaypointV3RunSampleWithKmzFilePath(path.c_str());
+				}
+				catch (const _STD exception& e)
+				{
+					LOG_ERROR("PSDKAdapter::waypointV3 任务在线程池中捕获到标准异常: {}", e.what());
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+				catch (...)
+				{
+					LOG_ERROR("PSDKAdapter::waypointV3 任务在线程池中捕获到未知异常！");
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+			});
+	}
+
+	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::setControlStrategy(int strategyCode)
+	{
+		return m_commandPool->enqueue(
+			[this, strategyCode]() -> _DJI T_DjiReturnCode
 			{
-				LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 智能环绕操作被禁止。");
-				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
-			}
-		}
-		catch (...)
-		{
-			LOG_ERROR("PSDKAdapter::flyCircleAroundPoint() 调用失败, 发生未知异常");
-			return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
-		}
+				try
+				{
+					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					if (!plane::utils::isStandardProceduresEnabled())
+					{
+						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+					}
+
+					LOG_INFO("线程池任务：设置云台控制策略, 策略代码: {}", strategyCode);
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+				}
+				catch (const _STD exception& e)
+				{
+					LOG_ERROR("PSDKAdapter::setControlStrategy 任务在线程池中捕获到标准异常: {}", e.what());
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+				catch (...)
+				{
+					LOG_ERROR("PSDKAdapter::setControlStrategy 任务在线程池中捕获到未知异常！");
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+			});
+	}
+
+	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams)
+	{
+		return m_commandPool->enqueue(
+			[this, params = circleParams]() -> _DJI T_DjiReturnCode
+			{
+				try
+				{
+					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					if (!plane::utils::isStandardProceduresEnabled())
+					{
+						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
+					}
+
+					LOG_INFO("线程池任务：调用智能环绕, 参数: lat={}, lon={}, alt={}, r={}, spd={}",
+							 params.WD,
+							 params.JD,
+							 params.GD,
+							 params.BJ,
+							 params.SD);
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+				}
+				catch (const _STD exception& e)
+				{
+					LOG_ERROR("PSDKAdapter::flyCircleAroundPoint 任务在线程池中捕获到标准异常: {}", e.what());
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+				catch (...)
+				{
+					LOG_ERROR("PSDKAdapter::flyCircleAroundPoint 任务在线程池中捕获到未知异常！");
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+			});
 	}
 
 	// ... 在这里实现所有其他 PSDK API 的封装 ...
