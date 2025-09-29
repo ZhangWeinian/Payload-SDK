@@ -49,3 +49,15 @@
 [submodule "external_libs/ThreadPool"]
 	path = external_libs/ThreadPool
 	url = git@github.com:progschj/ThreadPool.git
+[submodule "external_libs/abseil-cpp"]
+	path = external_libs/abseil-cpp
+	url = git@github.com:abseil/abseil-cpp.git
+[submodule "external_libs/asio"]
+	path = external_libs/asio
+	url = git@github.com:chriskohlhoff/asio.git
+[submodule "external_libs/cpp-httplib"]
+	path = external_libs/cpp-httplib
+	url = git@github.com:yhirose/cpp-httplib.git
+[submodule "external_libs/cereal"]
+	path = external_libs/cereal
+	url = git@github.com:USCiLab/cereal.git

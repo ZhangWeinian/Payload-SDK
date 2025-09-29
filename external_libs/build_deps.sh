@@ -235,6 +235,13 @@ build_cmake_project "libzip" \
 build_cmake_project "pugixml" \
 	"${BASE_DIR}/pugixml"
 
+build_cmake_project "abseil-cpp" \
+	"${BASE_DIR}/abseil-cpp" \
+	-DCMAKE_CXX_STANDARD=${CPP_STANDARD} \
+	-DABSL_BUILD_TESTING=OFF \
+	-DABSL_USE_GOOGLETEST_HEAD=OFF
+
+
 install_header_only_library "CLI11" \
 	"${BASE_DIR}/CLI11" \
 	"include"
@@ -248,7 +255,19 @@ install_header_only_library "range-v3" \
 	"include"
 
 install_header_only_library "ThreadPool" \
-    "${BASE_DIR}/ThreadPool" \
+	"${BASE_DIR}/ThreadPool" \
+
+install_header_only_library "cereal" \
+	"${BASE_DIR}/cereal" \
+	"include/cereal"
+
+install_header_only_library "asio" \
+	"${BASE_DIR}/asio" \
+	"asio/include"
+
+install_header_only_library "httplib" \
+	"${BASE_DIR}/cpp-httplib" \
+	"."
 
 printf "%s\n" "${COLOR_GREEN}============================================================"
 printf "                  所有依赖库已成功构建并安装!\n"
