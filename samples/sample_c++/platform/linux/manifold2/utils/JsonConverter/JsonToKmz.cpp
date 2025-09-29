@@ -1,11 +1,15 @@
 #include "utils/JsonConverter/JsonToKmz.h"
 
+#include <sys/stat.h>
 #include <cmath>
+#include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <pwd.h>
 #include <sstream>
+#include <unistd.h>
 
 #include <fmt/format.h>
 #include <zip.h>
@@ -76,7 +80,8 @@ namespace plane::utils
 			}
 
 		private:
-			_LIBZIP zip_t* m_archive { nullptr };
+			_LIBZIP zip_t* m_archive {};
+
 			ZipArchive(const ZipArchive&)			 = delete;
 			ZipArchive& operator=(const ZipArchive&) = delete;
 		};
@@ -93,7 +98,50 @@ namespace plane::utils
 					{
 						_STD_FS create_directories(kmzStorageDir);
 						LOG_INFO("创建 KMZ 存储目录: {}", kmzStorageDir.string());
+
+						_CSTD uid_t uid { _CSTD getuid() };
+						_CSTD gid_t gid { _CSTD getgid() };
+
+						if (_CSTD chown(kmzStorageDir.c_str(), uid, gid) != 0)
+						{
+							LOG_ERROR("无法设置目录 '{}' 的所有者: errno={}", kmzStorageDir.string(), errno);
+							return false;
+						}
+
+						if (_CSTD chmod(kmzStorageDir.c_str(), 0777) != 0)
+						{
+							LOG_ERROR("无法设置目录 '{}' 的权限为 777: errno={}", kmzStorageDir.string(), errno);
+							return false;
+						}
 					}
+					else
+					{
+						struct stat st {};
+						if (_CSTD stat(kmzStorageDir.c_str(), &st) == 0)
+						{
+							_CSTD uid_t uid { _CSTD getuid() };
+							_CSTD gid_t gid { _CSTD getgid() };
+
+							bool		owner_ok { (st.st_uid == uid) && (st.st_gid == gid) };
+							bool		perm_ok { (st.st_mode & 0777) == 0777 };
+
+							if (!owner_ok || !perm_ok)
+							{
+								if (!owner_ok && _CSTD chown(kmzStorageDir.c_str(), uid, gid) != 0)
+								{
+									LOG_ERROR("无法修正目录 '{}' 的所有者", kmzStorageDir.string());
+									return false;
+								}
+								if (!perm_ok && _CSTD chmod(kmzStorageDir.c_str(), 0777) != 0)
+								{
+									LOG_ERROR("无法修正目录 '{}' 的权限为 777", kmzStorageDir.string());
+									return false;
+								}
+								LOG_INFO("已修正 KMZ 目录权限和所有者");
+							}
+						}
+					}
+
 					return true;
 				}
 				catch (const _STD_FS filesystem_error& e)
@@ -125,8 +173,9 @@ namespace plane::utils
 
 		inline double calculateTotalDistance(const _STD vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
-			double totalDistance { 0.0 };
-			for (_STD size_t i { 1 }; i < waypoints.size(); ++i)
+			double		totalDistance { .0 };
+			_STD size_t size { waypoints.size() };
+			for (_STD size_t i { 1 }; i < size; ++i)
 			{
 				totalDistance += calculateDistance(waypoints[i - 1], waypoints[i]);
 			}
@@ -135,8 +184,9 @@ namespace plane::utils
 
 		inline double calculateTotalDuration(const _STD vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
-			double totalDuration { 0.0 };
-			for (_STD size_t i { 1 }; i < waypoints.size(); ++i)
+			double		totalDuration { .0 };
+			_STD size_t size { waypoints.size() };
+			for (_STD size_t i { 1 }; i < size; ++i)
 			{
 				double distance { calculateDistance(waypoints[i - 1], waypoints[i]) };
 				double speed { waypoints[i].SD };
@@ -201,7 +251,7 @@ namespace plane::utils
 					firstPlacemark.waypointHeadingParam.waypointHeadingAngle = calculateHeadingAngle(waypoints[0], waypoints[1]);
 				}
 
-				firstPlacemark.actionGroups.push_back(takeoffGroup);
+				// firstPlacemark.actionGroups.push_back(takeoffGroup);
 				wpml_file.document.folder.placemarks.push_back(firstPlacemark);
 
 				for (_STD size_t i { 1 }; i < size - 1; ++i)
@@ -232,7 +282,7 @@ namespace plane::utils
 						timeLapse.actionActuatorFuncParam.payloadPositionIndex = 7;
 						ag.actions.push_back(timeLapse);
 
-						placemark.actionGroups.push_back(ag);
+						// placemark.actionGroups.push_back(ag);
 					}
 
 					wpml_file.document.folder.placemarks.push_back(placemark);
@@ -265,7 +315,7 @@ namespace plane::utils
 					unlock.actionActuatorFunc = "gimbalAngleUnlock";
 					ag.actions.push_back(unlock);
 
-					lastPlacemark.actionGroups.push_back(ag);
+					// slastPlacemark.actionGroups.push_back(ag);
 					wpml_file.document.folder.placemarks.push_back(lastPlacemark);
 				}
 			}

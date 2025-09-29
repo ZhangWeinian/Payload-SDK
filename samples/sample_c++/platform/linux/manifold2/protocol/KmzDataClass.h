@@ -63,7 +63,7 @@ namespace plane::protocol
 			WpmlPoint	 point {};
 			int			 index { 0 };
 			int			 isRisky { 0 };
-			int			 useStraightLine { 0 };
+			int			 useStraightLine { 1 };
 
 			virtual void toXml(_PUGI xml_node& parent) const = 0;
 		};
@@ -165,7 +165,7 @@ namespace plane::protocol
 
 		struct WpmlWaypointTurnParam
 		{
-			_STD string waypointTurnMode { "toPointAndStopWithContinuityCurvature" };
+			_STD string waypointTurnMode { "toPointAndStopWithDiscontinuityCurvature" };
 			double		waypointTurnDampingDist { 0 };
 
 			void		toXml(_PUGI xml_node& parent) const
@@ -191,13 +191,13 @@ namespace plane::protocol
 
 		struct WpmlPlacemark final: public kmz::PublicWpmlPlacemark
 		{
-			double					 executeHeight { 40 };
-			double					 waypointSpeed { 5 };
-			WpmlWaypointHeadingParam waypointHeadingParam {};
-			WpmlWaypointTurnParam	 waypointTurnParam {};
+			double executeHeight { 40 };
+			double waypointSpeed { 5 };
+			int	   waypointWorkType { 0 };
 			_STD vector<WpmlActionGroup> actionGroups {};
+			WpmlWaypointHeadingParam	 waypointHeadingParam {};
+			WpmlWaypointTurnParam		 waypointTurnParam {};
 			WpmlGimbalHeadingParam		 waypointGimbalHeadingParam {};
-			int							 waypointWorkType { 0 };
 
 			void						 toXml(_PUGI xml_node& parent) const
 			{

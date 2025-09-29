@@ -178,7 +178,7 @@ namespace plane::services
 			else // 速度控制
 			{
 				LOG_INFO("[MQTT] 收到【云台速度控制】指令: pitch={}, yaw={}", payload.FYJ, payload.PHJ);
-				// TODO: FlyManager::getInstance().rotateGimbalBySpeed(payload.FYJ, payload.PHJ, 0.0);
+				// TODO: FlyManager::getInstance().rotateGimbalBySpeed(payload.FYJ, payload.PHJ, .0);
 			}
 		});
 	}
