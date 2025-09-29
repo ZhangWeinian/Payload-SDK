@@ -71,9 +71,9 @@ namespace plane::services
 
 	private:
 		_STD unique_ptr<Impl> impl_ { _STD make_unique<Impl>() };
-		_STD atomic<bool>			   connected_ { false };
-		_STD mutex					   mutex_ {};
-		constexpr static inline size_t MAX_DEQUE_SIZE { 30 };
+		_STD atomic<bool>					connected_ { false };
+		_STD mutex							mutex_ {};
+		constexpr static inline _STD size_t MAX_DEQUE_SIZE { 30 };
 
 		explicit MQTTService(void) noexcept = default;
 		~MQTTService(void) noexcept;

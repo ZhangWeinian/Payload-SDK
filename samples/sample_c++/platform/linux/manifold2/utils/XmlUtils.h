@@ -13,7 +13,7 @@
 
 namespace plane::utils
 {
-	inline _STD string toXmlString(const plane::protocol::WpmlRoot& root)
+	inline _STD string toXmlString(const plane::protocol::wpml::WaylinesWpmlFile& root)
 	{
 		_PUGI xml_document doc {};
 		root.toXml(doc);
@@ -22,7 +22,7 @@ namespace plane::utils
 		return oss.str();
 	}
 
-	inline _STD string toXmlString(const plane::protocol::TemplateKml& tpl)
+	inline _STD string toXmlString(const plane::protocol::kml::TemplateKmlFile& tpl)
 	{
 		_PUGI xml_document doc {};
 		tpl.toXml(doc);

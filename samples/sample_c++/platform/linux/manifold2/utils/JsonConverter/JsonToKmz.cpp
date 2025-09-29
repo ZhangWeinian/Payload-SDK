@@ -126,7 +126,7 @@ namespace plane::utils
 		inline double calculateTotalDistance(const _STD vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
 			double totalDistance { 0.0 };
-			for (size_t i { 1 }; i < waypoints.size(); ++i)
+			for (_STD size_t i { 1 }; i < waypoints.size(); ++i)
 			{
 				totalDistance += calculateDistance(waypoints[i - 1], waypoints[i]);
 			}
@@ -136,13 +136,13 @@ namespace plane::utils
 		inline double calculateTotalDuration(const _STD vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
 			double totalDuration { 0.0 };
-			for (size_t i { 1 }; i < waypoints.size(); ++i)
+			for (_STD size_t i { 1 }; i < waypoints.size(); ++i)
 			{
 				double distance { calculateDistance(waypoints[i - 1], waypoints[i]) };
 				double speed { waypoints[i].SD };
 				if (speed < 0.1)
 				{
-					speed = 5.0;
+					speed = 0.1;
 				}
 				totalDuration += distance / speed;
 			}
@@ -162,33 +162,35 @@ namespace plane::utils
 
 		static _STD string generateWaylinesWpml(const _STD vector<plane::protocol::Waypoint>& waypoints) noexcept
 		{
-			plane::protocol::WpmlRoot wpml {};
-			size_t					  size { waypoints.size() };
+			plane::protocol::wpml::WaylinesWpmlFile wpml_file {};
+			_STD size_t								size { waypoints.size() };
 
-			wpml.document.missionConfig.globalTransitionalSpeed = waypoints.empty() ? 5.0 : waypoints[0].SD;
-			wpml.document.folder.distance						= calculateTotalDistance(waypoints);
-			wpml.document.folder.duration						= calculateTotalDuration(waypoints);
-			wpml.document.folder.autoFlightSpeed				= wpml.document.missionConfig.globalTransitionalSpeed;
+			wpml_file.document.missionConfig.globalTransitionalSpeed  = waypoints.empty() ? 10.0 : waypoints[0].SD;
+			wpml_file.document.missionConfig.droneInfo.droneEnumValue = 78;
+			wpml_file.document.folder.distance						  = calculateTotalDistance(waypoints);
+			wpml_file.document.folder.duration						  = calculateTotalDuration(waypoints);
+			wpml_file.document.folder.autoFlightSpeed				  = wpml_file.document.missionConfig.globalTransitionalSpeed;
 
 			if (!waypoints.empty())
 			{
-				plane::protocol::WpmlActionGroup takeoffGroup {};
+				plane::protocol::wpml::WpmlActionGroup takeoffGroup {};
 				takeoffGroup.actionTriggerType = "takeoff";
 
-				plane::protocol::WpmlAction gimbalRotate {};
+				plane::protocol::wpml::WpmlAction gimbalRotate {};
 				gimbalRotate.actionId										= 0;
 				gimbalRotate.actionActuatorFunc								= "gimbalRotate";
-				gimbalRotate.actionActuatorFuncParam.payloadPositionIndex	= 0;
+				gimbalRotate.actionActuatorFuncParam.payloadPositionIndex	= 7;
 				gimbalRotate.actionActuatorFuncParam.gimbalYawRotateEnable	= 1;
 				gimbalRotate.actionActuatorFuncParam.gimbalPitchRotateAngle = waypoints[0].YTFYJ.value_or(-90.0);
 				takeoffGroup.actions.push_back(gimbalRotate);
 
-				plane::protocol::WpmlAction hover {};
+				plane::protocol::wpml::WpmlAction hover {};
 				hover.actionId			 = 1;
 				hover.actionActuatorFunc = "hover";
 				takeoffGroup.actions.push_back(hover);
 
-				plane::protocol::WpmlPlacemark firstPlacemark {};
+				plane::protocol::wpml::WpmlPlacemark firstPlacemark {};
+				firstPlacemark.index		   = 0;
 				firstPlacemark.point.longitude = waypoints[0].JD;
 				firstPlacemark.point.latitude  = waypoints[0].WD;
 				firstPlacemark.executeHeight   = waypoints[0].GD;
@@ -200,11 +202,12 @@ namespace plane::utils
 				}
 
 				firstPlacemark.actionGroups.push_back(takeoffGroup);
-				wpml.document.folder.placemarks.push_back(firstPlacemark);
+				wpml_file.document.folder.placemarks.push_back(firstPlacemark);
 
-				for (size_t i { 1 }; i < size - 1; ++i)
+				for (_STD size_t i { 1 }; i < size - 1; ++i)
 				{
-					plane::protocol::WpmlPlacemark placemark {};
+					plane::protocol::wpml::WpmlPlacemark placemark {};
+					placemark.index										= i;
 					placemark.point.longitude							= waypoints[i].JD;
 					placemark.point.latitude							= waypoints[i].WD;
 					placemark.executeHeight								= waypoints[i].GD;
@@ -214,65 +217,96 @@ namespace plane::utils
 
 					if (i == 1)
 					{
-						plane::protocol::WpmlActionGroup ag {};
+						plane::protocol::wpml::WpmlActionGroup ag {};
 						ag.actionGroupEndIndex = size > 2 ? static_cast<int>(size - 2) : 0;
 						ag.actionTriggerType   = "betweenAdjacentPoints";
 
-						plane::protocol::WpmlAction lock {};
+						plane::protocol::wpml::WpmlAction lock {};
 						lock.actionActuatorFunc								= "gimbalAngleLock";
 						lock.actionActuatorFuncParam.gimbalPitchRotateAngle = waypoints[i].YTFYJ.value_or(-90.0);
 						ag.actions.push_back(lock);
 
-						plane::protocol::WpmlAction timeLapse {};
+						plane::protocol::wpml::WpmlAction timeLapse {};
 						timeLapse.actionId									   = 1;
 						timeLapse.actionActuatorFunc						   = "startTimeLapse";
-						timeLapse.actionActuatorFuncParam.payloadPositionIndex = 0;
+						timeLapse.actionActuatorFuncParam.payloadPositionIndex = 7;
 						ag.actions.push_back(timeLapse);
 
 						placemark.actionGroups.push_back(ag);
 					}
 
-					wpml.document.folder.placemarks.push_back(placemark);
+					wpml_file.document.folder.placemarks.push_back(placemark);
 				}
 
 				if (size > 1)
 				{
-					const auto&					   lastWp { waypoints.back() };
-					plane::protocol::WpmlPlacemark lastPlacemark {};
+					const auto&							 lastWp { waypoints.back() };
+					plane::protocol::wpml::WpmlPlacemark lastPlacemark {};
+					lastPlacemark.index										= size - 1;
 					lastPlacemark.point.longitude							= lastWp.JD;
 					lastPlacemark.point.latitude							= lastWp.WD;
 					lastPlacemark.executeHeight								= lastWp.GD;
 					lastPlacemark.waypointSpeed								= lastWp.SD;
-					lastPlacemark.waypointHeadingParam.waypointHeadingAngle = 0.0;
+					lastPlacemark.waypointHeadingParam.waypointHeadingAngle = .0;
 
-					plane::protocol::WpmlActionGroup ag {};
+					plane::protocol::wpml::WpmlActionGroup ag {};
 					ag.actionGroupId		 = 1;
 					ag.actionGroupStartIndex = static_cast<int>(waypoints.size() - 1);
 					ag.actionGroupEndIndex	 = static_cast<int>(waypoints.size() - 1);
 					ag.actionTriggerType	 = "reachPoint";
 
-					plane::protocol::WpmlAction stop {};
+					plane::protocol::wpml::WpmlAction stop {};
 					stop.actionActuatorFunc							  = "stopTimeLapse";
-					stop.actionActuatorFuncParam.payloadPositionIndex = 0;
+					stop.actionActuatorFuncParam.payloadPositionIndex = 7;
 					ag.actions.push_back(stop);
 
-					plane::protocol::WpmlAction unlock {};
+					plane::protocol::wpml::WpmlAction unlock {};
 					unlock.actionId			  = 1;
 					unlock.actionActuatorFunc = "gimbalAngleUnlock";
 					ag.actions.push_back(unlock);
 
 					lastPlacemark.actionGroups.push_back(ag);
-					wpml.document.folder.placemarks.push_back(lastPlacemark);
+					wpml_file.document.folder.placemarks.push_back(lastPlacemark);
 				}
 			}
 
-			return plane::utils::toXmlString(wpml);
+			return plane::utils::toXmlString(wpml_file);
 		}
 
-		static _STD string generateTemplateKml(void) noexcept
+		static _STD string generateTemplateKml(const _STD vector<plane::protocol::Waypoint>& waypoints,
+											   const plane::protocol::WaypointPayload&		 missionInfo) noexcept
 		{
-			plane::protocol::TemplateKml kml {};
-			return plane::utils::toXmlString(kml);
+			plane::protocol::kml::TemplateKmlFile kml_file {};
+			_STD size_t							  size { waypoints.size() };
+
+			if (!waypoints.empty())
+			{
+				kml_file.document.folder.autoFlightSpeed				= waypoints[0].SD;
+				kml_file.document.folder.globalHeight					= waypoints[0].GD;
+				kml_file.document.missionConfig.globalTransitionalSpeed = waypoints[0].SD;
+			}
+
+			for (_STD size_t i { 0 }; i < size; ++i)
+			{
+				const auto&							wp { waypoints[i] };
+				plane::protocol::kml::WpmlPlacemark pm {};
+
+				pm.index				 = i;
+				pm.point.longitude		 = wp.JD;
+				pm.point.latitude		 = wp.WD;
+
+				pm.height				 = wp.GD;
+				pm.ellipsoidHeight		 = wp.GD;
+
+				pm.useGlobalHeight		 = 1;
+				pm.useGlobalSpeed		 = 1;
+				pm.useGlobalHeadingParam = 1;
+				pm.useGlobalTurnParam	 = 1;
+
+				kml_file.document.folder.placemarks.push_back(pm);
+			}
+
+			return plane::utils::toXmlString(kml_file);
 		}
 	} // namespace
 
@@ -293,16 +327,16 @@ namespace plane::utils
 		auto				now { _STD_CHRONO system_clock::now() };
 		auto				time_t_now { _STD_CHRONO system_clock::to_time_t(now) };
 		_STD tm				tm_now {};
-		localtime_r(&time_t_now, &tm_now);
-		_STD stringstream time_ss {};
-		time_ss << _STD	  put_time(&tm_now, "%Y%m%d_%H%M%S");
-		_STD string		  filename { _FMT format("{}.kmz", time_ss.str()) };
-		_STD_FS path	  kmzFilePath { storageDir / filename };
+		_CSTD				localtime_r(&time_t_now, &tm_now);
+		_STD stringstream	time_ss {};
+		time_ss << _STD		put_time(&tm_now, "%Y%m%d_%H%M%S");
+		_STD string			filename { _FMT format("{}.kmz", time_ss.str()) };
+		_STD_FS path		kmzFilePath { storageDir / filename };
 
 		LOG_DEBUG("开始生成 KMZ 文件, 任务 ID: {}, 路径: {}", missionId, kmzFilePath.string());
 
 		_STD string waylinesWpml { generateWaylinesWpml(waypoints) };
-		_STD string templateKml { generateTemplateKml() };
+		_STD string templateKml { generateTemplateKml(waypoints, missionInfo) };
 
 		ZipArchive	archive(kmzFilePath);
 		if (!archive)

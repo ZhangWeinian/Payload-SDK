@@ -152,7 +152,7 @@ namespace plane::services
 			_STD string info_json { plane::utils::JsonConverter::buildMissionInfoJson(info_payload) };
 			publishStatus(plane::services::TOPIC_FIXED_INFO, info_json);
 
-			for (size_t i { 0 }; i < 10; ++i)
+			for (_STD size_t i { 0 }; i < 10; ++i)
 			{
 				if (!run_.load(_STD memory_order_acquire))
 				{
