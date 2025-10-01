@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include <string_view>
-#include <unordered_map>
-
 #include <dji_error.h>
 #include <dji_typedef.h>
+
+#include <string_view>
+#include <unordered_map>
 
 #include "define.h"
 

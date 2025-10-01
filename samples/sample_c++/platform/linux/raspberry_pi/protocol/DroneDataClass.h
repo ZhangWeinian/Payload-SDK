@@ -2,12 +2,12 @@
 
 #pragma once
 
+#include <nlohmann/json.hpp>
+
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
-
-#include <nlohmann/json.hpp>
 
 #include "define.h"
 

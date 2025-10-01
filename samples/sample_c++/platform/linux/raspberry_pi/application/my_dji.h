@@ -4,13 +4,6 @@
 
 #include "application.hpp"
 
-#include <atomic>
-#include <chrono>
-#include <csignal>
-#include <cstdlib>
-#include <string>
-#include <thread>
-
 #include <dji_flight_controller.h>
 
 #include "config/ConfigManager.h"
@@ -21,6 +14,13 @@
 #include "utils/DjiErrorUtils.h"
 #include "utils/EnvironmentCheck.h"
 #include "utils/Logger.h"
+
+#include <atomic>
+#include <chrono>
+#include <csignal>
+#include <cstdlib>
+#include <string>
+#include <thread>
 
 #include "define.h"
 

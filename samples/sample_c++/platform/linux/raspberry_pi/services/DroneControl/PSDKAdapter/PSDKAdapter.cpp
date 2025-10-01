@@ -1,12 +1,10 @@
 // raspberry_pi/services/DroneControl/PSDKAdapter/PSDKAdapter.cpp
 
-#include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
+#include "PSDKAdapter.h"
 
-#include <string_view>
-#include <cmath>
-#include <filesystem>
-
-#include <gsl/gsl>
+#include "utils/DjiErrorUtils.h"
+#include "utils/EnvironmentCheck.h"
+#include "utils/Logger.h"
 
 #include <dji_aircraft_info.h>
 #include <dji_camera_manager.h>
@@ -35,10 +33,11 @@
 #include "widget/test_widget.h"
 #include "widget/test_widget_speaker.h"
 
-#include "PSDKAdapter.h"
-#include "utils/DjiErrorUtils.h"
-#include "utils/EnvironmentCheck.h"
-#include "utils/Logger.h"
+#include <gsl/gsl>
+
+#include <string_view>
+#include <cmath>
+#include <filesystem>
 
 namespace plane::services
 {
@@ -238,7 +237,7 @@ namespace plane::services
 		return true;
 	}
 
-	void PSDKAdapter::stop(_STD chrono::milliseconds timeout) noexcept
+	void PSDKAdapter::stop(_STD_CHRONO milliseconds timeout) noexcept
 	{
 		is_stopping_ = true;
 		LOG_INFO("PSDKAdapter 开始停止流程，超时时间: {}ms...", timeout.count());
@@ -448,6 +447,8 @@ namespace plane::services
 				latest_payload_ = current_payload;
 			}
 
+			this->event_dispatcher_.dispatch(PsdkEvent::TelemetryUpdated, current_payload);
+
 			{
 				_STD lock_guard<_STD mutex>		lock(health_utex_);
 				last_update_time_ = _STD_CHRONO steady_clock::now();
@@ -468,6 +469,8 @@ namespace plane::services
 				 djiMissionStateToString(missionState.state),
 				 missionState.currentWaypointIndex,
 				 missionState.wayLineId);
+
+		this->event_dispatcher_.dispatch(PsdkEvent::MissionStateChanged, missionState);
 	}
 
 	void PSDKAdapter::actionStateCallback(_DJI T_DjiWaypointV3ActionState actionState)
@@ -477,6 +480,8 @@ namespace plane::services
 				 actionState.currentWaypointIndex,
 				 actionState.actionGroupId,
 				 actionState.actionId);
+
+		this->event_dispatcher_.dispatch(PsdkEvent::ActionStateChanged, actionState);
 	}
 
 	_DJI T_DjiReturnCode PSDKAdapter::missionStateCallbackEntry(_DJI T_DjiWaypointV3MissionState missionState)
@@ -496,9 +501,27 @@ namespace plane::services
 		return command_pool_->enqueue(
 			[this]() -> _DJI T_DjiReturnCode
 			{
-				_STD lock_guard<_STD mutex> lock(psdk_command_mutex_);
-				LOG_INFO("线程池任务：发送停止航线指令...");
-				return _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_STOP);
+				try
+				{
+					_STD lock_guard<_STD mutex> lock(psdk_command_mutex_);
+					LOG_INFO("线程池任务：发送停止航线指令...");
+					_DJI T_DjiReturnCode returnCode { _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_STOP) };
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("发送停止航线指令失败, 错误: {} (0x{:08X})", plane::utils::djiReturnCodeToString(returnCode), returnCode);
+					}
+					return returnCode;
+				}
+				catch (const _STD exception& e)
+				{
+					LOG_ERROR("stopWaypointMission 任务捕获到标准异常: {}", e.what());
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
+				catch (...)
+				{
+					LOG_ERROR("stopWaypointMission 任务捕获到未知异常！");
+					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+				}
 			});
 	}
 
@@ -520,12 +543,12 @@ namespace plane::services
 				}
 				catch (const _STD exception& e)
 				{
-					LOG_ERROR("PSDKAdapter::pauseWaypointMission 任务捕获到标准异常: {}", e.what());
+					LOG_ERROR("pauseWaypointMission 任务捕获到标准异常: {}", e.what());
 					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
 				}
 				catch (...)
 				{
-					LOG_ERROR("PSDKAdapter::pauseWaypointMission 任务捕获到未知异常！");
+					LOG_ERROR("pauseWaypointMission 任务捕获到未知异常！");
 					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
 				}
 			});
@@ -549,12 +572,12 @@ namespace plane::services
 				}
 				catch (const _STD exception& e)
 				{
-					LOG_ERROR("PSDKAdapter::resumeWaypointMission 任务捕获到标准异常: {}", e.what());
+					LOG_ERROR("resumeWaypointMission 任务捕获到标准异常: {}", e.what());
 					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
 				}
 				catch (...)
 				{
-					LOG_ERROR("PSDKAdapter::resumeWaypointMission 任务捕获到未知异常！");
+					LOG_ERROR("resumeWaypointMission 任务捕获到未知异常！");
 					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
 				}
 			});

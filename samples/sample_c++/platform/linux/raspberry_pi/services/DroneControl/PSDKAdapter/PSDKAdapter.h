@@ -2,6 +2,17 @@
 
 #pragma once
 
+#include "protocol/DroneDataClass.h"
+#include "protocol/HeartbeatDataClass.h"
+
+#include <dji_fc_subscription.h>
+#include <dji_typedef.h>
+#include <dji_waypoint_v3.h>
+
+#include <eventpp/eventdispatcher.h>
+#include <eventpp/utilities/scopedremover.h>
+#include <ThreadPool.h>
+
 #include <string_view>
 #include <atomic>
 #include <chrono>
@@ -10,16 +21,8 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <variant>
 #include <vector>
-
-#include <ThreadPool.h>
-
-#include <dji_fc_subscription.h>
-#include <dji_typedef.h>
-#include <dji_waypoint_v3.h>
-
-#include "protocol/DroneDataClass.h"
-#include "protocol/HeartbeatDataClass.h"
 
 #include "define.h"
 
@@ -36,11 +39,9 @@ namespace plane::services
 		_NODISCARD bool		setup(void) noexcept;
 		void				cleanup(void) noexcept;
 
-		// --- 数据接口 ---
 		_NODISCARD plane::protocol::StatusPayload getLatestStatusPayload(void) const noexcept;
 		_NODISCARD _STD_CHRONO steady_clock::time_point getLastUpdateTime(void) const noexcept;
 
-		// --- 命令接口 ---
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> takeoff(const plane::protocol::TakeoffPayload& takeoffParams);
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> goHome(void);
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> hover(void);
@@ -52,7 +53,27 @@ namespace plane::services
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> pauseWaypointMission(void);
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> resumeWaypointMission(void);
 
+		enum class PsdkEvent
+		{
+			TelemetryUpdated,
+			MissionStateChanged,
+			ActionStateChanged
+		};
+
+		using EventData		  = _STD variant<plane::protocol::StatusPayload, _DJI T_DjiWaypointV3MissionState, _DJI T_DjiWaypointV3ActionState>;
+		using EventDispatcher = _EVENTPP EventDispatcher<PsdkEvent, void(const EventData&)>;
+
+		EventDispatcher&				 getEventDispatcher(void) noexcept
+		{
+			return this->event_dispatcher_;
+		}
+
 	private:
+		explicit PSDKAdapter(void) noexcept;
+		~PSDKAdapter(void) noexcept;
+		PSDKAdapter(const PSDKAdapter&) noexcept			= delete;
+		PSDKAdapter& operator=(const PSDKAdapter&) noexcept = delete;
+
 		struct SubscriptionStatus
 		{
 			bool positionFused { false };
@@ -64,38 +85,26 @@ namespace plane::services
 			bool gimbalAngles { false };
 		};
 
-		// --- 资源与线程管理 ---
+		void quaternionToEulerAngle(const _DJI T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept;
+		void acquisitionLoop(void) noexcept;
+
+		void missionStateCallback(_DJI T_DjiWaypointV3MissionState missionState);
+		void actionStateCallback(_DJI T_DjiWaypointV3ActionState actionState);
+		static _DJI T_DjiReturnCode missionStateCallbackEntry(_DJI T_DjiWaypointV3MissionState missionState);
+		static _DJI T_DjiReturnCode actionStateCallbackEntry(_DJI T_DjiWaypointV3ActionState actionState);
+
 		_STD unique_ptr<_THREADPOOL ThreadPool> command_pool_ {};
 		_STD mutex								psdk_command_mutex_ {};
 		_STD thread								acquisition_thread_ {};
 		_STD atomic<bool> run_acquisition_ { false };
 		_STD atomic<bool> is_stopping_ { false };
-
-		// --- 航线任务信令 ---
 		_STD unique_ptr<_STD promise<_DJI T_DjiReturnCode>> mission_completion_promise_ {};
-
-		// --- 数据缓存与健康状态 ---
-		SubscriptionStatus			   sub_status_ {};
-		mutable _STD mutex			   payload_mutex_ {};
-		mutable _STD mutex			   health_utex_ {};
-		plane::protocol::StatusPayload latest_payload_ {};
+		SubscriptionStatus									sub_status_ {};
+		mutable _STD mutex									payload_mutex_ {};
+		mutable _STD mutex									health_utex_ {};
+		plane::protocol::StatusPayload						latest_payload_ {};
 		_STD_CHRONO steady_clock::time_point last_update_time_ {};
+		EventDispatcher						 event_dispatcher_ {};
 		constexpr static auto				 ACQUISITION_INTERVAL { _STD_CHRONO milliseconds(20) };
-
-		// --- 生命周期 ---
-		explicit PSDKAdapter(void) noexcept;
-		~PSDKAdapter(void) noexcept;
-		PSDKAdapter(const PSDKAdapter&) noexcept			= delete;
-		PSDKAdapter& operator=(const PSDKAdapter&) noexcept = delete;
-
-		// --- 私有辅助函数 ---
-		void quaternionToEulerAngle(const _DJI T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept;
-		void acquisitionLoop(void) noexcept;
-
-		// --- 回调函数 ---
-		void						missionStateCallback(_DJI T_DjiWaypointV3MissionState missionState);
-		void						actionStateCallback(_DJI T_DjiWaypointV3ActionState actionState);
-		static _DJI T_DjiReturnCode missionStateCallbackEntry(_DJI T_DjiWaypointV3MissionState missionState);
-		static _DJI T_DjiReturnCode actionStateCallbackEntry(_DJI T_DjiWaypointV3ActionState actionState);
 	};
 } // namespace plane::services

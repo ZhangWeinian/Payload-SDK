@@ -1,10 +1,6 @@
 // raspberry_pi/services/MQTT/Handler/LogicHandler.cpp
 
-#include "services/MQTT/Handler/LogicHandler.h"
-
-#include <string_view>
-#include <filesystem>
-#include <functional>
+#include "LogicHandler.h"
 
 #include "protocol/DroneDataClass.h"
 #include "services/DroneControl/FlyManager.h"
@@ -13,6 +9,10 @@
 #include "utils/EnvironmentCheck.h"
 #include "utils/JsonConverter/JsonToKmz.h"
 #include "utils/Logger.h"
+
+#include <string_view>
+#include <filesystem>
+#include <functional>
 
 namespace plane::services
 {

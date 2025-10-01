@@ -1,18 +1,18 @@
 // raspberry_pi/services/MQTT/Service.cpp
 
-#include "services/MQTT/Service.h"
-
-#include <chrono>
-#include <thread>
-
-#include <fmt/format.h>
-#include <mqtt/async_client.h>
+#include "Service.h"
 
 #include "config/ConfigManager.h"
 #include "services/MQTT/Handler/MessageHandler.h"
 #include "services/MQTT/Topics.h"
 #include "utils/JsonConverter/BuildAndParse.h"
 #include "utils/Logger.h"
+
+#include <fmt/format.h>
+#include <mqtt/async_client.h>
+
+#include <chrono>
+#include <thread>
 
 namespace plane::services
 {

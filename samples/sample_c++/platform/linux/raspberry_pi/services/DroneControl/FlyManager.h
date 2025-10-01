@@ -2,14 +2,14 @@
 
 #pragma once
 
+#include "protocol/DroneDataClass.h"
+
 #include <string_view>
 #include <atomic>
 #include <future>
 #include <mutex>
 #include <string>
 #include <vector>
-
-#include "protocol/DroneDataClass.h"
 
 #include "define.h"
 

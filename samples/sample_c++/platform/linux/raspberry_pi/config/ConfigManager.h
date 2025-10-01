@@ -4,9 +4,10 @@
 
 #include "protocol/AppConfigDataClass.h"
 
-#include "define.h"
 #include <yaml-cpp/yaml.h>
 #include <string>
+
+#include "define.h"
 
 namespace plane::config
 {

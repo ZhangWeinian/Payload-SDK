@@ -2,6 +2,10 @@
 
 #pragma once
 
+#include "utils/Logger.h"
+
+#include <gsl/gsl>
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <string_view>
@@ -17,10 +21,7 @@
 #include <string>
 #include <vector>
 
-#include <gsl/gsl>
-
 #include "define.h"
-#include "utils/Logger.h"
 
 namespace plane::utils
 {

@@ -1,13 +1,12 @@
 // raspberry_pi/services/DroneControl/FlyManager.cpp
 
-#include "services/DroneControl/FlyManager.h"
+#include "FlyManager.h"
+
+#include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
+#include "utils/Logger.h"
 
 #include <filesystem>
 #include <fstream>
-
-#include "FlyManager.h"
-#include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
-#include "utils/Logger.h"
 
 namespace plane::services
 {

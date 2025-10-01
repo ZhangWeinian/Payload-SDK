@@ -1,6 +1,6 @@
 // raspberry_pi/services/MQTT/Handler/MessageHandler.cpp
 
-#include "services/MQTT/Handler/MessageHandler.h"
+#include "MessageHandler.h"
 
 #include "utils/Logger.h"
 

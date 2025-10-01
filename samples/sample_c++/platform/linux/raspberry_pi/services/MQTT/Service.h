@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <mqtt/async_client.h>
+
 #include <condition_variable>
 #include <string_view>
 #include <atomic>
@@ -13,8 +15,6 @@
 #include <string>
 #include <thread>
 #include <utility>
-
-#include <mqtt/async_client.h>
 
 #include "define.h"
 
@@ -72,17 +72,17 @@ namespace plane::services
 		}
 
 	private:
-		_STD unique_ptr<Impl> impl_ { _STD make_unique<Impl>() };
-		_STD atomic<bool>					connected_ { false };
-		_STD mutex							mutex_ {};
-		constexpr static inline _STD size_t MAX_DEQUE_SIZE { 30 };
-		constexpr static inline auto		LOG_THROTTLE_INTERVAL { _STD_CHRONO seconds(5) };
-
 		explicit MQTTService(void) noexcept = default;
 		~MQTTService(void) noexcept;
 		MQTTService(const MQTTService&) noexcept			= delete;
 		MQTTService& operator=(const MQTTService&) noexcept = delete;
 
 		void		 senderLoop(void) noexcept;
+
+		_STD unique_ptr<Impl> impl_ { _STD make_unique<Impl>() };
+		_STD atomic<bool>					connected_ { false };
+		_STD mutex							mutex_ {};
+		constexpr static inline _STD size_t MAX_DEQUE_SIZE { 30 };
+		constexpr static inline auto		LOG_THROTTLE_INTERVAL { _STD_CHRONO seconds(5) };
 	};
 } // namespace plane::services

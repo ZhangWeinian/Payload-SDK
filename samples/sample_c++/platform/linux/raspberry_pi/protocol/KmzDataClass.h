@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include <fmt/format.h>
+#include <pugixml.hpp>
+
 #include <chrono>
 #include <ctime>
 #include <iomanip>
@@ -9,9 +12,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <fmt/format.h>
-#include <pugixml.hpp>
 
 #include "define.h"
 

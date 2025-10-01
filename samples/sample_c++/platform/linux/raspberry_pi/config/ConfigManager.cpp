@@ -1,6 +1,7 @@
 // raspberry_pi/cinfig/ConfigManager.cpp
 
-#include "config/ConfigManager.h"
+#include "ConfigManager.h"
+
 #include "utils/Logger.h"
 
 #include <fstream>

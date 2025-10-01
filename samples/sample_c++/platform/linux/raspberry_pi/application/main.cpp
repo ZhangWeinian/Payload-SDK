@@ -1,9 +1,9 @@
 // raspberry_pi/application/main.cpp
 
-#include "CLI/CLI.hpp"
-
 #include "dji_demo.h"
 #include "my_dji.h"
+
+#include <CLI/CLI.hpp>
 
 int main(int argc, char** argv)
 {
