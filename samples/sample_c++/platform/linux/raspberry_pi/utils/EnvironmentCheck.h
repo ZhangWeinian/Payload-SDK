@@ -39,4 +39,9 @@ namespace plane::utils
 	{
 		return isEnvVarSetToOne("TEST_KMZ");
 	}
+
+	_NODISCARD inline bool isSaveKmz(void) noexcept
+	{
+		return isEnvVarSetToOne("SAVE_KMZ");
+	}
 } // namespace plane::utils

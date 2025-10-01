@@ -2,6 +2,10 @@
 
 #include "services/DroneControl/FlyManager.h"
 
+#include <filesystem>
+#include <fstream>
+
+#include "FlyManager.h"
 #include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
 #include "utils/Logger.h"
 
@@ -15,32 +19,30 @@ namespace plane::services
 
 	void FlyManager::interruptCurrentTask(void)
 	{
-		if (m_taskState == FlyTaskState::RUNNING)
+		if (m_taskState.load() == FlyTaskState::RUNNING)
 		{
-			LOG_INFO("检测到有任务正在运行，正在发送中断指令...");
-			plane::services::PSDKAdapter::getInstance().hover();
-			LOG_INFO("中断指令已提交到后台队列。");
+			LOG_INFO("检测到有任务在运行，正在提交中断指令 (停止航线)...");
+			(void)plane::services::PSDKAdapter::getInstance().stopWaypointMission();
+			LOG_INFO("中断指令已提交。");
 		}
 	}
 
-	template<typename Func, typename... Args>
-	void FlyManager::executeCommand(Func&& command, Args&&... args)
+	template<typename Callable>
+	void FlyManager::executeCommand(Callable&& task)
 	{
 		_STD lock_guard<_STD mutex> lock(m_taskMutex);
 
-		// 发送中断指令（如果需要）
-		// interruptCurrentTask();
+		interruptCurrentTask();
 
 		LOG_INFO("正在向 PSDKAdapter 提交新任务...");
-		auto commandFuture = _STD invoke(command, plane::services::PSDKAdapter::getInstance(), _STD forward<Args>(args)...);
-		m_taskState		   = FlyTaskState::RUNNING;
+		auto commandFuture { _STD forward<Callable>(task)() };
 
+		m_taskState.store(FlyTaskState::RUNNING);
 		_STD thread(
 			[this, f = _STD move(commandFuture)]() mutable
 			{
 				f.wait();
-
-				FlyTaskState expected { FlyTaskState::RUNNING };
+				FlyTaskState expected = FlyTaskState::RUNNING;
 				if (m_taskState.compare_exchange_strong(expected, FlyTaskState::IDLE))
 				{
 					LOG_INFO("FlyManager: 一个后台 PSDK 任务已执行完毕，状态已更新为 IDLE。");
@@ -53,53 +55,111 @@ namespace plane::services
 			.detach();
 	}
 
-	void FlyManager::flyToPoint(const plane::protocol::Waypoint& waypoint) noexcept
+	void FlyManager::flyToPoint(const plane::protocol::Waypoint& waypoint)
 	{
 		LOG_INFO("执行【单点飞行】: Lon={}, Lat={}, Alt={}", waypoint.JD, waypoint.WD, waypoint.GD);
 		// TODO: 调用 PSDK 的单点飞行 API
 	}
 
-	void FlyManager::waypointFly(_STD string_view kmzFilePath) noexcept
+	void FlyManager::waypoint(const _STD vector<uint8_t>& kmzData)
 	{
 		LOG_INFO("执行【航线】");
-		executeCommand(&plane::services::PSDKAdapter::waypointV3, _STD string(kmzFilePath));
+		executeCommand(
+			[&]
+			{
+				return PSDKAdapter::getInstance().waypointV3(kmzData);
+			});
+	}
+
+	void FlyManager::waypoint(_STD string_view kmzFilePath)
+	{
+		LOG_INFO("FlyManager: 执行【航线】(从文件: {})", kmzFilePath);
+
+		_STD_FS path path(kmzFilePath);
+		if (!_STD_FS exists(path))
+		{
+			LOG_ERROR("航线任务启动失败：KMZ 文件 '{}' 不存在。", kmzFilePath);
+			return;
+		}
+
+		_STD ifstream fileStream(path, _STD ios::binary);
+		if (!fileStream)
+		{
+			LOG_ERROR("航线任务启动失败：无法打开 KMZ 文件 '{}'。", kmzFilePath);
+			return;
+		}
+
+		_STD vector<uint8_t> kmzData { _STD istreambuf_iterator<char>(fileStream), _STD istreambuf_iterator<char>() };
+
+		if (kmzData.empty())
+		{
+			LOG_ERROR("航线任务启动失败：读取的 KMZ 文件 '{}' 内容为空。", kmzFilePath);
+			return;
+		}
+
+		LOG_INFO("KMZ 文件读取成功 ({} 字节)，正在提交任务...", kmzData.size());
+		executeCommand(
+			[&]
+			{
+				return PSDKAdapter::getInstance().waypointV3(kmzData);
+			});
 	}
 
 	void FlyManager::takeoff(const plane::protocol::TakeoffPayload& takeoffParams)
 	{
 		LOG_INFO("执行【起飞】");
-		executeCommand(&plane::services::PSDKAdapter::takeoff, takeoffParams);
+		executeCommand(
+			[&]
+			{
+				return PSDKAdapter::getInstance().takeoff(takeoffParams);
+			});
 	}
 
-	void FlyManager::goHome(void) noexcept
+	void FlyManager::goHome(void)
 	{
 		LOG_INFO("执行【返航】");
-		executeCommand(&plane::services::PSDKAdapter::goHome);
+		executeCommand(
+			[&]
+			{
+				return PSDKAdapter::getInstance().goHome();
+			});
 	}
 
-	void FlyManager::hover(void) noexcept
+	void FlyManager::hover(void)
 	{
-		LOG_INFO("执行【悬停】");
+		LOG_INFO("执行【悬停/中断】");
 		_STD lock_guard<_STD mutex> lock(m_taskMutex);
 		interruptCurrentTask();
 	}
 
-	void FlyManager::land(void) noexcept
+	void FlyManager::land(void)
 	{
 		LOG_INFO("执行【降落】");
-		executeCommand(&plane::services::PSDKAdapter::land);
+		executeCommand(
+			[&]
+			{
+				return PSDKAdapter::getInstance().land();
+			});
 	}
 
-	void FlyManager::setControlStrategy(int strategyCode) noexcept
+	void FlyManager::setControlStrategy(int strategyCode)
 	{
 		LOG_INFO("执行【设置云台控制策略】, 策略代码: {}", strategyCode);
-		executeCommand(&plane::services::PSDKAdapter::setControlStrategy, strategyCode);
+		executeCommand(
+			[=]
+			{
+				return PSDKAdapter::getInstance().setControlStrategy(strategyCode);
+			});
 	}
 
-	void FlyManager::flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams) noexcept
+	void FlyManager::flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams)
 	{
 		LOG_INFO("执行【环绕飞行】");
-		executeCommand(&plane::services::PSDKAdapter::flyCircleAroundPoint, circleParams);
+		executeCommand(
+			[&]
+			{
+				return PSDKAdapter::getInstance().flyCircleAroundPoint(circleParams);
+			});
 	}
 
 	void FlyManager::rotateGimbal(double pitch, double yaw) const noexcept

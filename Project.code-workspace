@@ -109,7 +109,11 @@
 			"ranges": "cpp",
 			"typeindex": "cpp",
 			"version": "cpp",
-			"filesystem": "cpp"
+			"filesystem": "cpp",
+			"strstream": "cpp",
+			"scoped_allocator": "cpp",
+			"gsl": "cpp",
+			"pointers": "cpp"
 		}
 	}
 }

@@ -86,7 +86,7 @@ namespace plane::services
 				LOG_INFO("测试指定航线 /tmp/kmz/1.kmz");
 				if (_STD_FS exists("/tmp/kmz/1.kmz"))
 				{
-					FlyManager::getInstance().waypointFly("/tmp/kmz/1.kmz"sv);
+					plane::services::FlyManager::getInstance().waypoint("/tmp/kmz/1.kmz"sv);
 				}
 				else
 				{
@@ -104,18 +104,19 @@ namespace plane::services
 				if (payload.HDJ.size() == 1)
 				{
 					LOG_INFO("[MQTT] 收到并准备执行【单航点任务】");
-					FlyManager::getInstance().flyToPoint(payload.HDJ[0]);
+					plane::services::FlyManager::getInstance().flyToPoint(payload.HDJ[0]);
 				}
 				else
 				{
 					LOG_INFO("[MQTT] 收到并准备执行【航线任务】, 共 {} 个航点", payload.HDJ.size());
-					if (plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload))
+					if (auto kmzData { plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload) }; kmzData)
 					{
-						FlyManager::getInstance().waypointFly(plane::utils::JsonToKmzConverter::getKmzFilePath());
+						plane::services::FlyManager::getInstance().waypoint(*kmzData);
 					}
 					else
 					{
-						LOG_ERROR("生成 KMZ 文件失败！任务中止。");
+						LOG_ERROR("无法执行航线任务，因为 KMZ 数据生成失败。");
+						return;
 					}
 				}
 			}
@@ -126,26 +127,26 @@ namespace plane::services
 	{
 		HANDLE_PAYLOAD("起飞", plane::protocol::TakeoffPayload, {
 			LOG_INFO("[MQTT] 收到【起飞】指令");
-			FlyManager::getInstance().takeoff(payload);
+			plane::services::FlyManager::getInstance().takeoff(payload);
 		});
 	}
 
 	void LogicHandler::handleGoHome(const n_json& payloadJson) noexcept
 	{
 		LOG_INFO("[MQTT] 收到【返航】指令");
-		FlyManager::getInstance().goHome();
+		plane::services::FlyManager::getInstance().goHome();
 	}
 
 	void LogicHandler::handleHover(const n_json& payloadJson) noexcept
 	{
 		LOG_INFO("[MQTT] 收到【悬停】指令");
-		FlyManager::getInstance().hover();
+		plane::services::FlyManager::getInstance().hover();
 	}
 
 	void LogicHandler::handleLand(const n_json& payloadJson) noexcept
 	{
 		LOG_INFO("[MQTT] 收到【降落】指令");
-		FlyManager::getInstance().land();
+		plane::services::FlyManager::getInstance().land();
 	}
 
 	void LogicHandler::handleControlStrategySwitch(const n_json& payloadJson) noexcept

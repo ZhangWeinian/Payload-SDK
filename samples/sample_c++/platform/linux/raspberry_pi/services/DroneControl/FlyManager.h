@@ -26,14 +26,15 @@ namespace plane::services
 	public:
 		static FlyManager& getInstance(void) noexcept;
 
-		void			   flyToPoint(const plane::protocol::Waypoint& waypoint) noexcept;
+		void			   flyToPoint(const plane::protocol::Waypoint& waypoint);
 		void			   takeoff(const plane::protocol::TakeoffPayload& takeoffParams);
-		void			   goHome(void) noexcept;
-		void			   hover(void) noexcept;
-		void			   land(void) noexcept;
-		void			   waypointFly(_STD string_view kmzFilePath) noexcept;
-		void			   setControlStrategy(int strategyCode) noexcept;
-		void			   flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams) noexcept;
+		void			   goHome(void);
+		void			   hover(void);
+		void			   land(void);
+		void			   waypoint(const _STD vector<uint8_t>& kmzData);
+		void			   waypoint(_STD string_view kmzFilePath);
+		void			   setControlStrategy(int strategyCode);
+		void			   flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams);
 
 		void			   rotateGimbal(double pitch, double yaw) const noexcept;
 		void			   rotateGimbalBySpeed(double pitchSpeed, double yawSpeed, double rollSpeed) const noexcept;
@@ -51,8 +52,8 @@ namespace plane::services
 		FlyManager(const FlyManager&) noexcept			  = delete;
 		FlyManager& operator=(const FlyManager&) noexcept = delete;
 
-		template<typename Func, typename... Args>
-		void executeCommand(Func&& command, Args&&... args);
+		template<typename Callable>
+		void executeCommand(Callable&& task);
 
 		void interruptCurrentTask(void);
 

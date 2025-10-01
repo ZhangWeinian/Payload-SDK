@@ -61,3 +61,6 @@
 [submodule "external_libs/cereal"]
 	path = external_libs/cereal
 	url = git@github.com:USCiLab/cereal.git
+[submodule "external_libs/GSL"]
+	path = external_libs/GSL
+	url = git@github.com:microsoft/GSL.git

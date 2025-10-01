@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.12)
+cmake_minimum_required (VERSION 3.30)
 project (cy_psdk CXX C)
 
 set (CMAKE_MESSAGE_LOG_LEVEL VERBOSE)

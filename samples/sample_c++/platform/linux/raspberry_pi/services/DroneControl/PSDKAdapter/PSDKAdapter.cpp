@@ -6,12 +6,15 @@
 #include <cmath>
 #include <filesystem>
 
+#include <gsl/gsl>
+
 #include <dji_aircraft_info.h>
 #include <dji_camera_manager.h>
 #include <dji_error.h>
 #include <dji_flight_controller.h>
 #include <dji_gimbal.h>
 #include <dji_logger.h>
+#include <dji_waypoint_v3.h>
 
 #include "camera_emu/test_payload_cam_emu_base.h"
 #include "camera_emu/test_payload_cam_emu_media.h"
@@ -29,7 +32,6 @@
 #include "perception/test_radar_entry.hpp"
 #include "positioning/test_positioning.h"
 #include "power_management/test_power_management.h"
-#include "waypoint_v3/test_waypoint_v3.h"
 #include "widget/test_widget.h"
 #include "widget/test_widget_speaker.h"
 
@@ -737,23 +739,24 @@ namespace plane::services
 			});
 	}
 
-	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::waypointV3(_STD string kmzFilePath)
+	_STD future<T_DjiReturnCode> PSDKAdapter::waypointV3(const _STD vector<uint8_t>& kmzData)
 	{
 		return m_commandPool->enqueue(
-			[this, path = _STD move(kmzFilePath)]() -> _DJI T_DjiReturnCode
+			[this, data = kmzData]() -> _DJI T_DjiReturnCode
 			{
 				try
 				{
 					if (m_isStopping)
 					{
-						LOG_WARN("应用程序正在关闭，航线任务 '{}' 被取消。", path);
+						LOG_WARN("应用程序正在关闭，航线任务被取消。");
 						return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
 					}
 
-					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					_STD unique_lock<_STD mutex> lock(m_psdkCommandMutex);
+
 					if (m_isStopping)
 					{
-						LOG_WARN("应用程序正在关闭，航线任务 '{}' 被取消。", path);
+						LOG_WARN("应用程序正在关闭，航线任务被取消。");
 						return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
 					}
 
@@ -763,36 +766,73 @@ namespace plane::services
 						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
 					}
 
-					if (!_STD_FS exists(path))
+					if (data.empty())
 					{
-						LOG_ERROR("航线任务失败：KMZ 文件不存在: {}", path);
+						LOG_ERROR("航线任务失败：KMZ 数据为空。");
 						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_INVALID_PARAMETER;
 					}
 
-					LOG_INFO("线程池任务：开始执行航线任务, 文件: {}", path);
-					T_DjiReturnCode returnCode { _DJI DjiTest_WaypointV3RunSampleWithKmzFilePath(path.c_str()) };
-					if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					LOG_DEBUG("正在初始化 Waypoint V3 模块...");
+					_DJI T_DjiReturnCode returnCode { _DJI DjiWaypointV3_Init() };
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 					{
-						LOG_ERROR("航线任务 '{}' 执行失败或被中断，最终返回错误: {} (0x{:08X})",
-								  path,
-								  plane::utils::djiReturnCodeToString(returnCode),
-								  returnCode);
+						LOG_ERROR("Waypoint V3 初始化失败: {}", plane::utils::djiReturnCodeToString(returnCode));
+						return returnCode;
+					}
+
+					auto deinit_guard = _GSL finally(
+						[]
+						{
+							LOG_DEBUG("正在通过 ScopeGuard 调用 DjiWaypointV3_DeInit()...");
+							_DJI DjiWaypointV3_DeInit();
+						});
+
+					LOG_INFO("线程池任务：开始上传 {} 字节的 KMZ 数据...", data.size());
+					returnCode = _DJI DjiWaypointV3_UploadKmzFile(data.data(), data.size());
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("上传 KMZ 数据失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+						return returnCode;
+					}
+
+					m_missionCompletionPromise						= _STD make_unique<_STD promise<_DJI T_DjiReturnCode>>();
+					_STD future<_DJI T_DjiReturnCode> missionFuture = { m_missionCompletionPromise->get_future() };
+
+					LOG_INFO("线程池任务：启动航线任务...");
+					returnCode = _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_START);
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("启动航线任务失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+						m_missionCompletionPromise.reset();
+						return returnCode;
+					}
+
+					lock.unlock();
+					LOG_INFO("航线任务已启动，工作线程等待来自回调的完成信号...");
+
+					_DJI T_DjiReturnCode finalStatus { missionFuture.get() };
+					if (finalStatus == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_INFO("航线任务成功完成 (由回调确认)。");
 					}
 					else
 					{
-						LOG_INFO("航线任务 '{}' 成功完成。", path);
+						LOG_ERROR("航线任务失败或被中断 (由回调确认)，最终状态: {} (0x{:08X})",
+								  plane::utils::djiReturnCodeToString(finalStatus),
+								  finalStatus);
 					}
-					return returnCode;
+
+					return finalStatus;
 				}
 				catch (const _STD exception& e)
 				{
 					LOG_ERROR("PSDKAdapter::waypointV3 任务在线程池中捕获到标准异常: {}", e.what());
-					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+					return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
 				}
 				catch (...)
 				{
 					LOG_ERROR("PSDKAdapter::waypointV3 任务在线程池中捕获到未知异常！");
-					return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+					return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
 				}
 			});
 	}

@@ -4,7 +4,7 @@
         {
             "name": "default",
             "displayName": "默认配置",
-            "description": "使用编译器的默认定义和包含路径。",
+            "description": "Debug，使用编译器的默认定义和包含路径。",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
