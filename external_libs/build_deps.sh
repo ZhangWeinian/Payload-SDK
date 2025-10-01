@@ -276,6 +276,10 @@ install_header_only_library "gsl" \
 	"${BASE_DIR}/GSL" \
 	"include/gsl"
 
+install_header_only_library "eventpp" \
+	"${BASE_DIR}/eventpp" \
+	"include"
+
 printf "%s\n" "${COLOR_GREEN}============================================================"
 printf "                  所有依赖库已成功构建并安装!\n"
 printf "============================================================${COLOR_NC}\n"

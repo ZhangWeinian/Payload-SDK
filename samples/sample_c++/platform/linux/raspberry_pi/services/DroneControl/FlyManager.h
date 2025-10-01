@@ -57,8 +57,8 @@ namespace plane::services
 
 		void interruptCurrentTask(void);
 
-		_STD atomic<FlyTaskState> m_taskState { FlyTaskState::IDLE };
-		_STD mutex				  m_taskMutex;
-		_STD future<void> m_currentTaskFuture;
+		_STD atomic<FlyTaskState> task_state_ { FlyTaskState::IDLE };
+		_STD mutex				  task_mutex_ {};
+		_STD future<void> current_task_future_ {};
 	};
 } // namespace plane::services

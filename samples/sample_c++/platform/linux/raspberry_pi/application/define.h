@@ -24,6 +24,10 @@
 	#define _DJI ::
 #endif
 
+#ifndef _UNNAMED
+	#define _UNNAMED
+#endif
+
 #if __has_include(<chrono>) && !defined(_STD_CHRONO)
 	#define _STD_CHRONO ::std::chrono::
 #endif
@@ -62,6 +66,10 @@
 
 #if __has_include(<gsl/gsl>) && !defined(_GSL)
 	#define _GSL ::gsl::
+#endif
+
+#if __has_include(<ThreadPool.h>) && !defined(_THREADPOOL)
+	#define _THREADPOOL ::
 #endif
 
 constexpr inline auto	MATH_PI { 3.14159265358979323846 };

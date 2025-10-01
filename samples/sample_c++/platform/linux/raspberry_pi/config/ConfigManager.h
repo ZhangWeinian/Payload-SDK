@@ -28,8 +28,8 @@ namespace plane::config
 		static _STD string			   generateUniqueClientId(void) noexcept;
 		bool						   validateConfig(void) noexcept;
 
-		_YAML Node					   configNode {};
-		bool						   loaded { false };
-		plane::protocol::AppConfigData appConfig {};
+		_YAML Node					   config_node_ {};
+		bool						   loaded_ { false };
+		plane::protocol::AppConfigData app_config_ {};
 	};
 } // namespace plane::config

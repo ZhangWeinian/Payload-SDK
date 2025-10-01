@@ -127,6 +127,7 @@ target_include_directories (
 			"${EXTERNAL_LIBS_DIR}/install/include/ThreadPool"
 			"${EXTERNAL_LIBS_DIR}/install/include/asio"
 			"${EXTERNAL_LIBS_DIR}/install/include/httplib"
+			"${EXTERNAL_LIBS_DIR}/install/include/eventpp"
 			${OPENSSL_INCLUDE_DIR}
 	)
 
@@ -258,6 +259,7 @@ add_custom_target (
 	DEPENDS ${CONFIG_DEST_FILE} ${RUN_SCRIPT_DEST_FILE}
 	COMMENT "确保所有运行时文件已复制并是最新版本"
 	)
+
 add_custom_command (
 	TARGET copy_runtime_files
 	POST_BUILD

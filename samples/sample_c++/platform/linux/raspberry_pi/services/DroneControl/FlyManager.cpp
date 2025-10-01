@@ -19,7 +19,7 @@ namespace plane::services
 
 	void FlyManager::interruptCurrentTask(void)
 	{
-		if (m_taskState.load() == FlyTaskState::RUNNING)
+		if (this->task_state_.load() == FlyTaskState::RUNNING)
 		{
 			LOG_INFO("检测到有任务在运行，正在提交中断指令 (停止航线)...");
 			(void)plane::services::PSDKAdapter::getInstance().stopWaypointMission();
@@ -30,20 +30,20 @@ namespace plane::services
 	template<typename Callable>
 	void FlyManager::executeCommand(Callable&& task)
 	{
-		_STD lock_guard<_STD mutex> lock(m_taskMutex);
+		_STD lock_guard<_STD mutex> lock(this->task_mutex_);
 
-		interruptCurrentTask();
+		this->interruptCurrentTask();
 
 		LOG_INFO("正在向 PSDKAdapter 提交新任务...");
 		auto commandFuture { _STD forward<Callable>(task)() };
 
-		m_taskState.store(FlyTaskState::RUNNING);
+		this->task_state_.store(FlyTaskState::RUNNING);
 		_STD thread(
 			[this, f = _STD move(commandFuture)]() mutable
 			{
 				f.wait();
 				FlyTaskState expected = FlyTaskState::RUNNING;
-				if (m_taskState.compare_exchange_strong(expected, FlyTaskState::IDLE))
+				if (this->task_state_.compare_exchange_strong(expected, FlyTaskState::IDLE))
 				{
 					LOG_INFO("FlyManager: 一个后台 PSDK 任务已执行完毕，状态已更新为 IDLE。");
 				}
@@ -64,10 +64,10 @@ namespace plane::services
 	void FlyManager::waypoint(const _STD vector<uint8_t>& kmzData)
 	{
 		LOG_INFO("执行【航线】");
-		executeCommand(
+		this->executeCommand(
 			[&]
 			{
-				return PSDKAdapter::getInstance().waypointV3(kmzData);
+				return plane::services::PSDKAdapter::getInstance().waypointV3(kmzData);
 			});
 	}
 
@@ -98,67 +98,63 @@ namespace plane::services
 		}
 
 		LOG_INFO("KMZ 文件读取成功 ({} 字节)，正在提交任务...", kmzData.size());
-		executeCommand(
-			[&]
-			{
-				return PSDKAdapter::getInstance().waypointV3(kmzData);
-			});
+		this->waypoint(kmzData);
 	}
 
 	void FlyManager::takeoff(const plane::protocol::TakeoffPayload& takeoffParams)
 	{
 		LOG_INFO("执行【起飞】");
-		executeCommand(
+		this->executeCommand(
 			[&]
 			{
-				return PSDKAdapter::getInstance().takeoff(takeoffParams);
+				return plane::services::PSDKAdapter::getInstance().takeoff(takeoffParams);
 			});
 	}
 
 	void FlyManager::goHome(void)
 	{
 		LOG_INFO("执行【返航】");
-		executeCommand(
+		this->executeCommand(
 			[&]
 			{
-				return PSDKAdapter::getInstance().goHome();
+				return plane::services::PSDKAdapter::getInstance().goHome();
 			});
 	}
 
 	void FlyManager::hover(void)
 	{
 		LOG_INFO("执行【悬停/中断】");
-		_STD lock_guard<_STD mutex> lock(m_taskMutex);
-		interruptCurrentTask();
+		_STD lock_guard<_STD mutex> lock(this->task_mutex_);
+		this->interruptCurrentTask();
 	}
 
 	void FlyManager::land(void)
 	{
 		LOG_INFO("执行【降落】");
-		executeCommand(
+		this->executeCommand(
 			[&]
 			{
-				return PSDKAdapter::getInstance().land();
+				return plane::services::PSDKAdapter::getInstance().land();
 			});
 	}
 
 	void FlyManager::setControlStrategy(int strategyCode)
 	{
 		LOG_INFO("执行【设置云台控制策略】, 策略代码: {}", strategyCode);
-		executeCommand(
+		this->executeCommand(
 			[=]
 			{
-				return PSDKAdapter::getInstance().setControlStrategy(strategyCode);
+				return plane::services::PSDKAdapter::getInstance().setControlStrategy(strategyCode);
 			});
 	}
 
 	void FlyManager::flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams)
 	{
 		LOG_INFO("执行【环绕飞行】");
-		executeCommand(
+		this->executeCommand(
 			[&]
 			{
-				return PSDKAdapter::getInstance().flyCircleAroundPoint(circleParams);
+				return plane::services::PSDKAdapter::getInstance().flyCircleAroundPoint(circleParams);
 			});
 	}
 

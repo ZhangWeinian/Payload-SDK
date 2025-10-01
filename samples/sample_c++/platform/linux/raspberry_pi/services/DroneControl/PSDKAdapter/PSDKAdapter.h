@@ -12,13 +12,14 @@
 #include <thread>
 #include <vector>
 
+#include <ThreadPool.h>
+
 #include <dji_fc_subscription.h>
 #include <dji_typedef.h>
 #include <dji_waypoint_v3.h>
 
 #include "protocol/DroneDataClass.h"
 #include "protocol/HeartbeatDataClass.h"
-#include "ThreadPool.h"
 
 #include "define.h"
 
@@ -64,21 +65,21 @@ namespace plane::services
 		};
 
 		// --- 资源与线程管理 ---
-		_STD unique_ptr<ThreadPool> m_commandPool {};
-		_STD mutex					m_psdkCommandMutex {};
-		_STD thread					m_acquisitionThread {};
-		_STD atomic<bool> m_runAcquisition { false };
-		_STD atomic<bool> m_isStopping { false };
+		_STD unique_ptr<_THREADPOOL ThreadPool> command_pool_ {};
+		_STD mutex								psdk_command_mutex_ {};
+		_STD thread								acquisition_thread_ {};
+		_STD atomic<bool> run_acquisition_ { false };
+		_STD atomic<bool> is_stopping_ { false };
 
 		// --- 航线任务信令 ---
-		_STD unique_ptr<_STD promise<_DJI T_DjiReturnCode>> m_missionCompletionPromise {};
+		_STD unique_ptr<_STD promise<_DJI T_DjiReturnCode>> mission_completion_promise_ {};
 
 		// --- 数据缓存与健康状态 ---
-		SubscriptionStatus			   m_sub_status {};
-		mutable _STD mutex			   m_payloadMutex {};
-		plane::protocol::StatusPayload m_latestPayload {};
-		mutable _STD mutex			   m_healthMutex {};
-		_STD_CHRONO steady_clock::time_point m_lastUpdateTime {};
+		SubscriptionStatus			   sub_status_ {};
+		mutable _STD mutex			   payload_mutex_ {};
+		mutable _STD mutex			   health_utex_ {};
+		plane::protocol::StatusPayload latest_payload_ {};
+		_STD_CHRONO steady_clock::time_point last_update_time_ {};
 		constexpr static auto				 ACQUISITION_INTERVAL { _STD_CHRONO milliseconds(20) };
 
 		// --- 生命周期 ---

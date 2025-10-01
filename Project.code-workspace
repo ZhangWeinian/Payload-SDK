@@ -113,7 +113,8 @@
 			"strstream": "cpp",
 			"scoped_allocator": "cpp",
 			"gsl": "cpp",
-			"pointers": "cpp"
+			"pointers": "cpp",
+			"util": "cpp"
 		}
 	}
 }

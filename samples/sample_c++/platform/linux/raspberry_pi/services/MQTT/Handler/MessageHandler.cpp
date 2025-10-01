@@ -14,8 +14,8 @@ namespace plane::services
 
 	void MqttMessageHandler::registerHandler(_STD string_view topic, _STD string_view messageType, LogicHandler handler) noexcept
 	{
-		_STD lock_guard<_STD mutex>				lock(handler_mutex_);
-		handler_map_[topic][messageType] = _STD move(handler);
+		_STD lock_guard<_STD mutex>					  lock(this->handler_mutex_);
+		this->handler_map_[topic][messageType] = _STD move(handler);
 		LOG_DEBUG("为主题 '{}', 消息类型 '{}' 注册了处理器。", topic, messageType);
 	}
 
@@ -23,8 +23,8 @@ namespace plane::services
 	{
 		try
 		{
-			_STD lock_guard<_STD mutex> lock(handler_mutex_);
-			if (auto topic_it { handler_map_.find(topic) }; topic_it != handler_map_.end())
+			_STD lock_guard<_STD mutex> lock(this->handler_mutex_);
+			if (auto topic_it { this->handler_map_.find(topic) }; topic_it != this->handler_map_.end())
 			{
 				if (auto type_it { topic_it->second.find(messageType) }; type_it != topic_it->second.end())
 				{

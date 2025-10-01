@@ -24,18 +24,18 @@ namespace plane::services
 
 		void connected(const _STD string& cause) override
 		{
-			service_->setConnected(true);
+			this->service_->setConnected(true);
 			LOG_INFO("MQTT 连接成功！");
-			service_->subscribe(plane::services::TOPIC_MISSION_CONTROL);
-			service_->subscribe(plane::services::TOPIC_COMMAND_CONTROL);
-			service_->subscribe(plane::services::TOPIC_PAYLOAD_CONTROL);
-			service_->subscribe(plane::services::TOPIC_ROCKER_CONTROL);
-			service_->subscribe(plane::services::TOPIC_VELOCITY_CONTROL);
+			this->service_->subscribe(plane::services::TOPIC_MISSION_CONTROL);
+			this->service_->subscribe(plane::services::TOPIC_COMMAND_CONTROL);
+			this->service_->subscribe(plane::services::TOPIC_PAYLOAD_CONTROL);
+			this->service_->subscribe(plane::services::TOPIC_ROCKER_CONTROL);
+			this->service_->subscribe(plane::services::TOPIC_VELOCITY_CONTROL);
 		}
 
 		void connection_lost(const _STD string& cause) override
 		{
-			auto& impl { service_->getImpl() };
+			auto& impl { this->service_->getImpl() };
 			if (!impl.manualDisconnect)
 			{
 				impl.reconnectAttempts++;
@@ -47,7 +47,7 @@ namespace plane::services
 				LOG_INFO("MQTT 连接已手动断开");
 				impl.manualDisconnect = false;
 			}
-			service_->setConnected(false);
+			this->service_->setConnected(false);
 		}
 
 		void message_arrived(_MQTT const_message_ptr msg) override
@@ -79,7 +79,7 @@ namespace plane::services
 	{
 		try
 		{
-			stop();
+			this->stop();
 			LOG_DEBUG("[MQTTService::dtor] stop() 完成");
 		}
 		catch (const _STD exception& ex)
@@ -100,24 +100,25 @@ namespace plane::services
 
 	bool MQTTService::publish(_STD string_view topic, _STD string_view payload) noexcept
 	{
-		if (!impl_->runSender_)
+		if (!this->impl_->runSender_)
 		{
 			LOG_WARN("MQTT 发送服务未运行, 消息被丢弃。");
 			return false;
 		}
 
 		{
-			_STD lock_guard<_STD mutex> lock(impl_->dequeMutex_);
+			_STD lock_guard<_STD mutex> lock(this->impl_->dequeMutex);
 
-			if (impl_->messageDeque_.size() >= MAX_DEQUE_SIZE)
+			if (this->impl_->messageDeque.size() >= MAX_DEQUE_SIZE)
 			{
-				impl_->messageDeque_.pop_front();
+				this->impl_->messageDeque.pop_front();
 				if (const auto now { _STD_CHRONO steady_clock::now() };
-					!impl_->isDroppingMessages_ || (now - impl_->lastDropLogTime_ > LOG_THROTTLE_INTERVAL))
+					!this->impl_->isDroppingMessages_ || (now - this->impl_->lastDropLogTime_ > this->LOG_THROTTLE_INTERVAL))
 				{
-					LOG_WARN("MQTT 消息队列已满, 正在丢弃最旧的消息以保证数据新鲜度。此警告将在 {} 秒内抑制。", LOG_THROTTLE_INTERVAL.count());
-					impl_->isDroppingMessages_ = true;
-					impl_->lastDropLogTime_	   = now;
+					LOG_WARN("MQTT 消息队列已满, 正在丢弃最旧的消息以保证数据新鲜度。此警告将在 {} 秒内抑制。",
+							 this->LOG_THROTTLE_INTERVAL.count());
+					this->impl_->isDroppingMessages_ = true;
+					this->impl_->lastDropLogTime_	 = now;
 				}
 				else
 				{
@@ -126,20 +127,20 @@ namespace plane::services
 			}
 			else
 			{
-				impl_->isDroppingMessages_ = false;
+				this->impl_->isDroppingMessages_ = false;
 			}
 
-			impl_->messageDeque_.emplace_back(topic, payload);
+			this->impl_->messageDeque.emplace_back(topic, payload);
 		}
 
-		impl_->dequeCv_.notify_one();
+		this->impl_->dequeCv.notify_one();
 		return true;
 	}
 
 	void MQTTService::subscribe(_STD string_view topic) noexcept
 	{
-		_STD lock_guard<_STD mutex> lock(mutex_);
-		if (!isConnected() || !impl_->client)
+		_STD lock_guard<_STD mutex> lock(this->mutex_);
+		if (!this->isConnected() || !this->impl_->client)
 		{
 			LOG_WARN("MQTT 未连接, 对主题 '{}' 的订阅请求被忽略。", topic);
 			return;
@@ -147,7 +148,7 @@ namespace plane::services
 
 		try
 		{
-			impl_->client->subscribe(topic.data(), 1);
+			this->impl_->client->subscribe(topic.data(), 1);
 			LOG_DEBUG("已发送订阅主题 '{}' 的请求。", topic);
 		}
 		catch (const _MQTT exception& ex)
@@ -166,9 +167,9 @@ namespace plane::services
 
 	bool MQTTService::start(_STD string_view serverURI, _STD string_view clientId) noexcept
 	{
-		_STD lock_guard<_STD mutex> lock(mutex_);
+		_STD lock_guard<_STD mutex> lock(this->mutex_);
 
-		if (isConnected())
+		if (this->isConnected())
 		{
 			LOG_DEBUG("MQTT 服务已经启动, 忽略重复启动请求");
 			return true;
@@ -179,8 +180,8 @@ namespace plane::services
 
 		if (url.empty() || cid.empty())
 		{
-			url = config::ConfigManager::getInstance().getMqttUrl();
-			cid = config::ConfigManager::getInstance().getMqttClientId();
+			url = plane::config::ConfigManager::getInstance().getMqttUrl();
+			cid = plane::config::ConfigManager::getInstance().getMqttClientId();
 			LOG_INFO("使用配置文件中的 MQTT 设置启动服务。服务器=[{}], 客户端ID=[{}]", url, cid);
 		}
 		else
@@ -188,18 +189,18 @@ namespace plane::services
 			LOG_INFO("使用提供的 MQTT 设置启动服务。服务器=[{}], 客户端ID=[{}]", url, cid);
 		}
 
-		if (impl_->client)
+		if (this->impl_->client)
 		{
 			LOG_DEBUG("清理现有的 MQTT 客户端实例");
-			stop();
+			this->stop();
 			LOG_DEBUG("stop() 完成, client 已清理");
 		}
 
 		try
 		{
-			impl_->client	= _STD	 make_unique<_MQTT async_client>(url, cid);
-			impl_->callback = _STD make_shared<MqttCallback>(this);
-			impl_->client->set_callback(*impl_->callback);
+			this->impl_->client	  = _STD   make_unique<_MQTT async_client>(url, cid);
+			this->impl_->callback = _STD make_shared<MqttCallback>(this);
+			this->impl_->client->set_callback(*(this->impl_)->callback);
 
 			_MQTT connect_options connOpts {};
 			connOpts.set_keep_alive_interval(30);
@@ -207,11 +208,11 @@ namespace plane::services
 			connOpts.set_automatic_reconnect(true);
 			connOpts.set_mqtt_version(MQTTVERSION_5);
 
-			impl_->client->connect(connOpts);
+			this->impl_->client->connect(connOpts);
 			LOG_DEBUG("MQTT 服务启动成功, 等待连接建立...");
 
-			impl_->runSender_	 = true;
-			impl_->senderThread_ = _STD thread(&MQTTService::senderLoop, this);
+			this->impl_->runSender_	  = true;
+			this->impl_->senderThread = _STD thread(&MQTTService::senderLoop, this);
 			LOG_DEBUG("MQTT 异步发送线程已启动。");
 
 			return true;
@@ -219,44 +220,44 @@ namespace plane::services
 		catch (const _MQTT exception& ex)
 		{
 			LOG_ERROR("MQTT 客户端初始化或连接失败: {}", ex.what());
-			impl_->client.reset();
-			impl_->callback.reset();
+			this->impl_->client.reset();
+			this->impl_->callback.reset();
 			return false;
 		}
 		catch (const _STD exception& ex)
 		{
 			LOG_ERROR("MQTT 客户端初始化或连接发生未知异常: {}", ex.what());
-			impl_->client.reset();
-			impl_->callback.reset();
+			this->impl_->client.reset();
+			this->impl_->callback.reset();
 			return false;
 		}
 		catch (...)
 		{
 			LOG_ERROR("MQTT 客户端初始化或连接发生未知异常: <non-std exception>");
-			impl_->client.reset();
-			impl_->callback.reset();
+			this->impl_->client.reset();
+			this->impl_->callback.reset();
 			return false;
 		}
 	}
 
 	void MQTTService::stop(void) noexcept
 	{
-		if (impl_->runSender_.exchange(false))
+		if (this->impl_->runSender_.exchange(false))
 		{
-			impl_->dequeCv_.notify_one();
-			if (impl_->senderThread_.joinable())
+			this->impl_->dequeCv.notify_one();
+			if (this->impl_->senderThread.joinable())
 			{
-				impl_->senderThread_.join();
+				this->impl_->senderThread.join();
 				LOG_DEBUG("MQTT 异步发送线程已停止。");
 			}
 		}
 
-		_STD lock_guard<_STD mutex> lock(mutex_);
+		_STD lock_guard<_STD mutex> lock(this->mutex_);
 
-		impl_->manualDisconnect = true;
-		setConnected(false);
+		this->impl_->manualDisconnect = true;
+		this->setConnected(false);
 
-		if (!impl_ || !impl_->client)
+		if (!this->impl_ || !this->impl_->client)
 		{
 			LOG_DEBUG("MQTTService 停止：客户端不存在或已被销毁");
 			return;
@@ -264,19 +265,19 @@ namespace plane::services
 
 		try
 		{
-			if (impl_->client->is_connected())
+			if (this->impl_->client->is_connected())
 			{
 				LOG_DEBUG("MQTTService 停止：客户端已连接, 正在发送断开连接请求...");
-				impl_->client->disconnect()->wait();
+				this->impl_->client->disconnect()->wait();
 				_STD this_thread::sleep_for(_STD_CHRONO milliseconds(200));
 			}
 			else
 			{
 				LOG_DEBUG("MQTTService 停止：客户端未连接, 跳过断开步骤");
 			}
-			LOG_DEBUG("正在销毁 MQTT 客户端实例...");
-			impl_->client.reset();
-			impl_->callback.reset();
+
+			this->impl_->client.reset();
+			this->impl_->callback.reset();
 			LOG_INFO("MQTT 服务已停止");
 		}
 		catch (const _MQTT exception& ex)
@@ -297,9 +298,9 @@ namespace plane::services
 	{
 		_STD lock_guard<_STD mutex> lock(mutex_);
 		LOG_INFO("重新启动 MQTT 服务...");
-		stop();
+		this->stop();
 		_STD this_thread::sleep_for(_STD_CHRONO milliseconds(300));
-		if (!start(serverURI, clientId))
+		if (!this->start(serverURI, clientId))
 		{
 			LOG_ERROR("MQTT restart 启动失败！");
 		}
@@ -307,45 +308,45 @@ namespace plane::services
 
 	void MQTTService::setConnected(bool status) noexcept
 	{
-		connected_.store(status, _STD memory_order_release);
+		this->connected_.store(status, _STD memory_order_release);
 	}
 
 	bool MQTTService::isConnected(void) const noexcept
 	{
-		return connected_.load(_STD memory_order_acquire);
+		return this->connected_.load(_STD memory_order_acquire);
 	}
 
 	void MQTTService::senderLoop() noexcept
 	{
 		LOG_DEBUG("MQTT 发送者线程循环开始。");
 
-		while (impl_->runSender_)
+		while (this->impl_->runSender_)
 		{
 			_STD pair<_STD string, _STD string> message {};
 
 			{
-				_STD unique_lock<_STD mutex> lock(impl_->dequeMutex_);
-				impl_->dequeCv_.wait(lock,
-									 [this]
-									 {
-										 return !impl_->messageDeque_.empty() || !impl_->runSender_;
-									 });
+				_STD unique_lock<_STD mutex> lock(this->impl_->dequeMutex);
+				this->impl_->dequeCv.wait(lock,
+										  [this]
+										  {
+											  return !this->impl_->messageDeque.empty() || !this->impl_->runSender_;
+										  });
 
-				if (!impl_->runSender_ && impl_->messageDeque_.empty())
+				if (!this->impl_->runSender_ && this->impl_->messageDeque.empty())
 				{
 					break;
 				}
 
-				if (impl_->messageDeque_.empty())
+				if (this->impl_->messageDeque.empty())
 				{
 					continue;
 				}
 
-				message = _STD move(impl_->messageDeque_.front());
-				impl_->messageDeque_.pop_front();
+				message = _STD move(this->impl_->messageDeque.front());
+				this->impl_->messageDeque.pop_front();
 			}
 
-			if (!isConnected() || !impl_ || !impl_->client)
+			if (!this->isConnected() || !this->impl_ || !this->impl_->client)
 			{
 				LOG_WARN("MQTT 未连接, 队列中的一条消息被丢弃。");
 				continue;
@@ -355,7 +356,7 @@ namespace plane::services
 			{
 				auto msg { _MQTT make_message(message.first, message.second) };
 				msg->set_qos(1);
-				impl_->client->publish(msg);
+				this->impl_->client->publish(msg);
 			}
 			catch (const _MQTT exception& ex)
 			{

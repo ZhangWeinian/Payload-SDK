@@ -33,10 +33,10 @@ namespace plane::services
 			_STD_CHRONO steady_clock::time_point lastDisconnectTime {};
 			_STD_CHRONO steady_clock::time_point lastConnectTime {};
 			bool								 manualDisconnect { false };
-			_STD deque<_STD pair<_STD string, _STD string>> messageDeque_ {};
-			_STD mutex										dequeMutex_ {};
-			_STD condition_variable							dequeCv_ {};
-			_STD thread										senderThread_ {};
+			_STD deque<_STD pair<_STD string, _STD string>> messageDeque {};
+			_STD mutex										dequeMutex {};
+			_STD condition_variable							dequeCv {};
+			_STD thread										senderThread {};
 			_STD atomic<bool> runSender_ { false };
 			bool			  isDroppingMessages_ { false };
 			_STD_CHRONO steady_clock::time_point lastDropLogTime_ {};

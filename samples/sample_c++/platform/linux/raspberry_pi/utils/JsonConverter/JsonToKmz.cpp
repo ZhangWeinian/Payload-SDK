@@ -31,125 +31,134 @@ namespace plane::utils
 		public:
 			explicit InMemoryZipArchive(void) noexcept
 			{
-				_LIBZIP zip_error_t error {};
-				_LIBZIP				zip_error_init(&error);
+				_LIBZIP zip_error_t		 error {};
+				_LIBZIP					 zip_error_init(&error);
 
-				m_source = _LIBZIP	zip_source_buffer_create(nullptr, 0, 1, &error);
-				if (!m_source)
+				this->m_source = _LIBZIP zip_source_buffer_create(nullptr, 0, 1, &error);
+				if (!this->m_source)
 				{
 					LOG_ERROR("创建 zip 内存源失败: {}", _LIBZIP zip_error_strerror(&error));
 					_LIBZIP zip_error_fini(&error);
 					return;
 				}
 
-				m_archive = _LIBZIP zip_open_from_source(m_source, ZIP_CREATE | ZIP_TRUNCATE, &error);
-				if (!m_archive)
+				this->m_archive = _LIBZIP zip_open_from_source(this->m_source, ZIP_CREATE | ZIP_TRUNCATE, &error);
+				if (!this->m_archive)
 				{
 					LOG_ERROR("从内存源打开 zip 归档失败: {}", _LIBZIP zip_error_strerror(&error));
 					_LIBZIP zip_source_free(m_source);
-					m_source = nullptr;
+					this->m_source = nullptr;
 				}
 				_LIBZIP zip_error_fini(&error);
 			}
 
 			~InMemoryZipArchive(void) noexcept
 			{
-				if (m_archive)
+				if (this->m_archive)
 				{
-					_LIBZIP zip_close(m_archive);
+					_LIBZIP zip_discard(this->m_archive);
 				}
-				m_archive = nullptr;
+				this->m_archive = nullptr;
 				if (m_source)
 				{
-					_LIBZIP zip_source_free(m_source);
+					_LIBZIP zip_source_free(this->m_source);
 				}
-				m_source = nullptr;
+				this->m_source = nullptr;
 			}
 
 			bool addFile(const _STD string& path_in_zip, const _STD string& content)
 			{
-				if (!m_archive)
+				if (!this->m_archive)
 				{
 					return false;
 				}
 
-				_LIBZIP zip_source_t* content_source { _LIBZIP zip_source_buffer(m_archive, content.c_str(), content.length(), 0) };
+				_LIBZIP zip_source_t* content_source { _LIBZIP zip_source_buffer(this->m_archive, content.c_str(), content.length(), 0) };
 				if (!content_source)
 				{
-					LOG_ERROR("无法为 '{}' 创建 zip source: {}", path_in_zip, _LIBZIP zip_strerror(m_archive));
+					LOG_ERROR("无法为 '{}' 创建 zip source: {}", path_in_zip, _LIBZIP zip_strerror(this->m_archive));
 					return false;
 				}
 
-				if (_LIBZIP zip_file_add(m_archive, path_in_zip.c_str(), content_source, ZIP_FL_ENC_UTF_8) < 0)
+				if (_LIBZIP zip_file_add(this->m_archive, path_in_zip.c_str(), content_source, ZIP_FL_ENC_UTF_8) < 0)
 				{
-					LOG_ERROR("无法将 '{}' 添加到 KMZ: {}", path_in_zip, _LIBZIP zip_strerror(m_archive));
+					LOG_ERROR("无法将 '{}' 添加到 KMZ: {}", path_in_zip, _LIBZIP zip_strerror(this->m_archive));
 					_LIBZIP zip_source_free(content_source);
 					return false;
 				}
 				return true;
 			}
 
-			_STD optional<_STD vector<uint8_t>> getFinalData()
+			_STD optional<_STD vector<uint8_t>> getFinalData(void)
 			{
-				if (!m_source || !m_archive)
+				if (!this->m_source || !this->m_archive)
 				{
 					return _STD nullopt;
 				}
 
-				if (_LIBZIP zip_close(m_archive) < 0)
+				if (_LIBZIP zip_close(this->m_archive) < 0)
 				{
-					LOG_ERROR("关闭内存归档时出错: {}", _LIBZIP zip_error_strerror(_LIBZIP zip_get_error(m_archive)));
-					m_archive = nullptr;
+					LOG_ERROR("关闭内存归档时出错: {}", _LIBZIP zip_error_strerror(_LIBZIP zip_get_error(this->m_archive)));
+					_LIBZIP zip_discard(this->m_archive);
+					this->m_archive = nullptr;
+					_LIBZIP zip_source_free(this->m_source);
+					this->m_source = nullptr;
 					return _STD nullopt;
 				}
-				m_archive = nullptr;
+				m_archive			   = nullptr;
 
-				if (_LIBZIP zip_source_open(m_source) < 0)
-				{
-					_LIBZIP zip_error_t* err { _LIBZIP zip_source_error(m_source) };
-					LOG_ERROR("无法打开内存 zip 源进行读取: {}", _LIBZIP zip_error_strerror(err));
-					return std::nullopt;
-				}
-
-				auto source_closer = _GSL finally(
+				auto source_free_guard = _GSL finally(
 					[this]
 					{
-						if (m_source)
+						if (this->m_source)
 						{
-							_LIBZIP zip_source_close(m_source);
+							_LIBZIP zip_source_free(this->m_source);
+							this->m_source = nullptr;
+						}
+					});
+
+				if (_LIBZIP zip_source_open(this->m_source) < 0)
+				{
+					_LIBZIP zip_error_t* err { _LIBZIP zip_source_error(this->m_source) };
+					LOG_ERROR("无法打开内存 zip 源进行读取: {}", _LIBZIP zip_error_strerror(err));
+					return _STD nullopt;
+				}
+
+				auto source_close_guard = _GSL finally(
+					[this]
+					{
+						if (this->m_source)
+						{
+							_LIBZIP zip_source_close(this->m_source);
 						}
 					});
 
 				_LIBZIP zip_stat_t st {};
-				if (_LIBZIP zip_source_stat(m_source, &st) < 0 || !(st.valid & ZIP_STAT_SIZE))
+				if (_LIBZIP zip_source_stat(this->m_source, &st) < 0 || !(st.valid & ZIP_STAT_SIZE))
 				{
 					LOG_ERROR("无法获取内存 zip 源的大小");
 					return _STD nullopt;
 				}
 
 				_STD vector<uint8_t> data(st.size);
-				if (_LIBZIP zip_int64_t bytes_read = _LIBZIP zip_source_read(m_source, data.data(), st.size);
+				if (_LIBZIP zip_int64_t bytes_read { _LIBZIP zip_source_read(this->m_source, data.data(), st.size) };
 					bytes_read < 0 || static_cast<_LIBZIP zip_uint64_t>(bytes_read) != st.size)
 				{
 					LOG_ERROR("从内存 zip 源读取数据不完整");
 					return _STD nullopt;
 				}
 
-				_LIBZIP zip_source_free(m_source);
-				m_source = nullptr;
-
 				return data;
 			}
 
 			explicit operator bool() const noexcept
 			{
-				return m_archive != nullptr;
+				return this->m_archive != nullptr;
 			}
 
 		private:
 			zip_t*		  m_archive { nullptr };
 			zip_source_t* m_source { nullptr };
-			// 禁止拷贝和移动
 			InMemoryZipArchive(const InMemoryZipArchive&)			 = delete;
 			InMemoryZipArchive& operator=(const InMemoryZipArchive&) = delete;
 		};
@@ -440,8 +449,8 @@ namespace plane::utils
 				return _STD nullopt;
 			}
 
-			_STD string		   waylinesWpml { generateWaylinesWpml(waypoints) };
-			_STD string		   templateKml { generateTemplateKml(waypoints, missionInfo) };
+			_STD string		   waylinesWpml { _UNNAMED generateWaylinesWpml(waypoints) };
+			_STD string		   templateKml { _UNNAMED generateTemplateKml(waypoints, missionInfo) };
 
 			InMemoryZipArchive archive {};
 			if (!archive)
@@ -465,9 +474,9 @@ namespace plane::utils
 			_STD vector<uint8_t>& kmzData { *kmzDataOpt };
 			LOG_DEBUG("成功在内存中生成 KMZ 数据 ({} 字节)。", kmzData.size());
 
-			if (isSaveKmz())
+			if (plane::utils::isSaveKmz())
 			{
-				if (auto storageDirOpt { getKmzStorageDir() }; storageDirOpt)
+				if (auto storageDirOpt { _UNNAMED getKmzStorageDir() }; storageDirOpt)
 				{
 					_STD stringstream time_ss {};
 					auto			  now { _STD_CHRONO system_clock::now() };

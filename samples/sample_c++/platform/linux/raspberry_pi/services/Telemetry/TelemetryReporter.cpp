@@ -12,7 +12,7 @@
 #include "utils/EnvironmentCheck.h"
 #include "utils/JsonConverter/BuildAndParse.h"
 #include "utils/Logger.h"
-#include "utils/NetworkUtils/NetworkUtils.h"
+#include "utils/NetworkUtils.h"
 
 namespace plane::services
 {
@@ -24,12 +24,12 @@ namespace plane::services
 
 	TelemetryReporter::~TelemetryReporter(void) noexcept
 	{
-		stop();
+		this->stop();
 	}
 
 	bool TelemetryReporter::start(void) noexcept
 	{
-		if (run_.exchange(true, _STD memory_order_relaxed))
+		if (this->run_.exchange(true, _STD memory_order_relaxed))
 		{
 			LOG_DEBUG("TelemetryReporter 已经启动, 请勿重复调用 start() 。");
 			return false;
@@ -37,14 +37,14 @@ namespace plane::services
 
 		LOG_DEBUG("正在启动遥测上报服务...");
 
-		status_thread_ = _STD thread(
+		this->status_thread_ = _STD thread(
 			[this]()
 			{
 				this->statusReportLoop();
 				LOG_DEBUG("statusReportLoop 线程启动");
 			});
 
-		fixed_info_thread_ = _STD thread(
+		this->fixed_info_thread_ = _STD thread(
 			[this]()
 			{
 				this->fixedInfoReportLoop();
@@ -57,20 +57,20 @@ namespace plane::services
 
 	void TelemetryReporter::stop(void) noexcept
 	{
-		if (!run_.exchange(false, _STD memory_order_release))
+		if (!this->run_.exchange(false, _STD memory_order_release))
 		{
 			LOG_DEBUG("已经停止, 无需重复");
 			return;
 		}
 
-		if (status_thread_.joinable())
+		if (this->status_thread_.joinable())
 		{
-			status_thread_.join();
+			this->status_thread_.join();
 		}
 
-		if (fixed_info_thread_.joinable())
+		if (this->fixed_info_thread_.joinable())
 		{
-			fixed_info_thread_.join();
+			this->fixed_info_thread_.join();
 		}
 
 		LOG_DEBUG("所有线程已结束, 服务完全停止");
@@ -81,8 +81,7 @@ namespace plane::services
 		_STD this_thread::sleep_for(_STD_CHRONO milliseconds(100));
 		LOG_DEBUG("线程启动, MQTTService instance addr: {}", (void*)&plane::services::MQTTService::getInstance());
 
-		const auto&						   ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
-
+		const auto& ipAddresses { plane::utils::NetworkUtils::getInstance().getDeviceIpv4Address().value_or("[Not Find]") };
 		const plane::protocol::VideoSource defaultVideoSource { .SPURL = _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ipAddresses),
 																.SPXY  = "RTSP",
 																.ZBZT  = 1 };
@@ -93,7 +92,7 @@ namespace plane::services
 			LOG_WARN("PSDK 未启用 (FULL_PSDK!=1)，遥测上报将使用模拟数据。");
 		}
 
-		while (run_.load(_STD memory_order_acquire))
+		while (this->run_.load(_STD memory_order_acquire))
 		{
 			if (!plane::services::MQTTService::getInstance().isConnected())
 			{
@@ -103,22 +102,22 @@ namespace plane::services
 			}
 
 			const auto					   now { _STD_CHRONO steady_clock::now() };
-			const auto					   lastUpdate { PSDKAdapter::getInstance().getLastUpdateTime() };
-			const bool					   isDataStale { now - lastUpdate > PSDK_WATCHDOG_TIMEOUT };
+			const auto					   lastUpdate { plane::services::PSDKAdapter::getInstance().getLastUpdateTime() };
+			const bool					   isDataStale { now - lastUpdate > this->PSDK_WATCHDOG_TIMEOUT };
 
 			plane::protocol::StatusPayload status_payload {};
 			if (isDataStale)
 			{
-				LOG_ERROR("PSDK 数据采集线程看门狗超时！数据已超过 {} 秒未更新！", PSDK_WATCHDOG_TIMEOUT.count());
+				LOG_ERROR("PSDK 数据采集线程看门狗超时！数据已超过 {} 秒未更新！", this->PSDK_WATCHDOG_TIMEOUT.count());
 
-				status_payload				= PSDKAdapter::getInstance().getLatestStatusPayload();
+				status_payload				= plane::services::PSDKAdapter::getInstance().getLatestStatusPayload();
 				status_payload.SXZT.GPSSXSL = -99;
 			}
 			else
 			{
 				if (psdk_enabled)
 				{
-					status_payload = PSDKAdapter::getInstance().getLatestStatusPayload();
+					status_payload = plane::services::PSDKAdapter::getInstance().getLatestStatusPayload();
 				}
 			}
 
@@ -135,12 +134,12 @@ namespace plane::services
 	{
 		_STD this_thread::sleep_for(_STD_CHRONO milliseconds(100));
 		LOG_DEBUG("固定信息上报线程已启动。");
-		const auto&							ipAddresses { plane::utils::NetworkUtils::getDeviceIpv4Address().value_or("[Not Find]") };
+		const auto& ipAddresses { plane::utils::NetworkUtils::getInstance().getDeviceIpv4Address().value_or("[Not Find]") };
 		plane::protocol::MissionInfoPayload info_payload { .FJSN   = plane::config::ConfigManager::getInstance().getPlaneCode(),
 														   .YKQIP  = ipAddresses,
 														   .YSRTSP = _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ipAddresses) };
 
-		while (run_.load(_STD memory_order_acquire))
+		while (this->run_.load(_STD memory_order_acquire))
 		{
 			if (!plane::services::MQTTService::getInstance().isConnected())
 			{
@@ -154,7 +153,7 @@ namespace plane::services
 
 			for (_STD size_t i { 0 }; i < 10; ++i)
 			{
-				if (!run_.load(_STD memory_order_acquire))
+				if (!this->run_.load(_STD memory_order_acquire))
 				{
 					LOG_DEBUG("MQTTService 在'{}' run_ 已停止, 提前 break", plane::services::TOPIC_FIXED_INFO);
 					break;

@@ -12,8 +12,8 @@ namespace plane::config
 {
 	ConfigManager::ConfigManager(void) noexcept
 	{
-		appConfig.mqttClientId = generateUniqueClientId();
-		LOG_DEBUG("运行时 MQTT Client ID 已生成: {}", appConfig.mqttClientId);
+		this->app_config_.mqttClientId = this->generateUniqueClientId();
+		LOG_DEBUG("运行时 MQTT Client ID 已生成: {}", this->app_config_.mqttClientId);
 	}
 
 	ConfigManager& ConfigManager::getInstance(void) noexcept
@@ -24,7 +24,7 @@ namespace plane::config
 
 	bool ConfigManager::loadAndCheck(const _STD string& filepath) noexcept
 	{
-		loaded = false;
+		this->loaded_ = false;
 
 		try
 		{
@@ -34,16 +34,16 @@ namespace plane::config
 				return false;
 			}
 
-			configNode = _YAML LoadFile(filepath);
+			this->config_node_ = _YAML LoadFile(filepath);
 			LOG_DEBUG("成功加载配置文件: {}", filepath);
 
-			if (!validateConfig())
+			if (!this->validateConfig())
 			{
 				LOG_ERROR("配置验证失败");
 				return false;
 			}
 
-			loaded = true;
+			this->loaded_ = true;
 			return true;
 		}
 		catch (const _YAML Exception& e)
@@ -62,15 +62,15 @@ namespace plane::config
 	{
 		try
 		{
-			if (configNode["mqtt"] && configNode["mqtt"]["url"])
+			if (this->config_node_["mqtt"] && this->config_node_["mqtt"]["url"])
 			{
-				_STD string url { configNode["mqtt"]["url"].as<_STD string>() };
+				_STD string url { this->config_node_["mqtt"]["url"].as<_STD string>() };
 				if (url.empty())
 				{
 					LOG_ERROR("MQTT URL 不能为空");
 					return false;
 				}
-				appConfig.mqttUrl = url;
+				this->app_config_.mqttUrl = url;
 			}
 			else
 			{
@@ -78,15 +78,15 @@ namespace plane::config
 				return false;
 			}
 
-			if (configNode["plane"] && configNode["plane"]["code"])
+			if (this->config_node_["plane"] && this->config_node_["plane"]["code"])
 			{
-				_STD string code { configNode["plane"]["code"].as<_STD string>() };
+				_STD string code { this->config_node_["plane"]["code"].as<_STD string>() };
 				if (code.empty())
 				{
 					LOG_ERROR("Plane Code 不能为空");
 					return false;
 				}
-				appConfig.planeCode = code;
+				this->app_config_.planeCode = code;
 			}
 			else
 			{
@@ -134,9 +134,9 @@ namespace plane::config
 
 	_STD string ConfigManager::getMqttUrl(void) const noexcept
 	{
-		if (loaded)
+		if (this->loaded_)
 		{
-			return appConfig.mqttUrl;
+			return this->app_config_.mqttUrl;
 		}
 		LOG_WARN("配置未加载或 MQTT URL 无效, 返回空字符串");
 		return "";
@@ -144,14 +144,14 @@ namespace plane::config
 
 	_STD string ConfigManager::getMqttClientId(void) const noexcept
 	{
-		return appConfig.mqttClientId;
+		return this->app_config_.mqttClientId;
 	}
 
 	_STD string ConfigManager::getPlaneCode(void) const noexcept
 	{
-		if (loaded)
+		if (this->loaded_)
 		{
-			return appConfig.planeCode;
+			return this->app_config_.planeCode;
 		}
 		LOG_WARN("配置未加载或 PlaneCode 无效, 返回空字符串");
 		return "";

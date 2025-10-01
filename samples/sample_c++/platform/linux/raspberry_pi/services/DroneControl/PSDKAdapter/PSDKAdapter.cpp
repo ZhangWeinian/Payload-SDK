@@ -216,8 +216,8 @@ namespace plane::services
 	}
 
 	PSDKAdapter::PSDKAdapter(void) noexcept:
-		m_commandPool(_STD make_unique<ThreadPool>(2)),
-		m_lastUpdateTime(_STD_CHRONO steady_clock::time_point::min())
+		command_pool_(_STD make_unique<ThreadPool>(2)),
+		last_update_time_(_STD_CHRONO steady_clock::time_point::min())
 	{}
 
 	PSDKAdapter::~PSDKAdapter(void) noexcept
@@ -227,37 +227,37 @@ namespace plane::services
 
 	bool PSDKAdapter::start(void) noexcept
 	{
-		m_isStopping = false;
-		if (m_runAcquisition.exchange(true))
+		is_stopping_ = false;
+		if (run_acquisition_.exchange(true))
 		{
 			LOG_WARN("PSDKAdapter 数据采集线程已经启动，请勿重复调用 start()。");
 			return false;
 		}
 		LOG_INFO("正在启动 PSDK 数据采集线程...");
-		m_acquisitionThread = _STD thread(&PSDKAdapter::acquisitionLoop, this);
+		acquisition_thread_ = _STD thread(&PSDKAdapter::acquisitionLoop, this);
 		return true;
 	}
 
 	void PSDKAdapter::stop(_STD chrono::milliseconds timeout) noexcept
 	{
-		m_isStopping = true;
+		is_stopping_ = true;
 		LOG_INFO("PSDKAdapter 开始停止流程，超时时间: {}ms...", timeout.count());
 
-		if (m_runAcquisition.exchange(false))
+		if (run_acquisition_.exchange(false))
 		{
-			if (m_acquisitionThread.joinable())
+			if (acquisition_thread_.joinable())
 			{
-				m_acquisitionThread.join();
+				acquisition_thread_.join();
 				LOG_INFO("PSDK 数据采集线程已停止。");
 			}
 		}
 
-		if (m_commandPool)
+		if (command_pool_)
 		{
 			auto future = _STD async(_STD launch::async,
 									 [this]()
 									 {
-										 m_commandPool.reset();
+										 command_pool_.reset();
 									 });
 
 			LOG_INFO("正在等待命令线程池中的任务完成...");
@@ -291,13 +291,13 @@ namespace plane::services
 			return true;
 		};
 
-		m_sub_status.positionFused		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED, "POSITION_FUSED"sv);
-		m_sub_status.altitudeFused		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED, "ALTITUDE_FUSED"sv);
-		m_sub_status.altitudeOfHomepoint = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT, "ALTITUDE_OF_HOMEPOINT"sv);
-		m_sub_status.quaternion			 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
-		m_sub_status.velocity			 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
-		m_sub_status.batteryInfo		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
-		m_sub_status.gimbalAngles		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
+		sub_status_.positionFused		= subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED, "POSITION_FUSED"sv);
+		sub_status_.altitudeFused		= subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED, "ALTITUDE_FUSED"sv);
+		sub_status_.altitudeOfHomepoint = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT, "ALTITUDE_OF_HOMEPOINT"sv);
+		sub_status_.quaternion			= subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
+		sub_status_.velocity			= subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
+		sub_status_.batteryInfo			= subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
+		sub_status_.gimbalAngles		= subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
 
 		if (_DJI T_DjiReturnCode returnCode { _DJI DjiWaypointV3_RegMissionStateCallback(missionStateCallbackEntry) };
 			returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
@@ -338,25 +338,25 @@ namespace plane::services
 			}
 		};
 
-		unsubscribe(m_sub_status.positionFused, _DJI DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED, "POSITION_FUSED"sv);
-		unsubscribe(m_sub_status.altitudeFused, _DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED, "ALTITUDE_FUSED"sv);
-		unsubscribe(m_sub_status.altitudeOfHomepoint, _DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT, "ALTITUDE_OF_HOMEPOINT"sv);
-		unsubscribe(m_sub_status.quaternion, _DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
-		unsubscribe(m_sub_status.velocity, _DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
-		unsubscribe(m_sub_status.batteryInfo, _DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
-		unsubscribe(m_sub_status.gimbalAngles, _DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
+		unsubscribe(sub_status_.positionFused, _DJI DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED, "POSITION_FUSED"sv);
+		unsubscribe(sub_status_.altitudeFused, _DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED, "ALTITUDE_FUSED"sv);
+		unsubscribe(sub_status_.altitudeOfHomepoint, _DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT, "ALTITUDE_OF_HOMEPOINT"sv);
+		unsubscribe(sub_status_.quaternion, _DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
+		unsubscribe(sub_status_.velocity, _DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
+		unsubscribe(sub_status_.batteryInfo, _DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
+		unsubscribe(sub_status_.gimbalAngles, _DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
 	}
 
 	void PSDKAdapter::acquisitionLoop(void) noexcept
 	{
-		while (m_runAcquisition)
+		while (run_acquisition_)
 		{
 			auto						   startTime { _STD_CHRONO steady_clock::now() };
 			plane::protocol::StatusPayload current_payload {};
 			_DJI T_DjiDataTimestamp		   timestamp {};
 
 			if (_DJI T_DjiFcSubscriptionPositionFused pos {};
-				m_sub_status.positionFused &&
+				sub_status_.positionFused &&
 				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED,
 															  (uint8_t*)&pos,
 															  sizeof(pos),
@@ -370,14 +370,14 @@ namespace plane::services
 			}
 
 			if (_DJI T_DjiFcSubscriptionAltitudeFused fused_alt {};
-				m_sub_status.altitudeFused &&
+				sub_status_.altitudeFused &&
 				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED,
 															  (uint8_t*)&fused_alt,
 															  sizeof(fused_alt),
 															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
 				if (_DJI T_DjiFcSubscriptionAltitudeFused hp_alt {};
-					m_sub_status.altitudeOfHomepoint &&
+					sub_status_.altitudeOfHomepoint &&
 					(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT,
 																  (uint8_t*)&hp_alt,
 																  sizeof(hp_alt),
@@ -388,7 +388,7 @@ namespace plane::services
 			}
 
 			if (_DJI T_DjiFcSubscriptionQuaternion q {};
-				m_sub_status.quaternion &&
+				sub_status_.quaternion &&
 				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, (uint8_t*)&q, sizeof(q), &timestamp) ==
 				 _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
@@ -396,10 +396,10 @@ namespace plane::services
 			}
 
 			if (_DJI T_DjiFcSubscriptionVelocity vel {};
-				m_sub_status.velocity && (_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY,
-																					   (uint8_t*)&vel,
-																					   sizeof(vel),
-																					   &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+				sub_status_.velocity && (_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY,
+																					  (uint8_t*)&vel,
+																					  sizeof(vel),
+																					  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
 				current_payload.VY	 = vel.data.x;	// 北向速度 (North)
 				current_payload.VX	 = vel.data.y;	// 东向速度 (East)
@@ -409,7 +409,7 @@ namespace plane::services
 			}
 
 			if (_DJI T_DjiFcSubscriptionSingleBatteryInfo batt {};
-				m_sub_status.batteryInfo &&
+				sub_status_.batteryInfo &&
 				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO,
 															  (uint8_t*)&batt,
 															  sizeof(batt),
@@ -420,7 +420,7 @@ namespace plane::services
 			}
 
 			if (_DJI T_DjiFcSubscriptionGimbalAngles gimbalAngle {};
-				m_sub_status.gimbalAngles &&
+				sub_status_.gimbalAngles &&
 				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES,
 															  (uint8_t*)&gimbalAngle,
 															  sizeof(gimbalAngle),
@@ -444,13 +444,13 @@ namespace plane::services
 			current_payload.CJ = "DJI";
 
 			{
-				_STD lock_guard<_STD mutex> lock(m_payloadMutex);
-				m_latestPayload = current_payload;
+				_STD lock_guard<_STD mutex> lock(payload_mutex_);
+				latest_payload_ = current_payload;
 			}
 
 			{
-				_STD lock_guard<_STD mutex>	   lock(m_healthMutex);
-				m_lastUpdateTime = _STD_CHRONO steady_clock::now();
+				_STD lock_guard<_STD mutex>		lock(health_utex_);
+				last_update_time_ = _STD_CHRONO steady_clock::now();
 			}
 
 			auto endTime { _STD_CHRONO steady_clock::now() };
@@ -493,10 +493,10 @@ namespace plane::services
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::stopWaypointMission(void)
 	{
-		return m_commandPool->enqueue(
+		return command_pool_->enqueue(
 			[this]() -> _DJI T_DjiReturnCode
 			{
-				_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+				_STD lock_guard<_STD mutex> lock(psdk_command_mutex_);
 				LOG_INFO("线程池任务：发送停止航线指令...");
 				return _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_STOP);
 			});
@@ -504,12 +504,12 @@ namespace plane::services
 
 	_STD future<T_DjiReturnCode> PSDKAdapter::pauseWaypointMission(void)
 	{
-		return m_commandPool->enqueue(
+		return command_pool_->enqueue(
 			[this]() -> _DJI T_DjiReturnCode
 			{
 				try
 				{
-					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					_STD lock_guard<_STD mutex> lock(psdk_command_mutex_);
 					LOG_INFO("线程池任务：发送暂停航线指令...");
 					_DJI T_DjiReturnCode returnCode { _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_PAUSE) };
 					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
@@ -533,12 +533,12 @@ namespace plane::services
 
 	_STD future<T_DjiReturnCode> PSDKAdapter::resumeWaypointMission(void)
 	{
-		return m_commandPool->enqueue(
+		return command_pool_->enqueue(
 			[this]() -> _DJI T_DjiReturnCode
 			{
 				try
 				{
-					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					_STD lock_guard<_STD mutex> lock(psdk_command_mutex_);
 					LOG_INFO("线程池任务：发送恢复航线指令...");
 					_DJI T_DjiReturnCode returnCode { _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_RESUME) };
 					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
@@ -562,14 +562,14 @@ namespace plane::services
 
 	_STD_CHRONO steady_clock::time_point PSDKAdapter::getLastUpdateTime(void) const noexcept
 	{
-		_STD lock_guard<_STD mutex> lock(m_healthMutex);
-		return m_lastUpdateTime;
+		_STD lock_guard<_STD mutex> lock(health_utex_);
+		return last_update_time_;
 	}
 
 	plane::protocol::StatusPayload PSDKAdapter::getLatestStatusPayload(void) const noexcept
 	{
-		_STD lock_guard<_STD mutex> lock(m_payloadMutex);
-		return m_latestPayload;
+		_STD lock_guard<_STD mutex> lock(payload_mutex_);
+		return latest_payload_;
 	}
 
 	void PSDKAdapter::quaternionToEulerAngle(const _DJI T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept
@@ -595,12 +595,12 @@ namespace plane::services
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::takeoff(const plane::protocol::TakeoffPayload& takeoffParams)
 	{
-		return m_commandPool->enqueue(
+		return command_pool_->enqueue(
 			[this]() -> _DJI T_DjiReturnCode
 			{
 				try
 				{
-					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					_STD lock_guard<_STD mutex> lock(psdk_command_mutex_);
 
 					if (!plane::utils::isStandardProceduresEnabled())
 					{
@@ -633,12 +633,12 @@ namespace plane::services
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::goHome(void)
 	{
-		return m_commandPool->enqueue(
+		return command_pool_->enqueue(
 			[this]() -> _DJI T_DjiReturnCode
 			{
 				try
 				{
-					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					_STD lock_guard<_STD mutex> lock(psdk_command_mutex_);
 					if (!plane::utils::isStandardProceduresEnabled())
 					{
 						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
@@ -669,12 +669,12 @@ namespace plane::services
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::hover(void)
 	{
-		return m_commandPool->enqueue(
+		return command_pool_->enqueue(
 			[this]() -> _DJI T_DjiReturnCode
 			{
 				try
 				{
-					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					_STD lock_guard<_STD mutex> lock(psdk_command_mutex_);
 					if (!plane::utils::isStandardProceduresEnabled())
 					{
 						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
@@ -705,12 +705,12 @@ namespace plane::services
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::land(void)
 	{
-		return m_commandPool->enqueue(
+		return command_pool_->enqueue(
 			[this]() -> _DJI T_DjiReturnCode
 			{
 				try
 				{
-					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					_STD lock_guard<_STD mutex> lock(psdk_command_mutex_);
 					if (!plane::utils::isStandardProceduresEnabled())
 					{
 						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
@@ -741,20 +741,20 @@ namespace plane::services
 
 	_STD future<T_DjiReturnCode> PSDKAdapter::waypointV3(const _STD vector<uint8_t>& kmzData)
 	{
-		return m_commandPool->enqueue(
+		return command_pool_->enqueue(
 			[this, data = kmzData]() -> _DJI T_DjiReturnCode
 			{
 				try
 				{
-					if (m_isStopping)
+					if (is_stopping_)
 					{
 						LOG_WARN("应用程序正在关闭，航线任务被取消。");
 						return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
 					}
 
-					_STD unique_lock<_STD mutex> lock(m_psdkCommandMutex);
+					_STD unique_lock<_STD mutex> lock(psdk_command_mutex_);
 
-					if (m_isStopping)
+					if (is_stopping_)
 					{
 						LOG_WARN("应用程序正在关闭，航线任务被取消。");
 						return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
@@ -795,15 +795,15 @@ namespace plane::services
 						return returnCode;
 					}
 
-					m_missionCompletionPromise						= _STD make_unique<_STD promise<_DJI T_DjiReturnCode>>();
-					_STD future<_DJI T_DjiReturnCode> missionFuture = { m_missionCompletionPromise->get_future() };
+					mission_completion_promise_						= _STD make_unique<_STD promise<_DJI T_DjiReturnCode>>();
+					_STD future<_DJI T_DjiReturnCode> missionFuture = { mission_completion_promise_->get_future() };
 
 					LOG_INFO("线程池任务：启动航线任务...");
 					returnCode = _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_START);
 					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 					{
 						LOG_ERROR("启动航线任务失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-						m_missionCompletionPromise.reset();
+						mission_completion_promise_.reset();
 						return returnCode;
 					}
 
@@ -839,12 +839,12 @@ namespace plane::services
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::setControlStrategy(int strategyCode)
 	{
-		return m_commandPool->enqueue(
+		return command_pool_->enqueue(
 			[this, strategyCode]() -> _DJI T_DjiReturnCode
 			{
 				try
 				{
-					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					_STD lock_guard<_STD mutex> lock(psdk_command_mutex_);
 					if (!plane::utils::isStandardProceduresEnabled())
 					{
 						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
@@ -868,12 +868,12 @@ namespace plane::services
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams)
 	{
-		return m_commandPool->enqueue(
+		return command_pool_->enqueue(
 			[this, params = circleParams]() -> _DJI T_DjiReturnCode
 			{
 				try
 				{
-					_STD lock_guard<_STD mutex> lock(m_psdkCommandMutex);
+					_STD lock_guard<_STD mutex> lock(psdk_command_mutex_);
 					if (!plane::utils::isStandardProceduresEnabled())
 					{
 						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
