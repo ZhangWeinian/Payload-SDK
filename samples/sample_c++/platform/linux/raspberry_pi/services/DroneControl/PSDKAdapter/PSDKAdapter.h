@@ -49,11 +49,12 @@ namespace plane::services
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> waypointV3(const _STD vector<uint8_t>& kmzData);
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> setControlStrategy(int strategyCode);
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams);
+
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> stopWaypointMission(void);
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> pauseWaypointMission(void);
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> resumeWaypointMission(void);
 
-		enum class PsdkEvent
+		enum class PSDKEvent
 		{
 			TelemetryUpdated,
 			MissionStateChanged,
@@ -61,7 +62,7 @@ namespace plane::services
 		};
 
 		using EventData		  = _STD variant<plane::protocol::StatusPayload, _DJI T_DjiWaypointV3MissionState, _DJI T_DjiWaypointV3ActionState>;
-		using EventDispatcher = _EVENTPP EventDispatcher<PsdkEvent, void(const EventData&)>;
+		using EventDispatcher = _EVENTPP EventDispatcher<PSDKEvent, void(const EventData&)>;
 
 		EventDispatcher&				 getEventDispatcher(void) noexcept
 		{
@@ -73,6 +74,11 @@ namespace plane::services
 		~PSDKAdapter(void) noexcept;
 		PSDKAdapter(const PSDKAdapter&) noexcept			= delete;
 		PSDKAdapter& operator=(const PSDKAdapter&) noexcept = delete;
+
+		_STD future<_DJI T_DjiReturnCode> executeWaypointAction(E_DjiWaypointV3Action action, _STD string_view actionName);
+
+		template<typename CommandLogic>
+		_STD future<_DJI T_DjiReturnCode> executePsdkCommand(_STD string_view commandName, CommandLogic&& logic);
 
 		struct SubscriptionStatus
 		{

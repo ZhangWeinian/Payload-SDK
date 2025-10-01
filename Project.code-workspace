@@ -114,7 +114,12 @@
 			"scoped_allocator": "cpp",
 			"gsl": "cpp",
 			"pointers": "cpp",
-			"util": "cpp"
+			"util": "cpp",
+			"assert": "cpp",
+			"byte": "cpp",
+			"narrow": "cpp",
+			"span_ext": "cpp",
+			"zstring": "cpp"
 		}
 	}
 }
