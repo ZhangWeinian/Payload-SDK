@@ -531,9 +531,10 @@ namespace plane::services
 	}
 
 	template<typename CommandLogic>
-	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::executePsdkCommand(_STD string_view commandName, CommandLogic&& logic)
+	_STD future<T_DjiReturnCode> PSDKAdapter::executePsdkCommand(CommandLogic&& logic, const _STD source_location& location)
 	{
-		return this->command_pool_->enqueue(
+		const char* commandName { location.function_name() };
+		return command_pool_->enqueue(
 			[this, name = _STD string(commandName), logic = _STD forward<CommandLogic>(logic)]() -> _DJI T_DjiReturnCode
 			{
 				try
@@ -561,81 +562,81 @@ namespace plane::services
 			});
 	}
 
-	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::executeWaypointAction(_DJI E_DjiWaypointV3Action action, _STD string_view actionName)
+	_STD future<T_DjiReturnCode> PSDKAdapter::executeWaypointAction(_DJI E_DjiWaypointV3Action action, const _STD source_location& location)
 	{
-		return this->executePsdkCommand(actionName,
-										[action, name = _STD string(actionName)]() -> _DJI T_DjiReturnCode
-										{
-											LOG_INFO("线程池任务：发送航线动作指令 '{}'...", name);
-											_DJI T_DjiReturnCode returnCode = DjiWaypointV3_Action(action);
-											if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-											{
-												LOG_ERROR("发送航线动作 '{}' 失败, 错误: {}",
-														  name,
-														  plane::utils::djiReturnCodeToString(returnCode));
-											}
-											return returnCode;
-										});
+		const char* commandName { location.function_name() };
+		return this->executePsdkCommand(
+			[action, name = _STD string(commandName)]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：发送航线动作 '{}'...", name);
+				_DJI T_DjiReturnCode returnCode = DjiWaypointV3_Action(action);
+				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_ERROR("发送航线动作 '{}' 失败, 错误: {}", name, plane::utils::djiReturnCodeToString(returnCode));
+				}
+				return returnCode;
+			},
+			location);
 	}
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::takeoff(const plane::protocol::TakeoffPayload& takeoffParams)
 	{
-		return this->executePsdkCommand("takeoff",
-										[]() -> _DJI T_DjiReturnCode
-										{
-											LOG_INFO("线程池任务：执行起飞...");
-											_DJI T_DjiReturnCode returnCode = _DJI DjiFlightController_StartTakeoff();
-											if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-											{
-												LOG_ERROR("起飞失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-											}
-											return returnCode;
-										});
+		return this->executePsdkCommand(
+			[]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：执行起飞...");
+				_DJI T_DjiReturnCode returnCode = _DJI DjiFlightController_StartTakeoff();
+				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_ERROR("起飞失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+				}
+				return returnCode;
+			});
 	}
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::goHome(void)
 	{
-		return this->executePsdkCommand("goHome",
-										[]() -> _DJI T_DjiReturnCode
-										{
-											LOG_INFO("线程池任务：执行返航...");
-											_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_StartGoHome() };
-											if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-											{
-												LOG_ERROR("返航失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-											}
-											return returnCode;
-										});
+		return this->executePsdkCommand(
+			[]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：执行返航...");
+				_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_StartGoHome() };
+				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_ERROR("返航失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+				}
+				return returnCode;
+			});
 	}
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::hover(void)
 	{
-		return this->executePsdkCommand("hover",
-										[]() -> _DJI T_DjiReturnCode
-										{
-											LOG_INFO("线程池任务：执行一键悬停...");
-											_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_ExecuteEmergencyBrakeAction() };
-											if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-											{
-												LOG_ERROR("一键悬停失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-											}
-											return returnCode;
-										});
+		return this->executePsdkCommand(
+			[]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：执行一键悬停...");
+				_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_ExecuteEmergencyBrakeAction() };
+				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_ERROR("一键悬停失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+				}
+				return returnCode;
+			});
 	}
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::land(void)
 	{
-		return this->executePsdkCommand("land",
-										[]() -> _DJI T_DjiReturnCode
-										{
-											LOG_INFO("线程池任务：执行降落...");
-											_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_StartLanding() };
-											if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-											{
-												LOG_ERROR("降落失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-											}
-											return returnCode;
-										});
+		return this->executePsdkCommand(
+			[]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：执行降落...");
+				_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_StartLanding() };
+				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_ERROR("降落失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+				}
+				return returnCode;
+			});
 	}
 
 	_STD future<T_DjiReturnCode> PSDKAdapter::waypointV3(const _STD vector<uint8_t>& kmzData)
@@ -738,54 +739,54 @@ namespace plane::services
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::setControlStrategy(int strategyCode)
 	{
-		return this->executePsdkCommand("setControlStrategy",
-										[strategyCode]() -> _DJI T_DjiReturnCode
-										{
-											LOG_INFO("线程池任务：设置控制策略, 代码: {}", strategyCode);
-											_DJI T_DjiReturnCode returnCode = _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 假设成功
-											if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-											{
-												LOG_ERROR("设置控制策略失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-											}
-											return returnCode;
-										});
+		return this->executePsdkCommand(
+			[strategyCode]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：设置控制策略, 代码: {}", strategyCode);
+				_DJI T_DjiReturnCode returnCode = _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 假设成功
+				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_ERROR("设置控制策略失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+				}
+				return returnCode;
+			});
 	}
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams)
 	{
-		return this->executePsdkCommand("flyCircleAroundPoint",
-										[circleParams]() -> _DJI T_DjiReturnCode
-										{
-											LOG_INFO("线程池任务：执行环绕飞行, 经度: {}, 纬度: {}, 高度: {}, 速度: {}, 半径: {}, 圈数: {}",
-													 circleParams.JD,
-													 circleParams.WD,
-													 circleParams.GD,
-													 circleParams.SD,
-													 circleParams.BJ,
-													 circleParams.QS);
-											_DJI T_DjiReturnCode returnCode = _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 假设成功
-											if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-											{
-												LOG_ERROR("环绕飞行失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-											}
-											return returnCode;
-										});
+		return this->executePsdkCommand(
+			[circleParams]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：执行环绕飞行, 经度: {}, 纬度: {}, 高度: {}, 速度: {}, 半径: {}, 圈数: {}",
+						 circleParams.JD,
+						 circleParams.WD,
+						 circleParams.GD,
+						 circleParams.SD,
+						 circleParams.BJ,
+						 circleParams.QS);
+				_DJI T_DjiReturnCode returnCode = _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 假设成功
+				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_ERROR("环绕飞行失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+				}
+				return returnCode;
+			});
 	}
 
 	// ... 在这里实现所有其他 PSDK API 的封装 ...
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::stopWaypointMission(void)
 	{
-		return this->executeWaypointAction(_DJI DJI_WAYPOINT_V3_ACTION_STOP, "stopWaypointMission");
+		return this->executeWaypointAction(_DJI DJI_WAYPOINT_V3_ACTION_STOP);
 	}
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::pauseWaypointMission(void)
 	{
-		return this->executeWaypointAction(_DJI DJI_WAYPOINT_V3_ACTION_PAUSE, "pauseWaypointMission");
+		return this->executeWaypointAction(_DJI DJI_WAYPOINT_V3_ACTION_PAUSE);
 	}
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::resumeWaypointMission(void)
 	{
-		return this->executeWaypointAction(_DJI DJI_WAYPOINT_V3_ACTION_RESUME, "resumeWaypointMission");
+		return this->executeWaypointAction(_DJI DJI_WAYPOINT_V3_ACTION_RESUME);
 	}
 } // namespace plane::services

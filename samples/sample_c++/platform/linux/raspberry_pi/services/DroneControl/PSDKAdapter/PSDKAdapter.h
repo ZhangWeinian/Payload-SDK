@@ -13,6 +13,7 @@
 #include <eventpp/utilities/scopedremover.h>
 #include <ThreadPool.h>
 
+#include <source_location>
 #include <string_view>
 #include <atomic>
 #include <chrono>
@@ -75,10 +76,12 @@ namespace plane::services
 		PSDKAdapter(const PSDKAdapter&) noexcept			= delete;
 		PSDKAdapter& operator=(const PSDKAdapter&) noexcept = delete;
 
-		_STD future<_DJI T_DjiReturnCode> executeWaypointAction(E_DjiWaypointV3Action action, _STD string_view actionName);
-
 		template<typename CommandLogic>
-		_STD future<_DJI T_DjiReturnCode> executePsdkCommand(_STD string_view commandName, CommandLogic&& logic);
+		_STD future<T_DjiReturnCode> executePsdkCommand(CommandLogic&&				logic,
+														const _STD source_location& location = _STD source_location::current());
+
+		_STD future<T_DjiReturnCode> executeWaypointAction(E_DjiWaypointV3Action	   action,
+														   const _STD source_location& location = _STD source_location::current());
 
 		struct SubscriptionStatus
 		{
