@@ -36,6 +36,10 @@ namespace plane::services
 		void			   setControlStrategy(int strategyCode);
 		void			   flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams);
 
+		void			   stopWaypointMission();
+		void			   pauseWaypointMission();
+		void			   resumeWaypointMission();
+
 		void			   rotateGimbal(double pitch, double yaw) const noexcept;
 		void			   rotateGimbalBySpeed(double pitchSpeed, double yawSpeed, double rollSpeed) const noexcept;
 		void			   setCameraZoomFactor(const plane::protocol::ZoomControlPayload& zoomParams) const noexcept;
@@ -51,14 +55,5 @@ namespace plane::services
 		~FlyManager(void) noexcept						  = default;
 		FlyManager(const FlyManager&) noexcept			  = delete;
 		FlyManager& operator=(const FlyManager&) noexcept = delete;
-
-		template<typename Callable>
-		void executeCommand(Callable&& task);
-
-		void interruptCurrentTask(void);
-
-		_STD atomic<FlyTaskState> task_state_ { FlyTaskState::IDLE };
-		_STD mutex				  task_mutex_ {};
-		_STD future<void> current_task_future_ {};
 	};
 } // namespace plane::services

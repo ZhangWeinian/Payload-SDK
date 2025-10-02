@@ -38,7 +38,7 @@ set (DEPS_INSTALL_DIR "${EXTERNAL_LIBS_DIR}/install")
 
 if(EXISTS "${EXTERNAL_LIBS_DIR}/build_deps.sh")
 	add_custom_target (
-		deps
+		deps ALL
 		COMMAND ${CMAKE_COMMAND} -E echo "构建所有第三方依赖关系..."
 		COMMAND bash ${EXTERNAL_LIBS_DIR}/build_deps.sh
 		WORKING_DIRECTORY ${EXTERNAL_LIBS_DIR}
@@ -49,7 +49,7 @@ else()
 endif()
 
 if(NOT EXISTS "${DEPS_INSTALL_DIR}")
-	message (WARNING "第三方库尚未构建。 \n" "请先运行 'make deps' 或 'cmake --build . --target deps' 然后再构建主应用程序。")
+	message (WARNING "第三方库尚未构建。 \n" "请先运行 './external_libs/build_deps.sh' 然后再构建主应用程序。")
 endif()
 
 # 3.平台选择和主应用程序引导

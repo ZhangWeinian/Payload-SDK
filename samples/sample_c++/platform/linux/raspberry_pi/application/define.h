@@ -68,7 +68,7 @@
 	#define _GSL ::gsl::
 #endif
 
-#if __has_include(<ThreadPool.h>) && !defined(_THREADPOOL)
+#if __has_include(<ThreadPool/ThreadPool.h>) && !defined(_THREADPOOL)
 	#define _THREADPOOL ::
 #endif
 

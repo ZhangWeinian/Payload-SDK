@@ -1,3 +1,5 @@
+// CMakePresets.json
+
 {
 	"version": 3,
 	"configurePresets": [
@@ -25,13 +27,7 @@
 				"BUILD_TESTING": "ON",
 				"PROJECT_ROOT_DIR": "${sourceDir}",
 				"EXTERNAL_LIBS_DIR": "${sourceDir}/external_libs",
-				"CMAKE_INSTALL_PREFIX": "${sourceDir}/bin",
-				"CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/build/debug/bin",
-				"CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/build/debug/lib",
-				"CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/build/debug/lib",
-				"CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG": "${sourceDir}/build/debug/bin",
-				"CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG": "${sourceDir}/build/debug/bin",
-				"CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG": "${sourceDir}/build/debug/lib"
+				"CMAKE_INSTALL_PREFIX": "${sourceDir}/bin"
 			},
 			"warnings": {
 				"dev": true,
@@ -63,13 +59,7 @@
 				"CMAKE_INSTALL_PREFIX": "${sourceDir}/bin",
 				"CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
 				"BUILD_TESTING": "OFF",
-				"CMAKE_INSTALL_DO_STRIP": "ON",
-				"CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/build/release/bin",
-				"CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/build/release/lib",
-				"CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/build/release/lib",
-				"CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE": "${sourceDir}/build/release/bin",
-				"CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE": "${sourceDir}/build/release/bin",
-				"CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE": "${sourceDir}/build/release/lib"
+				"CMAKE_INSTALL_DO_STRIP": "ON"
 			},
 			"warnings": {
 				"dev": false,
@@ -95,13 +85,7 @@
 				"CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG",
 				"CMAKE_C_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG",
 				"CMAKE_INSTALL_PREFIX": "${sourceDir}/bin",
-				"BUILD_TESTING": "ON",
-				"CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/build/relwithdebinfo/bin",
-				"CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/build/relwithdebinfo/bin",
-				"CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/build/relwithdebinfo/lib",
-				"CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO": "${sourceDir}/build/relwithdebinfo/bin",
-				"CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO": "${sourceDir}/build/relwithdebinfo/bin",
-				"CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO": "${sourceDir}/build/relwithdebinfo/lib"
+				"BUILD_TESTING": "ON"
 			}
 		}
 	],

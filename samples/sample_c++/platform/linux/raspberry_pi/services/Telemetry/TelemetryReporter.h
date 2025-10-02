@@ -6,7 +6,7 @@
 #include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
 
 #include <eventpp/eventdispatcher.h>
-#include <ThreadPool.h>
+#include <ThreadPool/ThreadPool.h>
 
 #include <string_view>
 #include <atomic>

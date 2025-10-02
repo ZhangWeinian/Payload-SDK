@@ -2,7 +2,9 @@
 
 #include "FlyManager.h"
 
+#include "services/DroneControl/CommandQueue.h"
 #include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
+#include "utils/JsonConverter/JsonToKmz.h"
 #include "utils/Logger.h"
 
 #include <filesystem>
@@ -16,44 +18,6 @@ namespace plane::services
 		return instance;
 	}
 
-	void FlyManager::interruptCurrentTask(void)
-	{
-		if (this->task_state_.load() == FlyTaskState::RUNNING)
-		{
-			LOG_INFO("检测到有任务在运行，正在提交中断指令 (停止航线)...");
-			(void)plane::services::PSDKAdapter::getInstance().stopWaypointMission();
-			LOG_INFO("中断指令已提交。");
-		}
-	}
-
-	template<typename Callable>
-	void FlyManager::executeCommand(Callable&& task)
-	{
-		_STD lock_guard<_STD mutex> lock(this->task_mutex_);
-
-		this->interruptCurrentTask();
-
-		LOG_INFO("正在向 PSDKAdapter 提交新任务...");
-		auto commandFuture { _STD forward<Callable>(task)() };
-
-		this->task_state_.store(FlyTaskState::RUNNING);
-		_STD thread(
-			[this, f = _STD move(commandFuture)]() mutable
-			{
-				f.wait();
-				FlyTaskState expected = FlyTaskState::RUNNING;
-				if (this->task_state_.compare_exchange_strong(expected, FlyTaskState::IDLE))
-				{
-					LOG_INFO("FlyManager: 一个后台 PSDK 任务已执行完毕，状态已更新为 IDLE。");
-				}
-				else
-				{
-					LOG_INFO("FlyManager: 一个后台 PSDK 任务已执行完毕，但状态已被新任务覆盖，无需更新。");
-				}
-			})
-			.detach();
-	}
-
 	void FlyManager::flyToPoint(const plane::protocol::Waypoint& waypoint)
 	{
 		LOG_INFO("执行【单点飞行】: Lon={}, Lat={}, Alt={}", waypoint.JD, waypoint.WD, waypoint.GD);
@@ -62,99 +26,86 @@ namespace plane::services
 
 	void FlyManager::waypoint(const _STD vector<uint8_t>& kmzData)
 	{
-		LOG_INFO("执行【航线】");
-		this->executeCommand(
-			[&]
-			{
-				return plane::services::PSDKAdapter::getInstance().waypointV3(kmzData);
-			});
+		LOG_INFO("FlyManager: 发送【航线任务】命令事件 (从内存数据 {} 字节)...", kmzData.size());
+		if (kmzData.empty())
+		{
+			LOG_ERROR("航线任务事件发送失败：KMZ 数据为空。");
+			return;
+		}
+		plane::services::CommandQueue.enqueue(plane::services::CommandEvent::WaypointMission, kmzData);
 	}
 
 	void FlyManager::waypoint(_STD string_view kmzFilePath)
 	{
-		LOG_INFO("FlyManager: 执行【航线】(从文件: {})", kmzFilePath);
+		LOG_INFO("FlyManager: 正在处理【航线任务】(从文件: {})", kmzFilePath);
 
-		_STD_FS path path(kmzFilePath);
-		if (!_STD_FS exists(path))
+		std::filesystem::path path(kmzFilePath);
+		if (!std::filesystem::exists(path))
 		{
-			LOG_ERROR("航线任务启动失败：KMZ 文件 '{}' 不存在。", kmzFilePath);
+			LOG_ERROR("航线任务事件发送失败：KMZ 文件 '{}' 不存在。", kmzFilePath);
 			return;
 		}
 
-		_STD ifstream fileStream(path, _STD ios::binary);
+		std::ifstream fileStream(path, std::ios::binary);
 		if (!fileStream)
 		{
-			LOG_ERROR("航线任务启动失败：无法打开 KMZ 文件 '{}'。", kmzFilePath);
+			LOG_ERROR("航线任务事件发送失败：无法打开 KMZ 文件 '{}'。", kmzFilePath);
 			return;
 		}
 
-		_STD vector<uint8_t> kmzData { _STD istreambuf_iterator<char>(fileStream), _STD istreambuf_iterator<char>() };
+		std::vector<uint8_t> kmzData { std::istreambuf_iterator<char>(fileStream), std::istreambuf_iterator<char>() };
 
-		if (kmzData.empty())
-		{
-			LOG_ERROR("航线任务启动失败：读取的 KMZ 文件 '{}' 内容为空。", kmzFilePath);
-			return;
-		}
-
-		LOG_INFO("KMZ 文件读取成功 ({} 字节)，正在提交任务...", kmzData.size());
+		// 调用另一个重载来发送事件
 		this->waypoint(kmzData);
 	}
 
 	void FlyManager::takeoff(const plane::protocol::TakeoffPayload& takeoffParams)
 	{
-		LOG_INFO("执行【起飞】");
-		this->executeCommand(
-			[&]
-			{
-				return plane::services::PSDKAdapter::getInstance().takeoff(takeoffParams);
-			});
+		LOG_INFO("FlyManager: 发送【起飞】命令事件...");
+		plane::services::CommandQueue.enqueue(plane::services::CommandEvent::Takeoff, takeoffParams);
 	}
 
 	void FlyManager::goHome(void)
 	{
-		LOG_INFO("执行【返航】");
-		this->executeCommand(
-			[&]
-			{
-				return plane::services::PSDKAdapter::getInstance().goHome();
-			});
+		LOG_INFO("FlyManager: 发送【返航】命令事件...");
+		plane::services::CommandQueue.enqueue(plane::services::CommandEvent::GoHome, std::monostate {});
 	}
 
 	void FlyManager::hover(void)
 	{
-		LOG_INFO("执行【悬停/中断】");
-		_STD lock_guard<_STD mutex> lock(this->task_mutex_);
-		this->interruptCurrentTask();
+		LOG_INFO("FlyManager: 发送【悬停/中断】命令事件...");
+		// “悬停”的业务意图是中断当前航线，所以我们发送 StopWaypointMission 事件
+		plane::services::CommandQueue.enqueue(plane::services::CommandEvent::StopWaypointMission, std::monostate {});
 	}
 
 	void FlyManager::land(void)
 	{
-		LOG_INFO("执行【降落】");
-		this->executeCommand(
-			[&]
-			{
-				return plane::services::PSDKAdapter::getInstance().land();
-			});
+		LOG_INFO("FlyManager: 发送【降落】命令事件...");
+		plane::services::CommandQueue.enqueue(plane::services::CommandEvent::Land, std::monostate {});
 	}
 
 	void FlyManager::setControlStrategy(int strategyCode)
 	{
-		LOG_INFO("执行【设置云台控制策略】, 策略代码: {}", strategyCode);
-		this->executeCommand(
-			[=]
-			{
-				return plane::services::PSDKAdapter::getInstance().setControlStrategy(strategyCode);
-			});
+		LOG_INFO("FlyManager: 发送【设置云台控制策略】命令事件...");
+		plane::services::CommandQueue.enqueue(plane::services::CommandEvent::SetControlStrategy, strategyCode);
 	}
 
 	void FlyManager::flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams)
 	{
-		LOG_INFO("执行【环绕飞行】");
-		this->executeCommand(
-			[&]
-			{
-				return plane::services::PSDKAdapter::getInstance().flyCircleAroundPoint(circleParams);
-			});
+		LOG_INFO("FlyManager: 发送【环绕飞行】命令事件...");
+		plane::services::CommandQueue.enqueue(plane::services::CommandEvent::FlyCircleAroundPoint, circleParams);
+	}
+
+	void FlyManager::pauseWaypointMission()
+	{
+		LOG_INFO("FlyManager: 发送【暂停航线】命令事件...");
+		plane::services::CommandQueue.enqueue(plane::services::CommandEvent::PauseWaypointMission, std::monostate {});
+	}
+
+	void FlyManager::resumeWaypointMission()
+	{
+		LOG_INFO("FlyManager: 发送【恢复航线】命令事件...");
+		plane::services::CommandQueue.enqueue(plane::services::CommandEvent::ResumeWaypointMission, std::monostate {});
 	}
 
 	void FlyManager::rotateGimbal(double pitch, double yaw) const noexcept
