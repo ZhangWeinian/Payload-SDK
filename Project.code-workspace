@@ -5,8 +5,8 @@
 			"name": "PSDK"
 		},
 		{
-			"name": "LLVM",
-			"path": "../llvm"
+			"name": "CodeFormatFile",
+			"path": "../CodeFormatFile"
 		}
 	],
 	"settings": {

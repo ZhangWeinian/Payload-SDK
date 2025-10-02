@@ -55,7 +55,8 @@ echo "============================================="
 echo ""
 
 export FULL_PSDK=1
-export TEST_KMZ=1
+# export SAVE_KMZ=1
+# export TEST_KMZ=1
 # export SKIP_RC=1
 # export LOG_DEBUG=1
 
