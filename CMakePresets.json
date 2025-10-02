@@ -1,17 +1,16 @@
-// CMakePresets.json
-
 {
 	"version": 3,
+	"vendor": {
+		"my-project": {
+			"common-warnings": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wformat=2 -Wunused"
+		}
+	},
 	"configurePresets": [
 		{
-			"name": "default",
-			"displayName": "Debug",
-			"description": "使用 Debug 级别的构建配置，包含调试符号和运行时检查",
+			"name": "base",
+			"hidden": true,
 			"generator": "Ninja",
-			"binaryDir": "${sourceDir}/build/debug",
-			"installDir": "${sourceDir}/install/debug",
 			"cacheVariables": {
-				"CMAKE_BUILD_TYPE": "Debug",
 				"CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
 				"CMAKE_COLOR_DIAGNOSTICS": "ON",
 				"CMAKE_CXX_STANDARD": "20",
@@ -20,155 +19,109 @@
 				"CMAKE_C_STANDARD": "17",
 				"CMAKE_C_STANDARD_REQUIRED": "ON",
 				"CMAKE_C_EXTENSIONS": "OFF",
-				"CMAKE_CXX_FLAGS_DEBUG": "-g -O0 -fno-omit-frame-pointer -fsanitize=address,undefined",
-				"CMAKE_C_FLAGS_DEBUG": "-g -O0 -fno-omit-frame-pointer -fsanitize=address,undefined",
-				"CMAKE_VERBOSE_MAKEFILE": "ON",
 				"BUILD_SHARED_LIBS": "ON",
-				"BUILD_TESTING": "ON",
-				"PROJECT_ROOT_DIR": "${sourceDir}",
-				"EXTERNAL_LIBS_DIR": "${sourceDir}/external_libs",
-				"CMAKE_INSTALL_PREFIX": "${sourceDir}/bin"
-			},
-			"warnings": {
-				"dev": true,
-				"deprecated": true,
-				"uninitialized": true,
-				"unusedCli": true,
-				"systemVars": false
-			},
-			"environment": {
-				"CTEST_OUTPUT_ON_FAILURE": "1",
-				"VERBOSE": "1"
+				"TREAT_WARNINGS_AS_ERRORS": {
+					"type": "BOOL",
+					"value": "FALSE"
+				},
+				"EXTERNAL_LIBS_DIR": "${sourceDir}/external_libs"
+			}
+		},
+		{
+			"name": "debug",
+			"displayName": "Debug",
+			"description": "带有调试符号和地址/未定义行为检测",
+			"inherits": "base",
+			"binaryDir": "${sourceDir}/build/debug",
+			"installDir": "${sourceDir}/install/debug",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug",
+				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/debug",
+				"CMAKE_CXX_FLAGS_DEBUG": "${vendor.my-project.common-warnings} -g3 -O0 -fno-omit-frame-pointer -fstack-protector-strong -D_GLIBCXX_DEBUG -fsanitize=address,undefined",
+				"CMAKE_C_FLAGS_DEBUG": "${vendor.my-project.common-warnings} -g3 -O0 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=address,undefined",
+				"BUILD_TESTING": "ON"
 			}
 		},
 		{
 			"name": "release",
 			"displayName": "Release",
-			"description": "使用 Release 级别的构建配置，优化性能和体积",
-			"inherits": "default",
+			"description": "优化的发布构建，注重性能",
+			"inherits": "base",
 			"binaryDir": "${sourceDir}/build/release",
 			"installDir": "${sourceDir}/install/release",
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "Release",
-				"CMAKE_EXPORT_COMPILE_COMMANDS": "OFF",
-				"CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG -march=native -flto -ffunction-sections -fdata-sections",
-				"CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG -march=native -flto -ffunction-sections -fdata-sections",
-				"CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections -flto",
-				"CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections -flto",
-				"CMAKE_VERBOSE_MAKEFILE": "OFF",
-				"CMAKE_INSTALL_PREFIX": "${sourceDir}/bin",
+				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/release",
+				"CMAKE_CXX_FLAGS_RELEASE": "${vendor.my-project.common-warnings} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+				"CMAKE_C_FLAGS_RELEASE": "${vendor.my-project.common-warnings} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+				"CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections -Wl,-z,relro,-z,now",
+				"CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections",
 				"CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
 				"BUILD_TESTING": "OFF",
-				"CMAKE_INSTALL_DO_STRIP": "ON"
-			},
-			"warnings": {
-				"dev": false,
-				"deprecated": false,
-				"uninitialized": false,
-				"unusedCli": false,
-				"systemVars": false
-			},
-			"environment": {
-				"CTEST_OUTPUT_ON_FAILURE": "0",
-				"VERBOSE": "0"
+				"CMAKE_INSTALL_DO_STRIP": "ON",
+				"TREAT_WARNINGS_AS_ERRORS": "ON"
 			}
 		},
 		{
 			"name": "relwithdebinfo",
 			"displayName": "RelWithDebInfo",
-			"description": "Release 构建但保留调试信息",
-			"inherits": "default",
+			"description": "带有调试符号的优化构建",
+			"inherits": "base",
 			"binaryDir": "${sourceDir}/build/relwithdebinfo",
 			"installDir": "${sourceDir}/install/relwithdebinfo",
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "RelWithDebInfo",
-				"CMAKE_CXX_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG",
-				"CMAKE_C_FLAGS_RELWITHDEBINFO": "-O2 -g -DNDEBUG",
-				"CMAKE_INSTALL_PREFIX": "${sourceDir}/bin",
+				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/relwithdebinfo",
+				"CMAKE_CXX_FLAGS_RELWITHDEBINFO": "${vendor.my-project.common-warnings} -O2 -g -DNDEBUG",
+				"CMAKE_C_FLAGS_RELWITHDEBINFO": "${vendor.my-project.common-warnings} -O2 -g -DNDEBUG",
 				"BUILD_TESTING": "ON"
 			}
 		}
 	],
 	"buildPresets": [
 		{
-			"name": "default",
+			"name": "debug",
 			"displayName": "Build Debug",
-			"configurePreset": "default",
-			"configuration": "Debug",
-			"jobs": 4,
-			"targets": ["all"],
-			"verbose": true
+			"configurePreset": "debug",
+			"targets": ["all"]
 		},
 		{
 			"name": "release",
 			"displayName": "Build Release",
 			"configurePreset": "release",
-			"configuration": "Release",
-			"jobs": 8,
-			"targets": ["all"],
-			"verbose": false,
 			"cleanFirst": true
 		},
 		{
 			"name": "relwithdebinfo",
 			"displayName": "Build RelWithDebInfo",
-			"configurePreset": "relwithdebinfo",
-			"configuration": "RelWithDebInfo",
-			"jobs": 6
+			"configurePreset": "relwithdebinfo"
 		},
 		{
 			"name": "install-debug",
-			"displayName": "Install Debug to bin",
-			"configurePreset": "default",
-			"configuration": "Debug",
+			"displayName": "Install Debug",
+			"configurePreset": "debug",
 			"targets": ["install"]
 		},
 		{
 			"name": "install-release",
-			"displayName": "Install Release to bin",
+			"displayName": "Install Release",
 			"configurePreset": "release",
-			"configuration": "Release",
 			"targets": ["install"]
-		},
-		{
-			"name": "debug-and-install",
-			"displayName": "Build Debug and Copy to bin",
-			"configurePreset": "default",
-			"configuration": "Debug",
-			"targets": ["all", "install"]
-		},
-		{
-			"name": "release-and-install",
-			"displayName": "Build Release and Copy to bin",
-			"configurePreset": "release",
-			"configuration": "Release",
-			"targets": ["all", "install"]
 		}
 	],
 	"testPresets": [
 		{
-			"name": "default",
+			"name": "debug",
 			"displayName": "Test Debug",
-			"configurePreset": "default",
-			"configuration": "Debug",
-			"output": {
-				"outputOnFailure": true,
-				"verbosity": "verbose"
-			},
-			"execution": {
-				"noTestsAction": "error",
-				"stopOnFailure": false
-			}
+			"configurePreset": "debug",
+			"output": { "outputOnFailure": true, "verbosity": "verbose" },
+			"execution": { "noTestsAction": "error", "stopOnFailure": false }
 		},
 		{
 			"name": "release",
 			"displayName": "Test Release",
 			"configurePreset": "release",
-			"configuration": "Release",
-			"output": {
-				"outputOnFailure": true,
-				"verbosity": "default"
-			}
+			"output": { "outputOnFailure": true }
 		}
 	]
 }
