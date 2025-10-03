@@ -231,7 +231,7 @@ build_cmake_project "fmt" \
 build_cmake_project "spdlog" \
 	"${BASE_DIR}/spdlog" \
 	-DSPDLOG_BUILD_SHARED=OFF \
-	-DSPDLOG_FMT_EXTERNAL=ON \
+	-DSPDLOG_FMT_EXTERNAL=OFF \
 	-DCMAKE_CXX_STANDARD=${CPP_STANDARD}
 
 build_cmake_project "nlohmann_json" \

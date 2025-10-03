@@ -40,7 +40,7 @@ namespace plane::utils
 
 		void init(_SPDLOG level::level_enum console_level = _SPDLOG level::info) noexcept
 		{
-			if (logger_)
+			if (this->logger_)
 			{
 				return;
 			}
@@ -50,10 +50,10 @@ namespace plane::utils
 				auto console_sink { _STD make_shared<_SPDLOG sinks::stdout_color_sink_mt>() };
 				console_sink->set_level(console_level);
 				console_sink->set_pattern("[%m-%d %H:%M:%S.%e] [%^%l%$] [th. %t] [%s:%#] %v");
-				logger_ = _STD make_shared<_SPDLOG logger>("psdk_logger", console_sink);
-				logger_->set_level(_SPDLOG level::trace);
-				logger_->flush_on(_SPDLOG level::trace);
-				_SPDLOG set_default_logger(logger_);
+				this->logger_ = _STD make_shared<_SPDLOG logger>("psdk_logger", console_sink);
+				this->logger_->set_level(_SPDLOG level::trace);
+				this->logger_->flush_on(_SPDLOG level::trace);
+				_SPDLOG set_default_logger(this->logger_);
 			}
 			catch (const _SPDLOG spdlog_ex& ex)
 			{
@@ -64,9 +64,9 @@ namespace plane::utils
 		template<typename... Args>
 		void log(_SPDLOG source_loc loc, _SPDLOG level::level_enum lvl, _SPDLOG format_string_t<Args...> fmt, Args&&... args) const noexcept
 		{
-			if (logger_)
+			if (this->logger_)
 			{
-				logger_->log(loc, lvl, fmt, _STD forward<Args>(args)...);
+				this->logger_->log(loc, lvl, fmt, _STD forward<Args>(args)...);
 			}
 		}
 

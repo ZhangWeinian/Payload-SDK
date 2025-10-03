@@ -4,11 +4,19 @@ project (cy_psdk LANGUAGES CXX C)
 # 1. 全局配置与辅助函数
 set (CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
 
-if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if(NOT
+   CMAKE_SYSTEM_NAME
+   STREQUAL
+   "Linux"
+)
 	message (FATAL_ERROR "此项目被配置为仅在 Linux 系统上构建")
 endif()
 
-function(pretty_message TITLE CONTENT)
+function(
+	pretty_message
+	TITLE
+	CONTENT
+)
 	message (STATUS "===========================================")
 	message (STATUS "${TITLE}:")
 	if(CONTENT)
@@ -66,18 +74,37 @@ add_executable (${MAIN_TARGET_NAME})
 
 set_target_properties (${MAIN_TARGET_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${MAIN_OUTPUT_PATH}")
 
-file (GLOB_RECURSE PSDK_CXX_SAMPLE_SOURCES "${PSDK_SAMPLES_DIR}/sample_c++/module_sample/*.cpp")
-file (GLOB_RECURSE PSDK_C_SAMPLE_SOURCES "${PSDK_SAMPLES_DIR}/sample_c/module_sample/*.c")
-file (GLOB_RECURSE PLATFORM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../common/*.c*" "${CMAKE_CURRENT_SOURCE_DIR}/hal/*.c*"
-	  "${CMAKE_CURRENT_SOURCE_DIR}/application/*.cpp"
+file (
+	GLOB_RECURSE
+	PSDK_CXX_SAMPLE_SOURCES
+	"${PSDK_SAMPLES_DIR}/sample_c++/module_sample/*.cpp"
 )
-file (GLOB_RECURSE CUSTOM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/config/*.cpp"
-	  "${CMAKE_CURRENT_SOURCE_DIR}/protocol/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/services/**/*.cpp"
-	  "${CMAKE_CURRENT_SOURCE_DIR}/utils/**/*.cpp"
+file (
+	GLOB_RECURSE
+	PSDK_C_SAMPLE_SOURCES
+	"${PSDK_SAMPLES_DIR}/sample_c/module_sample/*.c"
+)
+file (
+	GLOB_RECURSE
+	PLATFORM_SOURCES
+	"${CMAKE_CURRENT_SOURCE_DIR}/../common/*.c*"
+	"${CMAKE_CURRENT_SOURCE_DIR}/hal/*.c*"
+	"${CMAKE_CURRENT_SOURCE_DIR}/application/*.cpp"
+)
+file (
+	GLOB_RECURSE
+	CUSTOM_SOURCES
+	"${CMAKE_CURRENT_SOURCE_DIR}/config/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/protocol/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/services/**/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/utils/**/*.cpp"
 )
 target_sources (
-	${MAIN_TARGET_NAME} PRIVATE ${PSDK_CXX_SAMPLE_SOURCES} ${PSDK_C_SAMPLE_SOURCES} ${PLATFORM_SOURCES}
-								${CUSTOM_SOURCES}
+	${MAIN_TARGET_NAME}
+	PRIVATE ${PSDK_CXX_SAMPLE_SOURCES}
+			${PSDK_C_SAMPLE_SOURCES}
+			${PLATFORM_SOURCES}
+			${CUSTOM_SOURCES}
 )
 
 # 6. 平台检测
@@ -86,10 +113,17 @@ execute_process (
 	OUTPUT_VARIABLE DEVICE_SYSTEM_ID
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-if(DEVICE_SYSTEM_ID STREQUAL "x86_64")
+if(DEVICE_SYSTEM_ID
+   STREQUAL
+   "x86_64"
+)
 	set (TOOLCHAIN_NAME x86_64-linux-gnu-gcc)
 	set (PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_x86_64=1")
-elseif(DEVICE_SYSTEM_ID STREQUAL "aarch64")
+elseif(
+	DEVICE_SYSTEM_ID
+	STREQUAL
+	"aarch64"
+)
 	set (TOOLCHAIN_NAME aarch64-linux-gnu-gcc)
 	set (PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_AARCH64=1")
 else()
@@ -97,7 +131,11 @@ else()
 endif()
 
 # 7. 依赖查找与配置
-list (APPEND CMAKE_PREFIX_PATH "${EXTERNAL_INSTALL_DIR}")
+list (
+	APPEND
+	CMAKE_PREFIX_PATH
+	"${EXTERNAL_INSTALL_DIR}"
+)
 
 find_package (Threads REQUIRED)
 find_package (yalantinglibs REQUIRED)
@@ -135,7 +173,11 @@ foreach(LIB_NAME IN LISTS STATIC_LIBS)
 		PATHS "${EXTERNAL_INSTALL_DIR}/lib"
 		NO_DEFAULT_PATH REQUIRED
 	)
-	list (APPEND ALL_STATIC_LIBS ${${LIB_NAME}_LIBRARY})
+	list (
+		APPEND
+		ALL_STATIC_LIBS
+		${${LIB_NAME}_LIBRARY}
+	)
 
 	if(${LIB_NAME}_LIBRARY)
 		message (STATUS "[✓] 找到静态库: ${LIB_NAME} -> ${${LIB_NAME}_LIBRARY}")
@@ -163,7 +205,7 @@ target_include_directories (
 			"${EXTERNAL_INSTALL_DIR}/include/range-v3"
 )
 
-target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE _GNU_SOURCE ${PLATFORM_ARCH_DEFINE} SPDLOG_FMT_EXTERNAL)
+target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE _GNU_SOURCE ${PLATFORM_ARCH_DEFINE})
 
 target_link_libraries (
 	${MAIN_TARGET_NAME}
