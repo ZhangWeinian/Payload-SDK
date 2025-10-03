@@ -14,22 +14,6 @@
 #include <dji_logger.h>
 #include <dji_waypoint_v3.h>
 
-#include "data_transmission/test_data_transmission.h"
-#include "fc_subscription/test_fc_subscription.h"
-#include "flight_control/test_flight_control.h"
-#include "flight_controller/test_flight_controller_entry.h"
-#include "gimbal/test_gimbal_entry.hpp"
-#include "gimbal_emu/test_payload_gimbal_emu.h"
-#include "hms_manager/hms_manager_entry.h"
-#include "liveview/test_liveview_entry.hpp"
-#include "perception/test_lidar_entry.hpp"
-#include "perception/test_perception_entry.hpp"
-#include "perception/test_radar_entry.hpp"
-#include "positioning/test_positioning.h"
-#include "power_management/test_power_management.h"
-#include "widget/test_widget.h"
-#include "widget/test_widget_speaker.h"
-
 #include <gsl/gsl>
 
 #include <string_view>
