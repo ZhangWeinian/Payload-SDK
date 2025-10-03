@@ -5,19 +5,21 @@ project (cy_psdk LANGUAGES CXX C)
 set (CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	message (FATAL_ERROR "此项目被配置为仅在 Linux 系统上构建。")
+	message (FATAL_ERROR "此项目被配置为仅在 Linux 系统上构建")
 endif()
 
 function(pretty_message TITLE CONTENT)
 	message (STATUS "===========================================")
 	message (STATUS "${TITLE}:")
-	message (STATUS "${CONTENT}")
+	if(CONTENT)
+		message (STATUS "${CONTENT}")
+	endif()
 	message (STATUS "===========================================")
 endfunction()
 
 include (CTest)
 if(BUILD_TESTING)
-	message (STATUS "测试构建已启用 (BUILD_TESTING=ON)。")
+	message (STATUS "测试构建已启用 (BUILD_TESTING=ON)")
 	# add_subdirectory(tests) # 在这里添加测试
 endif()
 
@@ -51,7 +53,6 @@ set (EXTERNAL_INSTALL_DIR "${CMAKE_SOURCE_DIR}/external_libs/install")
 set (PSDK_SAMPLES_DIR "${CMAKE_SOURCE_DIR}/samples")
 
 # 4. 编译器与构建选项
-add_compile_options (-pthread)
 if(MEMORY_LEAK_CHECK_ON)
 	add_compile_options (-fsanitize=leak)
 	set (LEAK_SANITIZER_LINK_LIBS asan)
@@ -96,67 +97,52 @@ else()
 endif()
 
 # 7. 依赖查找与配置
+list (APPEND CMAKE_PREFIX_PATH "${EXTERNAL_INSTALL_DIR}")
+
+find_package (Threads REQUIRED)
+find_package (yalantinglibs REQUIRED)
 find_package (OpenSSL REQUIRED)
-pretty_message (
-	"系统依赖检查: OpenSSL" "版本: ${OPENSSL_VERSION}\n   头文件: ${OPENSSL_INCLUDE_DIR}\n   库文件: ${OPENSSL_LIBRARIES}"
+
+set (
+	STATIC_LIBS
+	pugixml
+	yaml-cpp
+	fmt
+	spdlog
+	zip
+	opus
+	usb-1.0
+	hv_static
+	paho-mqtt3a
+	paho-mqtt3as
+	paho-mqtt3c
+	paho-mqtt3cs
+	paho-mqttpp3
+	absl_synchronization
+	absl_time
+	absl_strings
+	absl_hash
+	absl_raw_hash_set
+	absl_int128
+	absl_base
+	absl_throw_delegate
 )
 
-set (STATIC_LIB_DIR "${EXTERNAL_INSTALL_DIR}/lib")
-pretty_message ("第三方静态库查找" "搜索目录: ${STATIC_LIB_DIR}")
-
-function(find_static_library LIB_VAR LIB_NAME)
-	cmake_parse_arguments (ARG "" "" "REQUIRED" ${ARGN})
+foreach(LIB_NAME IN LISTS STATIC_LIBS)
 	find_library (
-		${LIB_VAR}
+		${LIB_NAME}_LIBRARY
 		NAMES ${LIB_NAME}
-		PATHS ${STATIC_LIB_DIR}
-		NO_DEFAULT_PATH
+		PATHS "${EXTERNAL_INSTALL_DIR}/lib"
+		NO_DEFAULT_PATH REQUIRED
 	)
-	if(${LIB_VAR})
-		list (APPEND FOUND_STATIC_LIBS ${${LIB_VAR}})
-		set (
-			FOUND_STATIC_LIBS
-			${FOUND_STATIC_LIBS}
-			PARENT_SCOPE
-		)
-		message (STATUS "[✓] 成功找到【${LIB_NAME}】在: ${${LIB_VAR}}")
-	else()
-		set (ERROR_MESSAGE "[✗] 错误：找不到依赖库 'lib${LIB_NAME}.a'。\n   请确认已成功运行依赖构建目标：cmake --build <构建目录> --target deps")
-		if(ARG_REQUIRED)
-			message (FATAL_ERROR ${ERROR_MESSAGE})
-		else()
-			message (WARNING ${ERROR_MESSAGE})
-		endif()
-	endif()
-	set (
-		${LIB_VAR}
-		""
-		PARENT_SCOPE
-	)
-endfunction()
+	list (APPEND ALL_STATIC_LIBS ${${LIB_NAME}_LIBRARY})
 
-set (FOUND_STATIC_LIBS "")
-find_static_library (HV_LIB hv_static REQUIRED)
-find_static_library (LIBUSB_LIB usb-1.0 REQUIRED)
-find_static_library (OPUS_LIB opus REQUIRED)
-find_static_library (YAMLCPP_LIB yaml-cpp REQUIRED)
-find_static_library (PAHO_MQTT3A_LIB paho-mqtt3a REQUIRED)
-find_static_library (PAHO_MQTT3AS_LIB paho-mqtt3as REQUIRED)
-find_static_library (PAHO_MQTT3C_LIB paho-mqtt3c REQUIRED)
-find_static_library (PAHO_MQTT3CS_LIB paho-mqtt3cs REQUIRED)
-find_static_library (PAHO_MQTT3_CPP_LIB paho-mqttpp3 REQUIRED)
-find_static_library (SPDLOG_LIB spdlog REQUIRED)
-find_static_library (FMT_LIB fmt REQUIRED)
-find_static_library (ZIP_LIB zip REQUIRED)
-find_static_library (PUGIXML_LIB pugixml REQUIRED)
-find_static_library (ABSL_SYNCHRONIZATION_LIB absl_synchronization REQUIRED)
-find_static_library (ABSL_TIME_LIB absl_time REQUIRED)
-find_static_library (ABSL_STRINGS_LIB absl_strings REQUIRED)
-find_static_library (ABSL_HASH_LIB absl_hash REQUIRED)
-find_static_library (ABSL_RAW_HASH_SET_LIB absl_raw_hash_set REQUIRED)
-find_static_library (ABSL_INT128_LIB absl_int128 REQUIRED)
-find_static_library (ABSL_BASE_LIB absl_base REQUIRED)
-find_static_library (ABSL_THROW_DELEGATE_LIB absl_throw_delegate REQUIRED)
+	if(${LIB_NAME}_LIBRARY)
+		message (STATUS "[✓] 找到静态库: ${LIB_NAME} -> ${${LIB_NAME}_LIBRARY}")
+	else()
+		message (FATAL_ERROR "[✗] 找不到必需的静态库: ${LIB_NAME}")
+	endif()
+endforeach()
 
 # 8. 目标属性配置 (Includes, Defines, Links)
 target_include_directories (
@@ -177,17 +163,19 @@ target_include_directories (
 			"${EXTERNAL_INSTALL_DIR}/include/range-v3"
 )
 
-target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE _GNU_SOURCE ${PLATFORM_ARCH_DEFINE})
+target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE _GNU_SOURCE ${PLATFORM_ARCH_DEFINE} SPDLOG_FMT_EXTERNAL)
 
 target_link_libraries (
 	${MAIN_TARGET_NAME}
 	PRIVATE "${PSDK_LIB_DIR}/${TOOLCHAIN_NAME}/libpayloadsdk.a"
-			${FOUND_STATIC_LIBS}
-			${OPENSSL_LIBRARIES}
+			Threads::Threads
+			yalantinglibs::yalantinglibs
+			OpenSSL::SSL
+			OpenSSL::Crypto
+			${ALL_STATIC_LIBS}
 			udev
 			m
 			dl
-			pthread
 			bz2
 			zstd
 			z

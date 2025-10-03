@@ -65,21 +65,41 @@ build_cmake_project() {
 	mkdir -p "${BUILD_DIR}"
 	cd "${BUILD_DIR}"
 
-	if [ ! -f "Makefile" ]; then
+	CMAKE_CACHE_FILE="CMakeCache.txt"
+	NEED_RECONFIGURE=0
+
+	if [ "$CLEAN_BUILD" = "1" ]; then
+		echo ">>> 执行 clean 构建，正在清理 '${BUILD_DIR}'..."
+		rm -rf *
+		NEED_RECONFIGURE=1
+	elif [ ! -f "$CMAKE_CACHE_FILE" ]; then
 		echo "首次配置 ${NAME}..."
-		cmake .. -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} \
+		NEED_RECONFIGURE=1
+	else
+		if ! grep -q "CMAKE_INSTALL_PREFIX:PATH=${INSTALL_DIR}" "$CMAKE_CACHE_FILE"; then
+			echo "检测到安装目录已变更，将重新配置..."
+			rm -rf *
+			NEED_RECONFIGURE=1
+		fi
+	fi
+
+	if [ "$NEED_RECONFIGURE" = "1" ]; then
+		cmake .. -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
 				 -DBUILD_SHARED_LIBS=OFF \
 				 -DCMAKE_BUILD_TYPE=Release \
 				 -DCMAKE_CXX_STANDARD=${CPP_STANDARD} \
-				 ${EXTRA_CMAKE_ARGS}
+				 ${EXTRA_CMAKE_ARGS} \
+			|| { printf "%s\n" "${COLOR_RED}错误: CMake 配置 '${NAME}' 失败${COLOR_NC}"; exit 1; }
 	else
 		echo "${NAME} 已配置, 跳过 cmake 步骤."
 	fi
 
+
 	echo "开始编译 ${NAME}..."
-	make -j"$(nproc)"
+	make -j"$(nproc)" || { printf "%s\n" "${COLOR_RED}错误: 编译 '${NAME}' 失败${COLOR_NC}"; exit 1; }
 	echo "正在安装 ${NAME}..."
-	make install
+	make install || { printf "%s\n" "${COLOR_RED}错误: 安装 '${NAME}' 失败${COLOR_NC}"; exit 1; }
+
 	printf "%s\n" "${COLOR_GREEN}>>> ${NAME} 构建并安装成功!${COLOR_NC}"
 	printf "\n"
 }
@@ -243,6 +263,14 @@ build_cmake_project "abseil-cpp" \
 	-DCMAKE_CXX_STANDARD=${CPP_STANDARD} \
 	-DABSL_BUILD_TESTING=OFF \
 	-DABSL_USE_GOOGLETEST_HEAD=OFF
+
+build_cmake_project "yalantinglibs" \
+	"${BASE_DIR}/yalantinglibs" \
+	-DCMAKE_CXX_STANDARD=${CPP_STANDARD} \
+	-DBUILD_UNIT_TESTS=OFF \
+	-DBUILD_BENCHMARK=OFF \
+	-DBUILD_EXAMPLES=OFF \
+	-DYLT_ENABLE_SSL=ON
 
 
 install_header_only_library "CLI11" \

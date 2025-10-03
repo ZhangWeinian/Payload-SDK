@@ -14,9 +14,6 @@
 #include <dji_logger.h>
 #include <dji_waypoint_v3.h>
 
-#include "camera_emu/test_payload_cam_emu_base.h"
-#include "camera_emu/test_payload_cam_emu_media.h"
-#include "camera_manager/test_camera_manager_entry.h"
 #include "data_transmission/test_data_transmission.h"
 #include "fc_subscription/test_fc_subscription.h"
 #include "flight_control/test_flight_control.h"
@@ -214,10 +211,95 @@ namespace plane::services
 		return instance;
 	}
 
+	template<typename PayloadType, typename Func>
+	void PSDKAdapter::registerCommandListener(plane::services::EventManager::CommandEvent event, Func func)
+	{
+		this->command_queue_remover_->appendListener(
+			event,
+			[this, func](const plane::services::EventManager::CommandEvent& event, const plane::services::EventManager::CommandData& data)
+			{
+				if constexpr (_STD is_same_v<PayloadType, _STD monostate>)
+				{
+					if (_STD holds_alternative<_STD monostate>(data))
+					{
+						_STD invoke(func, this);
+					}
+					else
+					{
+						LOG_ERROR("事件 '{}' 期望一个空的负载 (monostate)，但收到了其他类型！", static_cast<int>(event));
+					}
+				}
+				else
+				{
+					if (auto* p = _STD get_if<PayloadType>(&data))
+					{
+						_STD invoke(func, this, *p);
+					}
+					else
+					{
+						LOG_ERROR("事件 '{}' 期望负载类型 '{}'，但收到了不匹配的类型！", static_cast<int>(event), typeid(PayloadType).name());
+					}
+				}
+			});
+	}
+
 	PSDKAdapter::PSDKAdapter(void) noexcept:
 		command_pool_(_STD make_unique<ThreadPool>(2)),
 		last_update_time_(_STD_CHRONO steady_clock::time_point::min())
-	{}
+	{
+		LOG_INFO("PSDKAdapter 正在初始化并设置 CommandQueue 的监听器...");
+
+		try
+		{
+			auto& commandQueueSource { EventManager::getInstance().getCommandQueue() };
+			this->command_queue_remover_ =
+				_STD make_unique<_EVENTPP ScopedRemover<plane::services::EventManager::CommandQueue>>(commandQueueSource);
+
+			this->registerCommandListener<plane::protocol::TakeoffPayload>(plane::services::EventManager::CommandEvent::Takeoff,
+																		   &PSDKAdapter::takeoff);
+			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::GoHome, &PSDKAdapter::goHome);
+			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::Hover, &PSDKAdapter::hover);
+			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::Land, &PSDKAdapter::land);
+			this->registerCommandListener<_STD vector<uint8_t>>(plane::services::EventManager::CommandEvent::WaypointMission,
+																&PSDKAdapter::waypointV3);
+			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::StopWaypointMission,
+														  &PSDKAdapter::stopWaypointMission);
+			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::PauseWaypointMission,
+														  &PSDKAdapter::pauseWaypointMission);
+			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::ResumeWaypointMission,
+														  &PSDKAdapter::resumeWaypointMission);
+			this->registerCommandListener<plane::protocol::CircleFlyPayload>(plane::services::EventManager::CommandEvent::FlyCircleAroundPoint,
+																			 &PSDKAdapter::flyCircleAroundPoint);
+			this->registerCommandListener<int>(plane::services::EventManager::CommandEvent::SetControlStrategy,
+											   &PSDKAdapter::setControlStrategy);
+			this->registerCommandListener<plane::protocol::GimbalControlPayload>(plane::services::EventManager::CommandEvent::RotateGimbal,
+																				 &PSDKAdapter::rotateGimbal);
+			this->registerCommandListener<plane::protocol::GimbalControlPayload>(
+				plane::services::EventManager::CommandEvent::RotateGimbalBySpeed,
+				&PSDKAdapter::rotateGimbal);
+			this->registerCommandListener<plane::protocol::ZoomControlPayload>(plane::services::EventManager::CommandEvent::SetCameraZoomFactor,
+																			   &PSDKAdapter::setCameraZoomFactor);
+			this->registerCommandListener<_STD string>(plane::services::EventManager::CommandEvent::SetCameraStreamSource,
+													   &PSDKAdapter::setCameraStreamSource);
+			this->registerCommandListener<plane::protocol::StickDataPayload>(plane::services::EventManager::CommandEvent::SendRawStickData,
+																			 &PSDKAdapter::sendRawStickData);
+			this->registerCommandListener<plane::protocol::StickModeSwitchPayload>(
+				plane::services::EventManager::CommandEvent::EnableVirtualStick,
+				&PSDKAdapter::enableVirtualStick);
+			this->registerCommandListener<plane::protocol::StickModeSwitchPayload>(
+				plane::services::EventManager::CommandEvent::DisableVirtualStick,
+				&PSDKAdapter::disableVirtualStick);
+			this->registerCommandListener<plane::protocol::NedVelocityPayload>(
+				plane::services::EventManager::CommandEvent::SendNedVelocityCommand,
+				&PSDKAdapter::sendNedVelocityCommand);
+
+			LOG_INFO("所有命令事件监听器已成功注册。");
+		}
+		catch (const _STD exception& e)
+		{
+			LOG_ERROR("在 PSDKAdapter 构造期间订阅 CommandQueue 失败: {}", e.what());
+		}
+	}
 
 	PSDKAdapter::~PSDKAdapter(void) noexcept
 	{
@@ -230,10 +312,19 @@ namespace plane::services
 		if (this->run_acquisition_.exchange(true))
 		{
 			LOG_WARN("PSDKAdapter 数据采集线程已经启动，请勿重复调用 start()。");
-			return false;
+			return true;
 		}
 		LOG_INFO("正在启动 PSDK 数据采集线程...");
 		this->acquisition_thread_ = _STD thread(&PSDKAdapter::acquisitionLoop, this);
+
+		if (this->run_command_processing_.exchange(true))
+		{
+			LOG_WARN("PSDKAdapter 命令处理线程已经启动，请勿重复调用 start()。");
+			return true;
+		}
+		LOG_INFO("正在启动 PSDK 命令处理线程...");
+		this->command_processing_thread_ = _STD thread(&PSDKAdapter::commandProcessingLoop, this);
+
 		return true;
 	}
 
@@ -248,6 +339,16 @@ namespace plane::services
 			{
 				this->acquisition_thread_.join();
 				LOG_INFO("PSDK 数据采集线程已停止。");
+			}
+		}
+
+		if (this->run_command_processing_.exchange(false))
+		{
+			plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::Takeoff, std::monostate {});
+			if (this->command_processing_thread_.joinable())
+			{
+				this->command_processing_thread_.join();
+				LOG_INFO("PSDK 命令处理线程已停止。");
 			}
 		}
 
@@ -469,10 +570,11 @@ namespace plane::services
 				this->latest_payload_ = current_payload;
 			}
 
-			this->event_dispatcher_.dispatch(PSDKEvent::TelemetryUpdated, current_payload);
+			plane::services::EventManager::getInstance().publishStatus(plane::services::EventManager::PSDKEvent::TelemetryUpdated,
+																	   current_payload);
 
 			{
-				_STD lock_guard<_STD mutex>			  lock(this->health_utex_);
+				_STD lock_guard<_STD mutex>			  lock(this->health_mutex_);
 				this->last_update_time_ = _STD_CHRONO steady_clock::now();
 			}
 
@@ -492,7 +594,7 @@ namespace plane::services
 				 missionState.currentWaypointIndex,
 				 missionState.wayLineId);
 
-		this->event_dispatcher_.dispatch(PSDKEvent::MissionStateChanged, missionState);
+		plane::services::EventManager::getInstance().publishStatus(plane::services::EventManager::PSDKEvent::MissionStateChanged, missionState);
 	}
 
 	void PSDKAdapter::actionStateCallback(_DJI T_DjiWaypointV3ActionState actionState)
@@ -503,7 +605,7 @@ namespace plane::services
 				 actionState.actionGroupId,
 				 actionState.actionId);
 
-		this->event_dispatcher_.dispatch(PSDKEvent::ActionStateChanged, actionState);
+		plane::services::EventManager::getInstance().publishStatus(plane::services::EventManager::PSDKEvent::ActionStateChanged, actionState);
 	}
 
 	_DJI T_DjiReturnCode PSDKAdapter::missionStateCallbackEntry(_DJI T_DjiWaypointV3MissionState missionState)
@@ -520,7 +622,7 @@ namespace plane::services
 
 	_STD_CHRONO steady_clock::time_point PSDKAdapter::getLastUpdateTime(void) const noexcept
 	{
-		_STD lock_guard<_STD mutex> lock(this->health_utex_);
+		_STD lock_guard<_STD mutex> lock(this->health_mutex_);
 		return this->last_update_time_;
 	}
 
@@ -531,7 +633,7 @@ namespace plane::services
 	}
 
 	template<typename CommandLogic>
-	_STD future<T_DjiReturnCode> PSDKAdapter::executePsdkCommand(CommandLogic&& logic, const _STD source_location& location)
+	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::executePsdkCommand(CommandLogic&& logic, const _STD source_location& location)
 	{
 		const char* commandName { location.function_name() };
 		return command_pool_->enqueue(
@@ -773,6 +875,76 @@ namespace plane::services
 			});
 	}
 
+	void PSDKAdapter::rotateGimbal(const plane::protocol::GimbalControlPayload& payload)
+	{
+		(void)this->executePsdkCommand(
+			[payload]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：执行云台控制...");
+				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
+			});
+	}
+
+	void PSDKAdapter::setCameraZoomFactor(const plane::protocol::ZoomControlPayload& payload)
+	{
+		(void)this->executePsdkCommand(
+			[payload]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：执行相机变焦...");
+				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
+			});
+	}
+
+	void PSDKAdapter::setCameraStreamSource(const _STD string& source)
+	{
+		(void)this->executePsdkCommand(
+			[source]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：执行切换视频源...");
+				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
+			});
+	}
+
+	void PSDKAdapter::sendRawStickData(const plane::protocol::StickDataPayload& payload)
+	{
+		(void)this->executePsdkCommand(
+			[payload]() -> _DJI T_DjiReturnCode
+			{
+				LOG_DEBUG("线程池任务：发送虚拟摇杆数据...");
+				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
+			});
+	}
+
+	void PSDKAdapter::enableVirtualStick(const plane::protocol::StickModeSwitchPayload& payload)
+	{
+		(void)this->executePsdkCommand(
+			[payload]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：开启虚拟摇杆...");
+				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
+			});
+	}
+
+	void PSDKAdapter::disableVirtualStick(const plane::protocol::StickModeSwitchPayload& payload)
+	{
+		(void)this->executePsdkCommand(
+			[payload]() -> _DJI T_DjiReturnCode
+			{
+				LOG_INFO("线程池任务：关闭虚拟摇杆...");
+				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
+			});
+	}
+
+	void PSDKAdapter::sendNedVelocityCommand(const plane::protocol::NedVelocityPayload& payload)
+	{
+		(void)this->executePsdkCommand(
+			[payload]() -> _DJI T_DjiReturnCode
+			{
+				LOG_DEBUG("线程池任务：发送 NED 速度指令...");
+				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
+			});
+	}
+
 	// ... 在这里实现所有其他 PSDK API 的封装 ...
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::stopWaypointMission(void)
@@ -788,5 +960,21 @@ namespace plane::services
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::resumeWaypointMission(void)
 	{
 		return this->executeWaypointAction(_DJI DJI_WAYPOINT_V3_ACTION_RESUME);
+	}
+
+	void PSDKAdapter::commandProcessingLoop(void)
+	{
+		LOG_INFO("PSDK 命令处理线程已进入循环。");
+		while (this->run_command_processing_)
+		{
+			auto& queue { plane::services::EventManager::getInstance().getCommandQueue() };
+			queue.wait();
+			if (!this->run_command_processing_)
+			{
+				break;
+			}
+			queue.process();
+		}
+		LOG_INFO("PSDK 命令处理线程已退出循环。");
 	}
 } // namespace plane::services

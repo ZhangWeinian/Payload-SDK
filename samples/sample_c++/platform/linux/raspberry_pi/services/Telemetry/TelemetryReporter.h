@@ -4,6 +4,7 @@
 
 #include "protocol/HeartbeatDataClass.h"
 #include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
+#include "services/EventManager/EventManager.h"
 
 #include <eventpp/eventdispatcher.h>
 #include <ThreadPool/ThreadPool.h>
@@ -36,10 +37,10 @@ namespace plane::services
 		TelemetryReporter& operator=(const TelemetryReporter&) noexcept = delete;
 
 		bool			   publishJson(_STD string_view topic, _STD string_view statusJson) noexcept;
-		void			   onPsdkEvent(const plane::services::PSDKAdapter::EventData& eventData);
+		void			   onPsdkEvent(const plane::services::EventManager::PSDKEventData& eventData);
 		void			   runWatchdogCheck(void) noexcept;
 
-		_STD unique_ptr<_EVENTPP ScopedRemover<plane::services::PSDKAdapter::EventDispatcher>> removers_ {};
+		_STD unique_ptr<_EVENTPP ScopedRemover<plane::services::EventManager::StatusDispatcher>> removers_ {};
 		_STD unique_ptr<_THREADPOOL ThreadPool> event_processing_pool_ {};
 		_STD atomic<bool>	  run_watchdog_ { false };
 		constexpr static auto PSDK_WATCHDOG_TIMEOUT { _STD_CHRONO seconds(3) };

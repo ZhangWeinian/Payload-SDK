@@ -40,23 +40,23 @@ namespace plane::services
 
 		try
 		{
-			auto&				   dispatcher { plane::services::PSDKAdapter::getInstance().getEventDispatcher() };
-			this->removers_ = _STD make_unique<_EVENTPP ScopedRemover<plane::services::PSDKAdapter::EventDispatcher>>(dispatcher);
+			auto&				   dispatcher { plane::services::EventManager::getInstance().getStatusDispatcher() };
+			this->removers_ = _STD make_unique<_EVENTPP ScopedRemover<plane::services::EventManager::StatusDispatcher>>(dispatcher);
 
-			this->removers_->appendListener(plane::services::PSDKAdapter::PSDKEvent::TelemetryUpdated,
-											[this](const plane::services::PSDKAdapter::EventData& data)
+			this->removers_->appendListener(plane::services::EventManager::PSDKEvent::TelemetryUpdated,
+											[this](const plane::services::EventManager::PSDKEventData& data)
 											{
 												this->onPsdkEvent(data);
 											});
 
-			this->removers_->appendListener(plane::services::PSDKAdapter::PSDKEvent::MissionStateChanged,
-											[this](const plane::services::PSDKAdapter::EventData& data)
+			this->removers_->appendListener(plane::services::EventManager::PSDKEvent::MissionStateChanged,
+											[this](const plane::services::EventManager::PSDKEventData& data)
 											{
 												this->onPsdkEvent(data);
 											});
 
-			this->removers_->appendListener(plane::services::PSDKAdapter::PSDKEvent::ActionStateChanged,
-											[this](const plane::services::PSDKAdapter::EventData& data)
+			this->removers_->appendListener(plane::services::EventManager::PSDKEvent::ActionStateChanged,
+											[this](const plane::services::EventManager::PSDKEventData& data)
 											{
 												this->onPsdkEvent(data);
 											});
@@ -133,7 +133,7 @@ namespace plane::services
 		return true;
 	}
 
-	void TelemetryReporter::onPsdkEvent(const plane::services::PSDKAdapter::EventData& eventData)
+	void TelemetryReporter::onPsdkEvent(const plane::services::EventManager::PSDKEventData& eventData)
 	{
 		if (!this->event_processing_pool_)
 		{

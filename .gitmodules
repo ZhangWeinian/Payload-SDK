@@ -67,3 +67,6 @@
 [submodule "external_libs/eventpp"]
 	path = external_libs/eventpp
 	url = git@github.com:wqking/eventpp.git
+[submodule "external_libs/yalantinglibs"]
+	path = external_libs/yalantinglibs
+	url = git@github.com:alibaba/yalantinglibs.git
