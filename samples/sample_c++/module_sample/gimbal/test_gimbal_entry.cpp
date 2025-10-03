@@ -128,7 +128,10 @@ start:
 
             osalHandler->TaskSleepMs(10);
             printf("Input enable flag: ");
-            scanf("%d", &enableFlag);
+            if (scanf("%d", &enableFlag) != 1) {
+                USER_LOG_ERROR("Invalid input");
+                enableFlag = 0;
+            }
 
             returnCode = DjiGimbalManager_Init();
             if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -151,7 +154,10 @@ start:
 
             osalHandler->TaskSleepMs(10);
             printf("Input max speed percentage of yaw axis: ");
-            scanf("%d", &percentage);
+			if (scanf("%d", &percentage) != 1) {
+                USER_LOG_ERROR("Invalid input");
+                percentage = 0;
+            }
 
             returnCode = DjiGimbalManager_Init();
             if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -168,7 +174,10 @@ start:
 
             osalHandler->TaskSleepMs(10);
             printf("Input max speed percentage of pitch axis: ");
-            scanf("%d", &percentage);
+            if (scanf("%d", &percentage) != 1) {
+                USER_LOG_ERROR("Invalid input");
+                percentage = 0;
+            }
 
             returnCode = DjiGimbalManager_SetControllerMaxSpeedPercentage(gimbalMountPosition, DJI_GIMBAL_AXIS_PITCH, (uint8_t)percentage);
             if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -185,7 +194,10 @@ start:
 
             osalHandler->TaskSleepMs(10);
             printf("Input yaw axis's smooth factor: ");
-            scanf("%d", &factor);
+            if (scanf("%d", &factor) != 1) {
+                USER_LOG_ERROR("Invalid input");
+                factor = 0;
+            }
 
             returnCode = DjiGimbalManager_Init();
             if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -202,7 +214,10 @@ start:
 
             osalHandler->TaskSleepMs(10);
             printf("Input pitch axis's smooth factor: ");
-            scanf("%d", &factor);
+            if (scanf("%d", &factor) != 1) {
+                USER_LOG_ERROR("Invalid input");
+                factor = 0;
+            }
 
             returnCode = DjiGimbalManager_SetControllerSmoothFactor(gimbalMountPosition, DJI_GIMBAL_AXIS_PITCH, (uint8_t)factor);
             if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -317,12 +332,19 @@ start:
                 printf("rotate mode: 0: rel, 1: abs\n");
                 printf("Input gimbal mode, rotate mode, p, r, y(range in 0 ~ 360 deg if in abs mode): ");
 
-                scanf("%d", &gimbalMode);
-                if (gimbalMode == 3) {
+                if (scanf("%d", &gimbalMode) != 1) {
+                    USER_LOG_ERROR("Invalid input");
+                    gimbalMode = 0;
+                }
+				if (gimbalMode == 3) {
                     break;
                 }
 
-                scanf("%d %f %f %f", &rotateMode, &pitch, &roll, &yaw);
+				if (scanf("%d %f %f %f", &rotateMode, &pitch, &roll, &yaw) != 4) {
+                    USER_LOG_ERROR("Invalid input");
+                    rotateMode = 0;
+                    pitch = roll = yaw = 0.0f;
+                }
 
                 printf("gimbale mode %d, rotate mode %d, p %f, r %f, y %f\n",
                        gimbalMode, rotateMode, pitch, roll, yaw);

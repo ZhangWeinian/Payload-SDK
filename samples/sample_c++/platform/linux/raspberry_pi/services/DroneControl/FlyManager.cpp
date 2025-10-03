@@ -24,7 +24,7 @@ namespace plane::services
 		// TODO: 调用 PSDK 的单点飞行 API
 	}
 
-	void FlyManager::waypoint(const _STD vector<uint8_t>& kmzData)
+	void FlyManager::waypoint(const _STD vector<_STD uint8_t>& kmzData)
 	{
 		LOG_INFO("FlyManager: 发送【航线任务】命令事件 (从内存数据 {} 字节)...", kmzData.size());
 		if (kmzData.empty())
@@ -53,7 +53,7 @@ namespace plane::services
 			return;
 		}
 
-		_STD vector<uint8_t> kmzData { _STD istreambuf_iterator<char>(fileStream), _STD istreambuf_iterator<char>() };
+		_STD vector<_STD uint8_t> kmzData { _STD istreambuf_iterator<char>(fileStream), _STD istreambuf_iterator<char>() };
 
 		this->waypoint(kmzData);
 	}

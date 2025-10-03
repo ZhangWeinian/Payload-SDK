@@ -52,10 +52,14 @@ T_DjiReturnCode Osal_Socket(E_DjiSocketMode mode, T_DjiSocketHandle *socketHandl
     int opt = 1;
 
     /*! set the socket default read buffer to 20MByte */
-    system("echo 20000000 > /proc/sys/net/core/rmem_default");
+    if (system("echo 20000000 > /proc/sys/net/core/rmem_default") != 0) {
+        printf("PSDK_ARCH: failed to set rmem_default.\n");
+    }
 
     /*! set the socket max read buffer to 50MByte */
-    system("echo 50000000 > /proc/sys/net/core/rmem_max");
+    if (system("echo 50000000 > /proc/sys/net/core/rmem_max") != 0) {
+        printf("PSDK_ARCH: failed to set rmem_max.\n");
+    }
 
     if (socketHandle == NULL) {
         return DJI_ERROR_SYSTEM_MODULE_CODE_INVALID_PARAMETER;

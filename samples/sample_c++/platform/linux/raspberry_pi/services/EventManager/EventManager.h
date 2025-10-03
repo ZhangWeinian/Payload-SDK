@@ -56,9 +56,9 @@ namespace plane::services
 										 plane::protocol::NedVelocityPayload,	  // 发送 NED 速度指令
 
 										 // 对于没有直接对应结构体的，使用基本类型
-										 _STD vector<uint8_t>, // KMZ 数据
-										 int,				   // 设置控制策略
-										 _STD string		   // 设置视频源
+										 _STD vector<_STD uint8_t>, // KMZ 数据
+										 int,						// 设置控制策略
+										 _STD string				// 设置视频源
 										 >;
 
 		// PSDK 状态事件

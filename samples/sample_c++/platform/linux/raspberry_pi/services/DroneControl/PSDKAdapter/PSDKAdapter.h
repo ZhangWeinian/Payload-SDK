@@ -90,7 +90,7 @@ namespace plane::services
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> goHome(void);
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> hover(void);
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> land(void);
-		_NODISCARD _STD future<_DJI T_DjiReturnCode> waypointV3(const _STD vector<uint8_t>& kmzData);
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> waypointV3(const _STD vector<_STD uint8_t>& kmzData);
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> setControlStrategy(int strategyCode);
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams);
 

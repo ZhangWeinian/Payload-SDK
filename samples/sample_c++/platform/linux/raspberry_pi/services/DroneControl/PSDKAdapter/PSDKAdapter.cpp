@@ -215,7 +215,7 @@ namespace plane::services
 				}
 				else
 				{
-					if (auto* p = _STD get_if<PayloadType>(&data))
+					if (auto* p { _STD get_if<PayloadType>(&data) })
 					{
 						_STD invoke(func, this, *p);
 					}
@@ -235,7 +235,7 @@ namespace plane::services
 
 		try
 		{
-			auto& commandQueueSource { EventManager::getInstance().getCommandQueue() };
+			auto& commandQueueSource { plane::services::EventManager::getInstance().getCommandQueue() };
 			this->command_queue_remover_ =
 				_STD make_unique<_EVENTPP ScopedRemover<plane::services::EventManager::CommandQueue>>(commandQueueSource);
 
@@ -244,8 +244,8 @@ namespace plane::services
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::GoHome, &PSDKAdapter::goHome);
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::Hover, &PSDKAdapter::hover);
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::Land, &PSDKAdapter::land);
-			this->registerCommandListener<_STD vector<uint8_t>>(plane::services::EventManager::CommandEvent::WaypointMission,
-																&PSDKAdapter::waypointV3);
+			this->registerCommandListener<_STD vector<_STD uint8_t>>(plane::services::EventManager::CommandEvent::WaypointMission,
+																	 &PSDKAdapter::waypointV3);
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::StopWaypointMission,
 														  &PSDKAdapter::stopWaypointMission);
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::PauseWaypointMission,
@@ -463,7 +463,7 @@ namespace plane::services
 			if (_DJI T_DjiFcSubscriptionPositionFused pos {};
 				this->sub_status_.positionFused &&
 				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED,
-															  (uint8_t*)&pos,
+															  (_STD uint8_t*)&pos,
 															  sizeof(pos),
 															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
@@ -477,14 +477,14 @@ namespace plane::services
 			if (_DJI T_DjiFcSubscriptionAltitudeFused fused_alt {};
 				this->sub_status_.altitudeFused &&
 				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_FUSED,
-															  (uint8_t*)&fused_alt,
+															  (_STD uint8_t*)&fused_alt,
 															  sizeof(fused_alt),
 															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
 				if (_DJI T_DjiFcSubscriptionAltitudeFused hp_alt {};
 					this->sub_status_.altitudeOfHomepoint &&
 					(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_ALTITUDE_OF_HOMEPOINT,
-																  (uint8_t*)&hp_alt,
+																  (_STD uint8_t*)&hp_alt,
 																  sizeof(hp_alt),
 																  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 				{
@@ -494,8 +494,10 @@ namespace plane::services
 
 			if (_DJI T_DjiFcSubscriptionQuaternion q {};
 				this->sub_status_.quaternion &&
-				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, (uint8_t*)&q, sizeof(q), &timestamp) ==
-				 _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION,
+															  (_STD uint8_t*)&q,
+															  sizeof(q),
+															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
 				this->quaternionToEulerAngle(q, current_payload.FJHGJ, current_payload.FJFYJ, current_payload.FJPHJ);
 			}
@@ -503,7 +505,7 @@ namespace plane::services
 			if (_DJI T_DjiFcSubscriptionVelocity vel {};
 				this->sub_status_.velocity &&
 				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY,
-															  (uint8_t*)&vel,
+															  (_STD uint8_t*)&vel,
 															  sizeof(vel),
 															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
@@ -517,7 +519,7 @@ namespace plane::services
 			if (_DJI T_DjiFcSubscriptionSingleBatteryInfo batt {};
 				this->sub_status_.batteryInfo &&
 				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO,
-															  (uint8_t*)&batt,
+															  (_STD uint8_t*)&batt,
 															  sizeof(batt),
 															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
@@ -528,7 +530,7 @@ namespace plane::services
 			if (_DJI T_DjiFcSubscriptionGimbalAngles gimbalAngle {};
 				this->sub_status_.gimbalAngles &&
 				(_DJI DjiFcSubscription_GetLatestValueOfTopic(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES,
-															  (uint8_t*)&gimbalAngle,
+															  (_STD uint8_t*)&gimbalAngle,
 															  sizeof(gimbalAngle),
 															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
@@ -725,7 +727,7 @@ namespace plane::services
 			});
 	}
 
-	_STD future<T_DjiReturnCode> PSDKAdapter::waypointV3(const _STD vector<uint8_t>& kmzData)
+	_STD future<T_DjiReturnCode> PSDKAdapter::waypointV3(const _STD vector<_STD uint8_t>& kmzData)
 	{
 		return this->command_pool_->enqueue(
 			[this, data = kmzData]() -> _DJI T_DjiReturnCode

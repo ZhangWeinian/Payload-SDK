@@ -31,7 +31,7 @@ namespace plane::services
 		void			   goHome(void);
 		void			   hover(void);
 		void			   land(void);
-		void			   waypoint(const _STD vector<uint8_t>& kmzData);
+		void			   waypoint(const _STD vector<_STD uint8_t>& kmzData);
 		void			   waypoint(_STD string_view kmzFilePath);
 		void			   setControlStrategy(int strategyCode);
 		void			   flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams);

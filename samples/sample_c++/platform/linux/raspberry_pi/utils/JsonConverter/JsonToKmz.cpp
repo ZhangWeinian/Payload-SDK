@@ -142,7 +142,7 @@ namespace plane::utils
 					return _STD nullopt;
 				}
 
-				_STD vector<uint8_t> data(st.size);
+				_STD vector<_STD uint8_t> data(st.size);
 				if (_LIBZIP zip_int64_t bytes_read { _LIBZIP zip_source_read(this->m_source, data.data(), st.size) };
 					bytes_read < 0 || static_cast<_LIBZIP zip_uint64_t>(bytes_read) != st.size)
 				{
@@ -439,8 +439,9 @@ namespace plane::utils
 		}
 	} // namespace
 
-	_STD optional<_STD vector<uint8_t>> JsonToKmzConverter::convertWaypointsToKmz(const _STD vector<plane::protocol::Waypoint>& waypoints,
-																				  const plane::protocol::WaypointPayload& missionInfo) noexcept
+	_STD optional<_STD vector<_STD uint8_t>>
+		 JsonToKmzConverter::convertWaypointsToKmz(const _STD vector<plane::protocol::Waypoint>& waypoints,
+												   const plane::protocol::WaypointPayload&		 missionInfo) noexcept
 	{
 		try
 		{
@@ -473,7 +474,7 @@ namespace plane::utils
 				return _STD nullopt;
 			}
 
-			_STD vector<uint8_t>& kmzData { *kmzDataOpt };
+			_STD vector<_STD uint8_t>& kmzData { *kmzDataOpt };
 			LOG_DEBUG("成功在内存中生成 KMZ 数据 ({} 字节)。", kmzData.size());
 
 			if (plane::utils::isSaveKmz())

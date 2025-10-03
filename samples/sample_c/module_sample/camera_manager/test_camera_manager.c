@@ -1484,8 +1484,11 @@ T_DjiReturnCode DjiTest_CameraManagerRunSample(E_DjiMountPosition mountPosition,
 
             osalHandler->TaskSleepMs(5);
             printf("Input expand directory name: ");
-            scanf("%s", dirName);
-            dirNameSize = strlen((const char *)dirName);
+            if (scanf("%s", dirName) != 1) {
+                USER_LOG_ERROR("Invalid input for dirName");
+				break;
+            }
+			dirNameSize = strlen((const char *)dirName);
 
             returnCode = DjiCameraManager_SetCustomExpandName(mountPosition,
                                                               DJI_CAMERA_MANAGER_EXPAND_NAME_TYPE_DIR,
@@ -1499,8 +1502,12 @@ T_DjiReturnCode DjiTest_CameraManagerRunSample(E_DjiMountPosition mountPosition,
             if (cameraType != DJI_CAMERA_TYPE_L1) {
                 osalHandler->TaskSleepMs(5);
                 printf("Input expand file name: ");
-                scanf("%s", fileName);
-                fileNameSize = strlen((const char *)fileName);
+                if (scanf("%s", fileName) != 1) {
+                    USER_LOG_ERROR("Invalid input for fileName");
+                    break;
+                }
+
+				fileNameSize = strlen((const char *)fileName);
 
                 returnCode = DjiCameraManager_SetCustomExpandName(mountPosition,
                                                                 DJI_CAMERA_MANAGER_EXPAND_NAME_TYPE_FILE,
@@ -1652,7 +1659,10 @@ T_DjiReturnCode DjiTest_CameraManagerRunSample(E_DjiMountPosition mountPosition,
 
             osalHandler->TaskSleepMs(10);
             printf("Input focus ring value to set: ");
-            scanf("%hd", &focusRingValue);
+            if (scanf("%hd", &focusRingValue) != 1) {
+                USER_LOG_ERROR("Invalid input for focusRingValue");
+                break;
+            }
 
             USER_LOG_INFO("Try to set focus ring value as %hd", focusRingValue);
             returnCode = DjiCameraManager_SetFocusRingValue(mountPosition, focusRingValue);
@@ -1681,7 +1691,10 @@ T_DjiReturnCode DjiTest_CameraManagerRunSample(E_DjiMountPosition mountPosition,
 
             osalHandler->TaskSleepMs(10);
             printf("Please input checking time: ");
-            scanf("%d", &loopTime);
+            if (scanf("%d", &loopTime) != 1) {
+                USER_LOG_ERROR("Invalid input for loopTime");
+				break;
+			}
 
             do {
                 returnCode = DjiCameraManager_GetCameraConnectStatus(mountPosition,
@@ -1915,7 +1928,10 @@ T_DjiReturnCode DjiTest_CameraManagerRunSample(E_DjiMountPosition mountPosition,
 
             osalHandler->TaskSleepMs(5);
             printf("Input meterting point (x, y) you want to set: ");
-            scanf("%d %d", &x, &y);
+            if (scanf("%d %d", &x, &y) != 1) {
+                USER_LOG_ERROR("Invalid input for x, y)");
+				break;
+			}
 
             USER_LOG_INFO("Try to set metering point as (%d, %d)", (uint8_t)x, (uint8_t)y);
             returnCode = DjiCameraManager_SetMeteringPoint(mountPosition, x, y);
@@ -1955,7 +1971,10 @@ T_DjiReturnCode DjiTest_CameraManagerRunSample(E_DjiMountPosition mountPosition,
 
             osalHandler->TaskSleepMs(10);
             printf("Input mode to set FFC (0 manual, 1 auto):");
-            scanf("%d", &ffcMode);
+            if (scanf("%d", &ffcMode) != 1) {
+                USER_LOG_ERROR("Invalid input for ffcMode");
+				break;
+			}
 
             if (cameraType != DJI_CAMERA_TYPE_XTS) {
                 USER_LOG_INFO("Set camera stream source to infrared camera.");
@@ -2003,7 +2022,10 @@ T_DjiReturnCode DjiTest_CameraManagerRunSample(E_DjiMountPosition mountPosition,
 
             osalHandler->TaskSleepMs(10);
             printf("Input gain mode to set (1 low, 2 high):");
-            scanf("%d", &gainMode);
+            if (scanf("%d", &gainMode) != 1) {
+                USER_LOG_ERROR("Invalid input for gainMode");
+				break;
+			}
 
             if (cameraType != DJI_CAMERA_TYPE_XTS) {
                 USER_LOG_INFO("Set camera stream source to infrared camera.");

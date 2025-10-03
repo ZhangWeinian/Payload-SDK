@@ -208,7 +208,7 @@ static void DjiTestWidgetManager_RecvSpeakerStatesCallback(E_DjiMountPosition po
     printf("speaker systemStates = %d\n", speakerStates->systemStates);
     printf("speaker playFileUuid = %s\n", speakerStates->playFileUuid);
     printf("speaker playFileName = %s\n", speakerStates->playFileName);
-    printf("speaker playQuality = %u\n", speakerStates->playFileName);
+    printf("speaker playQuality = %s\n", speakerStates->playFileName);
     printf("speaker actualVolume = %u\n", speakerStates->actualVolume);
     printf("speaker limitVolumeOnTheGround = %u\n", speakerStates->limitVolumeOnTheGround);
     printf("\033[0m");
