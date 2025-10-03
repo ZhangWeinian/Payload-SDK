@@ -27,21 +27,21 @@ namespace plane::utils
 
 	_NODISCARD inline bool isLogLevelDebug(void) noexcept
 	{
-		return isEnvVarSetToOne("LOG_DEBUG");
+		return _UNNAMED isEnvVarSetToOne("LOG_DEBUG");
 	}
 
 	_NODISCARD inline bool isSkipRC(void) noexcept
 	{
-		return isEnvVarSetToOne("SKIP_RC");
+		return _UNNAMED isEnvVarSetToOne("SKIP_RC");
 	}
 
 	_NODISCARD inline bool isTestKmzFile(void) noexcept
 	{
-		return isEnvVarSetToOne("TEST_KMZ");
+		return _UNNAMED isEnvVarSetToOne("TEST_KMZ");
 	}
 
 	_NODISCARD inline bool isSaveKmz(void) noexcept
 	{
-		return isEnvVarSetToOne("SAVE_KMZ");
+		return _UNNAMED isEnvVarSetToOne("SAVE_KMZ");
 	}
 } // namespace plane::utils

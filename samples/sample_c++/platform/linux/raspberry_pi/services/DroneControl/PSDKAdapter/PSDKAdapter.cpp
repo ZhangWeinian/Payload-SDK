@@ -542,7 +542,7 @@ namespace plane::services
 			if (_DJI T_DjiAircraftInfoBaseInfo aircraftInfo {};
 				_DJI DjiAircraftInfo_GetBaseInfo(&aircraftInfo) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
-				current_payload.XH = aircraftTypeToString(aircraftInfo.aircraftType);
+				current_payload.XH = _UNNAMED aircraftTypeToString(aircraftInfo.aircraftType);
 			}
 			else
 			{
@@ -576,7 +576,7 @@ namespace plane::services
 	void PSDKAdapter::missionStateCallback(_DJI T_DjiWaypointV3MissionState missionState)
 	{
 		LOG_INFO("[航线任务状态] 状态: {}, 当前航点: {}, 航线ID: {}",
-				 djiMissionStateToString(missionState.state),
+				 _UNNAMED djiMissionStateToString(missionState.state),
 				 missionState.currentWaypointIndex,
 				 missionState.wayLineId);
 
@@ -586,7 +586,7 @@ namespace plane::services
 	void PSDKAdapter::actionStateCallback(_DJI T_DjiWaypointV3ActionState actionState)
 	{
 		LOG_INFO("[航线动作状态] 状态: {}, 航点: {}, 动作组: {}, 动作ID: {}",
-				 djiActionStateToString(actionState.state),
+				 _UNNAMED djiActionStateToString(actionState.state),
 				 actionState.currentWaypointIndex,
 				 actionState.actionGroupId,
 				 actionState.actionId);

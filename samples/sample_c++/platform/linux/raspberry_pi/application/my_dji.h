@@ -39,8 +39,8 @@ namespace plane::my_dji
 
 	void runMyApplication(int argc, char** argv)
 	{
-		_CSTD signal(SIGINT, signalHandler);
-		_CSTD signal(SIGTERM, signalHandler);
+		_CSTD signal(SIGINT, _UNNAMED signalHandler);
+		_CSTD signal(SIGTERM, _UNNAMED signalHandler);
 
 		if (plane::utils::isLogLevelDebug())
 		{

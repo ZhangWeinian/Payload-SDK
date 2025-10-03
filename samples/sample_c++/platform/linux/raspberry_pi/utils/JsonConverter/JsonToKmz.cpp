@@ -256,7 +256,7 @@ namespace plane::utils
 			_STD size_t size { waypoints.size() };
 			for (_STD size_t i { 1 }; i < size; ++i)
 			{
-				totalDistance += calculateDistance(waypoints[i - 1], waypoints[i]);
+				totalDistance += _UNNAMED calculateDistance(waypoints[i - 1], waypoints[i]);
 			}
 			return totalDistance;
 		}
@@ -267,7 +267,7 @@ namespace plane::utils
 			_STD size_t size { waypoints.size() };
 			for (_STD size_t i { 1 }; i < size; ++i)
 			{
-				double distance { calculateDistance(waypoints[i - 1], waypoints[i]) };
+				double distance { _UNNAMED calculateDistance(waypoints[i - 1], waypoints[i]) };
 				double speed { waypoints[i].SD };
 				if (speed < 0.1)
 				{
@@ -296,8 +296,8 @@ namespace plane::utils
 
 			wpml_file.document.missionConfig.globalTransitionalSpeed  = waypoints.empty() ? 10.0 : waypoints[0].SD;
 			wpml_file.document.missionConfig.droneInfo.droneEnumValue = 78;
-			wpml_file.document.folder.distance						  = calculateTotalDistance(waypoints);
-			wpml_file.document.folder.duration						  = calculateTotalDuration(waypoints);
+			wpml_file.document.folder.distance						  = _UNNAMED calculateTotalDistance(waypoints);
+			wpml_file.document.folder.duration						  = _UNNAMED calculateTotalDuration(waypoints);
 			wpml_file.document.folder.autoFlightSpeed				  = wpml_file.document.missionConfig.globalTransitionalSpeed;
 
 			if (!waypoints.empty())
@@ -327,7 +327,7 @@ namespace plane::utils
 
 				if (size > 1)
 				{
-					firstPlacemark.waypointHeadingParam.waypointHeadingAngle = calculateHeadingAngle(waypoints[0], waypoints[1]);
+					firstPlacemark.waypointHeadingParam.waypointHeadingAngle = _UNNAMED calculateHeadingAngle(waypoints[0], waypoints[1]);
 				}
 
 				// firstPlacemark.actionGroups.push_back(takeoffGroup);
@@ -342,7 +342,7 @@ namespace plane::utils
 					placemark.executeHeight								= waypoints[i].GD;
 					placemark.waypointSpeed								= waypoints[i].SD;
 
-					placemark.waypointHeadingParam.waypointHeadingAngle = calculateHeadingAngle(waypoints[i], waypoints[i + 1]);
+					placemark.waypointHeadingParam.waypointHeadingAngle = _UNNAMED calculateHeadingAngle(waypoints[i], waypoints[i + 1]);
 
 					if (i == 1)
 					{
@@ -452,10 +452,10 @@ namespace plane::utils
 				return _STD nullopt;
 			}
 
-			_STD string		   waylinesWpml { _UNNAMED generateWaylinesWpml(waypoints) };
-			_STD string		   templateKml { _UNNAMED generateTemplateKml(waypoints, missionInfo) };
+			_STD string					waylinesWpml { _UNNAMED generateWaylinesWpml(waypoints) };
+			_STD string					templateKml { _UNNAMED generateTemplateKml(waypoints, missionInfo) };
 
-			InMemoryZipArchive archive {};
+			_UNNAMED InMemoryZipArchive archive {};
 			if (!archive)
 			{
 				LOG_ERROR("初始化内存归档器失败。");
