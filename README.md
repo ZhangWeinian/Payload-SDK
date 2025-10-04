@@ -1,8 +1,8 @@
 # DJI 负载 SDK（PSDK）
 
-[](https://img.shields.io/badge/version-V3.13.1-purple.svg)  
-[](https://img.shields.io/badge/platform-linux_|_rtos-red.svg)  
-[](https://img.shields.io/badge/license-MIT-cyan.svg)
+![](https://img.shields.io/badge/version-V3.13.1-purple.svg)
+![](https://img.shields.io/badge/platform-linux_|_rtos-red.svg)
+![](https://img.shields.io/badge/license-MIT-cyan.svg)
 
 ## 什么是 DJI 负载 SDK？
 
