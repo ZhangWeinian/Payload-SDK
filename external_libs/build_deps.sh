@@ -104,6 +104,54 @@ build_cmake_project() {
 	printf "\n"
 }
 
+build_boost_project() {
+	NAME="Boost"
+	SRC_DIR="$1"
+
+	if [ -z "$SRC_DIR" ] || [ ! -d "$SRC_DIR" ]; then
+		printf "%s\n" "${COLOR_RED}错误: 为 '${NAME}' 提供的源码目录 '${SRC_DIR}' 无效或不存在。${COLOR_NC}"
+		exit 1
+	fi
+
+	printf "%s\n" "${COLOR_BLUE}--- [ 检查/构建: ${NAME} ] ---${COLOR_NC}"
+	cd "${SRC_DIR}"
+
+	B2_TOOLSET=gcc
+	B2_LINK_TYPE=static
+	B2_VARIANT=release
+	B2_THREADING=multi
+
+	if [ "$CLEAN_BUILD" = "1" ]; then
+		echo ">>> 执行 clean 构建，清理 Boost..."
+		./b2 --clean || true
+		rm -rf bootstrap.log b2 bjam project-config.jam stage
+	fi
+
+	if [ ! -f "./b2" ]; then
+		echo "正在运行 bootstrap.sh 以准备 Boost 构建环境..."
+		./bootstrap.sh --with-toolset=${B2_TOOLSET} || { printf "%s\n" "${COLOR_RED}错误: Boost bootstrap.sh 失败${COLOR_NC}"; exit 1; }
+	else
+		echo "Boost 构建环境已准备好，跳过 bootstrap.sh。"
+	fi
+
+	printf "%s\n" "开始编译和安装 Boost 静态库..."
+	printf "%s\n" "这将需要一些时间，请耐心等待..."
+
+	./b2 install \
+		--prefix="${INSTALL_DIR}" \
+		toolset=${B2_TOOLSET} \
+		link=${B2_LINK_TYPE} \
+		variant=${B2_VARIANT} \
+		threading=${B2_THREADING} \
+		cxxstd=${CPP_STANDARD} \
+		cmake-config=on \
+		-j"$(nproc)" \
+		|| { printf "%s\n" "${COLOR_RED}错误: 构建或安装 '${NAME}' 失败${COLOR_NC}"; exit 1; }
+
+	printf "%s\n" "${COLOR_GREEN}>>> ${NAME} 构建并安装成功!${COLOR_NC}"
+	printf "\n"
+}
+
 build_autotools_project() {
 	NAME="$1"
 	SRC_DIR="$2"
@@ -192,6 +240,9 @@ install_header_only_library() {
 	printf "%s\n" "${COLOR_GREEN}>>> ${NAME} 头文件已安装至 install/include/${NAME}${COLOR_NC}"
 	printf "\n"
 }
+
+
+build_boost_project "${BASE_DIR}/boost"
 
 build_cmake_project "Paho MQTT C" \
 	"${BASE_DIR}/paho.mqtt.c" \

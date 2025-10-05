@@ -137,6 +137,17 @@ list (
 	"${EXTERNAL_INSTALL_DIR}"
 )
 
+set (Boost_USE_STATIC_LIBS ON)
+set (Boost_NO_BOOST_CMAKE ON)
+set (Boost_NO_SYSTEM_PATHS ON)
+
+find_package (
+	Boost
+	1.80.0
+	REQUIRED
+	COMPONENTS system thread
+)
+
 find_package (Threads REQUIRED)
 find_package (yalantinglibs REQUIRED)
 find_package (OpenSSL REQUIRED)
@@ -210,6 +221,8 @@ target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE _GNU_SOURCE ${PLATFORM_A
 target_link_libraries (
 	${MAIN_TARGET_NAME}
 	PRIVATE "${PSDK_LIB_DIR}/${TOOLCHAIN_NAME}/libpayloadsdk.a"
+			Boost::system
+			Boost::thread
 			Threads::Threads
 			yalantinglibs::yalantinglibs
 			OpenSSL::SSL
