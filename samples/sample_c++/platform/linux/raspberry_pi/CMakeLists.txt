@@ -131,16 +131,9 @@ else()
 endif()
 
 # 7. 依赖查找与配置
-list (
-	APPEND
-	CMAKE_PREFIX_PATH
-	"${EXTERNAL_INSTALL_DIR}"
-)
-
 set (Boost_USE_STATIC_LIBS ON)
 set (Boost_NO_BOOST_CMAKE ON)
 set (Boost_NO_SYSTEM_PATHS ON)
-
 find_package (
 	Boost
 	1.80.0
@@ -151,6 +144,12 @@ find_package (
 find_package (Threads REQUIRED)
 find_package (yalantinglibs REQUIRED)
 find_package (OpenSSL REQUIRED)
+
+list (
+	APPEND
+	CMAKE_PREFIX_PATH
+	"${EXTERNAL_INSTALL_DIR}"
+)
 
 set (
 	STATIC_LIBS

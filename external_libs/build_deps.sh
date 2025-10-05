@@ -30,6 +30,34 @@ else
 	COLOR_NC=""
 fi
 
+check_and_install_deps() {
+	REQUIRED_PKGS="build-essential libopenmpi-dev openmpi-bin python3-dev"
+	MISSING_PKGS=""
+	printf "%s\n" "${COLOR_BLUE}--- [ 检查系统依赖 ] ---${COLOR_NC}"
+
+	for pkg in ${REQUIRED_PKGS}; do
+		if ! dpkg-query -W -f='${Status}' "${pkg}" 2>/dev/null | grep -q "install ok installed"; then
+			printf " -> 缺失软件包: %s\n" "${COLOR_YELLOW}${pkg}${COLOR_NC}"
+			MISSING_PKGS="${MISSING_PKGS} ${pkg}"
+		else
+			printf " -> 已安装: %s\n" "${COLOR_GREEN}${pkg}${COLOR_NC}"
+		fi
+	done
+
+	if [ -n "${MISSING_PKGS}" ]; then
+		printf "\n%s\n" "${COLOR_YELLOW}检测到有缺失的依赖包。准备使用 apt 自动安装...${COLOR_NC}"
+		printf "%s\n" "这需要管理员权限 (sudo)，可能会提示您输入密码。"
+		sudo apt-get update || { printf "%s\n" "${COLOR_RED}错误: 'apt-get update' 失败${COLOR_NC}"; exit 1; }
+		sudo apt-get install -y ${MISSING_PKGS} || { printf "%s\n" "${COLOR_RED}错误: 软件包安装失败${COLOR_NC}"; exit 1; }
+		printf "\n%s\n" "${COLOR_GREEN}>>> 所有缺失的依赖已成功安装!${COLOR_NC}"
+	else
+		printf "\n%s\n" "${COLOR_GREEN}>>> 所有必需的系统依赖均已满足!${COLOR_NC}"
+	fi
+	printf "\n"
+}
+
+check_and_install_deps
+
 CPP_STANDARD=20
 
 BASE_DIR=$(pwd)
@@ -99,54 +127,6 @@ build_cmake_project() {
 	make -j"$(nproc)" || { printf "%s\n" "${COLOR_RED}错误: 编译 '${NAME}' 失败${COLOR_NC}"; exit 1; }
 	echo "正在安装 ${NAME}..."
 	make install || { printf "%s\n" "${COLOR_RED}错误: 安装 '${NAME}' 失败${COLOR_NC}"; exit 1; }
-
-	printf "%s\n" "${COLOR_GREEN}>>> ${NAME} 构建并安装成功!${COLOR_NC}"
-	printf "\n"
-}
-
-build_boost_project() {
-	NAME="Boost"
-	SRC_DIR="$1"
-
-	if [ -z "$SRC_DIR" ] || [ ! -d "$SRC_DIR" ]; then
-		printf "%s\n" "${COLOR_RED}错误: 为 '${NAME}' 提供的源码目录 '${SRC_DIR}' 无效或不存在。${COLOR_NC}"
-		exit 1
-	fi
-
-	printf "%s\n" "${COLOR_BLUE}--- [ 检查/构建: ${NAME} ] ---${COLOR_NC}"
-	cd "${SRC_DIR}"
-
-	B2_TOOLSET=gcc
-	B2_LINK_TYPE=static
-	B2_VARIANT=release
-	B2_THREADING=multi
-
-	if [ "$CLEAN_BUILD" = "1" ]; then
-		echo ">>> 执行 clean 构建，清理 Boost..."
-		./b2 --clean || true
-		rm -rf bootstrap.log b2 bjam project-config.jam stage
-	fi
-
-	if [ ! -f "./b2" ]; then
-		echo "正在运行 bootstrap.sh 以准备 Boost 构建环境..."
-		./bootstrap.sh --with-toolset=${B2_TOOLSET} || { printf "%s\n" "${COLOR_RED}错误: Boost bootstrap.sh 失败${COLOR_NC}"; exit 1; }
-	else
-		echo "Boost 构建环境已准备好，跳过 bootstrap.sh。"
-	fi
-
-	printf "%s\n" "开始编译和安装 Boost 静态库..."
-	printf "%s\n" "这将需要一些时间，请耐心等待..."
-
-	./b2 install \
-		--prefix="${INSTALL_DIR}" \
-		toolset=${B2_TOOLSET} \
-		link=${B2_LINK_TYPE} \
-		variant=${B2_VARIANT} \
-		threading=${B2_THREADING} \
-		cxxstd=${CPP_STANDARD} \
-		cmake-config=on \
-		-j"$(nproc)" \
-		|| { printf "%s\n" "${COLOR_RED}错误: 构建或安装 '${NAME}' 失败${COLOR_NC}"; exit 1; }
 
 	printf "%s\n" "${COLOR_GREEN}>>> ${NAME} 构建并安装成功!${COLOR_NC}"
 	printf "\n"
@@ -242,7 +222,9 @@ install_header_only_library() {
 }
 
 
-build_boost_project "${BASE_DIR}/boost"
+build_cmake_project "Boost" \
+	"${BASE_DIR}/boost" \
+	-DBUILD_TESTING=OFF
 
 build_cmake_project "Paho MQTT C" \
 	"${BASE_DIR}/paho.mqtt.c" \
@@ -360,5 +342,5 @@ install_header_only_library "eventpp" \
 	"include"
 
 printf "%s\n" "${COLOR_GREEN}============================================================"
-printf "                  所有依赖库已成功构建并安装!\n"
+printf "                 所有依赖库已成功构建并安装!\n"
 printf "============================================================${COLOR_NC}\n"
