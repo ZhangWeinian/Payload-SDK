@@ -9,7 +9,7 @@ format:
     dangle_align: "prefix"
     keyword_case: "upper"
     command_case: "lower"
-    max_pargs_hwrap: 2
+    max_pargs_hwrap: 3
 
 markup:
     canonicalize_hashrulers: true

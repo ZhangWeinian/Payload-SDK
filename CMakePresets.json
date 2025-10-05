@@ -11,6 +11,7 @@
 			"hidden": true,
 			"generator": "Ninja",
 			"cacheVariables": {
+				"CMAKE_PREFIX_PATH": "${sourceDir}/external_libs/install",
 				"CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
 				"CMAKE_COLOR_DIAGNOSTICS": "ON",
 				"CMAKE_CXX_STANDARD": "20",
@@ -23,8 +24,7 @@
 				"TREAT_WARNINGS_AS_ERRORS": {
 					"type": "BOOL",
 					"value": "FALSE"
-				},
-				"EXTERNAL_LIBS_DIR": "${sourceDir}/external_libs"
+				}
 			}
 		},
 		{
@@ -58,7 +58,6 @@
 				"CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections",
 				"CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
 				"BUILD_TESTING": "OFF",
-				"CMAKE_INSTALL_DO_STRIP": "ON",
 				"TREAT_WARNINGS_AS_ERRORS": "ON"
 			}
 		},

@@ -16,22 +16,23 @@ if(TREAT_WARNINGS_AS_ERRORS)
 endif()
 
 # 2. 第三方依赖管理
-set (DEPS_INSTALL_DIR "${EXTERNAL_LIBS_DIR}/install")
+set (DEPS_SOURCE_DIR "${CMAKE_SOURCE_DIR}/external_libs")
+set (DEPS_BUILD_SCRIPT "${DEPS_SOURCE_DIR}/build_deps.sh")
 
-if(EXISTS "${EXTERNAL_LIBS_DIR}/build_deps.sh")
+if(EXISTS "${DEPS_BUILD_SCRIPT}")
 	add_custom_target (
 		deps
 		COMMAND ${CMAKE_COMMAND} -E echo "正在通过脚本构建第三方依赖..."
-		COMMAND bash "${EXTERNAL_LIBS_DIR}/build_deps.sh"
-		WORKING_DIRECTORY "${EXTERNAL_LIBS_DIR}"
+		COMMAND bash "${DEPS_BUILD_SCRIPT}"
+		WORKING_DIRECTORY "${DEPS_SOURCE_DIR}"
 		COMMENT "构建所有依赖项的静态库。如有需要，请手动运行此目标。"
 	)
 else()
 	message (WARNING "未找到脚本 build_deps.sh 。依赖构建目标 'deps' 将不可用。")
 endif()
 
-if(NOT EXISTS "${DEPS_INSTALL_DIR}")
-	message (WARNING "第三方库似乎尚未构建。\n" "请考虑先为 'deps' 目标执行构建命令：\n   cmake --build <构建目录> --target deps")
+if(NOT EXISTS "${DEPS_SOURCE_DIR}/install")
+	message (WARNING "第三方库似乎尚未构建。\n   请考虑先为 'deps' 目标执行构建命令：\n   cmake --build <构建目录> --target deps")
 endif()
 
 # 3. 平台选择与项目引导

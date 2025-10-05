@@ -12,11 +12,7 @@ if(NOT
 	message (FATAL_ERROR "此项目被配置为仅在 Linux 系统上构建")
 endif()
 
-function(
-	pretty_message
-	TITLE
-	CONTENT
-)
+function(pretty_message TITLE CONTENT)
 	message (STATUS "===========================================")
 	message (STATUS "${TITLE}:")
 	if(CONTENT)
@@ -74,16 +70,8 @@ add_executable (${MAIN_TARGET_NAME})
 
 set_target_properties (${MAIN_TARGET_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${MAIN_OUTPUT_PATH}")
 
-file (
-	GLOB_RECURSE
-	PSDK_CXX_SAMPLE_SOURCES
-	"${PSDK_SAMPLES_DIR}/sample_c++/module_sample/*.cpp"
-)
-file (
-	GLOB_RECURSE
-	PSDK_C_SAMPLE_SOURCES
-	"${PSDK_SAMPLES_DIR}/sample_c/module_sample/*.c"
-)
+file (GLOB_RECURSE PSDK_CXX_SAMPLE_SOURCES "${PSDK_SAMPLES_DIR}/sample_c++/module_sample/*.cpp")
+file (GLOB_RECURSE PSDK_C_SAMPLE_SOURCES "${PSDK_SAMPLES_DIR}/sample_c/module_sample/*.c")
 file (
 	GLOB_RECURSE
 	PLATFORM_SOURCES
@@ -113,17 +101,11 @@ execute_process (
 	OUTPUT_VARIABLE DEVICE_SYSTEM_ID
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-if(DEVICE_SYSTEM_ID
-   STREQUAL
-   "x86_64"
-)
+
+if(DEVICE_SYSTEM_ID STREQUAL "x86_64")
 	set (TOOLCHAIN_NAME x86_64-linux-gnu-gcc)
 	set (PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_x86_64=1")
-elseif(
-	DEVICE_SYSTEM_ID
-	STREQUAL
-	"aarch64"
-)
+elseif(DEVICE_SYSTEM_ID STREQUAL "aarch64")
 	set (TOOLCHAIN_NAME aarch64-linux-gnu-gcc)
 	set (PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_AARCH64=1")
 else()
@@ -134,23 +116,12 @@ endif()
 set (Boost_USE_STATIC_LIBS ON)
 set (Boost_NO_BOOST_CMAKE ON)
 set (Boost_NO_SYSTEM_PATHS ON)
-find_package (
-	Boost
-	1.80.0
-	REQUIRED
-	COMPONENTS system thread
-)
-
+find_package (Boost 1.80.0 REQUIRED COMPONENTS system thread)
 find_package (Threads REQUIRED)
 find_package (yalantinglibs REQUIRED)
 find_package (OpenSSL REQUIRED)
 
-list (
-	APPEND
-	CMAKE_PREFIX_PATH
-	"${EXTERNAL_INSTALL_DIR}"
-)
-
+list (APPEND CMAKE_PREFIX_PATH "${EXTERNAL_INSTALL_DIR}")
 set (
 	STATIC_LIBS
 	pugixml
@@ -183,11 +154,7 @@ foreach(LIB_NAME IN LISTS STATIC_LIBS)
 		PATHS "${EXTERNAL_INSTALL_DIR}/lib"
 		NO_DEFAULT_PATH REQUIRED
 	)
-	list (
-		APPEND
-		ALL_STATIC_LIBS
-		${${LIB_NAME}_LIBRARY}
-	)
+	list (APPEND ALL_STATIC_LIBS ${${LIB_NAME}_LIBRARY})
 
 	if(${LIB_NAME}_LIBRARY)
 		message (STATUS "[✓] 找到静态库: ${LIB_NAME} -> ${${LIB_NAME}_LIBRARY}")
