@@ -11,8 +11,10 @@
 #include <eventpp/eventdispatcher.h>
 #include <eventpp/eventqueue.h>
 
+#include <chrono>
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace plane::services
 {
@@ -44,33 +46,40 @@ namespace plane::services
 			DisableVirtualStick,
 			SendNedVelocityCommand
 		};
-		using CommandData = _STD variant<_STD monostate, // 用于没有参数的命令
+		using CommandData  = _STD	   variant<_STD monostate, // 用于没有参数的命令
 
-										 // 对应 DroneDataClass 中的结构体
-										 plane::protocol::TakeoffPayload,		  // 起飞
-										 plane::protocol::CircleFlyPayload,		  // 围绕点飞行
-										 plane::protocol::GimbalControlPayload,	  // 云台控制
-										 plane::protocol::ZoomControlPayload,	  // 相机变焦控制
-										 plane::protocol::StickDataPayload,		  // 发送摇杆数据
-										 plane::protocol::StickModeSwitchPayload, // 启用/禁用虚拟摇杆
-										 plane::protocol::NedVelocityPayload,	  // 发送 NED 速度指令
+											   // 对应 DroneDataClass 中的结构体
+											   plane::protocol::TakeoffPayload,			// 起飞
+											   plane::protocol::CircleFlyPayload,		// 围绕点飞行
+											   plane::protocol::GimbalControlPayload,	// 云台控制
+											   plane::protocol::ZoomControlPayload,		// 相机变焦控制
+											   plane::protocol::StickDataPayload,		// 发送摇杆数据
+											   plane::protocol::StickModeSwitchPayload, // 启用/禁用虚拟摇杆
+											   plane::protocol::NedVelocityPayload,		// 发送 NED 速度指令
 
-										 // 对于没有直接对应结构体的，使用基本类型
-										 _STD vector<_STD uint8_t>, // KMZ 数据
-										 int,						// 设置控制策略
-										 _STD string				// 设置视频源
-										 >;
+											   // 对于没有直接对应结构体的，使用基本类型
+											   _STD vector<_STD uint8_t>, // KMZ 数据
+											   int,						  // 设置控制策略
+											   _STD string				  // 设置视频源
+											   >;
+
+		using CommandQueue = _EVENTPP EventQueue<CommandEvent, void(const CommandEvent&, const CommandData&)>;
 
 		// PSDK 状态事件
 		enum class PSDKEvent
 		{
 			TelemetryUpdated,
 			MissionStateChanged,
-			ActionStateChanged
+			ActionStateChanged,
+			HealthPing,
+			HealthStatusUpdated
 		};
-		using PSDKEventData	   = _STD		 variant<protocol::StatusPayload, T_DjiWaypointV3MissionState, T_DjiWaypointV3ActionState>;
+		using PSDKEventData	   = _STD		 variant<plane::protocol::StatusPayload,
+													 _DJI		 T_DjiWaypointV3MissionState,
+													 _DJI		 T_DjiWaypointV3ActionState,
+													 _STD_CHRONO steady_clock::time_point,
+													 plane::protocol::HealthStatusPayload>;
 
-		using CommandQueue	   = _EVENTPP	  EventQueue<CommandEvent, void(const CommandEvent&, const CommandData&)>;
 		using StatusDispatcher = _EVENTPP EventDispatcher<PSDKEvent, void(const PSDKEventData&)>;
 
 		static EventManager&			  getInstance(void) noexcept;

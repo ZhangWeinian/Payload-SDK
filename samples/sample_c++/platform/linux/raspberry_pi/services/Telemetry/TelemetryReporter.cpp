@@ -23,7 +23,10 @@ namespace plane::services
 		return instance;
 	}
 
-	TelemetryReporter::TelemetryReporter(void) noexcept: event_processing_pool_(_STD make_unique<_THREADPOOL ThreadPool>(2)) {}
+	TelemetryReporter::TelemetryReporter(void) noexcept:
+		event_processing_pool_(_STD make_unique<_THREADPOOL ThreadPool>(2)),
+		last_health_ping_time_(_STD chrono::steady_clock::now())
+	{}
 
 	TelemetryReporter::~TelemetryReporter(void) noexcept
 	{
@@ -56,6 +59,21 @@ namespace plane::services
 											});
 
 			this->removers_->appendListener(plane::services::EventManager::PSDKEvent::ActionStateChanged,
+											[this](const plane::services::EventManager::PSDKEventData& data)
+											{
+												this->onPsdkEvent(data);
+											});
+
+			this->removers_->appendListener(plane::services::EventManager::PSDKEvent::HealthPing,
+											[this](const plane::services::EventManager::PSDKEventData& data)
+											{
+												if (auto* p_time { _STD get_if<_STD_CHRONO steady_clock::time_point>(&data) })
+												{
+													this->last_health_ping_time_ = *p_time;
+												}
+											});
+
+			this->removers_->appendListener(plane::services::EventManager::PSDKEvent::HealthStatusUpdated,
 											[this](const plane::services::EventManager::PSDKEventData& data)
 											{
 												this->onPsdkEvent(data);
@@ -205,14 +223,19 @@ namespace plane::services
 												  plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
 							}
 						}
-						else if constexpr (_STD is_same_v<T, T_DjiWaypointV3MissionState>)
+						else if constexpr (_STD is_same_v<T, plane::protocol::HealthStatusPayload>)
+						{
+							LOG_INFO("准备上报健康状态...");
+							this->publishJson(plane::services::TOPIC_HEALTH_MANAGE, plane::utils::JsonConverter::buildHealthStatusJson(event));
+						}
+						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3MissionState>)
 						{
 							// 在这里，我们可以将航线状态上报给地面站
 							// 例如，构建一个新的 MQTT 消息
 							LOG_DEBUG("接收到航线状态更新，准备上报...");
 							// TODO: 实现 MissionProgressPayload 的构建和上报
 						}
-						else if constexpr (_STD is_same_v<T, T_DjiWaypointV3ActionState>)
+						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3ActionState>)
 						{
 							LOG_DEBUG("接收到航线动作更新...");
 							// TODO: 根据需要处理或上报动作状态
@@ -235,7 +258,7 @@ namespace plane::services
 		}
 
 		const auto now { _STD_CHRONO steady_clock::now() };
-		const auto lastUpdate { plane::services::PSDKAdapter::getInstance().getLastUpdateTime() };
+		const auto lastUpdate { this->last_health_ping_time_.load() };
 		if (now - lastUpdate > this->PSDK_WATCHDOG_TIMEOUT)
 		{
 			LOG_ERROR("看门狗超时！PSDK 数据源已超过 {} 秒没有更新！", this->PSDK_WATCHDOG_TIMEOUT.count());
@@ -248,7 +271,7 @@ namespace plane::services
 		this->event_processing_pool_->enqueue(
 			[this]
 			{
-				_STD this_thread::sleep_for(_STD_CHRONO seconds(1));
+				_STD this_thread::sleep_for(this->PSDK_WATCHDOG_CHECK_INTERVAL);
 				this->runWatchdogCheck();
 			});
 	}

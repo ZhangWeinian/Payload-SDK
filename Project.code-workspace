@@ -23,6 +23,7 @@
 			"*.toml": "toml",
 			"*.vssettings": "html",
 			"*.json5": "json5",
+			"CMakeLists.txt": "cmake",
 			"hal_uart.h": "c",
 			"dji_platform.h": "c",
 			"termbits.h": "c",
@@ -119,7 +120,12 @@
 			"byte": "cpp",
 			"narrow": "cpp",
 			"span_ext": "cpp",
-			"zstring": "cpp"
+			"zstring": "cpp",
+			"csetjmp": "cpp",
+			"rope": "cpp",
+			"slist": "cpp",
+			"spanstream": "cpp",
+			"stdfloat": "cpp"
 		}
 	}
 }

@@ -11,9 +11,11 @@
 #include <dji_error.h>
 #include <dji_flight_controller.h>
 #include <dji_gimbal.h>
+#include <dji_hms_info_table.h>
 #include <dji_logger.h>
 #include <dji_waypoint_v3.h>
 
+#include <fmt/format.h>
 #include <gsl/gsl>
 
 #include <string_view>
@@ -187,6 +189,26 @@ namespace plane::services
 				}
 			}
 		}
+
+		const auto hmsErrorCodeMap = []
+		{
+			_STD unordered_map<uint32_t, const char*> map {};
+			const auto								  size { sizeof(hmsErrCodeInfoTbl) / sizeof(_DJI T_DjiHmsErrCodeInfo) };
+			for (_STD size_t i { 0 }; i < size; ++i)
+			{
+				map[hmsErrCodeInfoTbl[i].alarmId] = hmsErrCodeInfoTbl[i].groundAlarmInfo;
+			}
+			return map;
+		}();
+
+		_STD string_view getHmsErrorDescription(uint32_t errorCode)
+		{
+			if (auto it { hmsErrorCodeMap.find(errorCode) }; it != hmsErrorCodeMap.end())
+			{
+				return it->second;
+			}
+			return "Unknown HMS Error";
+		}
 	} // namespace
 
 	PSDKAdapter& PSDKAdapter::getInstance(void) noexcept
@@ -227,9 +249,7 @@ namespace plane::services
 			});
 	}
 
-	PSDKAdapter::PSDKAdapter(void) noexcept:
-		command_pool_(_STD make_unique<ThreadPool>(2)),
-		last_update_time_(_STD_CHRONO steady_clock::time_point::min())
+	PSDKAdapter::PSDKAdapter(void) noexcept: command_pool_(_STD make_unique<ThreadPool>(2))
 	{
 		LOG_INFO("PSDKAdapter 正在初始化并设置 CommandQueue 的监听器...");
 
@@ -328,7 +348,7 @@ namespace plane::services
 
 		if (this->run_command_processing_.exchange(false))
 		{
-			plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::Takeoff, std::monostate {});
+			plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::Takeoff, _STD monostate {});
 			if (this->command_processing_thread_.joinable())
 			{
 				this->command_processing_thread_.join();
@@ -395,6 +415,17 @@ namespace plane::services
 			LOG_ERROR("注册 Waypoint V3 动作状态回调失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
 		}
 
+		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_Init() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_ERROR("HMS 模块初始化失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+		}
+
+		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_RegHmsInfoCallback(hmsInfoCallbackEntry) };
+			returnCode != _DJI	 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_ERROR("注册 HMS 信息回调失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+		}
+
 		LOG_INFO("PSDK 适配器准备就绪。");
 		return true;
 	}
@@ -429,6 +460,11 @@ namespace plane::services
 		unsubscribe(this->sub_status_.velocity, _DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
 		unsubscribe(this->sub_status_.batteryInfo, _DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
 		unsubscribe(this->sub_status_.gimbalAngles, _DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
+
+		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_WARN("HMS 模块反初始化失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+		}
 	}
 
 	void PSDKAdapter::quaternionToEulerAngle(const _DJI T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept
@@ -558,11 +594,7 @@ namespace plane::services
 
 			plane::services::EventManager::getInstance().publishStatus(plane::services::EventManager::PSDKEvent::TelemetryUpdated,
 																	   current_payload);
-
-			{
-				_STD lock_guard<_STD mutex>			  lock(this->health_mutex_);
-				this->last_update_time_ = _STD_CHRONO steady_clock::now();
-			}
+			plane::services::EventManager::getInstance().publishStatus(EventManager::PSDKEvent::HealthPing, _STD_CHRONO steady_clock::now());
 
 			auto endTime { _STD_CHRONO steady_clock::now() };
 			if (auto elapsedTime { _STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(endTime - startTime) };
@@ -583,6 +615,12 @@ namespace plane::services
 		plane::services::EventManager::getInstance().publishStatus(plane::services::EventManager::PSDKEvent::MissionStateChanged, missionState);
 	}
 
+	_DJI T_DjiReturnCode PSDKAdapter::missionStateCallbackEntry(_DJI T_DjiWaypointV3MissionState missionState)
+	{
+		PSDKAdapter::getInstance().missionStateCallback(missionState);
+		return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+	}
+
 	void PSDKAdapter::actionStateCallback(_DJI T_DjiWaypointV3ActionState actionState)
 	{
 		LOG_INFO("[航线动作状态] 状态: {}, 航点: {}, 动作组: {}, 动作ID: {}",
@@ -594,22 +632,71 @@ namespace plane::services
 		plane::services::EventManager::getInstance().publishStatus(plane::services::EventManager::PSDKEvent::ActionStateChanged, actionState);
 	}
 
-	_DJI T_DjiReturnCode PSDKAdapter::missionStateCallbackEntry(_DJI T_DjiWaypointV3MissionState missionState)
-	{
-		PSDKAdapter::getInstance().missionStateCallback(missionState);
-		return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
-	}
-
 	_DJI T_DjiReturnCode PSDKAdapter::actionStateCallbackEntry(_DJI T_DjiWaypointV3ActionState actionState)
 	{
 		PSDKAdapter::getInstance().actionStateCallback(actionState);
 		return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 	}
 
-	_STD_CHRONO steady_clock::time_point PSDKAdapter::getLastUpdateTime(void) const noexcept
+	_DJI T_DjiReturnCode PSDKAdapter::hmsInfoCallbackEntry(_DJI T_DjiHmsInfoTable hmsInfoTable)
 	{
-		_STD lock_guard<_STD mutex> lock(this->health_mutex_);
-		return this->last_update_time_;
+		PSDKAdapter::getInstance().hmsInfoCallback(hmsInfoTable);
+		return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+	}
+
+	void PSDKAdapter::hmsInfoCallback(_DJI T_DjiHmsInfoTable hmsInfoTable)
+	{
+		_STD vector<_STD uint32_t> current_error_codes {};
+		if (hmsInfoTable.hmsInfoNum > 0)
+		{
+			current_error_codes.reserve(hmsInfoTable.hmsInfoNum);
+			for (_STD uint32_t i { 0 }; i < hmsInfoTable.hmsInfoNum; ++i)
+			{
+				current_error_codes.push_back(hmsInfoTable.hmsInfo[i].errorCode);
+			}
+		}
+
+		_STD sort(current_error_codes.begin(), current_error_codes.end());
+
+		_STD atomic<bool> status_changed { false };
+		{
+			_STD lock_guard<_STD mutex> lock(this->hms_mutex_);
+			if (current_error_codes != this->last_hms_error_codes_)
+			{
+				status_changed.store(true);
+				this->last_hms_error_codes_ = current_error_codes;
+			}
+		}
+
+		if (status_changed.load())
+		{
+			if (hmsInfoTable.hmsInfoNum > 0)
+			{
+				LOG_INFO("HMS 告警状态发生变化，当前有 {} 条告警，正在上报...", hmsInfoTable.hmsInfoNum);
+			}
+			else
+			{
+				LOG_INFO("HMS 告警已全部清除，正在上报空列表...");
+			}
+
+			plane::protocol::HealthStatusPayload healthStatus {};
+			healthStatus.GJLB.reserve(hmsInfoTable.hmsInfoNum);
+
+			for (_STD uint32_t i { 0 }; i < hmsInfoTable.hmsInfoNum; ++i)
+			{
+				const auto&							djiAlert { hmsInfoTable.hmsInfo[i] };
+				plane::protocol::HealthAlertPayload ourAlert {};
+				ourAlert.GJDJ = djiAlert.errorLevel;
+				ourAlert.GJMK = djiAlert.componentIndex;
+				ourAlert.GJM  = _FMT	  format("0x{:08X}", djiAlert.errorCode);
+				ourAlert.GJBT = _UNNAMED getHmsErrorDescription(djiAlert.errorCode);
+				ourAlert.GJMS = ourAlert.GJBT;
+
+				healthStatus.GJLB.push_back(ourAlert);
+			}
+
+			EventManager::getInstance().publishStatus(EventManager::PSDKEvent::HealthStatusUpdated, healthStatus);
+		}
 	}
 
 	plane::protocol::StatusPayload PSDKAdapter::getLatestStatusPayload(void) const noexcept

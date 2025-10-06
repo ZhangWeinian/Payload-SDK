@@ -14,30 +14,33 @@ namespace plane::utils
 {
 	using n_json = _NLOHMANN_JSON json;
 
-	static int64_t				  getCurrentTimestampMs(void) noexcept
+	namespace
 	{
-		return _STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(_STD_CHRONO system_clock::now().time_since_epoch()).count();
-	}
+		static int64_t getCurrentTimestampMs(void) noexcept
+		{
+			return _STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(_STD_CHRONO system_clock::now().time_since_epoch()).count();
+		}
 
-	static _STD string formatTimestamp(int64_t ms) noexcept
-	{
-		auto			  time_t { static_cast<_STD time_t>(ms / 1000) };
-		_STD tm			  tm_buf {};
-		_CSTD			  localtime_r(&time_t, &tm_buf);
-		_STD stringstream ss {};
-		ss << _STD		  put_time(&tm_buf, "%Y-%m-%d %H:%M:%S");
-		return ss.str();
-	}
+		static _STD string formatTimestamp(int64_t ms) noexcept
+		{
+			auto			  time_t { static_cast<_STD time_t>(ms / 1000) };
+			_STD tm			  tm_buf {};
+			_CSTD			  localtime_r(&time_t, &tm_buf);
+			_STD stringstream ss {};
+			ss << _STD		  put_time(&tm_buf, "%Y-%m-%d %H:%M:%S");
+			return ss.str();
+		}
+	} // namespace
 
 	_STD string JsonConverter::buildStatusReportJson(const plane::protocol::StatusPayload& payload) noexcept
 	{
 		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
-		auto					 now { getCurrentTimestampMs() };
+		auto					 now { _UNNAMED getCurrentTimestampMs() };
 		plane::protocol::NetworkMessage<plane::protocol::StatusPayload> msg { .ZBID = plane_code,
 																			  .XXID = "SBZT-" + plane_code + "-" + _STD to_string(now),
 																			  .XXLX = "SBZT",
 																			  .SJC	= now,
-																			  .SBSJ = formatTimestamp(now),
+																			  .SBSJ = _UNNAMED formatTimestamp(now),
 																			  .XXXX = payload };
 
 		n_json															j = msg;
@@ -47,28 +50,27 @@ namespace plane::utils
 	_STD string JsonConverter::buildMissionInfoJson(const plane::protocol::MissionInfoPayload& payload) noexcept
 	{
 		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
-		auto					 now { getCurrentTimestampMs() };
+		auto					 now { _UNNAMED getCurrentTimestampMs() };
 		plane::protocol::NetworkMessage<plane::protocol::MissionInfoPayload> msg { .ZBID = plane_code,
 																				   .XXID = "GDXX-" + plane_code + "-" + _STD to_string(now),
 																				   .XXLX = "GDXX",
 																				   .SJC	 = now,
-																				   .SBSJ = formatTimestamp(now),
+																				   .SBSJ = _UNNAMED formatTimestamp(now),
 																				   .XXXX = payload };
 
 		n_json																 j = msg;
 		return j.dump();
 	}
 
-	_STD string JsonConverter::buildHealthStatusJson(const _STD vector<plane::protocol::HealthAlertPayload>& alerts) noexcept
+	_STD string JsonConverter::buildHealthStatusJson(const plane::protocol::HealthStatusPayload& payload) noexcept
 	{
-		static const _STD string			 plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
-		auto								 now { getCurrentTimestampMs() };
-		plane::protocol::HealthStatusPayload payload { .GJLB = alerts };
+		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
+		auto					 now { _UNNAMED getCurrentTimestampMs() };
 		plane::protocol::NetworkMessage<plane::protocol::HealthStatusPayload> msg { .ZBID = plane_code,
 																					.XXID = "JKGL-" + plane_code + "-" + _STD to_string(now),
 																					.XXLX = "JKGL",
 																					.SJC  = now,
-																					.SBSJ = formatTimestamp(now),
+																					.SBSJ = _UNNAMED formatTimestamp(now),
 																					.XXXX = payload };
 
 		n_json																  j = msg;
