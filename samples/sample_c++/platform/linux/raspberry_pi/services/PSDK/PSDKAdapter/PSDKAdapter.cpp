@@ -1,4 +1,4 @@
-// raspberry_pi/services/DroneControl/PSDKAdapter/PSDKAdapter.cpp
+// raspberry_pi/services/PSDK/PSDKAdapter/PSDKAdapter.cpp
 
 #include "PSDKAdapter.h"
 
@@ -415,11 +415,6 @@ namespace plane::services
 			LOG_ERROR("注册 Waypoint V3 动作状态回调失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
 		}
 
-		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_Init() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			LOG_ERROR("HMS 模块初始化失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-		}
-
 		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_RegHmsInfoCallback(hmsInfoCallbackEntry) };
 			returnCode != _DJI	 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 		{
@@ -460,11 +455,6 @@ namespace plane::services
 		unsubscribe(this->sub_status_.velocity, _DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
 		unsubscribe(this->sub_status_.batteryInfo, _DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
 		unsubscribe(this->sub_status_.gimbalAngles, _DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
-
-		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			LOG_WARN("HMS 模块反初始化失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-		}
 	}
 
 	void PSDKAdapter::quaternionToEulerAngle(const _DJI T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept

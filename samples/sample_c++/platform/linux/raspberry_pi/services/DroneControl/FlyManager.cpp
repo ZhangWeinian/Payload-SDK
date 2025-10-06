@@ -2,8 +2,7 @@
 
 #include "FlyManager.h"
 
-#include "services/DroneControl/PSDKAdapter/PSDKAdapter.h"
-#include "services/EventManager/EventManager.h"
+#include "services/PSDK/PSDKAdapter/PSDKAdapter.h"
 #include "utils/JsonConverter/JsonToKmz.h"
 #include "utils/Logger.h"
 

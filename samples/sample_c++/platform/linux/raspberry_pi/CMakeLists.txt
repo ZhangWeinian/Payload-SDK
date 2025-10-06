@@ -272,11 +272,10 @@ add_custom_command (
 # 11. 显示最终构建信息
 pretty_message (
 	"构建配置"
-	"主目标名称: ${MAIN_TARGET_NAME}
+	" 主目标名称: ${MAIN_TARGET_NAME}
 	构建类型: ${CMAKE_BUILD_TYPE}
 	平台架构: ${DEVICE_SYSTEM_ID}
 	Git提交哈希: ${GIT_COMMIT_HASH}
 	当前构建输出: ${MAIN_OUTPUT_PATH}
-	最新产物目录: ${LATEST_BUILD_DIR}
-	版本化归档: ${VERSIONED_OUTPUT_PATH}"
+	最新产物目录: ${LATEST_BUILD_DIR}"
 )

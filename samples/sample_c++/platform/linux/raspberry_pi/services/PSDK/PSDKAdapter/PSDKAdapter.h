@@ -1,4 +1,4 @@
-// raspberry_pi/services/DroneControl/PSDKAdapter/PSDKAdapter.h
+// raspberry_pi/services/PSDK/PSDKAdapter/PSDKAdapter.h
 
 #pragma once
 
@@ -32,6 +32,8 @@
 
 namespace plane::services
 {
+	class PSDKManager;
+
 	class PSDKAdapter
 	{
 	public:
@@ -40,16 +42,16 @@ namespace plane::services
 		_NODISCARD bool		start(void) noexcept;
 		void				stop(_STD_CHRONO milliseconds timeout = _STD_CHRONO seconds(5)) noexcept;
 
-		_NODISCARD bool		setup(void) noexcept;
-		void				cleanup(void) noexcept;
-
 		_NODISCARD plane::protocol::StatusPayload getLatestStatusPayload(void) const noexcept;
 
 	private:
 		explicit PSDKAdapter(void) noexcept;
 		~PSDKAdapter(void) noexcept;
-		PSDKAdapter(const PSDKAdapter&) noexcept			= delete;
-		PSDKAdapter& operator=(const PSDKAdapter&) noexcept = delete;
+		PSDKAdapter(const PSDKAdapter&) noexcept			   = delete;
+		PSDKAdapter&	operator=(const PSDKAdapter&) noexcept = delete;
+
+		_NODISCARD bool setup(void) noexcept;
+		void			cleanup(void) noexcept;
 
 		template<typename CommandLogic>
 		_STD future<_DJI T_DjiReturnCode> executePsdkCommand(CommandLogic&&				 logic,
@@ -57,17 +59,6 @@ namespace plane::services
 
 		_STD future<_DJI T_DjiReturnCode> executeWaypointAction(_DJI E_DjiWaypointV3Action	action,
 																const _STD source_location& location = _STD source_location::current());
-
-		struct SubscriptionStatus
-		{
-			bool positionFused { false };
-			bool altitudeFused { false };
-			bool altitudeOfHomepoint { false };
-			bool quaternion { false };
-			bool velocity { false };
-			bool batteryInfo { false };
-			bool gimbalAngles { false };
-		};
 
 		void quaternionToEulerAngle(const _DJI T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept;
 		void acquisitionLoop(void) noexcept;
@@ -104,16 +95,27 @@ namespace plane::services
 		void										 commandProcessingLoop(void);
 
 		template<typename PayloadType, typename Func>
-		void			   registerCommandListener(plane::services::EventManager::CommandEvent event, Func func);
+		void registerCommandListener(plane::services::EventManager::CommandEvent event, Func func);
 
-		SubscriptionStatus sub_status_ {};
-		_STD thread		   acquisition_thread_ {};
-		_STD thread		   command_processing_thread_ {};
+		friend class PSDKManager;
+
+		struct SubscriptionStatus
+		{
+			bool positionFused { false };
+			bool altitudeFused { false };
+			bool altitudeOfHomepoint { false };
+			bool quaternion { false };
+			bool velocity { false };
+			bool batteryInfo { false };
+			bool gimbalAngles { false };
+		} sub_status_;
+
+		_STD thread acquisition_thread_ {};
+		_STD thread command_processing_thread_ {};
 		_STD atomic<bool> run_acquisition_ { false };
 		_STD atomic<bool> is_stopping_ { false };
 		_STD atomic<bool>  run_command_processing_ { false };
 		mutable _STD mutex payload_mutex_ {};
-		mutable _STD mutex health_mutex_ {};
 		_STD mutex		   psdk_command_mutex_ {};
 		_STD mutex		   hms_mutex_ {};
 		_STD vector<_STD uint32_t>	   last_hms_error_codes_ {};
