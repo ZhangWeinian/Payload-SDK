@@ -230,10 +230,12 @@ namespace plane::services
 						}
 						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3MissionState>)
 						{
-							// 在这里，我们可以将航线状态上报给地面站
-							// 例如，构建一个新的 MQTT 消息
-							LOG_DEBUG("接收到航线状态更新，准备上报...");
-							// TODO: 实现 MissionProgressPayload 的构建和上报
+							plane::protocol::MissionProgressPayload progress {};
+							progress.ZT	  = static_cast<int>(event.state);
+							progress.DQHD = event.currentWaypointIndex;
+							progress.RWID = _STD to_string(event.wayLineId);
+							// this->publishJson(plane::services::TOPIC_MISSION_PROGRESS,
+							// 				  plane::utils::JsonConverter::buildMissionProgressJson(progress));
 						}
 						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3ActionState>)
 						{

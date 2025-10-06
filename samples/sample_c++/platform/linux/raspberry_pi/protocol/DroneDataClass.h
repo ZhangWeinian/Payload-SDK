@@ -17,76 +17,30 @@ namespace plane::protocol
 
 	enum class MissionExecutionStatus : int
 	{
-		EXECUTING		 = 1,
-		PAUSED			 = 2,
-		FINISHED		 = 3,
-		UPLOADING		 = 4,
-		UPLOAD_COMPLETE	 = 5,
-		UPLOAD_FAILED	 = 6,
-		EXECUTION_FAILED = 7
+		IDLE			  = 0,	// 空闲
+		PREPARE			  = 16, // 准备中
+		TRANS_MISSION	  = 32, // 传输中
+		MISSION			  = 48, // 执行中
+		BREAK			  = 64, // 中断
+		RESUME			  = 80, // 恢复
+		RETURN_FIRSTPOINT = 98	// 返回起点
 	};
 
 	enum class MissionControlAction
 	{
-		START,
-		PAUSE,
-		RESUME,
-		STOP
+		RWKS, // 任务开始
+		RWZT, // 任务停止
+		RWJX, // 任务继续
+		RWJS  // 任务结束
 	};
 
-	inline void to_json(n_json& j, const MissionControlAction& action)
-	{
-		switch (action)
-		{
-			case MissionControlAction::START:
-			{
-				j = "RWKS";
-				break;
-			}
-			case MissionControlAction::PAUSE:
-			{
-				j = "RWZT";
-				break;
-			}
-			case MissionControlAction::RESUME:
-			{
-				j = "RWJX";
-				break;
-			}
-			case MissionControlAction::STOP:
-			{
-				j = "RWJS";
-				break;
-			}
-			default:
-			{
-				j = nullptr;
-				break;
-			}
-		}
-	}
-
-	inline void from_json(const n_json& j, MissionControlAction& action)
-	{
-		const _STD string s { j.get<_STD string>() };
-		if (s == "RWKS")
-		{
-			action = MissionControlAction::START;
-		}
-		else if (s == "RWZT")
-		{
-			action = MissionControlAction::PAUSE;
-		}
-		else if (s == "RWJX")
-		{
-			action = MissionControlAction::RESUME;
-		}
-		else if (s == "RWJS")
-		{
-			action = MissionControlAction::STOP;
-		}
-		// 在实际业务逻辑中可能需要处理未知字符串的情况
-	}
+	NLOHMANN_JSON_SERIALIZE_ENUM(MissionControlAction,
+								 {
+									 { MissionControlAction::RWKS, "RWKS" },
+									 { MissionControlAction::RWZT, "RWZT" },
+									 { MissionControlAction::RWJX, "RWJX" },
+									 { MissionControlAction::RWJS, "RWJS" },
+	 })
 
 	enum class RthMode : int
 	{
@@ -115,54 +69,17 @@ namespace plane::protocol
 
 	enum class TargetType
 	{
-		INDEX,
-		COORDINATE,
-		RECTANGLE
+		MBSY, // 目标索引
+		MBWZ, // 目标位置
+		MBJX  // 目标矩形
 	};
 
-	inline void to_json(n_json& j, const TargetType& type)
-	{
-		switch (type)
-		{
-			case TargetType::INDEX:
-			{
-				j = "MBSY";
-				break;
-			}
-			case TargetType::COORDINATE:
-			{
-				j = "MBWZ";
-				break;
-			}
-			case TargetType::RECTANGLE:
-			{
-				j = "MBJX";
-				break;
-			}
-			default:
-			{
-				j = nullptr;
-				break;
-			}
-		}
-	}
-
-	inline void from_json(const n_json& j, TargetType& type)
-	{
-		const _STD string s { j.get<_STD string>() };
-		if (s == "MBSY")
-		{
-			type = TargetType::INDEX;
-		}
-		else if (s == "MBWZ")
-		{
-			type = TargetType::COORDINATE;
-		}
-		else if (s == "MBJX")
-		{
-			type = TargetType::RECTANGLE;
-		}
-	}
+	NLOHMANN_JSON_SERIALIZE_ENUM(TargetType,
+								 {
+									 { TargetType::MBSY, "MBSY" },
+									 { TargetType::MBWZ, "MBWZ" },
+									 { TargetType::MBJX, "MBJX" },
+	 })
 
 	struct WaypointAction
 	{
@@ -373,4 +290,5 @@ namespace plane::protocol
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(StickDataPayload, YML, PHL, FYL, HGL);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(StickModeSwitchPayload, YGMS);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(NedVelocityPayload, SDN, SDD, SDX, PHJ);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(MissionProgressPayload, RWID, DQHD, ZHD, JD, ZT);
 } // namespace plane::protocol

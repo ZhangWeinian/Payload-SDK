@@ -42,7 +42,6 @@ namespace plane::utils
 																			  .SJC	= now,
 																			  .SBSJ = _UNNAMED formatTimestamp(now),
 																			  .XXXX = payload };
-
 		n_json															j = msg;
 		return j.dump();
 	}
@@ -57,7 +56,6 @@ namespace plane::utils
 																				   .SJC	 = now,
 																				   .SBSJ = _UNNAMED formatTimestamp(now),
 																				   .XXXX = payload };
-
 		n_json																 j = msg;
 		return j.dump();
 	}
@@ -72,8 +70,21 @@ namespace plane::utils
 																					.SJC  = now,
 																					.SBSJ = _UNNAMED formatTimestamp(now),
 																					.XXXX = payload };
-
 		n_json																  j = msg;
+		return j.dump();
+	}
+
+	_STD string JsonConverter::buildMissionProgressJson(const plane::protocol::MissionProgressPayload& payload) noexcept
+	{
+		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
+		auto					 now { _UNNAMED getCurrentTimestampMs() };
+		plane::protocol::NetworkMessage<plane::protocol::MissionProgressPayload> msg { .ZBID = plane_code,
+																					   .XXID = "RWJD-" + plane_code + "-" + _STD to_string(now),
+																					   .XXLX = "RWJD",
+																					   .SJC	 = now,
+																					   .SBSJ = _UNNAMED formatTimestamp(now),
+																					   .XXXX = payload };
+		n_json																	 j = msg;
 		return j.dump();
 	}
 
