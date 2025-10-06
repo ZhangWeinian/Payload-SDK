@@ -9,7 +9,6 @@
 #include "services/PSDK/PSDKManager/PSDKManager.h"
 #include "services/Telemetry/TelemetryReporter.h"
 #include "utils/DjiErrorUtils.h"
-#include "utils/EnvironmentCheck.h"
 #include "utils/Logger.h"
 
 #include <atomic>
@@ -36,10 +35,21 @@ namespace plane::my_dji
 
 	void runMyApplication(int argc, char** argv)
 	{
+		STD_PRINTLN("==========================================================");
+		STD_PRINTLN("                        应用程序启动中");
+		STD_PRINTLN("==========================================================");
+
 		_CSTD signal(SIGINT, _UNNAMED signalHandler);
 		_CSTD signal(SIGTERM, _UNNAMED signalHandler);
 
-		if (plane::utils::isLogLevelDebug())
+		if (!plane::config::ConfigManager::getInstance().loadAndCheck("config.yml"))
+		{
+			LOG_ERROR("错误: 配置文件加载失败，程序退出。");
+			return;
+		}
+		LOG_INFO("配置文件加载成功。");
+
+		if (plane::config::ConfigManager::getInstance().isLogLevelDebug())
 		{
 			plane::utils::Logger::getInstance().init(_SPDLOG level::trace);
 		}
@@ -47,11 +57,8 @@ namespace plane::my_dji
 		{
 			plane::utils::Logger::getInstance().init(_SPDLOG level::info);
 		}
-		LOG_INFO("==========================================================");
-		LOG_INFO("                        应用程序启动中");
-		LOG_INFO("==========================================================");
 
-		if (plane::utils::isStandardProceduresEnabled())
+		if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
 		{
 			if (!plane::services::PSDKManager::getInstance().initialize(argc, argv))
 			{
@@ -64,13 +71,6 @@ namespace plane::my_dji
 		{
 			LOG_WARN("未启用标准 PSDK 作业流程 (环境变量 FULL_PSDK=1 未设置)。");
 		}
-
-		if (!plane::config::ConfigManager::getInstance().loadAndCheck("config.yml"))
-		{
-			LOG_ERROR("错误: 配置文件加载失败，程序退出。");
-			return;
-		}
-		LOG_INFO("配置文件加载成功。");
 
 		if (!plane::services::MQTTService::getInstance().start())
 		{
@@ -121,7 +121,7 @@ namespace plane::my_dji
 		plane::services::MQTTService::getInstance().stop();
 		LOG_INFO("MQTT 服务已停止。");
 
-		if (plane::utils::isStandardProceduresEnabled())
+		if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
 		{
 			plane::services::PSDKManager::getInstance().deinitialize();
 		}

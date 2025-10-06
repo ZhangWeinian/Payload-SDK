@@ -21,5 +21,10 @@ namespace plane::protocol
 		_STD string planeSn {};
 		_STD string planeCode {};
 		_STD string mqttClientId {};
+		bool		enableFullPSDK { false };
+		bool		enableDebugLog { false };
+		bool		enableSkipRC { false };
+		bool		enableUseTestKmz { false };
+		bool		enableSaveKmzFile { false };
 	};
 } // namespace plane::protocol

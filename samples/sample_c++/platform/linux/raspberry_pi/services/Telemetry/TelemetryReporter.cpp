@@ -5,7 +5,6 @@
 #include "config/ConfigManager.h"
 #include "services/MQTT/Service.h"
 #include "services/MQTT/Topics.h"
-#include "utils/EnvironmentCheck.h"
 #include "utils/JsonConverter/BuildAndParse.h"
 #include "utils/Logger.h"
 #include "utils/NetworkUtils.h"

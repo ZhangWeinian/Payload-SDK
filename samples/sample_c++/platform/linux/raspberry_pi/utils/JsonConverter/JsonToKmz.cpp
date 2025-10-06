@@ -2,8 +2,8 @@
 
 #include "JsonToKmz.h"
 
+#include "config/ConfigManager.h"
 #include "protocol/KmzDataClass.h"
-#include "utils/EnvironmentCheck.h"
 #include "utils/Logger.h"
 #include "utils/XmlUtils.h"
 
@@ -477,7 +477,7 @@ namespace plane::utils
 			_STD vector<_STD uint8_t>& kmzData { *kmzDataOpt };
 			LOG_DEBUG("成功在内存中生成 KMZ 数据 ({} 字节)。", kmzData.size());
 
-			if (plane::utils::isSaveKmz())
+			if (plane::config::ConfigManager::getInstance().isSaveKmz())
 			{
 				if (auto storageDirOpt { _UNNAMED getKmzStorageDir() }; storageDirOpt)
 				{

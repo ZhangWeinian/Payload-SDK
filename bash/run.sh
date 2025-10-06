@@ -54,12 +54,6 @@ echo "动态库路径 (LD_LIBRARY_PATH): ${LD_LIBRARY_PATH}"
 echo "============================================="
 echo ""
 
-export FULL_PSDK=1
-export SAVE_KMZ=1
-# export TEST_KMZ=1
-# export SKIP_RC=1
-# export LOG_DEBUG=1
-
 echo "正在启动应用程序: ${SCRIPT_DIR}/cy_psdk $@"
 echo "---------------------------------------------"
 "${SCRIPT_DIR}/cy_psdk" "$@"

@@ -2,11 +2,11 @@
 
 #include "LogicHandler.h"
 
+#include "config/ConfigManager.h"
 #include "protocol/DroneDataClass.h"
 #include "services/DroneControl/FlyManager.h"
 #include "services/MQTT/Handler/MessageHandler.h"
 #include "services/MQTT/Topics.h"
-#include "utils/EnvironmentCheck.h"
 #include "utils/JsonConverter/JsonToKmz.h"
 #include "utils/Logger.h"
 
@@ -81,7 +81,7 @@ namespace plane::services
 	void LogicHandler::handleWaypointMission(const n_json& payloadJson) noexcept
 	{
 		HANDLE_PAYLOAD("航线任务", plane::protocol::WaypointPayload, {
-			if (plane::utils::isTestKmzFile())
+			if (plane::config::ConfigManager::getInstance().isTestKmzFile())
 			{
 				LOG_INFO("测试指定航线 /tmp/kmz/1.kmz");
 				if (_STD_FS exists("/tmp/kmz/1.kmz"))

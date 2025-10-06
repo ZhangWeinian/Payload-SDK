@@ -20,6 +20,12 @@ namespace plane::config
 		_NODISCARD _STD string getMqttClientId(void) const noexcept;
 		_NODISCARD _STD string getPlaneCode(void) const noexcept;
 
+		_NODISCARD bool		   isStandardProceduresEnabled(void) const noexcept;
+		_NODISCARD bool		   isLogLevelDebug(void) const noexcept;
+		_NODISCARD bool		   isSkipRC(void) const noexcept;
+		_NODISCARD bool		   isTestKmzFile(void) const noexcept;
+		_NODISCARD bool		   isSaveKmz(void) const noexcept;
+
 	private:
 		explicit ConfigManager(void) noexcept;
 		~ConfigManager(void) noexcept								   = default;

@@ -95,6 +95,28 @@ namespace plane::config
 				return false;
 			}
 
+			if (this->config_node_["features"])
+			{
+				const auto& features				= this->config_node_["features"];
+
+				this->app_config_.enableFullPSDK	= features["enable_full_psdk"].as<bool>(false);
+				this->app_config_.enableDebugLog	= features["enable_debug_log"].as<bool>(false);
+				this->app_config_.enableSkipRC		= features["skip_rc"].as<bool>(false);
+				this->app_config_.enableUseTestKmz	= features["use_test_kmz"].as<bool>(false);
+				this->app_config_.enableSaveKmzFile = features["save_kmz_file"].as<bool>(false);
+
+				LOG_INFO("功能开关配置加载: FullPSDK={}, DebugLog={}, SkipRC={}, TestKMZ={}, SaveKMZ={}",
+						 this->app_config_.enableFullPSDK,
+						 this->app_config_.enableDebugLog,
+						 this->app_config_.enableSkipRC,
+						 this->app_config_.enableUseTestKmz,
+						 this->app_config_.enableSaveKmzFile);
+			}
+			else
+			{
+				LOG_INFO("配置文件中未找到 'features' 部分，所有功能开关将使用默认值 (false)。");
+			}
+
 			return true;
 		}
 		catch (const _STD exception& e)
@@ -156,5 +178,30 @@ namespace plane::config
 		}
 		LOG_WARN("配置未加载或 PlaneCode 无效, 返回空字符串");
 		return "";
+	}
+
+	bool ConfigManager::isStandardProceduresEnabled(void) const noexcept
+	{
+		return this->loaded_ && this->app_config_.enableFullPSDK;
+	}
+
+	bool ConfigManager::isLogLevelDebug(void) const noexcept
+	{
+		return this->loaded_ && this->app_config_.enableDebugLog;
+	}
+
+	bool ConfigManager::isSkipRC(void) const noexcept
+	{
+		return this->loaded_ && this->app_config_.enableSkipRC;
+	}
+
+	bool ConfigManager::isTestKmzFile(void) const noexcept
+	{
+		return this->loaded_ && this->app_config_.enableUseTestKmz;
+	}
+
+	bool ConfigManager::isSaveKmz(void) const noexcept
+	{
+		return this->loaded_ && this->app_config_.enableSaveKmzFile;
 	}
 } // namespace plane::config

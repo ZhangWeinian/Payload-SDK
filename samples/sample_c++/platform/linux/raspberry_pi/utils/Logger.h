@@ -27,6 +27,8 @@
 
 #define LOG_CRITICAL_STDERR(msg) _STD cerr << "CRITICAL ERROR: " << msg << _STD endl
 
+#define STD_PRINTLN(msg)		 _STD cout << msg << _STD endl
+
 namespace plane::utils
 {
 	class Logger

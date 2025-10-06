@@ -2,8 +2,8 @@
 
 #include "PSDKAdapter.h"
 
+#include "config/ConfigManager.h"
 #include "utils/DjiErrorUtils.h"
-#include "utils/EnvironmentCheck.h"
 #include "utils/Logger.h"
 
 #include <dji_aircraft_info.h>
@@ -706,7 +706,7 @@ namespace plane::services
 				{
 					_STD lock_guard<_STD mutex> lock(this->psdk_command_mutex_);
 
-					if (!plane::utils::isStandardProceduresEnabled())
+					if (!plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
 					{
 						LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 命令 '{}' 被禁止。", name);
 						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
@@ -825,7 +825,7 @@ namespace plane::services
 						return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
 					}
 
-					if (!plane::utils::isStandardProceduresEnabled())
+					if (!plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
 					{
 						LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 航点任务操作被禁止。");
 						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;

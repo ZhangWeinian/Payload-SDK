@@ -9,9 +9,9 @@
 
 #include "application.hpp"
 
+#include "config/ConfigManager.h"
 #include "services/PSDK/PSDKAdapter/PSDKAdapter.h"
 #include "utils/DjiErrorUtils.h"
-#include "utils/EnvironmentCheck.h"
 #include "utils/Logger.h"
 
 #include <chrono>
@@ -85,7 +85,7 @@ namespace plane::services
 		}
 		LOG_INFO("PSDK 适配器 setup 完成。");
 
-		if (plane::utils::isStandardProceduresEnabled() && plane::utils::isSkipRC())
+		if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled() && plane::config::ConfigManager::getInstance().isSkipRC())
 		{
 			if (_DJI T_DjiReturnCode returnCode {
 					_DJI DjiFlightController_SetRCLostActionEnableStatus(_DJI DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
