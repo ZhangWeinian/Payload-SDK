@@ -24,7 +24,8 @@ endfunction()
 include (CTest)
 if(BUILD_TESTING)
 	message (STATUS "测试构建已启用 (BUILD_TESTING=ON)")
-	# add_subdirectory(tests) # 在这里添加测试
+	# 在这里添加测试
+	# add_subdirectory(tests)
 endif()
 
 if(NOT CMAKE_BUILD_TYPE)

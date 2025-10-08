@@ -102,6 +102,7 @@ namespace plane::my_dji
 		}
 		LOG_INFO("遥测上报服务已启动。");
 
+		_STD this_thread::sleep_for(_STD_CHRONO seconds(2));
 		LOG_INFO("==========================================================");
 		LOG_INFO("               应用程序初始化完成, 正在运行中...");
 		LOG_INFO("                    按 Ctrl+C 退出。");
@@ -109,7 +110,7 @@ namespace plane::my_dji
 
 		while (!g_should_exit)
 		{
-			_STD this_thread::sleep_for(_STD chrono::milliseconds(500));
+			_STD this_thread::sleep_for(_STD_CHRONO milliseconds(500));
 		}
 
 		LOG_INFO("收到退出信号, 正在关闭应用程序...");
@@ -126,9 +127,10 @@ namespace plane::my_dji
 		if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
 		{
 			plane::services::PSDKManager::getInstance().deinitialize();
+			LOG_INFO("PSDK 底层服务已反初始化。");
 		}
 
-		_STD this_thread::sleep_for(_STD chrono::seconds(1));
+		_STD this_thread::sleep_for(_STD_CHRONO seconds(1));
 		LOG_INFO("应用程序已关闭。");
 	}
 } // namespace plane::my_dji
