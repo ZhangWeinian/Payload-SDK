@@ -67,7 +67,7 @@ namespace plane::services
 		}
 		catch (const _STD runtime_error& e)
 		{
-			LOG_CRITICAL_STDERR("DJI Application 初始化失败: " << e.what());
+			STD_PRINTLN_ERROR("DJI Application 初始化失败: " << e.what());
 			return false;
 		}
 		LOG_INFO("DJI PSDK Application 初始化完成。");

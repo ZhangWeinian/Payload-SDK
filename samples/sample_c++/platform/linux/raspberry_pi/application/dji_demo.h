@@ -33,7 +33,7 @@
 
 namespace plane::dji_demo
 {
-	void runDjiApplication(int argc, char** argv)
+	void runDjiApplication(int argc, char* argv[])
 	{
 		Application					   application(argc, argv);
 		char						   inputChar {};

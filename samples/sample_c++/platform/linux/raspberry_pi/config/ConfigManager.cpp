@@ -11,12 +11,6 @@
 
 namespace plane::config
 {
-	ConfigManager::ConfigManager(void) noexcept
-	{
-		this->app_config_.mqttClientId = this->generateUniqueClientId();
-		LOG_DEBUG("运行时 MQTT Client ID 已生成: {}", this->app_config_.mqttClientId);
-	}
-
 	ConfigManager& ConfigManager::getInstance(void) noexcept
 	{
 		static ConfigManager instance {};
@@ -25,7 +19,16 @@ namespace plane::config
 
 	bool ConfigManager::loadAndCheck(const _STD string& filepath) noexcept
 	{
-		this->loaded_ = false;
+		if (this->loaded_)
+		{
+			return true;
+		}
+
+		if (this->app_config_.mqttClientId.empty())
+		{
+			this->app_config_.mqttClientId = this->generateUniqueClientId();
+			LOG_DEBUG("运行时 MQTT Client ID 已生成: {}", this->app_config_.mqttClientId);
+		}
 
 		try
 		{

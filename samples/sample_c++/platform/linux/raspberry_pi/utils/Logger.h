@@ -25,9 +25,7 @@
 #define LOG_TRACE(fmt, ...)                                                                                                                    \
 	plane::utils::Logger::getInstance().log(_SPDLOG source_loc { __FILE__, __LINE__, __FUNCTION__ }, _SPDLOG level::trace, fmt, ##__VA_ARGS__)
 
-#define LOG_CRITICAL_STDERR(msg) _STD cerr << "CRITICAL ERROR: " << msg << _STD endl
-
-#define STD_PRINTLN(msg)		 _STD cout << msg << _STD endl
+#define STD_PRINTLN_ERROR(msg) _STD cerr << "CRITICAL ERROR: " << msg << _STD endl
 
 namespace plane::utils
 {
@@ -59,7 +57,7 @@ namespace plane::utils
 			}
 			catch (const _SPDLOG spdlog_ex& ex)
 			{
-				LOG_CRITICAL_STDERR("日志系统初始化失败: " << ex.what());
+				STD_PRINTLN_ERROR("日志系统初始化失败: " << ex.what());
 			}
 		}
 

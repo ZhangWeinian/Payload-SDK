@@ -40,12 +40,12 @@ namespace plane::services
 		void			   pauseWaypointMission();
 		void			   resumeWaypointMission();
 
-		void			   rotateGimbal(double pitch, double yaw) const noexcept;
-		void			   rotateGimbalBySpeed(double pitchSpeed, double yawSpeed, double rollSpeed) const noexcept;
+		void			   rotateGimbal(const plane::protocol::GimbalControlPayload& gimbalParams) const noexcept;
+		void			   rotateGimbalBySpeed(const plane::protocol::GimbalControlPayload& gimbalParams) const noexcept;
 		void			   setCameraZoomFactor(const plane::protocol::ZoomControlPayload& zoomParams) const noexcept;
-		void			   setCameraStreamSource(_STD string_view source) const noexcept;
+		void			   setCameraStreamSource(const plane::protocol::ZoomControlPayload& zoomParams) const noexcept;
 
-		void			   sendRawStickData(int throttle, int yaw, int pitch, int roll) const noexcept;
+		void			   sendRawStickData(const plane::protocol::StickDataPayload& stickData) const noexcept;
 		void			   enableVirtualStick(bool advancedMode) const noexcept;
 		void			   disableVirtualStick(void) const noexcept;
 		void			   sendNedVelocityCommand(const plane::protocol::NedVelocityPayload& velocityParams) const noexcept;

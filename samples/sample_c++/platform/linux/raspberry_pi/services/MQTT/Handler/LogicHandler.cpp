@@ -67,163 +67,238 @@ namespace plane::services
 		return true;
 	}
 
-#define HANDLE_PAYLOAD(command_name, payload_type, code_block)                                             \
-	try                                                                                                    \
-	{                                                                                                      \
-		const auto payload { payloadJson.get<payload_type>() };                                            \
-		code_block                                                                                         \
-	}                                                                                                      \
-	catch (const n_json::exception& e)                                                                     \
-	{                                                                                                      \
-		LOG_ERROR("解析【{}】指令失败: {}, payloadJson:\n{}", command_name, e.what(), payloadJson.dump()); \
+	template<typename PayloadType, typename Func>
+	void LogicHandler::handleCommand(_STD string_view command_name, const n_json& payloadJson, Func&& handler)
+	{
+		if constexpr (_STD is_same_v<PayloadType, _STD monostate>)
+		{
+			try
+			{
+				handler();
+			}
+			catch (const _STD exception& e)
+			{
+				LOG_ERROR("执行【{}】指令时发生异常: {}", command_name, e.what());
+			}
+		}
+		else
+		{
+			try
+			{
+				handler(payloadJson.get<PayloadType>());
+			}
+			catch (const n_json::exception& e)
+			{
+				LOG_ERROR("解析【{}】指令失败: {}, payloadJson:\n{}", command_name, e.what(), payloadJson.dump(4));
+			}
+			catch (const _STD exception& e)
+			{
+				LOG_ERROR("执行【{}】指令时发生异常: {}", command_name, e.what());
+			}
+		}
 	}
 
 	void LogicHandler::handleWaypointMission(const n_json& payloadJson) noexcept
 	{
-		HANDLE_PAYLOAD("航线任务", plane::protocol::WaypointPayload, {
-			if (plane::config::ConfigManager::getInstance().isTestKmzFile())
+		this->handleCommand<plane::protocol::WaypointPayload>(
+			"航线任务",
+			payloadJson,
+			[&](const auto& payload)
 			{
-				LOG_INFO("测试指定航线 /tmp/kmz/1.kmz");
-				if (_STD_FS exists("/tmp/kmz/1.kmz"))
+				if (plane::config::ConfigManager::getInstance().isTestKmzFile())
 				{
-					plane::services::FlyManager::getInstance().waypoint("/tmp/kmz/1.kmz"sv);
-				}
-				else
-				{
-					LOG_ERROR("测试指定航线 /tmp/kmz/1.kmz 不存在");
-				}
-			}
-			else
-			{
-				if (payload.HDJ.empty())
-				{
-					LOG_WARN("[MQTT] 收到的航点任务 (RWID: {}) 中不包含任何航点。", payload.RWID.value_or("N/A"));
-					return;
-				}
-
-				if (payload.HDJ.size() == 1)
-				{
-					LOG_INFO("[MQTT] 收到并准备执行【单航点任务】");
-					plane::services::FlyManager::getInstance().flyToPoint(payload.HDJ[0]);
-				}
-				else
-				{
-					LOG_INFO("[MQTT] 收到并准备执行【航线任务】, 共 {} 个航点", payload.HDJ.size());
-					if (auto kmzData { plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload) }; kmzData)
+					LOG_INFO("测试指定航线 /tmp/kmz/1.kmz");
+					if (_STD_FS exists("/tmp/kmz/1.kmz"))
 					{
-						plane::services::FlyManager::getInstance().waypoint(*kmzData);
+						plane::services::FlyManager::getInstance().waypoint("/tmp/kmz/1.kmz"sv);
 					}
 					else
 					{
-						LOG_ERROR("无法执行航线任务，因为 KMZ 数据生成失败。");
-						return;
+						LOG_ERROR("测试指定航线 /tmp/kmz/1.kmz 不存在");
 					}
 				}
-			}
-		});
+				else
+				{
+					if (payload.HDJ.empty())
+					{
+						LOG_WARN("[MQTT] 收到的航点任务 (RWID: {}) 中不包含任何航点。", payload.RWID.value_or("N/A"));
+						return;
+					}
+
+					if (payload.HDJ.size() == 1)
+					{
+						LOG_INFO("[MQTT] 收到并准备执行【单航点任务】");
+						plane::services::FlyManager::getInstance().flyToPoint(payload.HDJ[0]);
+					}
+					else
+					{
+						LOG_INFO("[MQTT] 收到并准备执行【航线任务】, 共 {} 个航点", payload.HDJ.size());
+						if (auto kmzData { plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload) }; kmzData)
+						{
+							plane::services::FlyManager::getInstance().waypoint(*kmzData);
+						}
+						else
+						{
+							LOG_ERROR("无法执行航线任务，因为 KMZ 数据生成失败。");
+							return;
+						}
+					}
+				}
+			});
 	}
 
 	void LogicHandler::handleTakeoff(const n_json& payloadJson) noexcept
 	{
-		HANDLE_PAYLOAD("起飞", plane::protocol::TakeoffPayload, {
-			LOG_INFO("[MQTT] 收到【起飞】指令");
-			plane::services::FlyManager::getInstance().takeoff(payload);
-		});
+		this->handleCommand<plane::protocol::TakeoffPayload>("起飞",
+															 payloadJson,
+															 [&](const auto& payload)
+															 {
+																 LOG_INFO("[MQTT] 收到【起飞】指令");
+																 plane::services::FlyManager::getInstance().takeoff(payload);
+															 });
 	}
 
 	void LogicHandler::handleGoHome(const n_json& payloadJson) noexcept
 	{
-		LOG_INFO("[MQTT] 收到【返航】指令");
-		plane::services::FlyManager::getInstance().goHome();
+		this->handleCommand<_STD monostate>("返航",
+											payloadJson,
+											[&]()
+											{
+												LOG_INFO("[MQTT] 收到【返航】指令");
+												plane::services::FlyManager::getInstance().goHome();
+											});
 	}
 
 	void LogicHandler::handleHover(const n_json& payloadJson) noexcept
 	{
-		LOG_INFO("[MQTT] 收到【悬停】指令");
-		plane::services::FlyManager::getInstance().hover();
+		this->handleCommand<_STD monostate>("悬停",
+											payloadJson,
+											[&]()
+											{
+												LOG_INFO("[MQTT] 收到【悬停】指令");
+												plane::services::FlyManager::getInstance().hover();
+											});
 	}
 
 	void LogicHandler::handleLand(const n_json& payloadJson) noexcept
 	{
-		LOG_INFO("[MQTT] 收到【降落】指令");
-		plane::services::FlyManager::getInstance().land();
+		this->handleCommand<_STD monostate>("降落",
+											payloadJson,
+											[&]()
+											{
+												LOG_INFO("[MQTT] 收到【降落】指令");
+												plane::services::FlyManager::getInstance().land();
+											});
 	}
 
 	void LogicHandler::handleControlStrategySwitch(const n_json& payloadJson) noexcept
 	{
-		HANDLE_PAYLOAD("云台控制策略切换", plane::protocol::ControlStrategyPayload, {
-			if (payload.YTJSCL)
+		this->handleCommand<plane::protocol::ControlStrategyPayload>(
+			"云台控制策略切换",
+			payloadJson,
+			[&](const auto& payload)
 			{
-				LOG_INFO("[MQTT] 收到【云台控制策略切换】指令, 策略代码: {}", *payload.YTJSCL);
-				// TODO: FlyManager::getInstance().setControlStrategy(*payload.YTJSCL);
-			}
-		});
+				if (payload.YTJSCL)
+				{
+					LOG_INFO("[MQTT] 收到【云台控制策略切换】指令, 策略代码: {}", *payload.YTJSCL);
+					plane::services::FlyManager::getInstance().setControlStrategy(*payload.YTJSCL);
+				}
+			});
 	}
 
 	void LogicHandler::handleCircleFly(const n_json& payloadJson) noexcept
 	{
-		HANDLE_PAYLOAD("智能环绕", plane::protocol::CircleFlyPayload, {
-			LOG_INFO("[MQTT] 收到【智能环绕】指令");
-			// TODO: FlyManager::getInstance().flyCircleAroundPoint(payload);
-		});
+		this->handleCommand<plane::protocol::CircleFlyPayload>("智能环绕",
+															   payloadJson,
+															   [&](const auto& payload)
+															   {
+																   LOG_INFO("[MQTT] 收到【智能环绕】指令");
+																   plane::services::FlyManager::getInstance().flyCircleAroundPoint(payload);
+															   });
 	}
 
 	void LogicHandler::handleGimbalControl(const n_json& payloadJson) noexcept
 	{
-		HANDLE_PAYLOAD("云台控制", plane::protocol::GimbalControlPayload, {
-			if (payload.MS == 0) // 角度控制
+		this->handleCommand<plane::protocol::GimbalControlPayload>(
+			"云台控制",
+			payloadJson,
+			[&](const auto& payload)
 			{
-				LOG_INFO("[MQTT] 收到【云台角度控制】指令: pitch={}, yaw={}", payload.FYJ, payload.PHJ);
-				// TODO: FlyManager::getInstance().rotateGimbal(payload.FYJ, payload.PHJ);
-			}
-			else // 速度控制
-			{
-				LOG_INFO("[MQTT] 收到【云台速度控制】指令: pitch={}, yaw={}", payload.FYJ, payload.PHJ);
-				// TODO: FlyManager::getInstance().rotateGimbalBySpeed(payload.FYJ, payload.PHJ, .0);
-			}
-		});
+				if (payload.MS == 0) // 角度控制
+				{
+					LOG_INFO("[MQTT] 收到【云台角度控制】指令: pitch={}, yaw={}", payload.FYJ, payload.PHJ);
+					plane::services::FlyManager::getInstance().rotateGimbal(payload);
+				}
+				else // 速度控制
+				{
+					LOG_INFO("[MQTT] 收到【云台速度控制】指令: pitch={}, yaw={}", payload.FYJ, payload.PHJ);
+					plane::services::FlyManager::getInstance().rotateGimbalBySpeed(payload);
+				}
+			});
 	}
 
 	void LogicHandler::handleCameraControl(const n_json& payloadJson) noexcept
 	{
-		HANDLE_PAYLOAD("相机控制", plane::protocol::ZoomControlPayload, {
-			if (payload.BJB)
-			{
-				LOG_INFO("[MQTT] 收到【相机变焦】指令: factor={}", *payload.BJB);
-				// TODO: FlyManager::getInstance().setCameraZoomFactor(*payload.BJB);
-			}
-			if (payload.XJLX)
-			{
-				LOG_INFO("[MQTT] 收到【相机视频源切换】指令: source={}", *payload.XJLX);
-				// TODO: FlyManager::getInstance().setCameraStreamSource(*payload.XJLX);
-			}
-		});
+		this->handleCommand<plane::protocol::ZoomControlPayload>("相机控制",
+																 payloadJson,
+																 [&](const auto& payload)
+																 {
+																	 if (payload.BJB)
+																	 {
+																		 LOG_INFO("[MQTT] 收到【相机变焦】指令: factor={}", *payload.BJB);
+																		 plane::services::FlyManager::getInstance().setCameraZoomFactor(payload);
+																	 }
+																	 if (payload.XJLX)
+																	 {
+																		 LOG_INFO("[MQTT] 收到【相机视频源切换】指令: source={}", *payload.XJLX);
+																		 plane::services::FlyManager::getInstance().setCameraStreamSource(
+																			 payload);
+																	 }
+																 });
 	}
 
 	void LogicHandler::handleStickData(const n_json& payloadJson) noexcept
 	{
-		HANDLE_PAYLOAD("虚拟摇杆数据",
-					   plane::protocol::StickDataPayload,
-					   {
-						   // TODO: FlyManager::getInstance().sendRawStickData(payload);
-					   });
+		this->handleCommand<plane::protocol::StickDataPayload>(
+			"虚拟摇杆数据",
+			payloadJson,
+			[&](const auto& payload)
+			{
+				LOG_INFO("[MQTT] 收到【虚拟摇杆数据】指令: 油门量={}, 偏航量={}, 俯仰量={}, 横滚量={}",
+						 payload.YML,
+						 payload.PHL,
+						 payload.FYL,
+						 payload.HGL);
+
+				plane::services::FlyManager::getInstance().sendRawStickData(payload);
+			});
 	}
 
 	void LogicHandler::handleStickModeSwitch(const n_json& payloadJson) noexcept
 	{
-		HANDLE_PAYLOAD("虚拟摇杆模式切换", plane::protocol::StickModeSwitchPayload, {
-			LOG_INFO("[MQTT] 收到【虚拟摇杆模式切换】指令: mode={}", payload.YGMS);
-			// TODO: FlyManager::getInstance().switchVirtualStick(payload.YGMS);
-		});
+		this->handleCommand<plane::protocol::StickModeSwitchPayload>("虚拟摇杆模式切换",
+																	 payloadJson,
+																	 [&](const auto& payload)
+																	 {
+																		 LOG_INFO("[MQTT] 收到【虚拟摇杆模式切换】指令: mode={}", payload.YGMS);
+																		 plane::services::FlyManager::getInstance().enableVirtualStick(
+																			 payload.YGMS);
+																	 });
 	}
 
 	void LogicHandler::handleNedVelocity(const n_json& payloadJson) noexcept
 	{
-		HANDLE_PAYLOAD("NED速度控制", plane::protocol::NedVelocityPayload, {
-			LOG_DEBUG("[MQTT] 收到【NED速度控制】指令");
-			// TODO: FlyManager::getInstance().sendNedVelocityCommand(payload);
-		});
+		this->handleCommand<plane::protocol::NedVelocityPayload>(
+			"NED速度控制",
+			payloadJson,
+			[&](const auto& payload)
+			{
+				LOG_INFO("[MQTT] 收到【NED速度控制】指令: 北向速度={}, 东向速度={}, 地向速度={}, 偏航角速率={}",
+						 payload.SDN,
+						 payload.SDD,
+						 payload.SDX,
+						 payload.PHJ);
+				plane::services::FlyManager::getInstance().sendNedVelocityCommand(payload);
+			});
 	}
-
-#undef HANDLE_PAYLOAD
 } // namespace plane::services

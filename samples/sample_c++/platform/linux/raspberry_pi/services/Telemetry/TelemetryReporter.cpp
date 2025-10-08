@@ -34,10 +34,10 @@ namespace plane::services
 
 	bool TelemetryReporter::start(void)
 	{
-		if (!this->removers_)
+		if (this->removers_)
 		{
 			LOG_DEBUG("TelemetryReporter 已经启动，请勿重复调用 start()。");
-			return false;
+			return true;
 		}
 
 		try
@@ -106,7 +106,7 @@ namespace plane::services
 	{
 		this->run_watchdog_ = false;
 
-		if (!this->removers_)
+		if (this->removers_)
 		{
 			this->removers_.reset();
 			LOG_DEBUG("遥测上报服务已停止 (注销了所有事件监听器)。");

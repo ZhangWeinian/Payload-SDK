@@ -110,21 +110,20 @@ namespace plane::services
 																	_STD monostate {});
 	}
 
-	void FlyManager::rotateGimbal(double pitch, double yaw) const noexcept
+	void FlyManager::rotateGimbal(const plane::protocol::GimbalControlPayload& gimbalParams) const noexcept
 	{
-		LOG_INFO("FlyManager: 发送【云台角度控制】命令事件: Pitch={}, Yaw={}", pitch, yaw);
+		LOG_INFO("FlyManager: 发送【云台角度控制】命令事件: 俯仰角={}, 偏航角={}", gimbalParams.FYJ, gimbalParams.PHJ);
 		// 使用 GimbalControlPayload，MS=0 表示角度控制 (根据你的定义调整)
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::RotateGimbal,
-																	plane::protocol::GimbalControlPayload { pitch, yaw, 0 });
+		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::RotateGimbal, gimbalParams);
 	}
 
-	void FlyManager::rotateGimbalBySpeed(double pitchSpeed, double yawSpeed, double rollSpeed) const noexcept
+	void FlyManager::rotateGimbalBySpeed(const plane::protocol::GimbalControlPayload& gimbalParams) const noexcept
 	{
-		LOG_INFO("FlyManager: 发送【云台速度控制】命令事件: PitchSpeed={}, YawSpeed={}", pitchSpeed, yawSpeed);
+		LOG_INFO("FlyManager: 发送【云台速度控制】命令事件: 俯仰角={}, 偏航角={}", gimbalParams.FYJ, gimbalParams.PHJ);
 		// 使用 GimbalControlPayload，MS=1 表示速度控制 (根据你的定义调整)
 		// rollSpeed 暂时没有对应字段，如果需要可以扩展 GimbalControlPayload
 		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::RotateGimbalBySpeed,
-																	plane::protocol::GimbalControlPayload { pitchSpeed, yawSpeed, 1 });
+																	gimbalParams);
 	}
 
 	void FlyManager::setCameraZoomFactor(const plane::protocol::ZoomControlPayload& zoomParams) const noexcept
@@ -134,18 +133,17 @@ namespace plane::services
 																	zoomParams);
 	}
 
-	void FlyManager::setCameraStreamSource(_STD string_view source) const noexcept
+	void FlyManager::setCameraStreamSource(const plane::protocol::ZoomControlPayload& zoomParams) const noexcept
 	{
-		LOG_INFO("FlyManager: 发送【切换视频源】命令事件: Source={}", source);
+		LOG_INFO("FlyManager: 发送【切换视频源】命令事件...");
 		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::SetCameraStreamSource,
-																	_STD string(source));
+																	zoomParams);
 	}
 
-	void FlyManager::sendRawStickData(int throttle, int yaw, int pitch, int roll) const noexcept
+	void FlyManager::sendRawStickData(const plane::protocol::StickDataPayload& stickData) const noexcept
 	{
-		LOG_DEBUG("FlyManager: 发送【虚拟摇杆数据】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::SendRawStickData,
-																	plane::protocol::StickDataPayload { throttle, yaw, pitch, roll });
+		LOG_INFO("FlyManager: 发送【虚拟摇杆数据】命令事件...");
+		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::SendRawStickData, stickData);
 	}
 
 	void FlyManager::enableVirtualStick(bool advancedMode) const noexcept
@@ -165,7 +163,7 @@ namespace plane::services
 
 	void FlyManager::sendNedVelocityCommand(const plane::protocol::NedVelocityPayload& velocityParams) const noexcept
 	{
-		LOG_DEBUG("FlyManager: 发送【NED 速度指令】命令事件...");
+		LOG_INFO("FlyManager: 发送【NED 速度指令】命令事件...");
 		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::SendNedVelocityCommand,
 																	velocityParams);
 	}

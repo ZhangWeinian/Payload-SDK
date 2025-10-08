@@ -8,13 +8,13 @@
 #include "services/PSDK/PSDKAdapter/PSDKAdapter.h"
 #include "services/PSDK/PSDKManager/PSDKManager.h"
 #include "services/Telemetry/TelemetryReporter.h"
-#include "utils/DjiErrorUtils.h"
 #include "utils/Logger.h"
 
 #include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
+#include <iostream>
 #include <string>
 #include <thread>
 
@@ -24,7 +24,7 @@ namespace plane::my_dji
 {
 	namespace
 	{
-		std::atomic<bool> g_should_exit(false);
+		_STD atomic<bool> g_should_exit(false);
 
 		void			  signalHandler(int signum)
 		{
@@ -33,14 +33,16 @@ namespace plane::my_dji
 		}
 	} // namespace
 
-	void runMyApplication(int argc, char** argv)
+	void runMyApplication(int argc, char* argv[])
 	{
-		STD_PRINTLN("==========================================================");
-		STD_PRINTLN("                        应用程序启动中");
-		STD_PRINTLN("==========================================================");
-
 		_CSTD signal(SIGINT, _UNNAMED signalHandler);
 		_CSTD signal(SIGTERM, _UNNAMED signalHandler);
+
+		plane::utils::Logger::getInstance().init(_SPDLOG level::info);
+
+		LOG_INFO("==========================================================");
+		LOG_INFO("                        应用程序启动中");
+		LOG_INFO("==========================================================");
 
 		if (!plane::config::ConfigManager::getInstance().loadAndCheck("config.yml"))
 		{
@@ -51,11 +53,11 @@ namespace plane::my_dji
 
 		if (plane::config::ConfigManager::getInstance().isLogLevelDebug())
 		{
-			plane::utils::Logger::getInstance().init(_SPDLOG level::trace);
+			_SPDLOG set_level(_SPDLOG level::trace);
 		}
 		else
 		{
-			plane::utils::Logger::getInstance().init(_SPDLOG level::info);
+			_SPDLOG set_level(_SPDLOG level::info);
 		}
 
 		if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
@@ -107,7 +109,7 @@ namespace plane::my_dji
 
 		while (!g_should_exit)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
+			_STD this_thread::sleep_for(_STD chrono::milliseconds(500));
 		}
 
 		LOG_INFO("收到退出信号, 正在关闭应用程序...");
@@ -126,7 +128,7 @@ namespace plane::my_dji
 			plane::services::PSDKManager::getInstance().deinitialize();
 		}
 
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		_STD this_thread::sleep_for(_STD chrono::seconds(1));
 		LOG_INFO("应用程序已关闭。");
 	}
 } // namespace plane::my_dji

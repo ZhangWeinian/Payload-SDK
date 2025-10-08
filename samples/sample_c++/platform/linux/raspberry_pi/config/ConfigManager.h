@@ -27,7 +27,7 @@ namespace plane::config
 		_NODISCARD bool		   isSaveKmz(void) const noexcept;
 
 	private:
-		explicit ConfigManager(void) noexcept;
+		explicit ConfigManager(void) noexcept						   = default;
 		~ConfigManager(void) noexcept								   = default;
 		ConfigManager(const ConfigManager&)							   = delete;
 		ConfigManager&				   operator=(const ConfigManager&) = delete;

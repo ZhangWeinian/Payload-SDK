@@ -5,7 +5,7 @@
 
 #include <CLI/CLI.hpp>
 
-int main(int argc, char** argv)
+int main(int argc, char* argv[])
 {
 	CLI::App app { "DJI PSDK 应用, 集成自定义 MQTT 服务" };
 	app.set_help_all_flag("--help-all", "显示所有帮助信息");
