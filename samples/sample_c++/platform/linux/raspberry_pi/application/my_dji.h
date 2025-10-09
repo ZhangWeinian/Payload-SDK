@@ -3,6 +3,7 @@
 #pragma once
 
 #include "config/ConfigManager.h"
+#include "services/Heartbeat/HeartbeatService.h"
 #include "services/MQTT/Handler/LogicHandler.h"
 #include "services/MQTT/Service.h"
 #include "services/PSDK/PSDKAdapter/PSDKAdapter.h"
@@ -38,12 +39,14 @@ namespace plane::my_dji
 		_CSTD signal(SIGINT, _UNNAMED signalHandler);
 		_CSTD signal(SIGTERM, _UNNAMED signalHandler);
 
-		plane::utils::Logger::getInstance().init(_SPDLOG level::info);
+		// 日志系统初始化（必须最先初始化）
+		plane::utils::Logger::getInstance().init();
 
 		LOG_INFO("==========================================================");
 		LOG_INFO("                        应用程序启动中");
 		LOG_INFO("==========================================================");
 
+		// 尝试加载配置文件
 		if (!plane::config::ConfigManager::getInstance().loadAndCheck("config.yml"))
 		{
 			LOG_ERROR("错误: 配置文件加载失败，程序退出。");
@@ -51,6 +54,7 @@ namespace plane::my_dji
 		}
 		LOG_INFO("配置文件加载成功。");
 
+		// 根据配置设置日志级别
 		if (plane::config::ConfigManager::getInstance().isLogLevelDebug())
 		{
 			_SPDLOG set_level(_SPDLOG level::trace);
@@ -60,20 +64,29 @@ namespace plane::my_dji
 			_SPDLOG set_level(_SPDLOG level::info);
 		}
 
+		// 如果启用标准 PSDK 作业流程，则初始化 PSDKManager 和 PSDKAdapter
 		if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
 		{
-			if (!plane::services::PSDKManager::getInstance().initialize(argc, argv))
+			if (!plane::services::PSDKManager::getInstance().start(argc, argv))
 			{
 				LOG_ERROR("PSDK 底层服务初始化失败，程序退出。");
 				return;
 			}
 			LOG_INFO("PSDK 底层服务初始化完毕。");
+
+			if (!plane::services::PSDKAdapter::getInstance().start())
+			{
+				LOG_ERROR("PSDK 适配器运行时线程启动失败！");
+				return;
+			}
+			LOG_INFO("PSDK 适配器运行时线程已启动。");
 		}
 		else
 		{
 			LOG_WARN("未启用标准 PSDK 作业流程 (环境变量 FULL_PSDK=1 未设置)。");
 		}
 
+		// 尝试启动 MQTT 服务
 		if (!plane::services::MQTTService::getInstance().start())
 		{
 			LOG_ERROR("错误: MQTT 服务启动失败，程序退出。");
@@ -81,6 +94,14 @@ namespace plane::my_dji
 		}
 		LOG_INFO("MQTT 服务已启动。");
 
+		// 尝试启动心跳服务
+		if (!plane::services::HeartbeatService::getInstance().start())
+		{
+			LOG_ERROR("错误: 心跳服务启动失败，程序退出。");
+			return;
+		}
+
+		// 尝试初始化业务逻辑处理器
 		if (!plane::services::LogicHandler::getInstance().init())
 		{
 			LOG_ERROR("错误: 业务逻辑处理器初始化失败，程序退出。");
@@ -88,13 +109,7 @@ namespace plane::my_dji
 		}
 		LOG_INFO("业务逻辑处理器注册完毕。");
 
-		if (!plane::services::PSDKAdapter::getInstance().start())
-		{
-			LOG_ERROR("PSDK 适配器运行时线程启动失败！");
-			return;
-		}
-		LOG_INFO("PSDK 适配器运行时线程已启动。");
-
+		// 尝试启动遥测上报服务
 		if (!plane::services::TelemetryReporter::getInstance().start())
 		{
 			LOG_ERROR("错误: 遥测上报服务启动失败，程序退出。");
@@ -102,6 +117,7 @@ namespace plane::my_dji
 		}
 		LOG_INFO("遥测上报服务已启动。");
 
+		// 等待一段时间让各服务稳定运行，随后报告应用已启动
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(2));
 		LOG_INFO("==========================================================");
 		LOG_INFO("               应用程序初始化完成, 正在运行中...");
@@ -113,21 +129,25 @@ namespace plane::my_dji
 			_STD this_thread::sleep_for(_STD_CHRONO milliseconds(500));
 		}
 
+		// 收到退出信号，开始关闭各服务
 		LOG_INFO("收到退出信号, 正在关闭应用程序...");
 
 		plane::services::TelemetryReporter::getInstance().stop();
 		LOG_INFO("遥测上报服务已停止。");
 
-		plane::services::PSDKAdapter::getInstance().stop();
-		LOG_INFO("PSDK 适配器运行时线程已停止。");
+		plane::services::HeartbeatService::getInstance().stop();
+		LOG_INFO("心跳服务已停止。");
 
 		plane::services::MQTTService::getInstance().stop();
 		LOG_INFO("MQTT 服务已停止。");
 
 		if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
 		{
-			plane::services::PSDKManager::getInstance().deinitialize();
-			LOG_INFO("PSDK 底层服务已反初始化。");
+			plane::services::PSDKManager::getInstance().stop();
+			LOG_INFO("PSDK 底层服务已停止。");
+
+			plane::services::PSDKAdapter::getInstance().stop();
+			LOG_INFO("PSDK 适配器运行时线程已停止。");
 		}
 
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(1));

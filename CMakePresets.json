@@ -3,7 +3,7 @@
 {
 	"version": 3,
 	"vendor": {
-		"my-project": {
+		"psdk": {
 			"common-warnings": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wformat=2 -Wunused"
 		}
 	},
@@ -39,8 +39,8 @@
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "Debug",
 				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/debug",
-				"CMAKE_CXX_FLAGS_DEBUG": "${vendor.my-project.common-warnings} -g3 -O0 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=undefined",
-				"CMAKE_C_FLAGS_DEBUG": "${vendor.my-project.common-warnings} -g3 -O0 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=undefined",
+				"CMAKE_CXX_FLAGS_DEBUG": "${vendor.psdk.common-warnings} -g3 -O0 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=undefined",
+				"CMAKE_C_FLAGS_DEBUG": "${vendor.psdk.common-warnings} -g3 -O0 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=undefined",
 				"BUILD_TESTING": "ON"
 			}
 		},
@@ -54,8 +54,8 @@
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "Release",
 				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/release",
-				"CMAKE_CXX_FLAGS_RELEASE": "${vendor.my-project.common-warnings} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
-				"CMAKE_C_FLAGS_RELEASE": "${vendor.my-project.common-warnings} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+				"CMAKE_CXX_FLAGS_RELEASE": "${vendor.psdk.common-warnings} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+				"CMAKE_C_FLAGS_RELEASE": "${vendor.psdk.common-warnings} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
 				"CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections -Wl,-z,relro,-z,now",
 				"CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections",
 				"CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
@@ -73,8 +73,8 @@
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "RelWithDebInfo",
 				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/relwithdebinfo",
-				"CMAKE_CXX_FLAGS_RELWITHDEBINFO": "${vendor.my-project.common-warnings} -O2 -g -DNDEBUG",
-				"CMAKE_C_FLAGS_RELWITHDEBINFO": "${vendor.my-project.common-warnings} -O2 -g -DNDEBUG",
+				"CMAKE_CXX_FLAGS_RELWITHDEBINFO": "${vendor.psdk.common-warnings} -O2 -g -DNDEBUG",
+				"CMAKE_C_FLAGS_RELWITHDEBINFO": "${vendor.psdk.common-warnings} -O2 -g -DNDEBUG",
 				"BUILD_TESTING": "ON"
 			}
 		}

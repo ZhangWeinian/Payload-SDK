@@ -31,6 +31,7 @@ namespace plane::services
 			this->service_->subscribe(plane::services::TOPIC_PAYLOAD_CONTROL);
 			this->service_->subscribe(plane::services::TOPIC_ROCKER_CONTROL);
 			this->service_->subscribe(plane::services::TOPIC_VELOCITY_CONTROL);
+			LOG_INFO("MQTT 初始主题订阅成功！");
 		}
 
 		void connection_lost(const _STD string& cause) override
@@ -80,15 +81,150 @@ namespace plane::services
 		try
 		{
 			this->stop();
-			LOG_DEBUG("[MQTTService::dtor] stop() 完成");
 		}
 		catch (const _STD exception& ex)
 		{
-			LOG_ERROR("MQTTService 析构异常: {}", ex.what());
+			LOG_ERROR("MQTT 服务析构异常: {}", ex.what());
 		}
 		catch (...)
 		{
-			LOG_ERROR("MQTTService 析构发生未知异常: <non-std exception>");
+			LOG_ERROR("MQTT 服务析构发生未知异常: <non-std exception>");
+		}
+	}
+
+	bool MQTTService::start(void) noexcept
+	{
+		_STD lock_guard<_STD mutex> lock(this->mutex_);
+
+		if (this->isConnected())
+		{
+			LOG_DEBUG("MQTT 服务已经启动, 忽略重复启动请求");
+			return true;
+		}
+
+		_STD string url { plane::config::ConfigManager::getInstance().getMqttUrl() };
+		_STD string cid { plane::config::ConfigManager::getInstance().getMqttClientId() };
+		LOG_INFO("使用配置文件中的 MQTT 设置启动服务。服务器=[{}], 客户端ID=[{}]", url, cid);
+
+		if (this->impl_->client)
+		{
+			LOG_DEBUG("清理现有的 MQTT 客户端实例");
+			this->stop();
+			LOG_DEBUG("stop() 完成, client 已清理");
+		}
+
+		try
+		{
+			this->impl_->client	  = _STD   make_unique<_MQTT async_client>(url, cid);
+			this->impl_->callback = _STD make_shared<MqttCallback>(this);
+			this->impl_->client->set_callback(*(this->impl_)->callback);
+
+			_MQTT connect_options connOpts {};
+			connOpts.set_keep_alive_interval(30);
+			connOpts.set_clean_session(true);
+			connOpts.set_automatic_reconnect(true);
+			connOpts.set_mqtt_version(MQTTVERSION_5);
+
+			this->impl_->client->connect(connOpts);
+			LOG_DEBUG("MQTT 服务启动成功, 等待连接建立...");
+
+			this->impl_->runSender	  = true;
+			this->impl_->senderThread = _STD thread(&MQTTService::senderLoop, this);
+			LOG_DEBUG("MQTT 异步发送线程已启动。");
+
+			return true;
+		}
+		catch (const _MQTT exception& ex)
+		{
+			LOG_ERROR("MQTT 客户端初始化或连接失败: {}", ex.what());
+			this->impl_->client.reset();
+			this->impl_->callback.reset();
+			return false;
+		}
+		catch (const _STD exception& ex)
+		{
+			LOG_ERROR("MQTT 客户端初始化或连接发生未知异常: {}", ex.what());
+			this->impl_->client.reset();
+			this->impl_->callback.reset();
+			return false;
+		}
+		catch (...)
+		{
+			LOG_ERROR("MQTT 客户端初始化或连接发生未知异常: <non-std exception>");
+			this->impl_->client.reset();
+			this->impl_->callback.reset();
+			return false;
+		}
+	}
+
+	void MQTTService::stop(void) noexcept
+	{
+		if (!this->stopped_.exchange(true))
+		{
+			return;
+		}
+
+		if (this->impl_->runSender.exchange(false))
+		{
+			this->impl_->dequeCv.notify_one();
+			if (this->impl_->senderThread.joinable())
+			{
+				this->impl_->senderThread.join();
+				LOG_DEBUG("MQTT 异步发送线程已停止。");
+			}
+		}
+
+		_STD lock_guard<_STD mutex> lock(this->mutex_);
+
+		this->impl_->manualDisconnect = true;
+		this->setConnected(false);
+
+		if (!this->impl_ || !this->impl_->client)
+		{
+			LOG_DEBUG("MQTTService 停止：客户端不存在或已被销毁");
+			return;
+		}
+
+		try
+		{
+			if (this->impl_->client->is_connected())
+			{
+				LOG_DEBUG("MQTTService 停止：客户端已连接, 正在发送断开连接请求...");
+				this->impl_->client->disconnect()->wait();
+				_STD this_thread::sleep_for(_STD_CHRONO milliseconds(200));
+			}
+			else
+			{
+				LOG_DEBUG("MQTTService 停止：客户端未连接, 跳过断开步骤");
+			}
+
+			this->impl_->client.reset();
+			this->impl_->callback.reset();
+			LOG_INFO("MQTT 服务已停止。");
+		}
+		catch (const _MQTT exception& ex)
+		{
+			LOG_ERROR("MQTTService 停止异常（来自 MQTT）: {}", ex.what());
+		}
+		catch (const _STD exception& ex)
+		{
+			LOG_ERROR("MQTTService 停止发生未知异常: {}", ex.what());
+		}
+		catch (...)
+		{
+			LOG_ERROR("MQTTService 停止发生未知异常: <non-std exception>");
+		}
+	}
+
+	void MQTTService::restart(void) noexcept
+	{
+		_STD lock_guard<_STD mutex> lock(this->mutex_);
+		LOG_INFO("重新启动 MQTT 服务...");
+		this->stop();
+		_STD this_thread::sleep_for(_STD_CHRONO milliseconds(300));
+		if (!this->start())
+		{
+			LOG_ERROR("MQTT restart 启动失败！");
 		}
 	}
 
@@ -100,7 +236,7 @@ namespace plane::services
 
 	bool MQTTService::publish(_STD string_view topic, _STD string_view payload) noexcept
 	{
-		if (!this->impl_->runSender_)
+		if (!this->impl_->runSender)
 		{
 			LOG_WARN("MQTT 发送服务未运行, 消息被丢弃。");
 			return false;
@@ -109,16 +245,16 @@ namespace plane::services
 		{
 			_STD lock_guard<_STD mutex> lock(this->impl_->dequeMutex);
 
-			if (this->impl_->messageDeque.size() >= MAX_DEQUE_SIZE)
+			if (this->impl_->messageDeque.size() >= this->MAX_DEQUE_SIZE)
 			{
 				this->impl_->messageDeque.pop_front();
 				if (const auto now { _STD_CHRONO steady_clock::now() };
-					!this->impl_->isDroppingMessages_ || (now - this->impl_->lastDropLogTime_ > this->LOG_THROTTLE_INTERVAL))
+					!this->impl_->isDroppingMessages || (now - this->impl_->lastDropLogTime > this->LOG_THROTTLE_INTERVAL))
 				{
 					LOG_WARN("MQTT 消息队列已满, 正在丢弃最旧的消息以保证数据新鲜度。此警告将在 {} 秒内抑制。",
 							 this->LOG_THROTTLE_INTERVAL.count());
-					this->impl_->isDroppingMessages_ = true;
-					this->impl_->lastDropLogTime_	 = now;
+					this->impl_->isDroppingMessages = true;
+					this->impl_->lastDropLogTime	= now;
 				}
 				else
 				{
@@ -127,7 +263,7 @@ namespace plane::services
 			}
 			else
 			{
-				this->impl_->isDroppingMessages_ = false;
+				this->impl_->isDroppingMessages = false;
 			}
 
 			this->impl_->messageDeque.emplace_back(topic, payload);
@@ -165,147 +301,6 @@ namespace plane::services
 		}
 	}
 
-	bool MQTTService::start(_STD string_view serverURI, _STD string_view clientId) noexcept
-	{
-		_STD lock_guard<_STD mutex> lock(this->mutex_);
-
-		if (this->isConnected())
-		{
-			LOG_DEBUG("MQTT 服务已经启动, 忽略重复启动请求");
-			return true;
-		}
-
-		_STD string url { serverURI };
-		_STD string cid { clientId };
-
-		if (url.empty() || cid.empty())
-		{
-			url = plane::config::ConfigManager::getInstance().getMqttUrl();
-			cid = plane::config::ConfigManager::getInstance().getMqttClientId();
-			LOG_INFO("使用配置文件中的 MQTT 设置启动服务。服务器=[{}], 客户端ID=[{}]", url, cid);
-		}
-		else
-		{
-			LOG_INFO("使用提供的 MQTT 设置启动服务。服务器=[{}], 客户端ID=[{}]", url, cid);
-		}
-
-		if (this->impl_->client)
-		{
-			LOG_DEBUG("清理现有的 MQTT 客户端实例");
-			this->stop();
-			LOG_DEBUG("stop() 完成, client 已清理");
-		}
-
-		try
-		{
-			this->impl_->client	  = _STD   make_unique<_MQTT async_client>(url, cid);
-			this->impl_->callback = _STD make_shared<MqttCallback>(this);
-			this->impl_->client->set_callback(*(this->impl_)->callback);
-
-			_MQTT connect_options connOpts {};
-			connOpts.set_keep_alive_interval(30);
-			connOpts.set_clean_session(true);
-			connOpts.set_automatic_reconnect(true);
-			connOpts.set_mqtt_version(MQTTVERSION_5);
-
-			this->impl_->client->connect(connOpts);
-			LOG_DEBUG("MQTT 服务启动成功, 等待连接建立...");
-
-			this->impl_->runSender_	  = true;
-			this->impl_->senderThread = _STD thread(&MQTTService::senderLoop, this);
-			LOG_DEBUG("MQTT 异步发送线程已启动。");
-
-			return true;
-		}
-		catch (const _MQTT exception& ex)
-		{
-			LOG_ERROR("MQTT 客户端初始化或连接失败: {}", ex.what());
-			this->impl_->client.reset();
-			this->impl_->callback.reset();
-			return false;
-		}
-		catch (const _STD exception& ex)
-		{
-			LOG_ERROR("MQTT 客户端初始化或连接发生未知异常: {}", ex.what());
-			this->impl_->client.reset();
-			this->impl_->callback.reset();
-			return false;
-		}
-		catch (...)
-		{
-			LOG_ERROR("MQTT 客户端初始化或连接发生未知异常: <non-std exception>");
-			this->impl_->client.reset();
-			this->impl_->callback.reset();
-			return false;
-		}
-	}
-
-	void MQTTService::stop(void) noexcept
-	{
-		if (this->impl_->runSender_.exchange(false))
-		{
-			this->impl_->dequeCv.notify_one();
-			if (this->impl_->senderThread.joinable())
-			{
-				this->impl_->senderThread.join();
-				LOG_DEBUG("MQTT 异步发送线程已停止。");
-			}
-		}
-
-		_STD lock_guard<_STD mutex> lock(this->mutex_);
-
-		this->impl_->manualDisconnect = true;
-		this->setConnected(false);
-
-		if (!this->impl_ || !this->impl_->client)
-		{
-			LOG_DEBUG("MQTTService 停止：客户端不存在或已被销毁");
-			return;
-		}
-
-		try
-		{
-			if (this->impl_->client->is_connected())
-			{
-				LOG_DEBUG("MQTTService 停止：客户端已连接, 正在发送断开连接请求...");
-				this->impl_->client->disconnect()->wait();
-				_STD this_thread::sleep_for(_STD_CHRONO milliseconds(200));
-			}
-			else
-			{
-				LOG_DEBUG("MQTTService 停止：客户端未连接, 跳过断开步骤");
-			}
-
-			this->impl_->client.reset();
-			this->impl_->callback.reset();
-			LOG_INFO("MQTT 服务已停止");
-		}
-		catch (const _MQTT exception& ex)
-		{
-			LOG_ERROR("MQTTService 停止异常（来自 MQTT）: {}", ex.what());
-		}
-		catch (const _STD exception& ex)
-		{
-			LOG_ERROR("MQTTService 停止发生未知异常: {}", ex.what());
-		}
-		catch (...)
-		{
-			LOG_ERROR("MQTTService 停止发生未知异常: <non-std exception>");
-		}
-	}
-
-	void MQTTService::restart(_STD string_view serverURI, _STD string_view clientId) noexcept
-	{
-		_STD lock_guard<_STD mutex> lock(mutex_);
-		LOG_INFO("重新启动 MQTT 服务...");
-		this->stop();
-		_STD this_thread::sleep_for(_STD_CHRONO milliseconds(300));
-		if (!this->start(serverURI, clientId))
-		{
-			LOG_ERROR("MQTT restart 启动失败！");
-		}
-	}
-
 	void MQTTService::setConnected(bool status) noexcept
 	{
 		this->connected_.store(status, _STD memory_order_release);
@@ -320,7 +315,7 @@ namespace plane::services
 	{
 		LOG_DEBUG("MQTT 发送者线程循环开始。");
 
-		while (this->impl_->runSender_)
+		while (this->impl_->runSender)
 		{
 			_STD pair<_STD string, _STD string> message {};
 
@@ -329,10 +324,10 @@ namespace plane::services
 				this->impl_->dequeCv.wait(lock,
 										  [this]
 										  {
-											  return !this->impl_->messageDeque.empty() || !this->impl_->runSender_;
+											  return !this->impl_->messageDeque.empty() || !this->impl_->runSender;
 										  });
 
-				if (!this->impl_->runSender_ && this->impl_->messageDeque.empty())
+				if (!this->impl_->runSender && this->impl_->messageDeque.empty())
 				{
 					break;
 				}

@@ -261,38 +261,55 @@ namespace plane::services
 
 			this->registerCommandListener<plane::protocol::TakeoffPayload>(plane::services::EventManager::CommandEvent::Takeoff,
 																		   &PSDKAdapter::takeoff);
+
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::GoHome, &PSDKAdapter::goHome);
+
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::Hover, &PSDKAdapter::hover);
+
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::Land, &PSDKAdapter::land);
+
 			this->registerCommandListener<_STD vector<_STD uint8_t>>(plane::services::EventManager::CommandEvent::WaypointMission,
 																	 &PSDKAdapter::waypointV3);
+
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::StopWaypointMission,
 														  &PSDKAdapter::stopWaypointMission);
+
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::PauseWaypointMission,
 														  &PSDKAdapter::pauseWaypointMission);
+
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::ResumeWaypointMission,
 														  &PSDKAdapter::resumeWaypointMission);
+
 			this->registerCommandListener<plane::protocol::CircleFlyPayload>(plane::services::EventManager::CommandEvent::FlyCircleAroundPoint,
 																			 &PSDKAdapter::flyCircleAroundPoint);
+
 			this->registerCommandListener<int>(plane::services::EventManager::CommandEvent::SetControlStrategy,
 											   &PSDKAdapter::setControlStrategy);
+
 			this->registerCommandListener<plane::protocol::GimbalControlPayload>(plane::services::EventManager::CommandEvent::RotateGimbal,
 																				 &PSDKAdapter::rotateGimbal);
+
 			this->registerCommandListener<plane::protocol::GimbalControlPayload>(
 				plane::services::EventManager::CommandEvent::RotateGimbalBySpeed,
 				&PSDKAdapter::rotateGimbal);
+
 			this->registerCommandListener<plane::protocol::ZoomControlPayload>(plane::services::EventManager::CommandEvent::SetCameraZoomFactor,
 																			   &PSDKAdapter::setCameraZoomFactor);
+
 			this->registerCommandListener<_STD string>(plane::services::EventManager::CommandEvent::SetCameraStreamSource,
 													   &PSDKAdapter::setCameraStreamSource);
+
 			this->registerCommandListener<plane::protocol::StickDataPayload>(plane::services::EventManager::CommandEvent::SendRawStickData,
 																			 &PSDKAdapter::sendRawStickData);
+
 			this->registerCommandListener<plane::protocol::StickModeSwitchPayload>(
 				plane::services::EventManager::CommandEvent::EnableVirtualStick,
 				&PSDKAdapter::enableVirtualStick);
+
 			this->registerCommandListener<plane::protocol::StickModeSwitchPayload>(
 				plane::services::EventManager::CommandEvent::DisableVirtualStick,
 				&PSDKAdapter::disableVirtualStick);
+
 			this->registerCommandListener<plane::protocol::NedVelocityPayload>(
 				plane::services::EventManager::CommandEvent::SendNedVelocityCommand,
 				&PSDKAdapter::sendNedVelocityCommand);
@@ -307,35 +324,87 @@ namespace plane::services
 
 	PSDKAdapter::~PSDKAdapter(void) noexcept
 	{
-		stop();
+		try
+		{
+			this->stop();
+		}
+		catch (const _STD exception& e)
+		{
+			LOG_ERROR("PSDKAdapter 析构异常: {}", e.what());
+		}
+		catch (...)
+		{
+			LOG_ERROR("PSDKAdapter 析构发生未知异常: <non-std exception>");
+		}
 	}
 
 	bool PSDKAdapter::start(void) noexcept
 	{
-		this->is_stopping_ = false;
-		if (this->run_acquisition_.exchange(true))
+		try
 		{
-			LOG_WARN("PSDKAdapter 数据采集线程已经启动，请勿重复调用 start()。");
+			if (State expected_state { State::STOPPED }; !this->state_.compare_exchange_strong(expected_state, State::STARTING))
+			{
+				LOG_WARN("PSDKAdapter::start() 被调用，但服务当前状态为 '{}' (非 STOPPED)，已忽略。", static_cast<int>(state_.load()));
+				return state_ == State::RUNNING;
+			}
+
+			if (!run_acquisition_.exchange(true))
+			{
+				acquisition_thread_ = _STD thread(&PSDKAdapter::acquisitionLoop, this);
+			}
+
+			if (!run_command_processing_.exchange(true))
+			{
+				command_processing_thread_ = _STD thread(&PSDKAdapter::commandProcessingLoop, this);
+			}
+
+			this->state_ = State::RUNNING;
+			LOG_INFO("PSDK 适配器运行时线程已启动。");
 			return true;
 		}
-		LOG_INFO("正在启动 PSDK 数据采集线程...");
-		this->acquisition_thread_ = _STD thread(&PSDKAdapter::acquisitionLoop, this);
-
-		if (this->run_command_processing_.exchange(true))
+		catch (const _STD exception& e)
 		{
-			LOG_WARN("PSDKAdapter 命令处理线程已经启动，请勿重复调用 start()。");
-			return true;
+			LOG_ERROR("启动 PSDKAdapter 失败: {}", e.what());
+			this->run_acquisition_		  = false;
+			this->run_command_processing_ = false;
+			if (this->acquisition_thread_.joinable())
+			{
+				this->acquisition_thread_.join();
+			}
+			if (this->command_processing_thread_.joinable())
+			{
+				this->command_processing_thread_.join();
+			}
+			this->state_ = State::STOPPED;
+			return false;
 		}
-		LOG_INFO("正在启动 PSDK 命令处理线程...");
-		this->command_processing_thread_ = _STD thread(&PSDKAdapter::commandProcessingLoop, this);
-
-		return true;
+		catch (...)
+		{
+			LOG_ERROR("启动 PSDKAdapter 失败: 捕获到未知异常");
+			this->run_acquisition_		  = false;
+			this->run_command_processing_ = false;
+			if (this->acquisition_thread_.joinable())
+			{
+				this->acquisition_thread_.join();
+			}
+			if (this->command_processing_thread_.joinable())
+			{
+				this->command_processing_thread_.join();
+			}
+			state_ = State::STOPPED;
+			return false;
+		}
 	}
 
 	void PSDKAdapter::stop(_STD_CHRONO milliseconds timeout) noexcept
 	{
-		this->is_stopping_ = true;
-		LOG_INFO("PSDKAdapter 开始停止流程，超时时间: {}ms...", timeout.count());
+		if (State expected_state = State::RUNNING; !this->state_.compare_exchange_strong(expected_state, State::STOPPING))
+		{
+			LOG_DEBUG("PSDKAdapter::stop() 被调用，但服务当前未处于 RUNNING 状态，已忽略。");
+			return;
+		}
+
+		LOG_INFO("PSDKAdapter 开始停止流程...（超时时间: {}ms）", timeout.count());
 
 		if (this->run_acquisition_.exchange(false))
 		{
@@ -359,7 +428,7 @@ namespace plane::services
 		if (this->command_pool_)
 		{
 			auto future = _STD async(_STD launch::async,
-									 [this]()
+									 [this]
 									 {
 										 this->command_pool_.reset();
 									 });
@@ -374,6 +443,8 @@ namespace plane::services
 				LOG_INFO("PSDK 命令执行线程池已成功关闭。");
 			}
 		}
+
+		LOG_INFO("PSDK 适配器运行时线程已停止。");
 	}
 
 	bool PSDKAdapter::setup(void) noexcept
@@ -386,10 +457,10 @@ namespace plane::services
 					_DJI DjiFcSubscription_SubscribeTopic(topic, _DJI DJI_DATA_SUBSCRIPTION_TOPIC_10_HZ, nullptr) };
 				returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
-				LOG_WARN("订阅主题 '{}' 失败 (飞机不支持?), 错误: {}, 错误码: {:#08x}",
-						 topicName,
-						 plane::utils::djiReturnCodeToString(returnCode),
-						 returnCode);
+				LOG_ERROR("订阅主题 '{}' 失败 (飞机不支持?), 错误: {}, 错误码: {:#08x}",
+						  topicName,
+						  plane::utils::djiReturnCodeToString(returnCode),
+						  returnCode);
 				return false;
 			}
 			return true;
@@ -584,6 +655,7 @@ namespace plane::services
 
 			plane::services::EventManager::getInstance().publishStatus(plane::services::EventManager::PSDKEvent::TelemetryUpdated,
 																	   current_payload);
+
 			plane::services::EventManager::getInstance().publishStatus(EventManager::PSDKEvent::HealthPing, _STD_CHRONO steady_clock::now());
 
 			auto endTime { _STD_CHRONO steady_clock::now() };
@@ -811,17 +883,17 @@ namespace plane::services
 			{
 				try
 				{
-					if (this->is_stopping_)
+					if (this->state_ != State::RUNNING)
 					{
-						LOG_WARN("应用程序正在关闭，航线任务被取消。");
+						LOG_WARN("PSDKAdapter 不在运行状态，航线任务被取消。");
 						return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
 					}
 
 					_STD unique_lock<_STD mutex> lock(this->psdk_command_mutex_);
 
-					if (this->is_stopping_)
+					if (this->state_ != State::RUNNING)
 					{
-						LOG_WARN("应用程序正在关闭，航线任务被取消。");
+						LOG_WARN("PSDKAdapter 不在运行状态，航线任务被取消。");
 						return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
 					}
 

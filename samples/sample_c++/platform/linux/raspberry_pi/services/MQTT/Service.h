@@ -37,9 +37,9 @@ namespace plane::services
 			_STD mutex										dequeMutex {};
 			_STD condition_variable							dequeCv {};
 			_STD thread										senderThread {};
-			_STD atomic<bool> runSender_ { false };
-			bool			  isDroppingMessages_ { false };
-			_STD_CHRONO steady_clock::time_point lastDropLogTime_ {};
+			_STD atomic<bool> runSender { false };
+			bool			  isDroppingMessages { false };
+			_STD_CHRONO steady_clock::time_point lastDropLogTime {};
 
 			explicit Impl(void) noexcept		  = default;
 			~Impl(void) noexcept				  = default;
@@ -51,9 +51,9 @@ namespace plane::services
 
 	public:
 		static MQTTService& getInstance(void) noexcept;
-		_NODISCARD bool		start(_STD string_view serverURI = "", _STD string_view clientId = "") noexcept;
+		_NODISCARD bool		start(void) noexcept;
 		void				stop(void) noexcept;
-		void				restart(_STD string_view serverURI, _STD string_view clientId) noexcept;
+		void				restart(void) noexcept;
 		_NODISCARD bool		publish(_STD string_view topic, _STD string_view payload) noexcept;
 		_NODISCARD bool		isConnected(void) const noexcept;
 		void				subscribe(_STD string_view topic) noexcept;
@@ -81,6 +81,7 @@ namespace plane::services
 
 		_STD unique_ptr<Impl> impl_ { _STD make_unique<Impl>() };
 		_STD atomic<bool>					connected_ { false };
+		_STD atomic<bool>					stopped_ { false };
 		_STD mutex							mutex_ {};
 		constexpr static inline _STD size_t MAX_DEQUE_SIZE { 30 };
 		constexpr static inline auto		LOG_THROTTLE_INTERVAL { _STD_CHRONO seconds(5) };

@@ -29,12 +29,23 @@ namespace plane::services
 
 	TelemetryReporter::~TelemetryReporter(void) noexcept
 	{
-		this->stop();
+		try
+		{
+			this->stop();
+		}
+		catch (const _STD exception& e)
+		{
+			LOG_ERROR("遥测上报服务析构异常: {}", e.what());
+		}
+		catch (...)
+		{
+			LOG_ERROR("遥测上报服务析构发生未知异常: <non-std exception>");
+		}
 	}
 
 	bool TelemetryReporter::start(void)
 	{
-		if (this->removers_)
+		if (this->psdk_event_remover_ || this->system_event_remover_)
 		{
 			LOG_DEBUG("TelemetryReporter 已经启动，请勿重复调用 start()。");
 			return true;
@@ -42,48 +53,66 @@ namespace plane::services
 
 		try
 		{
-			auto&				   dispatcher { plane::services::EventManager::getInstance().getStatusDispatcher() };
-			this->removers_ = _STD make_unique<_EVENTPP ScopedRemover<plane::services::EventManager::StatusDispatcher>>(dispatcher);
+			auto&							 dispatcher { plane::services::EventManager::getInstance().getStatusDispatcher() };
+			this->psdk_event_remover_ = _STD make_unique<_EVENTPP ScopedRemover<plane::services::EventManager::StatusDispatcher>>(dispatcher);
 
-			this->removers_->appendListener(plane::services::EventManager::PSDKEvent::TelemetryUpdated,
-											[this](const plane::services::EventManager::PSDKEventData& data)
-											{
-												this->onPsdkEvent(data);
-											});
+			this->psdk_event_remover_->appendListener(plane::services::EventManager::PSDKEvent::TelemetryUpdated,
+													  [this](const plane::services::EventManager::PSDKEventData& data)
+													  {
+														  this->onPSDKEvent(data);
+													  });
 
-			this->removers_->appendListener(plane::services::EventManager::PSDKEvent::MissionStateChanged,
-											[this](const plane::services::EventManager::PSDKEventData& data)
-											{
-												this->onPsdkEvent(data);
-											});
+			this->psdk_event_remover_->appendListener(plane::services::EventManager::PSDKEvent::MissionStateChanged,
+													  [this](const plane::services::EventManager::PSDKEventData& data)
+													  {
+														  this->onPSDKEvent(data);
+													  });
 
-			this->removers_->appendListener(plane::services::EventManager::PSDKEvent::ActionStateChanged,
-											[this](const plane::services::EventManager::PSDKEventData& data)
-											{
-												this->onPsdkEvent(data);
-											});
+			this->psdk_event_remover_->appendListener(plane::services::EventManager::PSDKEvent::ActionStateChanged,
+													  [this](const plane::services::EventManager::PSDKEventData& data)
+													  {
+														  this->onPSDKEvent(data);
+													  });
 
-			this->removers_->appendListener(plane::services::EventManager::PSDKEvent::HealthPing,
-											[this](const plane::services::EventManager::PSDKEventData& data)
-											{
-												if (auto* p_time { _STD get_if<_STD_CHRONO steady_clock::time_point>(&data) })
-												{
-													this->last_health_ping_time_ = *p_time;
-												}
-											});
+			this->psdk_event_remover_->appendListener(plane::services::EventManager::PSDKEvent::HealthPing,
+													  [this](const plane::services::EventManager::PSDKEventData& data)
+													  {
+														  if (auto* p_time { _STD get_if<_STD_CHRONO steady_clock::time_point>(&data) })
+														  {
+															  this->last_health_ping_time_ = *p_time;
+														  }
+													  });
 
-			this->removers_->appendListener(plane::services::EventManager::PSDKEvent::HealthStatusUpdated,
-											[this](const plane::services::EventManager::PSDKEventData& data)
-											{
-												this->onPsdkEvent(data);
-											});
+			this->psdk_event_remover_->appendListener(plane::services::EventManager::PSDKEvent::HealthStatusUpdated,
+													  [this](const plane::services::EventManager::PSDKEventData& data)
+													  {
+														  this->onPSDKEvent(data);
+													  });
 
-			this->run_watchdog_ = true;
-			this->event_processing_pool_->enqueue(
-				[this]
-				{
-					this->runWatchdogCheck();
-				});
+			auto& systemDispatcher { plane::services::EventManager::getInstance().getSystemDispatcher() };
+			this->system_event_remover_ =
+				_STD make_unique<_EVENTPP ScopedRemover<plane::services::EventManager::SystemDispatcher>>(systemDispatcher);
+
+			this->system_event_remover_->appendListener(plane::services::EventManager::SystemEvent::HeartbeatTick,
+														[this](const plane::services::EventManager::SystemEventData& data)
+														{
+															this->onHeartbeatTick(data);
+														});
+
+			if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
+			{
+				this->run_watchdog_ = true;
+				this->event_processing_pool_->enqueue(
+					[this]
+					{
+						this->runWatchdogCheck();
+					});
+				LOG_INFO("PSDK 看门狗已启动。");
+			}
+			else
+			{
+				LOG_INFO("PSDK 未启用，看门狗将不会启动。");
+			}
 
 			LOG_INFO("遥测上报服务已启动。");
 			return true;
@@ -104,12 +133,23 @@ namespace plane::services
 
 	void TelemetryReporter::stop(void)
 	{
+		if (this->stopped_.exchange(true))
+		{
+			return;
+		}
+
 		this->run_watchdog_ = false;
 
-		if (this->removers_)
+		if (this->system_event_remover_)
 		{
-			this->removers_.reset();
-			LOG_DEBUG("遥测上报服务已停止 (注销了所有事件监听器)。");
+			this->system_event_remover_.reset();
+			LOG_DEBUG("遥测上报服务已停止 (注销了所有系统事件监听器)。");
+		}
+
+		if (this->psdk_event_remover_)
+		{
+			this->psdk_event_remover_.reset();
+			LOG_DEBUG("遥测上报服务已停止 (注销了所有 PSDK 事件监听器)。");
 		}
 
 		if (this->event_processing_pool_)
@@ -150,7 +190,7 @@ namespace plane::services
 		return true;
 	}
 
-	void TelemetryReporter::onPsdkEvent(const plane::services::EventManager::PSDKEventData& eventData)
+	void TelemetryReporter::onPSDKEvent(const plane::services::EventManager::PSDKEventData& eventData)
 	{
 		if (!this->event_processing_pool_)
 		{
@@ -186,7 +226,12 @@ namespace plane::services
 					{
 						using T = _STD decay_t<decltype(event)>;
 
-						if constexpr (_STD is_same_v<T, plane::protocol::StatusPayload>)
+						if constexpr (_STD is_same_v<T, _STD_CHRONO steady_clock::time_point>)
+						{
+							this->last_health_ping_time_ = event;
+							return;
+						}
+						else if constexpr (_STD is_same_v<T, plane::protocol::StatusPayload>)
 						{
 							if (!plane::services::MQTTService::getInstance().isConnected())
 							{
@@ -205,21 +250,9 @@ namespace plane::services
 																  .SPXY	 = "RTSP",
 																  .ZBZT	 = 1 }
 								};
+								LOG_INFO("准备上报飞行状态...");
 								this->publishJson(plane::services::TOPIC_DRONE_STATUS,
 												  plane::utils::JsonConverter::buildStatusReportJson(payload));
-							}
-
-							static int fixed_info_counter { 0 };
-							if (++fixed_info_counter >= 50)
-							{
-								fixed_info_counter = 0;
-								plane::protocol::MissionInfoPayload info_payload {
-									.FJSN	= plane::config::ConfigManager::getInstance().getPlaneCode(),
-									.YKQIP	= ip,
-									.YSRTSP = _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ip)
-								};
-								this->publishJson(plane::services::TOPIC_FIXED_INFO,
-												  plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
 							}
 						}
 						else if constexpr (_STD is_same_v<T, plane::protocol::HealthStatusPayload>)
@@ -247,6 +280,41 @@ namespace plane::services
 						}
 					},
 					eventData);
+			});
+	}
+
+	void TelemetryReporter::onHeartbeatTick(const plane::services::EventManager::SystemEventData& eventData)
+	{
+		if (!this->event_processing_pool_)
+		{
+			return;
+		}
+
+		this->event_processing_pool_->enqueue(
+			[this]
+			{
+				if (!plane::services::MQTTService::getInstance().isConnected())
+				{
+					LOG_TRACE("MQTT 未连接，跳过本次固定信息心跳上报。");
+					return;
+				}
+
+				static const auto ip_address { plane::utils::NetworkUtils::getInstance().getDeviceIpv4Address().value_or("N/A") };
+				static const auto plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
+				if (plane_code.empty())
+				{
+					LOG_WARN("无法获取飞机编码 (PlaneCode) ，跳过本次固定信息心跳上报。");
+					return;
+				}
+
+				plane::protocol::MissionInfoPayload info_payload { .FJSN  = plane_code,
+																   .YKQIP = ip_address,
+																   .YSRTSP =
+																	   _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ip_address) };
+
+				this->publishJson(plane::services::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
+
+				LOG_TRACE("已通过心跳事件上报固定信息 (MissionInfoPayload) 。");
 			});
 	}
 

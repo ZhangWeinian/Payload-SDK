@@ -1,5 +1,10 @@
 // raspberry_pi/utils/Logger.h
 
+/*
+* 基于 spdlog 的日志系统封装，提供统一的日志接口。
+* 支持不同日志级别和格式化输出。
+*/
+
 #pragma once
 
 #include <spdlog/sinks/stdout_color_sinks.h>

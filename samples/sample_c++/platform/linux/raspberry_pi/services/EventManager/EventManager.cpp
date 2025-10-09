@@ -19,4 +19,9 @@ namespace plane::services
 	{
 		status_dispatcher_.dispatch(event, data);
 	}
+
+	void EventManager::publishSystemEvent(SystemEvent event, const SystemEventData& data)
+	{
+		system_dispatcher_.dispatch(event, data);
+	}
 } // namespace plane::services

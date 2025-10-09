@@ -4,6 +4,7 @@
 
 #include "dji_typedef.h"
 
+#include <atomic>
 #include <memory>
 
 #include "define.h"
@@ -16,15 +17,16 @@ namespace plane::services
 	{
 	public:
 		static PSDKManager& getInstance(void) noexcept;
-		_NODISCARD bool		initialize(int argc, char* argv[]);
-		void				deinitialize(void);
+		_NODISCARD bool		start(int argc, char* argv[]);
+		void				stop(void);
 
 	private:
 		explicit PSDKManager(void) noexcept;
 		~PSDKManager(void) noexcept;
-		PSDKManager(const PSDKManager&)							   = delete;
-		PSDKManager&				 operator=(const PSDKManager&) = delete;
+		PSDKManager(const PSDKManager&)			   = delete;
+		PSDKManager& operator=(const PSDKManager&) = delete;
 
-		std::unique_ptr<Application> dji_application_ {};
+		_STD unique_ptr<_DJI Application> dji_application_ {};
+		_STD atomic<bool> started_ { false };
 	};
 } // namespace plane::services

@@ -245,6 +245,7 @@ void Application::DjiUser_SetupEnvironment()
 		throw std::runtime_error("File system init error.");
 	}
 
+	// 日志重定向，使用自己的日志系统管理，此处取消大疆的日志系统
 	// returnCode = DjiLogger_AddConsole(&printConsole);
 	// if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	// {
@@ -316,8 +317,6 @@ void Application::DjiUser_ApplicationStart()
 	{
 		throw std::runtime_error("Set alias error.");
 	}
-
-	USER_LOG_INFO("2222222222222222");
 
 #ifdef CONFIG_MODULE_SAMPLE_CAMERA_EMU_ON
 	returnCode = DjiTest_CameraEmuBaseStartService();
@@ -391,8 +390,6 @@ void Application::DjiUser_ApplicationStart()
 	{
 		throw std::runtime_error("Start sdk application error.");
 	}
-
-	USER_LOG_INFO("111111111111");
 
 	USER_LOG_INFO("Application start.");
 }

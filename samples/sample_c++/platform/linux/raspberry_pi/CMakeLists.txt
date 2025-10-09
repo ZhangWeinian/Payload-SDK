@@ -88,6 +88,7 @@ file (
 	"${CMAKE_CURRENT_SOURCE_DIR}/services/**/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/utils/**/*.cpp"
 )
+
 target_sources (
 	${MAIN_TARGET_NAME}
 	PRIVATE ${PSDK_CXX_SAMPLE_SOURCES}

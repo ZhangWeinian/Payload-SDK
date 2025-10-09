@@ -7,6 +7,6 @@ plane:
 features:
     enable_full_psdk: false
     enable_debug_log: true
-    skip_rc: true
+    skip_rc: false
     use_test_kmz: false
     save_kmz_file: true

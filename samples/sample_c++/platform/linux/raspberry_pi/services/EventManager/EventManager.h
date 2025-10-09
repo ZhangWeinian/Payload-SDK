@@ -46,6 +46,7 @@ namespace plane::services
 			DisableVirtualStick,
 			SendNedVelocityCommand
 		};
+
 		using CommandData  = _STD	   variant<_STD monostate, // 用于没有参数的命令
 
 											   // 对应 DroneDataClass 中的结构体
@@ -62,7 +63,6 @@ namespace plane::services
 											   int,						  // 设置控制策略
 											   _STD string				  // 设置视频源
 											   >;
-
 		using CommandQueue = _EVENTPP EventQueue<CommandEvent, void(const CommandEvent&, const CommandData&)>;
 
 		// PSDK 状态事件
@@ -82,19 +82,33 @@ namespace plane::services
 
 		using StatusDispatcher = _EVENTPP EventDispatcher<PSDKEvent, void(const PSDKEventData&)>;
 
+		enum class SystemEvent
+		{
+			HeartbeatTick
+		};
+
+		using SystemEventData  = _STD	   variant<_STD monostate>;
+		using SystemDispatcher = _EVENTPP EventDispatcher<SystemEvent, void(const SystemEventData&)>;
+
 		static EventManager&			  getInstance(void) noexcept;
 
 		void							  publishCommand(CommandEvent event, const CommandData& data);
 		void							  publishStatus(PSDKEvent event, const PSDKEventData& data);
+		void							  publishSystemEvent(SystemEvent event, const SystemEventData& data = _STD monostate {});
 
 		CommandQueue&					  getCommandQueue(void) noexcept
 		{
-			return command_queue_;
+			return this->command_queue_;
 		}
 
 		StatusDispatcher& getStatusDispatcher(void) noexcept
 		{
-			return status_dispatcher_;
+			return this->status_dispatcher_;
+		}
+
+		SystemDispatcher& getSystemDispatcher(void) noexcept
+		{
+			return this->system_dispatcher_;
 		}
 
 	private:
@@ -105,5 +119,6 @@ namespace plane::services
 
 		CommandQueue	 command_queue_ {};
 		StatusDispatcher status_dispatcher_ {};
+		SystemDispatcher system_dispatcher_ {};
 	};
 } // namespace plane::services

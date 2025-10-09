@@ -39,10 +39,25 @@ namespace plane::services
 		return instance;
 	}
 
-	PSDKManager::PSDKManager(void) noexcept	 = default;
-	PSDKManager::~PSDKManager(void) noexcept = default;
+	PSDKManager::PSDKManager(void) noexcept = default;
 
-	bool PSDKManager::initialize(int argc, char* argv[])
+	PSDKManager::~PSDKManager(void) noexcept
+	{
+		try
+		{
+			this->stop();
+		}
+		catch (const _STD exception& e)
+		{
+			LOG_ERROR("PSDKManager 析构异常: {}", e.what());
+		}
+		catch (...)
+		{
+			LOG_ERROR("PSDKManager 析构发生未知异常: <non-std exception>");
+		}
+	}
+
+	bool PSDKManager::start(int argc, char* argv[])
 	{
 		LOG_INFO("--- PSDK 底层服务初始化开始 ---");
 
@@ -60,10 +75,9 @@ namespace plane::services
 			LOG_INFO("PSDK 日志已成功重定向到 spdlog 。");
 		}
 
-		LOG_INFO("正在初始化 DJI PSDK Application...");
 		try
 		{
-			this->dji_application_ = _STD make_unique<Application>(argc, argv);
+			this->dji_application_ = _STD make_unique<_DJI Application>(argc, argv);
 		}
 		catch (const _STD runtime_error& e)
 		{
@@ -72,7 +86,7 @@ namespace plane::services
 		}
 		LOG_INFO("DJI PSDK Application 初始化完成。");
 
-		if (T_DjiReturnCode returnCode { DjiHmsManager_Init() }; returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_Init() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 		{
 			LOG_WARN("HMS 模块初始化失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
 		}
@@ -85,7 +99,7 @@ namespace plane::services
 		}
 		LOG_INFO("PSDK 适配器 setup 完成。");
 
-		if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled() && plane::config::ConfigManager::getInstance().isSkipRC())
+		if (const auto& config { plane::config::ConfigManager::getInstance() }; config.isStandardProceduresEnabled() && config.isSkipRC())
 		{
 			if (_DJI T_DjiReturnCode returnCode {
 					_DJI DjiFlightController_SetRCLostActionEnableStatus(_DJI DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
@@ -103,8 +117,13 @@ namespace plane::services
 		return true;
 	}
 
-	void PSDKManager::deinitialize()
+	void PSDKManager::stop(void)
 	{
+		if (!this->started_.exchange(true))
+		{
+			return;
+		}
+
 		LOG_INFO("--- PSDK 底层服务反初始化开始 ---");
 
 		plane::services::PSDKAdapter::getInstance().cleanup();
