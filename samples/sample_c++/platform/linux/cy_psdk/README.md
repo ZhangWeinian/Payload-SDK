@@ -5,6 +5,15 @@
 目前基础开发模块：manifold2
 后期目标基础模块：raspberry_pi
 
+## 如何替换基础模块？
+
+1. 删除 my_dji 文件夹中的 application 和 hal 文件夹
+2. 拷贝目标模块的 application 和 hal 文件夹到 my_dji 中
+3. 删除拷贝后 application 中的 main.cpp 文件
+4. 按照如下的【开发者信息】和【接口定义】更新基础模块中的信息
+5. 清理之前的构建缓存（如果有），重新编译项目
+6. 可能要适当加强新的 application 和 hal 中的部分代码，以符合当前编译要求（-Werror=unused-result）。
+
 ## 开发者信息
 
 文件：dji_sdk_app_info.h

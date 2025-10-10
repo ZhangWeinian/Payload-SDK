@@ -511,7 +511,10 @@ T_DjiReturnCode Application::DjiUser_LocalWriteFsInit(const char *path)
     }
 
     sprintf(systemCmd, "ln -sfrv %s " DJI_LOG_FOLDER_NAME "/latest.log", filePath);
-    system(systemCmd);
+    int rc = system(systemCmd);
+	if (rc != 0) {
+		return DJI_ERROR_SYSTEM_MODULE_CODE_SYSTEM_ERROR;
+	}
     return djiReturnCode;
 }
 

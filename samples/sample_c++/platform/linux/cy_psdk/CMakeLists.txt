@@ -79,6 +79,7 @@ file (
 	"${CMAKE_CURRENT_SOURCE_DIR}/../common/*.c*"
 	"${CMAKE_CURRENT_SOURCE_DIR}/hal/*.c*"
 	"${CMAKE_CURRENT_SOURCE_DIR}/application/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/workspace/*.cpp"
 )
 file (
 	GLOB_RECURSE
@@ -170,6 +171,7 @@ target_include_directories (
 	${MAIN_TARGET_NAME}
 	PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
 			"${CMAKE_CURRENT_SOURCE_DIR}/application"
+			"${CMAKE_CURRENT_SOURCE_DIR}/workspace"
 			"${CMAKE_CURRENT_SOURCE_DIR}/../common"
 			"${PSDK_INCLUDE_DIR}"
 			"${PSDK_SAMPLES_DIR}/sample_c++/module_sample"
