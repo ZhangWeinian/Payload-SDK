@@ -48,6 +48,8 @@ namespace plane::config
 			}
 
 			this->loaded_ = true;
+
+			LOG_INFO("配置文件 '{}' 加载并验证成功", filepath);
 			return true;
 		}
 		catch (const _YAML Exception& e)

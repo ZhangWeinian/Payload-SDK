@@ -45,9 +45,9 @@ namespace plane::services
 
 	bool TelemetryReporter::start(void)
 	{
-		if (this->psdk_event_remover_ || this->system_event_remover_)
+		if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))
 		{
-			LOG_DEBUG("TelemetryReporter 已经启动，请勿重复调用 start()。");
+			LOG_WARN("TelemetryReporter::start() 被重复调用，已忽略。");
 			return true;
 		}
 
@@ -133,7 +133,7 @@ namespace plane::services
 
 	void TelemetryReporter::stop(void)
 	{
-		if (this->stopped_.exchange(true))
+		if (bool expected { true}; !this->running_.compare_exchange_strong(expected, false))
 		{
 			return;
 		}

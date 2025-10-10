@@ -1,6 +1,6 @@
 # CY PSDK 开发组件信息
 
-## 重要信息
+## 开发模块信息
 
 目前基础开发模块：manifold2
 后期目标基础模块：raspberry_pi
@@ -12,7 +12,7 @@
 3. 删除拷贝后 application 中的 main.cpp 文件
 4. 按照如下的【开发者信息】和【接口定义】更新基础模块中的信息
 5. 清理之前的构建缓存（如果有），重新编译项目
-6. 可能要适当加强新的 application 和 hal 中的部分代码，以符合当前编译要求（-Werror=unused-result）。
+6. 可能要适当加强新的 application 和 hal 中的部分代码以符合当前编译要求（-Werror=unused-result）。
 
 ## 开发者信息
 
@@ -20,6 +20,7 @@
 配置：
 
 ```cpp
+// 仅替换以下关键信息即可
 #define USER_APP_NAME "test"
 #define USER_APP_ID   "168809"
 #define USER_APP_KEY  "fa42c26a9253e8d492b12e0baf83fdb"
@@ -39,6 +40,7 @@
 配置：
 
 ```cpp
+// 仅替换以下关键信息即可
 #define LINUX_UART_DEV1 "/dev/ttyUSB0"
 #define LINUX_UART_DEV2 ""
 ```

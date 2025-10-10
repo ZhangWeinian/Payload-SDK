@@ -1,4 +1,4 @@
-// cy_psdk/my_dji/main.cpp
+// cy_psdk/workspace/main.cpp
 
 #include "dji_demo.h"
 #include "my_dji.h"

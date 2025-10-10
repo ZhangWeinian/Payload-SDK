@@ -21,6 +21,7 @@ namespace plane::services
 		using LogicHandler = _STD	  function<void(const n_json&)>;
 
 		static MqttMessageHandler&	  getInstance(void) noexcept;
+
 		void						  registerHandler(_STD string_view topic, _STD string_view messageType, LogicHandler handler) noexcept;
 		void						  routeMessage(_STD string_view topic, _STD string_view messageType, const n_json& payloadJson) noexcept;
 

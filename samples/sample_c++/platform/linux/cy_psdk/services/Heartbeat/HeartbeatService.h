@@ -26,7 +26,6 @@ namespace plane::services
 		void			  runLoop(_STD_CHRONO milliseconds interval);
 
 		_STD thread		  heartbeat_thread_ {};
-		_STD atomic<bool> run_heartbeat_ { false };
-		_STD atomic<bool> stopped_ { false };
+		_STD atomic<bool> running_ { false };
 	};
 } // namespace plane::services

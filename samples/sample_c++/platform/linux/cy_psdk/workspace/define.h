@@ -1,4 +1,4 @@
-// cy_psdk/my_dji/define.h
+// cy_psdk/workspace/define.h
 
 #pragma once
 

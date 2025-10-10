@@ -15,6 +15,7 @@ namespace plane::config
 	{
 	public:
 		static ConfigManager&  getInstance(void) noexcept;
+
 		_NODISCARD bool		   loadAndCheck(const _STD string& filepath) noexcept;
 		_NODISCARD _STD string getMqttUrl(void) const noexcept;
 		_NODISCARD _STD string getMqttClientId(void) const noexcept;

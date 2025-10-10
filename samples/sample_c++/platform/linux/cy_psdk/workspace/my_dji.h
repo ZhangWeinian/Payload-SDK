@@ -1,4 +1,4 @@
-// cy_psdk/my_dji/my_dji.h
+// cy_psdk/workspace/my_dji.h
 
 #pragma once
 
@@ -52,7 +52,6 @@ namespace plane::my_dji
 			LOG_ERROR("错误: 配置文件加载失败，程序退出。");
 			return;
 		}
-		LOG_INFO("配置文件加载成功。");
 
 		// 根据配置设置日志级别
 		if (plane::config::ConfigManager::getInstance().isLogLevelDebug())
@@ -72,18 +71,16 @@ namespace plane::my_dji
 				LOG_ERROR("PSDK 底层服务初始化失败，程序退出。");
 				return;
 			}
-			LOG_INFO("PSDK 底层服务初始化完毕。");
 
 			if (!plane::services::PSDKAdapter::getInstance().start())
 			{
 				LOG_ERROR("PSDK 适配器运行时线程启动失败！");
 				return;
 			}
-			LOG_INFO("PSDK 适配器运行时线程已启动。");
 		}
 		else
 		{
-			LOG_WARN("未启用标准 PSDK 作业流程 (环境变量 FULL_PSDK=1 未设置)。");
+			LOG_WARN("未启用标准 PSDK 作业流程。");
 		}
 
 		// 尝试启动 MQTT 服务
@@ -92,7 +89,6 @@ namespace plane::my_dji
 			LOG_ERROR("错误: MQTT 服务启动失败，程序退出。");
 			return;
 		}
-		LOG_INFO("MQTT 服务已启动。");
 
 		// 尝试启动心跳服务
 		if (!plane::services::HeartbeatService::getInstance().start())
@@ -107,7 +103,6 @@ namespace plane::my_dji
 			LOG_ERROR("错误: 业务逻辑处理器初始化失败，程序退出。");
 			return;
 		}
-		LOG_INFO("业务逻辑处理器注册完毕。");
 
 		// 尝试启动遥测上报服务
 		if (!plane::services::TelemetryReporter::getInstance().start())
@@ -115,7 +110,6 @@ namespace plane::my_dji
 			LOG_ERROR("错误: 遥测上报服务启动失败，程序退出。");
 			return;
 		}
-		LOG_INFO("遥测上报服务已启动。");
 
 		// 等待一段时间让各服务稳定运行，随后报告应用已启动
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(2));
@@ -133,21 +127,13 @@ namespace plane::my_dji
 		LOG_INFO("收到退出信号, 正在关闭应用程序...");
 
 		plane::services::TelemetryReporter::getInstance().stop();
-		LOG_INFO("遥测上报服务已停止。");
-
 		plane::services::HeartbeatService::getInstance().stop();
-		LOG_INFO("心跳服务已停止。");
-
 		plane::services::MQTTService::getInstance().stop();
-		LOG_INFO("MQTT 服务已停止。");
 
 		if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
 		{
 			plane::services::PSDKManager::getInstance().stop();
-			LOG_INFO("PSDK 底层服务已停止。");
-
 			plane::services::PSDKAdapter::getInstance().stop();
-			LOG_INFO("PSDK 适配器运行时线程已停止。");
 		}
 
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(1));

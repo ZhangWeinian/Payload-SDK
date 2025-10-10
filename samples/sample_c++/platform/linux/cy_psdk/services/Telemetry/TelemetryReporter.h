@@ -45,7 +45,7 @@ namespace plane::services
 		_STD unique_ptr<_EVENTPP ScopedRemover<plane::services::EventManager::SystemDispatcher>> system_event_remover_ {};
 		_STD unique_ptr<_THREADPOOL ThreadPool> event_processing_pool_ {};
 		_STD atomic<bool> run_watchdog_ { false };
-		_STD atomic<bool> stopped_ { false };
+		_STD atomic<bool> running_ { false };
 		_STD atomic<_STD_CHRONO steady_clock::time_point> last_health_ping_time_ {};
 		_STD atomic<_STD size_t> queued_task_count_ { 0 };
 		constexpr static auto	 PSDK_WATCHDOG_CHECK_INTERVAL { _STD_CHRONO seconds(1) };

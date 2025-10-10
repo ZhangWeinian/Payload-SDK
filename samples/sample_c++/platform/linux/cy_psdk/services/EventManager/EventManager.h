@@ -96,7 +96,8 @@ namespace plane::services
 		void							  publishStatus(PSDKEvent event, const PSDKEventData& data);
 		void							  publishSystemEvent(SystemEvent event, const SystemEventData& data = _STD monostate {});
 
-		CommandQueue&					  getCommandQueue(void) noexcept
+		// 获取各事件队列/分发器的引用
+		CommandQueue& getCommandQueue(void) noexcept
 		{
 			return this->command_queue_;
 		}

@@ -57,14 +57,15 @@ namespace plane::services
 			msg_handler.registerHandler(plane::services::TOPIC_VELOCITY_CONTROL,
 										"SDKZ",
 										_STD bind_front(&LogicHandler::handleNedVelocity, this));
+
+			LOG_INFO("MQTT 业务逻辑处理器初始化成功");
+			return true;
 		}
 		catch (const _STD exception& e)
 		{
 			LOG_ERROR("初始化 MQTT 业务逻辑处理器时发生异常: {}", e.what());
 			return false;
 		}
-
-		return true;
 	}
 
 	template<typename PayloadType, typename Func>

@@ -30,14 +30,14 @@ namespace plane::services
 
 	bool HeartbeatService::start(_STD_CHRONO milliseconds interval)
 	{
+		if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))
+		{
+			LOG_WARN("HeartbeatService 已经启动，请勿重复调用 start()。");
+			return true;
+		}
+
 		try
 		{
-			if (this->run_heartbeat_.exchange(true))
-			{
-				LOG_WARN("HeartbeatService 已经启动，请勿重复调用 start()。");
-				return true;
-			}
-
 			this->heartbeat_thread_ = _STD thread(&HeartbeatService::runLoop, this, interval);
 			LOG_INFO("心跳服务已启动，频率: {}ms。", interval.count());
 			return true;
@@ -45,25 +45,20 @@ namespace plane::services
 		catch (const _STD exception& e)
 		{
 			LOG_ERROR("心跳服务启动失败，出现异常: {}", e.what());
-			this->stop();
+			this->running_ = false;
 			return false;
 		}
 		catch (...)
 		{
 			LOG_ERROR("心跳服务启动失败，出现未知异常");
-			this->stop();
+			this->running_ = false;
 			return false;
 		}
 	}
 
 	void HeartbeatService::stop(void)
 	{
-		if (this->stopped_.exchange(true))
-		{
-			return;
-		}
-
-		if (!this->run_heartbeat_.exchange(false))
+		if (bool expected { true }; !this->running_.compare_exchange_strong(expected, false))
 		{
 			return;
 		}
@@ -71,16 +66,19 @@ namespace plane::services
 		if (this->heartbeat_thread_.joinable())
 		{
 			this->heartbeat_thread_.join();
-			LOG_INFO("心跳服务已停止。");
 		}
+		LOG_INFO("心跳服务已停止。");
 	}
 
 	void HeartbeatService::runLoop(_STD_CHRONO milliseconds interval)
 	{
-		while (this->run_heartbeat_)
+		while (this->running_)
 		{
 			plane::services::EventManager::getInstance().publishSystemEvent(plane::services::EventManager::SystemEvent::HeartbeatTick);
-			_STD this_thread::sleep_for(interval);
+			while (this->running_ && _STD_CHRONO steady_clock::now() < (_STD_CHRONO steady_clock::now() + interval))
+			{
+				_STD this_thread::sleep_for(_STD_CHRONO milliseconds(100));
+			}
 		}
 	}
 } // namespace plane::services

@@ -51,13 +51,15 @@ namespace plane::services
 
 	public:
 		static MQTTService& getInstance(void) noexcept;
+
 		_NODISCARD bool		start(void) noexcept;
-		void				stop(void) noexcept;
 		void				restart(void) noexcept;
-		_NODISCARD bool		publish(_STD string_view topic, _STD string_view payload) noexcept;
+		void				stop(void) noexcept;
+
 		_NODISCARD bool		isConnected(void) const noexcept;
+
+		_NODISCARD bool		publish(_STD string_view topic, _STD string_view payload) noexcept;
 		void				subscribe(_STD string_view topic) noexcept;
-		void				setConnected(bool status) noexcept;
 
 		Impl&				getImpl(void) noexcept
 		{
@@ -77,12 +79,15 @@ namespace plane::services
 		MQTTService(const MQTTService&) noexcept			= delete;
 		MQTTService& operator=(const MQTTService&) noexcept = delete;
 
-		void		 senderLoop(void) noexcept;
+		friend class MqttCallback;
 
-		_STD unique_ptr<Impl> impl_ { _STD make_unique<Impl>() };
+		void	   senderLoop(void) noexcept;
+		void	   setConnected(bool status) noexcept;
+
+		_STD mutex mutex_ {};
+		_STD atomic<bool> running_ { false };
 		_STD atomic<bool> connected_ { false };
-		_STD atomic<bool>					stopped_ { false };
-		_STD mutex							mutex_ {};
+		_STD unique_ptr<Impl>				impl_ { _STD make_unique<Impl>() };
 		constexpr static inline _STD size_t MAX_DEQUE_SIZE { 30 };
 		constexpr static inline auto		LOG_THROTTLE_INTERVAL { _STD_CHRONO seconds(5) };
 	};

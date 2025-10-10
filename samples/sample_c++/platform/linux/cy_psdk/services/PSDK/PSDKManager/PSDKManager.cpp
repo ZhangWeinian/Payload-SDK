@@ -59,67 +59,81 @@ namespace plane::services
 
 	bool PSDKManager::start(int argc, char* argv[])
 	{
-		LOG_INFO("--- PSDK 底层服务初始化开始 ---");
-
-		_DJI T_DjiLoggerConsole		console = { 0 };
-		console.consoleLevel				= _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_DEBUG;
-		console.func						= _UNNAMED	   psdkLogRedirectCallback;
-		console.isSupportColor				= true;
-
-		if (_DJI DjiLogger_AddConsole(&console) != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))
 		{
-			LOG_WARN("重定向 PSDK 日志失败。可能会看到重复或格式不一的日志。");
-		}
-		else
-		{
-			LOG_INFO("PSDK 日志已成功重定向到 spdlog 。");
+			LOG_WARN("PSDKManager::start() 被重复调用，已忽略。");
+			return true;
 		}
 
 		try
 		{
-			this->dji_application_ = _STD make_unique<_DJI Application>(argc, argv);
-		}
-		catch (const _STD runtime_error& e)
-		{
-			STD_PRINTLN_ERROR("DJI Application 初始化失败: " << e.what());
-			return false;
-		}
-		LOG_INFO("DJI PSDK Application 初始化完成。");
+			LOG_INFO("--- PSDK 底层服务初始化开始 ---");
 
-		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_Init() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			LOG_WARN("HMS 模块初始化失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-		}
-		LOG_INFO("HMS 模块初始化完成。");
+			_DJI T_DjiLoggerConsole		console = { 0 };
+			console.consoleLevel				= _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_DEBUG;
+			console.func						= _UNNAMED	   psdkLogRedirectCallback;
+			console.isSupportColor				= true;
 
-		if (!plane::services::PSDKAdapter::getInstance().setup())
-		{
-			LOG_ERROR("PSDK 适配器 setup 失败！");
-			return false;
-		}
-		LOG_INFO("PSDK 适配器 setup 完成。");
-
-		if (const auto& config { plane::config::ConfigManager::getInstance() }; config.isStandardProceduresEnabled() && config.isSkipRC())
-		{
-			if (_DJI T_DjiReturnCode returnCode {
-					_DJI DjiFlightController_SetRCLostActionEnableStatus(_DJI DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
-				returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			if (_DJI DjiLogger_AddConsole(&console) != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
-				LOG_WARN("禁用 RC Lost Action 失败，错误: {}, 错误码: {:#08X}", plane::utils::djiReturnCodeToString(returnCode), returnCode);
+				LOG_WARN("重定向 PSDK 日志失败。可能会看到重复或格式不一的日志。");
 			}
 			else
 			{
-				LOG_INFO("已成功发送禁用 RC Lost Action 的指令。");
+				LOG_INFO("PSDK 日志已成功重定向到 spdlog 。");
 			}
-		}
 
-		LOG_INFO("--- PSDK 底层服务初始化成功 ---");
-		return true;
+			this->dji_application_ = _STD make_unique<_DJI Application>(argc, argv);
+
+			LOG_INFO("DJI PSDK Application 初始化完成。");
+
+			if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_Init() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			{
+				LOG_WARN("HMS 模块初始化失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+			}
+			LOG_INFO("HMS 模块初始化完成。");
+
+			if (!plane::services::PSDKAdapter::getInstance().setup())
+			{
+				LOG_ERROR("PSDK 适配器 setup 失败！");
+				return false;
+			}
+			LOG_INFO("PSDK 适配器 setup 完成。");
+
+			if (const auto& config { plane::config::ConfigManager::getInstance() }; config.isStandardProceduresEnabled() && config.isSkipRC())
+			{
+				if (_DJI T_DjiReturnCode returnCode {
+						_DJI DjiFlightController_SetRCLostActionEnableStatus(_DJI DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
+					returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				{
+					LOG_WARN("禁用 RC Lost Action 失败，错误: {}, 错误码: {:#08X}", plane::utils::djiReturnCodeToString(returnCode), returnCode);
+				}
+				else
+				{
+					LOG_INFO("已成功发送禁用 RC Lost Action 的指令。");
+				}
+			}
+
+			LOG_INFO("--- PSDK 底层服务初始化成功 ---");
+			return true;
+		}
+		catch (const _STD exception& e)
+		{
+			LOG_ERROR("PSDK 底层服务初始化异常: {}", e.what());
+			this->stop();
+			return false;
+		}
+		catch (...)
+		{
+			LOG_ERROR("PSDK 底层服务初始化发生未知异常: <non-std exception>");
+			this->stop();
+			return false;
+		}
 	}
 
 	void PSDKManager::stop(void)
 	{
-		if (!this->started_.exchange(true))
+		if (bool expected { true }; !this->running_.compare_exchange_strong(expected, false))
 		{
 			return;
 		}
@@ -129,7 +143,6 @@ namespace plane::services
 		plane::services::PSDKAdapter::getInstance().cleanup();
 		LOG_INFO("PSDK 适配器 cleanup 完成。");
 
-		LOG_INFO("正在反初始化 HMS 模块...");
 		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 		{
 			LOG_WARN("HMS 模块反初始化失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));

@@ -34,97 +34,58 @@ namespace plane::services
 			{
 				// M200 V2 Series
 				case _DJI DJI_AIRCRAFT_TYPE_M200_V2:
-				{
 					return "Matrice 200 V2"sv;
-				}
 				case _DJI DJI_AIRCRAFT_TYPE_M210_V2:
-				{
 					return "Matrice 210 V2"sv;
-				}
 				case _DJI DJI_AIRCRAFT_TYPE_M210RTK_V2:
-				{
 					return "Matrice 210 RTK V2"sv;
-				}
 
 				// M300 / M350 Series
 				case _DJI DJI_AIRCRAFT_TYPE_M300_RTK:
-				{
 					return "Matrice 300 RTK"sv;
-				}
 				case _DJI DJI_AIRCRAFT_TYPE_M350_RTK:
-				{
 					return "Matrice 350 RTK"sv;
-				}
 
 				// M30 Series
 				case _DJI DJI_AIRCRAFT_TYPE_M30:
-				{
 					return "Matrice 30"sv;
-				}
 				case _DJI DJI_AIRCRAFT_TYPE_M30T:
-				{
 					return "Matrice 30T"sv;
-				}
 
 				// Mavic 3 Enterprise Series
 				case _DJI DJI_AIRCRAFT_TYPE_M3E:
-				{
 					return "Mavic 3 Enterprise"sv;
-				}
 				case _DJI DJI_AIRCRAFT_TYPE_M3T:
-				{
 					return "Mavic 3 Thermal"sv;
-				}
 				case _DJI DJI_AIRCRAFT_TYPE_M3TA:
-				{
 					return "Mavic 3 TA"sv;
-				}
 
 				// Matrice 3D / 3TD Series
 				case _DJI DJI_AIRCRAFT_TYPE_M3D:
-				{
 					return "Matrice 3D"sv;
-				}
 				case _DJI DJI_AIRCRAFT_TYPE_M3TD:
-				{
 					return "Matrice 3TD"sv;
-				}
 
 				// Matrice 4 Series
 				case _DJI DJI_AIRCRAFT_TYPE_M4T:
-				{
 					return "Matrice 4T"sv;
-				}
 				case _DJI DJI_AIRCRAFT_TYPE_M4E:
-				{
 					return "Matrice 4E"sv;
-				}
 				case _DJI DJI_AIRCRAFT_TYPE_M4TD:
-				{
 					return "Matrice 4TD"sv;
-				}
 				case _DJI DJI_AIRCRAFT_TYPE_M4D:
-				{
 					return "Matrice 4D"sv;
-				}
 
 				// Matrice 400 Series
 				case _DJI DJI_AIRCRAFT_TYPE_M400:
-				{
 					return "Matrice 400"sv;
-				}
 
 				// Other
 				case _DJI DJI_AIRCRAFT_TYPE_FC30:
-				{
 					return "FlyCart 30"sv;
-				}
-
 				case _DJI DJI_AIRCRAFT_TYPE_UNKNOWN:
 				default:
-				{
 					return "Unknown Aircraft"sv;
-				}
 			}
 		}
 
@@ -133,37 +94,21 @@ namespace plane::services
 			switch (state)
 			{
 				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_IDLE:
-				{
 					return "空闲"sv;
-				}
 				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_PREPARE:
-				{
 					return "准备中"sv;
-				}
 				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_TRANS_MISSION:
-				{
 					return "传输中"sv;
-				}
 				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_MISSION:
-				{
 					return "任务执行中"sv;
-				}
 				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_BREAK:
-				{
 					return "任务中断"sv;
-				}
 				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_RESUME:
-				{
 					return "任务恢复中"sv;
-				}
 				case _DJI DJI_WAYPOINT_V3_MISSION_STATE_RETURN_FIRSTPOINT:
-				{
 					return "返回航线起点"sv;
-				}
 				default:
-				{
 					return "未知状态"sv;
-				}
 			}
 		}
 
@@ -172,21 +117,13 @@ namespace plane::services
 			switch (state)
 			{
 				case _DJI DJI_WAYPOINT_V3_ACTION_STATE_IDLE:
-				{
 					return "空闲"sv;
-				}
 				case _DJI DJI_WAYPOINT_V3_ACTION_STATE_RUNNING:
-				{
 					return "正在执行"sv;
-				}
 				case _DJI DJI_WAYPOINT_V3_ACTION_STATE_FINISHED:
-				{
 					return "执行完成"sv;
-				}
 				default:
-				{
 					return "未知状态"sv;
-				}
 			}
 		}
 
