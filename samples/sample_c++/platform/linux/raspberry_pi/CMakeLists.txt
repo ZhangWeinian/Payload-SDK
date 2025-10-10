@@ -1,283 +1,132 @@
-cmake_minimum_required (VERSION 3.30)
-project (cy_psdk LANGUAGES CXX C)
+cmake_minimum_required(VERSION 3.5)
+project(dji_sdk_demo_on_rpi_cxx CXX)
 
-# 1. 全局配置与辅助函数
-set (CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
+set(CMAKE_C_FLAGS "-pthread -std=gnu99")
+set(CMAKE_CXX_FLAGS "-std=c++11 -pthread")
+set(CMAKE_EXE_LINKER_FLAGS "-pthread")
+set(CMAKE_C_COMPILER "aarch64-linux-gnu-gcc")
+set(CMAKE_CXX_COMPILER "aarch64-linux-gnu-g++")
+add_definitions(-D_GNU_SOURCE)
 
-if(NOT
-   CMAKE_SYSTEM_NAME
-   STREQUAL
-   "Linux"
-)
-	message (FATAL_ERROR "此项目被配置为仅在 Linux 系统上构建")
+if (MEMORY_LEAK_CHECK_ON MATCHES TRUE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=leak")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=leak")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lasan")
+endif ()
+
+if (BUILD_TEST_CASES_ON MATCHES TRUE)
+    set(COMMON_CXX_FLAGS "-std=c++11 -pthread")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage -Wno-deprecated-declarations")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
+endif ()
+
+include_directories(../../../module_sample)
+include_directories(../../../../sample_c/module_sample)
+include_directories(../common)
+include_directories(application)
+
+file(GLOB_RECURSE MODULE_SAMPLE_SRC
+        ../../../module_sample/liveview/*.c*
+        ../../../module_sample/camera_manager/*.c*
+        ../../../module_sample/perception/*.c*
+        ../../../module_sample/gimbal/*.c*
+        ../../../module_sample/flight_controller/*.c*
+        ../../../module_sample/hms_manager/*.c*
+        ../../../../sample_c/module_sample/*.c
+        ../../../module_sample/widget_manager/*.c*
+        )
+file(GLOB_RECURSE MODULE_COMMON_SRC ../common/*.c*)
+file(GLOB_RECURSE MODULE_HAL_SRC hal/*.c*)
+file(GLOB_RECURSE MODULE_APP_SRC application/*.c*)
+
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../common/3rdparty)
+
+link_directories(${CMAKE_CURRENT_LIST_DIR}/../../../../../psdk_lib/lib/aarch64-linux-gnu-gcc)
+link_libraries(${CMAKE_CURRENT_LIST_DIR}/../../../../../psdk_lib/lib/aarch64-linux-gnu-gcc/libpayloadsdk.a -lstdc++)
+
+add_executable(${PROJECT_NAME}
+        ${MODULE_APP_SRC}
+        ${MODULE_SAMPLE_SRC}
+        ${MODULE_COMMON_SRC}
+        ${MODULE_HAL_SRC})
+
+include_directories(${CMAKE_CURRENT_LIST_DIR}/../../../../../psdk_lib/include)
+
+if (BUILD_CROSS_COMPILE MATCHES TRUE)
+    # Try to see if user has OpenCV installed
+    # if yes, default callback will display the image
+    find_package(OpenCV QUIET)
+    if (OpenCV_FOUND)
+        message("\n${PROJECT_NAME}...")
+        message(STATUS "Found OpenCV installed in the system, will use it to display image in AdvancedSensing APIs")
+        message(STATUS " - Includes: ${OpenCV_INCLUDE_DIRS}")
+        message(STATUS " - Libraries: ${OpenCV_LIBRARIES}")
+        add_definitions(-DOPEN_CV_INSTALLED)
+    else ()
+        message(STATUS "Did not find OpenCV in the system, image data is inside RecvContainer as raw data")
+    endif ()
+
+    find_package(FFMPEG REQUIRED)
+    if (FFMPEG_FOUND)
+        message(STATUS "Found FFMPEG installed in the system")
+        message(STATUS " - Includes: ${FFMPEG_INCLUDE_DIR}")
+        message(STATUS " - Libraries: ${FFMPEG_LIBRARIES}")
+
+        EXECUTE_PROCESS(COMMAND ffmpeg -version
+                OUTPUT_VARIABLE ffmpeg_version_output
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                )
+        string(REGEX MATCH "version.*Copyright" ffmpeg_version_line ${ffmpeg_version_output})
+        string(REGEX MATCH " .* " ffmpeg_version ${ffmpeg_version_line})
+        string(REGEX MATCH "^ 5.*$" ffmpeg_major_version ${ffmpeg_version})
+
+        if (HEAD${ffmpeg_major_version} STREQUAL "HEAD")
+            message(STATUS " - Version: ${ffmpeg_version}")
+        else ()
+            message(FATAL_ERROR " - Not support FFMPEG version: ${ffmpeg_major_version}, please install 4.x.x instead.")
+        endif ()
+
+        target_link_libraries(${PROJECT_NAME} ${FFMPEG_LIBRARIES})
+        include_directories(${FFMPEG_INCLUDE_DIR})
+        add_definitions(-DFFMPEG_INSTALLED)
+    else ()
+        message(STATUS "Cannot Find FFMPEG")
+    endif (FFMPEG_FOUND)
+
+    find_package(OPUS REQUIRED)
+    if (OPUS_FOUND)
+        message(STATUS "Found OPUS installed in the system")
+        message(STATUS " - Includes: ${OPUS_INCLUDE_DIR}")
+        message(STATUS " - Libraries: ${OPUS_LIBRARY}")
+
+        add_definitions(-DOPUS_INSTALLED)
+        target_link_libraries(${PROJECT_NAME} /usr/local/lib/libopus.a)
+    else ()
+        message(STATUS "Cannot Find OPUS")
+    endif (OPUS_FOUND)
+
+    find_package(LIBUSB REQUIRED)
+    if (LIBUSB_FOUND)
+        message(STATUS "Found LIBUSB installed in the system")
+        message(STATUS " - Includes: ${LIBUSB_INCLUDE_DIR}")
+        message(STATUS " - Libraries: ${LIBUSB_LIBRARY}")
+
+        add_definitions(-DLIBUSB_INSTALLED)
+        target_link_libraries(${PROJECT_NAME} usb-1.0)
+    else ()
+        message(STATUS "Cannot Find LIBUSB")
+    endif (LIBUSB_FOUND)
 endif()
 
-function(pretty_message TITLE CONTENT)
-	message (STATUS "===========================================")
-	message (STATUS "${TITLE}:")
-	if(CONTENT)
-		message (STATUS "${CONTENT}")
-	endif()
-	message (STATUS "===========================================")
-endfunction()
+if (NOT EXECUTABLE_OUTPUT_PATH)
+    set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
+endif ()
 
-include (CTest)
-if(BUILD_TESTING)
-	message (STATUS "测试构建已启用 (BUILD_TESTING=ON)")
-	# 在这里添加测试
-	# add_subdirectory(tests)
-endif()
+target_link_libraries(${PROJECT_NAME} m dl)
 
-if(NOT CMAKE_BUILD_TYPE)
-	set (
-		CMAKE_BUILD_TYPE
-		Debug
-		CACHE STRING "构建类型"
-	)
-endif()
+target_include_directories(${PROJECT_NAME} PRIVATE ${OpenCV_INCLUDE_DIRS})
+if (OpenCV_FOUND)
+    target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+endif ()
 
-# 2. 项目信息与版本控制
-find_package (Git QUIET)
-if(GIT_FOUND)
-	execute_process (
-		COMMAND ${GIT_EXECUTABLE} rev-parse --short=7 HEAD
-		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-		OUTPUT_VARIABLE GIT_COMMIT_HASH
-		OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
-	)
-endif()
-if(NOT GIT_COMMIT_HASH)
-	set (GIT_COMMIT_HASH "unknown")
-endif()
-
-# 3. 路径与变量定义
-set (MAIN_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
-set (PSDK_LIB_DIR "${CMAKE_SOURCE_DIR}/psdk_lib/lib")
-set (PSDK_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/psdk_lib/include")
-set (EXTERNAL_INSTALL_DIR "${CMAKE_SOURCE_DIR}/external_libs/install")
-set (PSDK_SAMPLES_DIR "${CMAKE_SOURCE_DIR}/samples")
-
-# 4. 编译器与构建选项
-if(MEMORY_LEAK_CHECK_ON)
-	add_compile_options (-fsanitize=leak)
-	set (LEAK_SANITIZER_LINK_LIBS asan)
-else()
-	set (LEAK_SANITIZER_LINK_LIBS "")
-endif()
-
-# 5. 主要目标定义与源文件
-set (MAIN_TARGET_NAME "${PROJECT_NAME}")
-add_executable (${MAIN_TARGET_NAME})
-
-set_target_properties (${MAIN_TARGET_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${MAIN_OUTPUT_PATH}")
-
-file (GLOB_RECURSE PSDK_CXX_SAMPLE_SOURCES "${PSDK_SAMPLES_DIR}/sample_c++/module_sample/*.cpp")
-file (GLOB_RECURSE PSDK_C_SAMPLE_SOURCES "${PSDK_SAMPLES_DIR}/sample_c/module_sample/*.c")
-file (
-	GLOB_RECURSE
-	PLATFORM_SOURCES
-	"${CMAKE_CURRENT_SOURCE_DIR}/../common/*.c*"
-	"${CMAKE_CURRENT_SOURCE_DIR}/hal/*.c*"
-	"${CMAKE_CURRENT_SOURCE_DIR}/application/*.cpp"
-)
-file (
-	GLOB_RECURSE
-	CUSTOM_SOURCES
-	"${CMAKE_CURRENT_SOURCE_DIR}/config/*.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/protocol/*.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/services/**/*.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/utils/**/*.cpp"
-)
-
-target_sources (
-	${MAIN_TARGET_NAME}
-	PRIVATE ${PSDK_CXX_SAMPLE_SOURCES}
-			${PSDK_C_SAMPLE_SOURCES}
-			${PLATFORM_SOURCES}
-			${CUSTOM_SOURCES}
-)
-
-# 6. 平台检测
-execute_process (
-	COMMAND uname -m
-	OUTPUT_VARIABLE DEVICE_SYSTEM_ID
-	OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-if(DEVICE_SYSTEM_ID STREQUAL "x86_64")
-	set (TOOLCHAIN_NAME x86_64-linux-gnu-gcc)
-	set (PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_x86_64=1")
-elseif(DEVICE_SYSTEM_ID STREQUAL "aarch64")
-	set (TOOLCHAIN_NAME aarch64-linux-gnu-gcc)
-	set (PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_AARCH64=1")
-else()
-	message (FATAL_ERROR "错误！检测到不支持的平台：${DEVICE_SYSTEM_ID}")
-endif()
-
-# 7. 依赖查找与配置
-set (Boost_USE_STATIC_LIBS ON)
-set (Boost_NO_BOOST_CMAKE ON)
-set (Boost_NO_SYSTEM_PATHS ON)
-find_package (Boost 1.80.0 REQUIRED COMPONENTS system thread)
-find_package (Threads REQUIRED)
-find_package (yalantinglibs REQUIRED)
-find_package (OpenSSL REQUIRED)
-
-list (APPEND CMAKE_PREFIX_PATH "${EXTERNAL_INSTALL_DIR}")
-set (
-	STATIC_LIBS
-	pugixml
-	yaml-cpp
-	fmt
-	spdlog
-	zip
-	opus
-	usb-1.0
-	hv_static
-	paho-mqtt3a
-	paho-mqtt3as
-	paho-mqtt3c
-	paho-mqtt3cs
-	paho-mqttpp3
-	absl_synchronization
-	absl_time
-	absl_strings
-	absl_hash
-	absl_raw_hash_set
-	absl_int128
-	absl_base
-	absl_throw_delegate
-)
-
-foreach(LIB_NAME IN LISTS STATIC_LIBS)
-	find_library (
-		${LIB_NAME}_LIBRARY
-		NAMES ${LIB_NAME}
-		PATHS "${EXTERNAL_INSTALL_DIR}/lib"
-		NO_DEFAULT_PATH REQUIRED
-	)
-	list (APPEND ALL_STATIC_LIBS ${${LIB_NAME}_LIBRARY})
-
-	if(${LIB_NAME}_LIBRARY)
-		message (STATUS "[✓] 找到静态库: ${LIB_NAME} -> ${${LIB_NAME}_LIBRARY}")
-	else()
-		message (FATAL_ERROR "[✗] 找不到必需的静态库: ${LIB_NAME}")
-	endif()
-endforeach()
-
-# 8. 目标属性配置 (Includes, Defines, Links)
-target_include_directories (
-	${MAIN_TARGET_NAME}
-	PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
-			"${CMAKE_CURRENT_SOURCE_DIR}/application"
-			"${CMAKE_CURRENT_SOURCE_DIR}/../common"
-			"${PSDK_INCLUDE_DIR}"
-			"${PSDK_SAMPLES_DIR}/sample_c++/module_sample"
-			"${PSDK_SAMPLES_DIR}/sample_c/module_sample"
-			"${EXTERNAL_INSTALL_DIR}/include"
-			"${EXTERNAL_INSTALL_DIR}/include/absl"
-			"${EXTERNAL_INSTALL_DIR}/include/asio"
-			"${EXTERNAL_INSTALL_DIR}/include/CLI11"
-			"${EXTERNAL_INSTALL_DIR}/include/eventpp"
-			"${EXTERNAL_INSTALL_DIR}/include/httplib"
-			"${EXTERNAL_INSTALL_DIR}/include/libusb-1.0"
-			"${EXTERNAL_INSTALL_DIR}/include/range-v3"
-)
-
-target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE _GNU_SOURCE ${PLATFORM_ARCH_DEFINE})
-
-target_link_libraries (
-	${MAIN_TARGET_NAME}
-	PRIVATE "${PSDK_LIB_DIR}/${TOOLCHAIN_NAME}/libpayloadsdk.a"
-			Boost::system
-			Boost::thread
-			Threads::Threads
-			yalantinglibs::yalantinglibs
-			OpenSSL::SSL
-			OpenSSL::Crypto
-			${ALL_STATIC_LIBS}
-			udev
-			m
-			dl
-			bz2
-			zstd
-			z
-			lzma
-			${LEAK_SANITIZER_LINK_LIBS}
-)
-
-if(TARGET deps)
-	add_dependencies (${MAIN_TARGET_NAME} deps)
-endif()
-
-# 9. 构建时文件复制
-set (CONFIG_SOURCE_FILE "${CMAKE_SOURCE_DIR}/config/config.yml")
-set (RUN_SCRIPT_SOURCE_FILE "${CMAKE_SOURCE_DIR}/bash/run.sh")
-set (SYSTEM_LIBS_SOURCE_DIR "${CMAKE_SOURCE_DIR}/system_libs")
-
-set (CONFIG_DEST_FILE "${MAIN_OUTPUT_PATH}/config.yml")
-set (RUN_SCRIPT_DEST_FILE "${MAIN_OUTPUT_PATH}/run.sh")
-set (LIBS_DEST_DIR "${MAIN_OUTPUT_PATH}/libs")
-
-add_custom_command (
-	OUTPUT ${CONFIG_DEST_FILE}
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CONFIG_SOURCE_FILE} ${CONFIG_DEST_FILE}
-	DEPENDS ${CONFIG_SOURCE_FILE}
-	COMMENT "正在复制配置文件..."
-)
-add_custom_command (
-	OUTPUT ${RUN_SCRIPT_DEST_FILE}
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_SCRIPT_SOURCE_FILE} ${RUN_SCRIPT_DEST_FILE}
-	DEPENDS ${RUN_SCRIPT_SOURCE_FILE}
-	COMMENT "正在复制运行脚本..."
-)
-add_custom_target (copy_runtime_files ALL DEPENDS ${CONFIG_DEST_FILE} ${RUN_SCRIPT_DEST_FILE})
-
-add_custom_command (
-	TARGET copy_runtime_files
-	POST_BUILD
-	COMMAND chmod +x ${RUN_SCRIPT_DEST_FILE}
-)
-
-add_dependencies (${MAIN_TARGET_NAME} copy_runtime_files)
-
-if(EXISTS ${SYSTEM_LIBS_SOURCE_DIR})
-	file (
-		GLOB LIB_FILES
-		LIST_DIRECTORIES false
-		"${SYSTEM_LIBS_SOURCE_DIR}/*"
-	)
-	add_custom_target (
-		copy_system_libs
-		SOURCES ${LIB_FILES}
-		COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBS_DEST_DIR}"
-		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${SYSTEM_LIBS_SOURCE_DIR} "${LIBS_DEST_DIR}"
-		COMMENT "正在复制系统库..."
-	)
-	add_dependencies (${MAIN_TARGET_NAME} copy_system_libs)
-endif()
-
-# 10. 构建后处理 (打包与同步)
-set (SYNC_LATEST_SCRIPT "${CMAKE_SOURCE_DIR}/bash/sync_latest.sh")
-set (LATEST_BUILD_DIR "${CMAKE_SOURCE_DIR}/build/bin")
-
-add_custom_command (
-	TARGET ${MAIN_TARGET_NAME}
-	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E echo ""
-	COMMAND ${CMAKE_COMMAND} -E echo "--- [同步到 build/bin] ---"
-	COMMAND /bin/bash ${SYNC_LATEST_SCRIPT} "${MAIN_OUTPUT_PATH}" "${LATEST_BUILD_DIR}"
-	COMMENT "执行构建后处理"
-	VERBATIM
-)
-
-# 11. 显示最终构建信息
-pretty_message (
-	"构建配置"
-	" 主目标名称: ${MAIN_TARGET_NAME}
-	构建类型: ${CMAKE_BUILD_TYPE}
-	平台架构: ${DEVICE_SYSTEM_ID}
-	Git提交哈希: ${GIT_COMMIT_HASH}
-	当前构建输出: ${MAIN_OUTPUT_PATH}
-	最新产物目录: ${LATEST_BUILD_DIR}"
-)

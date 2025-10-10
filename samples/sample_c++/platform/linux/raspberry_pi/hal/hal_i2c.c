@@ -24,22 +24,21 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "hal_i2c.h"
+#include <string.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
-#include <sys/ioctl.h>
-#include <fcntl.h>
-#include <string.h>
-#include <unistd.h>
 
 /* Private constants ---------------------------------------------------------*/
-#define I2C_DEVICE_RESET_TIME_US	(25 * 1000)
-#define I2C_DEVICE_RESET_GPIO_NUM	(4)
-#define DJI_SYSTEM_CMD_STR_MAX_SIZE (64)
+#define I2C_DEVICE_RESET_TIME_US       (25 * 1000)
+#define I2C_DEVICE_RESET_GPIO_NUM      (4)
+#define DJI_SYSTEM_CMD_STR_MAX_SIZE    (64)
 
 /* Private types -------------------------------------------------------------*/
-typedef struct
-{
-	int32_t i2cFd;
+typedef struct {
+    int32_t i2cFd;
 } T_I2cHandleStruct;
 
 /* Private values -------------------------------------------------------------*/
@@ -48,137 +47,130 @@ typedef struct
 static void HalI2c_ResetDevice(void);
 
 /* Exported functions definition ---------------------------------------------*/
-T_DjiReturnCode HalI2c_Init(T_DjiHalI2cConfig i2cConfig, T_DjiI2cHandle* i2cHandle)
+T_DjiReturnCode HalI2c_Init(T_DjiHalI2cConfig i2cConfig, T_DjiI2cHandle *i2cHandle)
 {
-	T_I2cHandleStruct* i2CHandleStruct = NULL;
+    T_I2cHandleStruct *i2CHandleStruct = NULL;
 
-	// attention: suggest reset the i2c device before init it.
-	HalI2c_ResetDevice();
+    //attention: suggest reset the i2c device before init it.
+    HalI2c_ResetDevice();
 
-	i2CHandleStruct = malloc(sizeof(T_I2cHandleStruct));
-	if (i2CHandleStruct == NULL)
-	{
-		return DJI_ERROR_SYSTEM_MODULE_CODE_MEMORY_ALLOC_FAILED;
-	}
+    i2CHandleStruct = malloc(sizeof(T_I2cHandleStruct));
+    if (i2CHandleStruct == NULL) {
+        return DJI_ERROR_SYSTEM_MODULE_CODE_MEMORY_ALLOC_FAILED;
+    }
 
-	i2CHandleStruct->i2cFd = open(LINUX_I2C_DEV1, O_RDWR);
-	if (i2CHandleStruct->i2cFd < 0)
-	{
-		printf("Open i2c device failed, fd: %d\r\n", i2CHandleStruct->i2cFd);
-		return -1;
-	}
+    i2CHandleStruct->i2cFd = open(LINUX_I2C_DEV1, O_RDWR);
+    if (i2CHandleStruct->i2cFd < 0) {
+        printf("Open i2c device failed, fd: %d\r\n", i2CHandleStruct->i2cFd);
+        return -1;
+    }
 
-	*i2cHandle = i2CHandleStruct;
+    *i2cHandle = i2CHandleStruct;
 
-	return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+    return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
 T_DjiReturnCode HalI2c_DeInit(T_DjiI2cHandle i2cHandle)
 {
-	T_I2cHandleStruct* i2CHandleStruct = (T_I2cHandleStruct*)i2cHandle;
+    T_I2cHandleStruct *i2CHandleStruct = (T_I2cHandleStruct *) i2cHandle;
 
-	close(i2CHandleStruct->i2cFd);
-	free(i2CHandleStruct);
+    close(i2CHandleStruct->i2cFd);
+    free(i2CHandleStruct);
 
-	return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+    return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
-T_DjiReturnCode HalI2c_WriteData(T_DjiI2cHandle i2cHandle, uint16_t devAddress, const uint8_t* buf, uint32_t len, uint32_t* realLen)
+T_DjiReturnCode HalI2c_WriteData(T_DjiI2cHandle i2cHandle, uint16_t devAddress, const uint8_t *buf,
+                                 uint32_t len, uint32_t *realLen)
 {
-	struct i2c_rdwr_ioctl_data data;
-	struct i2c_msg			   messages;
-	int32_t					   ret			   = 0;
-	T_I2cHandleStruct*		   i2CHandleStruct = (T_I2cHandleStruct*)i2cHandle;
+    struct i2c_rdwr_ioctl_data data;
+    struct i2c_msg messages;
+    int32_t ret = 0;
+    T_I2cHandleStruct *i2CHandleStruct = (T_I2cHandleStruct *) i2cHandle;
 
-	messages.addr							   = devAddress;
-	messages.flags							   = 0;
-	messages.len							   = len;
-	messages.buf							   = (uint8_t*)buf;
+    messages.addr = devAddress;
+    messages.flags = 0;
+    messages.len = len;
+    messages.buf = (uint8_t *) buf;
 
-	data.msgs								   = &messages;
-	data.nmsgs								   = 1;
+    data.msgs = &messages;
+    data.nmsgs = 1;
 
-	ret										   = ioctl(i2CHandleStruct->i2cFd, I2C_RDWR, &data);
-	if (ret < 0)
-	{
-		*realLen = 0;
-		return DJI_ERROR_SYSTEM_MODULE_CODE_SYSTEM_ERROR;
-	}
+    ret = ioctl(i2CHandleStruct->i2cFd, I2C_RDWR, &data);
+    if (ret < 0) {
+        *realLen = 0;
+        return DJI_ERROR_SYSTEM_MODULE_CODE_SYSTEM_ERROR;
+    }
 
-	*realLen = ret;
+    *realLen = ret;
 
-	return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+    return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
-T_DjiReturnCode HalI2c_ReadData(T_DjiI2cHandle i2cHandle, uint16_t devAddress, uint8_t* buf, uint32_t len, uint32_t* realLen)
+T_DjiReturnCode HalI2c_ReadData(T_DjiI2cHandle i2cHandle, uint16_t devAddress, uint8_t *buf,
+                                uint32_t len, uint32_t *realLen)
 {
-	struct i2c_rdwr_ioctl_data data;
-	struct i2c_msg			   messages;
-	int32_t					   ret			   = 0;
-	T_I2cHandleStruct*		   i2CHandleStruct = (T_I2cHandleStruct*)i2cHandle;
+    struct i2c_rdwr_ioctl_data data;
+    struct i2c_msg messages;
+    int32_t ret = 0;
+    T_I2cHandleStruct *i2CHandleStruct = (T_I2cHandleStruct *) i2cHandle;
 
-	messages.addr							   = devAddress;
-	messages.flags							   = I2C_M_RD;
-	messages.len							   = len;
-	messages.buf							   = buf;
+    messages.addr = devAddress;
+    messages.flags = I2C_M_RD;
+    messages.len = len;
+    messages.buf = buf;
 
-	data.msgs								   = &messages;
-	data.nmsgs								   = 1;
+    data.msgs = &messages;
+    data.nmsgs = 1;
 
-	ret										   = ioctl(i2CHandleStruct->i2cFd, I2C_RDWR, &data);
-	if (ret < 0)
-	{
-		*realLen = 0;
-		return DJI_ERROR_SYSTEM_MODULE_CODE_SYSTEM_ERROR;
-	}
+    ret = ioctl(i2CHandleStruct->i2cFd, I2C_RDWR, &data);
+    if (ret < 0) {
+        *realLen = 0;
+        return DJI_ERROR_SYSTEM_MODULE_CODE_SYSTEM_ERROR;
+    }
 
-	*realLen = ret;
+    *realLen = ret;
 
-	return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+    return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
 /* Private functions definition-----------------------------------------------*/
 static void HalI2c_ResetDevice(void)
 {
-	char	systemCmd[DJI_SYSTEM_CMD_STR_MAX_SIZE] = { 0 };
-	int32_t ret;
+    char systemCmd[DJI_SYSTEM_CMD_STR_MAX_SIZE] = {0};
+    int32_t ret;
 
-	sprintf(systemCmd, "echo %d > /sys/class/gpio/export", I2C_DEVICE_RESET_GPIO_NUM);
-	ret = system(systemCmd);
-	if (ret != 0)
-	{
-		printf("Export reset gpio failed, %d\r\n", ret);
-	}
+    sprintf(systemCmd, "echo %d > /sys/class/gpio/export", I2C_DEVICE_RESET_GPIO_NUM);
+    ret = system(systemCmd);
+    if (ret != 0) {
+        printf("Export reset gpio failed, %d\r\n", ret);
+    }
 
-	sprintf(systemCmd, "echo out > /sys/class/gpio/gpio4/direction");
-	ret = system(systemCmd);
-	if (ret != 0)
-	{
-		printf("Set gpio direction failed, %d\r\n", ret);
-	}
+    sprintf(systemCmd, "echo out > /sys/class/gpio/gpio4/direction");
+    ret = system(systemCmd);
+    if (ret != 0) {
+        printf("Set gpio direction failed, %d\r\n", ret);
+    }
 
-	sprintf(systemCmd, "echo 0 > /sys/class/gpio/gpio4/value");
-	ret = system(systemCmd);
-	if (ret != 0)
-	{
-		printf("Set gpio value failed, %d\r\n", ret);
-	}
+    sprintf(systemCmd, "echo 0 > /sys/class/gpio/gpio4/value");
+    ret = system(systemCmd);
+    if (ret != 0) {
+        printf("Set gpio value failed, %d\r\n", ret);
+    }
 
-	usleep(I2C_DEVICE_RESET_TIME_US);
+    usleep(I2C_DEVICE_RESET_TIME_US);
 
-	sprintf(systemCmd, "echo 1 > /sys/class/gpio/gpio4/value");
-	ret = system(systemCmd);
-	if (ret != 0)
-	{
-		printf("Set gpio value failed, %d\r\n", ret);
-	}
+    sprintf(systemCmd, "echo 1 > /sys/class/gpio/gpio4/value");
+    ret = system(systemCmd);
+    if (ret != 0) {
+        printf("Set gpio value failed, %d\r\n", ret);
+    }
 
-	sprintf(systemCmd, "echo %d > /sys/class/gpio/unexport", I2C_DEVICE_RESET_GPIO_NUM);
-	ret = system(systemCmd);
-	if (ret != 0)
-	{
-		printf("Unexport reset gpio failed, %d\r\n", ret);
-	}
+    sprintf(systemCmd, "echo %d > /sys/class/gpio/unexport", I2C_DEVICE_RESET_GPIO_NUM);
+    ret = system(systemCmd);
+    if (ret != 0) {
+        printf("Unexport reset gpio failed, %d\r\n", ret);
+    }
 }
 
 /****************** (C) COPYRIGHT DJI Innovations *****END OF FILE****/

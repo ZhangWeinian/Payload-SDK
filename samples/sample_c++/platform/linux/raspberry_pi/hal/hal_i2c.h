@@ -25,30 +25,31 @@
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef HAL_I2C_H
-	#define HAL_I2C_H
+#define HAL_I2C_H
 
-	/* Includes ------------------------------------------------------------------*/
-	#include "dji_platform.h"
+/* Includes ------------------------------------------------------------------*/
+#include "dji_platform.h"
 
-	#ifdef __cplusplus
-extern "C"
-{
-	#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-	/* Exported constants --------------------------------------------------------*/
-	#define LINUX_I2C_DEV1 "/dev/i2c-1"
+/* Exported constants --------------------------------------------------------*/
+#define LINUX_I2C_DEV1        "/dev/i2c-1"
 
-	/* Exported types ------------------------------------------------------------*/
+/* Exported types ------------------------------------------------------------*/
 
-	/* Exported functions --------------------------------------------------------*/
-	T_DjiReturnCode HalI2c_Init(T_DjiHalI2cConfig i2cConfig, T_DjiI2cHandle* i2cHandle);
-	T_DjiReturnCode HalI2c_DeInit(T_DjiI2cHandle i2cHandle);
-	T_DjiReturnCode HalI2c_WriteData(T_DjiI2cHandle i2cHandle, uint16_t devAddress, const uint8_t* buf, uint32_t len, uint32_t* realLen);
-	T_DjiReturnCode HalI2c_ReadData(T_DjiI2cHandle i2cHandle, uint16_t devAddress, uint8_t* buf, uint32_t len, uint32_t* realLen);
+/* Exported functions --------------------------------------------------------*/
+T_DjiReturnCode HalI2c_Init(T_DjiHalI2cConfig i2cConfig, T_DjiI2cHandle *i2cHandle);
+T_DjiReturnCode HalI2c_DeInit(T_DjiI2cHandle i2cHandle);
+T_DjiReturnCode HalI2c_WriteData(T_DjiI2cHandle i2cHandle, uint16_t devAddress,
+                                 const uint8_t *buf, uint32_t len, uint32_t *realLen);
+T_DjiReturnCode HalI2c_ReadData(T_DjiI2cHandle i2cHandle, uint16_t devAddress,
+                                uint8_t *buf, uint32_t len, uint32_t *realLen);
 
-	#ifdef __cplusplus
+#ifdef __cplusplus
 }
-	#endif
+#endif
 
 #endif // HAL_I2C_H
 /************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/

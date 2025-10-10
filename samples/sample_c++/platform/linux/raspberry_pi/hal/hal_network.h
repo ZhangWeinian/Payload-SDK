@@ -25,50 +25,49 @@
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef HAL_NETWORK_H
-	#define HAL_NETWORK_H
+#define HAL_NETWORK_H
 
-	/* Includes ------------------------------------------------------------------*/
-	#include "dji_platform.h"
+/* Includes ------------------------------------------------------------------*/
+#include "dji_platform.h"
 
-	#ifdef __cplusplus
-extern "C"
-{
-	#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-	/* Exported constants --------------------------------------------------------*/
+/* Exported constants --------------------------------------------------------*/
 
-	/** @attention  User can config network card name here, if your device is not MF2C/G, please comment below and add your
-	 * NIC name micro define as #define 'LINUX_NETWORK_DEV   "your NIC name"'.
-	 */
-	#ifdef PLATFORM_ARCH_x86_64
-		#define LINUX_NETWORK_DEV "enp0s31f6"
-	#else
-		#define LINUX_NETWORK_DEV "pi4br0"
-	#endif
-	/**
-	 * @attention
-	 */
+/** @attention  User can config network card name here, if your device is not MF2C/G, please comment below and add your
+ * NIC name micro define as #define 'LINUX_NETWORK_DEV   "your NIC name"'.
+ */
+#ifdef PLATFORM_ARCH_x86_64
+#define LINUX_NETWORK_DEV           "enp0s31f6"
+#else
+#define LINUX_NETWORK_DEV           "pi4br0"
+#endif
+/**
+ * @attention
+ */
 
-	#ifdef PLATFORM_ARCH_x86_64
-		#define USB_NET_ADAPTER_VID (0x0B95)
-		#define USB_NET_ADAPTER_PID (0x1790)
-	#else
-		#define USB_NET_ADAPTER_VID (0x0955)
-		#define USB_NET_ADAPTER_PID (0x7020)
-	#endif
+#ifdef PLATFORM_ARCH_x86_64
+#define USB_NET_ADAPTER_VID                   (0x0B95)
+#define USB_NET_ADAPTER_PID                   (0x1790)
+#else
+#define USB_NET_ADAPTER_VID                   (0x0955)
+#define USB_NET_ADAPTER_PID                   (0x7020)
+#endif
 
-	#define LINUX_CMD_STR_MAX_SIZE (128)
+#define LINUX_CMD_STR_MAX_SIZE      (128)
 
-	/* Exported types ------------------------------------------------------------*/
+/* Exported types ------------------------------------------------------------*/
 
-	/* Exported functions --------------------------------------------------------*/
-	T_DjiReturnCode HalNetWork_Init(const char* ipAddr, const char* netMask, T_DjiNetworkHandle* halObj);
-	T_DjiReturnCode HalNetWork_DeInit(T_DjiNetworkHandle halObj);
-	T_DjiReturnCode HalNetWork_GetDeviceInfo(T_DjiHalNetworkDeviceInfo* deviceInfo);
+/* Exported functions --------------------------------------------------------*/
+T_DjiReturnCode HalNetWork_Init(const char *ipAddr, const char *netMask, T_DjiNetworkHandle *halObj);
+T_DjiReturnCode HalNetWork_DeInit(T_DjiNetworkHandle halObj);
+T_DjiReturnCode HalNetWork_GetDeviceInfo(T_DjiHalNetworkDeviceInfo *deviceInfo);
 
-	#ifdef __cplusplus
+#ifdef __cplusplus
 }
-	#endif
+#endif
 
 #endif // HAL_NETWORK_H
-	   /************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/
+/************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/

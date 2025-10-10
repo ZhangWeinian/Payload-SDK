@@ -46,7 +46,7 @@ message (STATUS "当前选择的目标平台：${TARGET_PLATFORM}")
 
 if(TARGET_PLATFORM STREQUAL "LINUX")
 	add_compile_definitions (SYSTEM_ARCH_LINUX)
-	add_subdirectory (samples/sample_c++/platform/linux/raspberry_pi)
+	add_subdirectory (samples/sample_c++/platform/linux/cy_psdk)
 elseif(TARGET_PLATFORM STREQUAL "RTOS")
 	add_compile_definitions (SYSTEM_ARCH_RTOS)
 else()
