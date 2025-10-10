@@ -1,5 +1,10 @@
 # CY PSDK 开发组件信息
 
+## 重要信息
+
+目前基础开发模块：manifold2
+后期目标基础模块：raspberry_pi
+
 ## 开发者信息
 
 文件：dji_sdk_app_info.h

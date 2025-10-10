@@ -25,44 +25,43 @@
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef APPLICATION_H
-	#define APPLICATION_H
+#define APPLICATION_H
 
-	/* Includes ------------------------------------------------------------------*/
-	#include "dji_core.h"
-	#include "dji_typedef.h"
-	#include <fstream>
-	#include <iostream>
+/* Includes ------------------------------------------------------------------*/
+#include <iostream>
+#include <fstream>
+#include "dji_typedef.h"
+#include "dji_core.h"
 
-	#ifdef __cplusplus
-extern "C"
-{
-	#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-	/* Exported constants --------------------------------------------------------*/
+/* Exported constants --------------------------------------------------------*/
 
-	/* Exported types ------------------------------------------------------------*/
-	using namespace std;
+/* Exported types ------------------------------------------------------------*/
+using namespace std;
 
-	class Application
-	{
-	public:
-		Application(int argc, char** argv);
-		~Application();
+class Application {
+public:
+    Application(int argc, char **argv);
+    ~Application();
 
-	private:
-		static void			   DjiUser_SetupEnvironment();
-		static void			   DjiUser_ApplicationStart();
-		static T_DjiReturnCode DjiUser_PrintConsole(const uint8_t* data, uint16_t dataLen);
-		static T_DjiReturnCode DjiUser_LocalWrite(const uint8_t* data, uint16_t dataLen);
-		static T_DjiReturnCode DjiUser_FillInUserInfo(T_DjiUserInfo* userInfo);
-		static T_DjiReturnCode DjiUser_LocalWriteFsInit(const char* path);
-	};
+private:
+    static void DjiUser_SetupEnvironment(int argc, char **argv);
+    static void DjiUser_ApplicationStart();
+    static T_DjiReturnCode DjiUser_PrintConsole(const uint8_t *data, uint16_t dataLen);
+    static T_DjiReturnCode DjiUser_LocalWrite(const uint8_t *data, uint16_t dataLen);
+    static T_DjiReturnCode DjiUser_FillInUserInfo(T_DjiUserInfo *userInfo);
+    static T_DjiReturnCode DjiUser_LocalWriteFsInit(const char *path);
+};
 
-	/* Exported functions --------------------------------------------------------*/
+/* Exported functions --------------------------------------------------------*/
 
-	#ifdef __cplusplus
+
+#ifdef __cplusplus
 }
-	#endif
+#endif
 
 #endif // APPLICATION_H
 /************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/

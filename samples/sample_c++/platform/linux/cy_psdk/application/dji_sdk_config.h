@@ -25,47 +25,42 @@
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef DJI_SDK_CONFIG_H
-	#define DJI_SDK_CONFIG_H
+#define DJI_SDK_CONFIG_H
 
 /* Includes ------------------------------------------------------------------*/
 
-	#ifdef __cplusplus
-extern "C"
-{
-	#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-	/* Exported constants --------------------------------------------------------*/
-	#define DJI_USE_ONLY_UART				 (0)
-	#define DJI_USE_UART_AND_USB_BULK_DEVICE (1)
-	#define DJI_USE_UART_AND_NETWORK_DEVICE	 (2)
-	#define DJI_USE_ONLY_USB_BULK_DEVICE	 (3)
-	#define DJI_USE_ONLY_NETWORK_DEVICE		 (4)
+/* Exported constants --------------------------------------------------------*/
+#define DJI_USE_ONLY_UART                  (0)
+#define DJI_USE_UART_AND_USB_BULK_DEVICE   (1)
+#define DJI_USE_UART_AND_NETWORK_DEVICE    (2)
 
-	/*!< Attention: Select your hardware connection mode here.
-	 * */
-	#define CONFIG_HARDWARE_CONNECTION				  DJI_USE_ONLY_UART
+/*!< Attention: Select your hardware connection mode here.
+* */
+#define CONFIG_HARDWARE_CONNECTION         DJI_USE_ONLY_UART
 
-	#define CONFIG_MODULE_SAMPLE_CAMERA_EMU_ON		  true
+/*!< Attention: Select the sample you want to run here.
+* */
+#define CONFIG_MODULE_SAMPLE_GIMBAL_EMU_ON
 
-	#define CONFIG_MODULE_SAMPLE_CAMERA_MEDIA_ON	  true
+#define CONFIG_MODULE_SAMPLE_WIDGET_ON
 
-	#define CONFIG_MODULE_SAMPLE_GIMBAL_EMU_ON		  true
+#define CONFIG_MODULE_SAMPLE_WIDGET_SPEAKER_ON
 
-	#define CONFIG_MODULE_SAMPLE_WIDGET_ON			  true
+#define CONFIG_MODULE_SAMPLE_POWER_MANAGEMENT_ON
 
-	#define CONFIG_MODULE_SAMPLE_WIDGET_SPEAKER_ON	  true
+#define CONFIG_MODULE_SAMPLE_DATA_TRANSMISSION_ON
 
-	#define CONFIG_MODULE_SAMPLE_POWER_MANAGEMENT_ON  true
+/* Exported types ------------------------------------------------------------*/
 
-	#define CONFIG_MODULE_SAMPLE_DATA_TRANSMISSION_ON true
+/* Exported functions --------------------------------------------------------*/
 
-	/* Exported types ------------------------------------------------------------*/
-
-	/* Exported functions --------------------------------------------------------*/
-
-	#ifdef __cplusplus
+#ifdef __cplusplus
 }
-	#endif
+#endif
 
 #endif // DJI_SDK_CONFIG_H
 /************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/
