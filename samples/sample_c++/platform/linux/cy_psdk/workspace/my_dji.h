@@ -36,6 +36,7 @@ namespace plane::my_dji
 
 	void runMyApplication(int argc, char* argv[])
 	{
+		// 注册信号处理函数
 		_CSTD signal(SIGINT, _UNNAMED signalHandler);
 		_CSTD signal(SIGTERM, _UNNAMED signalHandler);
 
@@ -74,7 +75,7 @@ namespace plane::my_dji
 
 			if (!plane::services::PSDKAdapter::getInstance().start())
 			{
-				LOG_ERROR("PSDK 适配器运行时线程启动失败！");
+				LOG_ERROR("PSDK 适配器运行时启动失败！");
 				return;
 			}
 		}

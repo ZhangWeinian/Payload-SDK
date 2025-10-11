@@ -43,6 +43,8 @@ namespace plane::utils
 			return instance;
 		}
 
+		// 初始化日志系统，设置日志输出级别（默认 info 级别）
+		// 该函数必须在任何日志调用之前执行
 		void init(_SPDLOG level::level_enum console_level = _SPDLOG level::info) noexcept
 		{
 			if (this->logger_)
@@ -66,6 +68,11 @@ namespace plane::utils
 			}
 		}
 
+		// 记录日志，支持格式化参数
+		// loc: 日志调用位置（文件名、行号、函数名）
+		// lvl: 日志级别
+		// fmt: 格式化字符串
+		// args: 格式化参数
 		template<typename... Args>
 		void log(_SPDLOG source_loc loc, _SPDLOG level::level_enum lvl, _SPDLOG format_string_t<Args...> fmt, Args&&... args) const noexcept
 		{

@@ -128,7 +128,7 @@ namespace plane::services
 
 		_STD string url { plane::config::ConfigManager::getInstance().getMqttUrl() };
 		_STD string cid { plane::config::ConfigManager::getInstance().getMqttClientId() };
-		LOG_INFO("使用配置文件中的 MQTT 设置启动服务。服务器=[{}], 客户端ID=[{}]", url, cid);
+		LOG_INFO("MQTT 服务配置: 服务器={}, 客户端ID={}", url, cid);
 
 		try
 		{

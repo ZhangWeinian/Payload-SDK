@@ -16,7 +16,7 @@
 
 ## 开发者信息
 
-文件：dji_sdk_app_info.h
+文件：application/dji_sdk_app_info.h
 配置：
 
 ```cpp

@@ -169,7 +169,7 @@ namespace plane::utils
 		{
 			static _STD_FS path kmzStorageDir { "/tmp/kmz" };
 
-			static bool			is_initialized = []()
+			static bool			is_initialized = []
 			{
 				try
 				{

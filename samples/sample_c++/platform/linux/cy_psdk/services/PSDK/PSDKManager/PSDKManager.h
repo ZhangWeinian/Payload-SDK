@@ -17,8 +17,12 @@ namespace plane::services
 	{
 	public:
 		static PSDKManager& getInstance(void) noexcept;
-		_NODISCARD bool		start(int argc, char* argv[]);
-		void				stop(void);
+
+		// 启动 PSDK 底层服务，这是一个幂等的操作
+		_NODISCARD bool start(int argc, char* argv[]);
+
+		// 停止 PSDK 底层服务，这是一个幂等的操作
+		void stop(void);
 
 	private:
 		explicit PSDKManager(void) noexcept;

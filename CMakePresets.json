@@ -64,15 +64,15 @@
 			}
 		},
 		{
-			"name": "relwithdebinfo",
+			"name": "redbi",
 			"displayName": "RelWithDebInfo",
 			"description": "带有调试符号的优化构建",
 			"inherits": "base",
-			"binaryDir": "${sourceDir}/build/relwithdebinfo",
-			"installDir": "${sourceDir}/install/relwithdebinfo",
+			"binaryDir": "${sourceDir}/build/redbi",
+			"installDir": "${sourceDir}/install/redbi",
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "RelWithDebInfo",
-				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/relwithdebinfo",
+				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/redbi",
 				"CMAKE_CXX_FLAGS_RELWITHDEBINFO": "${vendor.psdk.common-warnings} -O2 -g -DNDEBUG",
 				"CMAKE_C_FLAGS_RELWITHDEBINFO": "${vendor.psdk.common-warnings} -O2 -g -DNDEBUG",
 				"BUILD_TESTING": "ON"
@@ -93,9 +93,9 @@
 			"cleanFirst": true
 		},
 		{
-			"name": "relwithdebinfo",
+			"name": "redbi",
 			"displayName": "Build RelWithDebInfo",
-			"configurePreset": "relwithdebinfo"
+			"configurePreset": "redbi"
 		},
 		{
 			"name": "install-debug",

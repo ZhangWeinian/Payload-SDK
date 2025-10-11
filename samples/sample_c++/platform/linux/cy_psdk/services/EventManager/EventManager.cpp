@@ -12,16 +12,16 @@ namespace plane::services
 
 	void EventManager::publishCommand(CommandEvent event, const CommandData& data)
 	{
-		command_queue_.enqueue(event, data);
+		this->command_queue_.enqueue(event, data);
 	}
 
 	void EventManager::publishStatus(PSDKEvent event, const PSDKEventData& data)
 	{
-		status_dispatcher_.dispatch(event, data);
+		this->status_dispatcher_.dispatch(event, data);
 	}
 
 	void EventManager::publishSystemEvent(SystemEvent event, const SystemEventData& data)
 	{
-		system_dispatcher_.dispatch(event, data);
+		this->system_dispatcher_.dispatch(event, data);
 	}
 } // namespace plane::services

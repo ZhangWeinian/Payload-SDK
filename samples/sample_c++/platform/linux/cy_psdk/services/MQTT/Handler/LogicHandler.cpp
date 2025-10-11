@@ -163,7 +163,7 @@ namespace plane::services
 	{
 		this->handleCommand<_STD monostate>("返航",
 											payloadJson,
-											[&]()
+											[&]
 											{
 												LOG_INFO("[MQTT] 收到【返航】指令");
 												plane::services::FlyManager::getInstance().goHome();
@@ -174,7 +174,7 @@ namespace plane::services
 	{
 		this->handleCommand<_STD monostate>("悬停",
 											payloadJson,
-											[&]()
+											[&]
 											{
 												LOG_INFO("[MQTT] 收到【悬停】指令");
 												plane::services::FlyManager::getInstance().hover();
@@ -185,7 +185,7 @@ namespace plane::services
 	{
 		this->handleCommand<_STD monostate>("降落",
 											payloadJson,
-											[&]()
+											[&]
 											{
 												LOG_INFO("[MQTT] 收到【降落】指令");
 												plane::services::FlyManager::getInstance().land();
