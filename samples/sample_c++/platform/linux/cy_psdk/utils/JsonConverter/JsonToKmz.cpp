@@ -153,16 +153,17 @@ namespace plane::utils
 				return data;
 			}
 
-			explicit operator bool() const noexcept
+			explicit operator bool(void) const noexcept
 			{
 				return this->m_archive != nullptr;
 			}
 
 		private:
-			zip_t*		  m_archive { nullptr };
-			zip_source_t* m_source { nullptr };
-			InMemoryZipArchive(const InMemoryZipArchive&)			 = delete;
-			InMemoryZipArchive& operator=(const InMemoryZipArchive&) = delete;
+			explicit InMemoryZipArchive(const InMemoryZipArchive&) noexcept		= delete;
+			InMemoryZipArchive&	  operator=(const InMemoryZipArchive&) noexcept = delete;
+
+			_LIBZIP zip_t*		  m_archive { nullptr };
+			_LIBZIP zip_source_t* m_source { nullptr };
 		};
 
 		inline _STD optional<_STD_FS path> getKmzStorageDir(void) noexcept

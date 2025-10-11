@@ -47,15 +47,17 @@ namespace plane::my_dji
 		LOG_INFO("                        应用程序启动中");
 		LOG_INFO("==========================================================");
 
+		auto& config { plane::config::ConfigManager::getInstance() };
+
 		// 尝试加载配置文件
-		if (!plane::config::ConfigManager::getInstance().loadAndCheck("config.yml"))
+		if (!config.loadAndCheck("config.yml"))
 		{
 			LOG_ERROR("错误: 配置文件加载失败，程序退出。");
 			return;
 		}
 
 		// 根据配置设置日志级别
-		if (plane::config::ConfigManager::getInstance().isLogLevelDebug())
+		if (config.isLogLevelDebug())
 		{
 			_SPDLOG set_level(_SPDLOG level::trace);
 		}
@@ -65,7 +67,7 @@ namespace plane::my_dji
 		}
 
 		// 如果启用标准 PSDK 作业流程，则初始化 PSDKManager 和 PSDKAdapter
-		if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
+		if (config.isStandardProceduresEnabled())
 		{
 			if (!plane::services::PSDKManager::getInstance().start(argc, argv))
 			{
@@ -131,7 +133,7 @@ namespace plane::my_dji
 		plane::services::HeartbeatService::getInstance().stop();
 		plane::services::MQTTService::getInstance().stop();
 
-		if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
+		if (config.isStandardProceduresEnabled())
 		{
 			plane::services::PSDKManager::getInstance().stop();
 			plane::services::PSDKAdapter::getInstance().stop();

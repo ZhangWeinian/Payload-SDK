@@ -52,16 +52,22 @@ namespace plane::services
 	public:
 		static MQTTService& getInstance(void) noexcept;
 
-		_NODISCARD bool		start(void) noexcept;
-		void				restart(void) noexcept;
-		void				stop(void) noexcept;
+		// 启动后端 MQTT 客户端并连接到服务器，这是一个幂等的操作
+		_NODISCARD bool start(void) noexcept;
 
-		_NODISCARD bool		isConnected(void) const noexcept;
+		// 停止 MQTT 客户端并断开连接，这是一个幂等的操作
+		void stop(void) noexcept;
 
-		_NODISCARD bool		publish(_STD string_view topic, _STD string_view payload) noexcept;
-		void				subscribe(_STD string_view topic) noexcept;
+		// 重启 MQTT 客户端（等同于 stop() 后紧接着 start()）
+		void restart(void) noexcept;
 
-		Impl&				getImpl(void) noexcept
+		// 检查当前是否已连接到 MQTT 服务器
+		_NODISCARD bool isConnected(void) const noexcept;
+
+		_NODISCARD bool publish(_STD string_view topic, _STD string_view payload) noexcept;
+		void			subscribe(_STD string_view topic) noexcept;
+
+		Impl&			getImpl(void) noexcept
 		{
 			assert(impl_ != nullptr && "Impl pointer is null");
 			return *impl_;
