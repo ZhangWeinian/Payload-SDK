@@ -16,6 +16,8 @@
 #include <variant>
 #include <vector>
 
+#include "define.h"
+
 namespace plane::services
 {
 	class EventManager
@@ -25,26 +27,26 @@ namespace plane::services
 		enum class CommandEvent
 		{
 			// 任务指令
-			Takeoff,
-			GoHome,
-			Hover,
-			Land,
-			WaypointMission,
-			StopWaypointMission,
-			PauseWaypointMission,
-			ResumeWaypointMission,
-			SetControlStrategy,
-			FlyCircleAroundPoint,
+			Takeoff,			   // 起飞
+			GoHome,				   // 返航
+			Hover,				   // 悬停
+			Land,				   // 降落
+			WaypointMission,	   // 航点任务
+			StopWaypointMission,   // 停止航点任务
+			PauseWaypointMission,  // 暂停航点任务
+			ResumeWaypointMission, // 恢复航点任务
+			FlyCircleAroundPoint,  // 环绕飞行
 
 			// 即时指令
-			RotateGimbal,
-			RotateGimbalBySpeed,
-			SetCameraZoomFactor,
-			SetCameraStreamSource,
-			SendRawStickData,
-			EnableVirtualStick,
-			DisableVirtualStick,
-			SendNedVelocityCommand
+			RotateGimbal,			// 云台控制
+			RotateGimbalBySpeed,	// 云台速度控制
+			SetCameraZoomFactor,	// 相机变焦
+			SetControlStrategy,		// 设置云台控制策略
+			SetCameraStreamSource,	// 切换视频源
+			SendRawStickData,		// 发送虚拟摇杆数据
+			EnableVirtualStick,		// 启用虚拟摇杆
+			DisableVirtualStick,	// 禁用虚拟摇杆
+			SendNedVelocityCommand, // 发送 NED 速度指令
 		};
 
 		using CommandData  = _STD	   variant<_STD monostate, // 用于没有参数的命令
@@ -59,10 +61,9 @@ namespace plane::services
 											   plane::protocol::NedVelocityPayload,		// 发送 NED 速度指令
 
 											   // 对于没有直接对应结构体的，使用基本类型
-											   _STD vector<_STD uint8_t>, // KMZ 数据
-											   int,						  // 设置控制策略
-											   _STD string				  // 设置视频源
-											   >;
+											   _DEFINED _STD vector<_STD uint8_t>,
+											   _DEFINED int,
+											   _DEFINED _STD string>;
 		using CommandQueue = _EVENTPP EventQueue<CommandEvent, void(const CommandEvent&, const CommandData&)>;
 
 		// PSDK 状态事件

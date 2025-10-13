@@ -113,10 +113,10 @@ namespace plane::services
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> landAsync(void);
 
 		// 异步上传并执行 KMZ 格式的航线任务
-		_NODISCARD _STD future<_DJI T_DjiReturnCode> waypointAsync(const _STD vector<_STD uint8_t>& kmzData);
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> waypointAsync(const _DEFINED _KMZ_DATA_TYPE& kmzData);
 
 		// 异步设置飞行控制策略
-		_NODISCARD _STD future<_DJI T_DjiReturnCode> setControlStrategyAsync(int strategyCode);
+		_NODISCARD _STD future<_DJI T_DjiReturnCode> setControlStrategyAsync(const _DEFINED _PTZ_CONTROL_STRATEGY_TYPE& strategyCode);
 
 		// 异步执行环绕指定地理点飞行的任务
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> selfPOIAsync(const plane::protocol::CircleFlyPayload& circleParams);
@@ -128,7 +128,7 @@ namespace plane::services
 		void setCameraZoomFactor(const plane::protocol::ZoomControlPayload& payload);
 
 		// 切换相机视频流源（如主相机、热成像等）
-		void setCameraStreamSource(const _STD string& source);
+		void setCameraStreamSource(const _DEFINED _VIDEO_SOURCE_TYPE& source);
 
 		// 发送原始虚拟摇杆数据（用于精细控制飞行器运动）
 		void sendRawStickData(const plane::protocol::StickDataPayload& payload);

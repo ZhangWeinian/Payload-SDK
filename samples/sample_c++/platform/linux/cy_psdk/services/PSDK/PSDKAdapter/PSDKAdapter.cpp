@@ -127,24 +127,24 @@ namespace plane::services
 			}
 		}
 
-		const auto hmsErrorCodeMap = []
+		_STD string_view getHmsErrorDescription(_STD uint32_t errorCode)
 		{
-			_STD unordered_map<uint32_t, const char*> map {};
-			const auto								  size { sizeof(hmsErrCodeInfoTbl) / sizeof(_DJI T_DjiHmsErrCodeInfo) };
-			for (_STD size_t i { 0 }; i < size; ++i)
+			static const auto& hmsErrorCodeMap = []
 			{
-				map[hmsErrCodeInfoTbl[i].alarmId] = hmsErrCodeInfoTbl[i].groundAlarmInfo;
-			}
-			return map;
-		}();
+				_STD unordered_map<_STD uint32_t, const char*> map {};
+				const auto&									   size { sizeof(_DJI hmsErrCodeInfoTbl) / sizeof(_DJI T_DjiHmsErrCodeInfo) };
+				for (_STD size_t i { 0 }; i < size; ++i)
+				{
+					map[_DJI hmsErrCodeInfoTbl[i].alarmId] = _DJI hmsErrCodeInfoTbl[i].groundAlarmInfo;
+				}
+				return map;
+			}();
 
-		_STD string_view getHmsErrorDescription(uint32_t errorCode)
-		{
-			if (auto it { hmsErrorCodeMap.find(errorCode) }; it != hmsErrorCodeMap.end())
+			if (const auto& it { hmsErrorCodeMap.find(errorCode) }; it != hmsErrorCodeMap.end())
 			{
 				return it->second;
 			}
-			return "Unknown HMS Error";
+			return "Unknown HMS Error"sv;
 		}
 	} // namespace
 
@@ -205,8 +205,8 @@ namespace plane::services
 
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::Land, &PSDKAdapter::landAsync);
 
-			this->registerCommandListener<_STD vector<_STD uint8_t>>(plane::services::EventManager::CommandEvent::WaypointMission,
-																	 &PSDKAdapter::waypointAsync);
+			this->registerCommandListener<_DEFINED _KMZ_DATA_TYPE>(plane::services::EventManager::CommandEvent::WaypointMission,
+																   &PSDKAdapter::waypointAsync);
 
 			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::StopWaypointMission,
 														  &PSDKAdapter::stopWaypointMissionAsync);
@@ -281,18 +281,18 @@ namespace plane::services
 		{
 			if (State expected_state { State::STOPPED }; !this->state_.compare_exchange_strong(expected_state, State::STARTING))
 			{
-				LOG_WARN("PSDKAdapter::start() 被调用，但服务当前状态为 '{}' (非 STOPPED)，已忽略。", static_cast<int>(state_.load()));
-				return state_ == State::RUNNING;
+				LOG_WARN("PSDKAdapter::start() 被调用，但服务当前状态为 '{}' (非 STOPPED)，已忽略。", static_cast<int>(this->state_.load()));
+				return this->state_ == State::RUNNING;
 			}
 
-			if (!run_acquisition_.exchange(true))
+			if (!this->run_acquisition_.exchange(true))
 			{
-				acquisition_thread_ = _STD thread(&PSDKAdapter::acquisitionLoop, this);
+				this->acquisition_thread_ = _STD thread(&PSDKAdapter::acquisitionLoop, this);
 			}
 
-			if (!run_command_processing_.exchange(true))
+			if (!this->run_command_processing_.exchange(true))
 			{
-				command_processing_thread_ = _STD thread(&PSDKAdapter::commandProcessingLoop, this);
+				this->command_processing_thread_ = _STD thread(&PSDKAdapter::commandProcessingLoop, this);
 			}
 
 			this->state_ = State::RUNNING;
@@ -328,7 +328,7 @@ namespace plane::services
 			{
 				this->command_processing_thread_.join();
 			}
-			state_ = State::STOPPED;
+			this->state_ = State::STOPPED;
 			return false;
 		}
 	}
@@ -476,21 +476,21 @@ namespace plane::services
 	{
 		const double sinr_cosp { 2 * (q.q0 * q.q1 + q.q2 * q.q3) };
 		const double cosr_cosp { 1 - 2 * (q.q1 * q.q1 + q.q2 * q.q2) };
-		roll = _STD	 atan2(sinr_cosp, cosr_cosp) * 180.0 / MATH_PI;
+		roll = _STD atan2(sinr_cosp, cosr_cosp) * 180.0 / _DEFINED MATH_PI;
 
-		const double sinp { 2 * (q.q0 * q.q2 - q.q3 * q.q1) };
+		const double											   sinp { 2 * (q.q0 * q.q2 - q.q3 * q.q1) };
 		if (_STD abs(sinp) >= 1)
 		{
-			pitch = _STD copysign(MATH_PI / 2, sinp) * 180.0 / MATH_PI;
+			pitch = _STD copysign(_DEFINED MATH_PI / 2, sinp) * 180.0 / _DEFINED MATH_PI;
 		}
 		else
 		{
-			pitch = _STD asin(sinp) * 180.0 / MATH_PI;
+			pitch = _STD asin(sinp) * 180.0 / _DEFINED MATH_PI;
 		}
 
 		const double siny_cosp { 2 * (q.q0 * q.q3 + q.q1 * q.q2) };
 		const double cosy_cosp { 1 - 2 * (q.q2 * q.q2 + q.q3 * q.q3) };
-		yaw = _STD	 atan2(siny_cosp, cosy_cosp) * 180.0 / MATH_PI;
+		yaw = _STD atan2(siny_cosp, cosy_cosp) * 180.0 / _DEFINED MATH_PI;
 	}
 
 	void PSDKAdapter::acquisitionLoop(void) noexcept
@@ -509,9 +509,9 @@ namespace plane::services
 															  &timestamp) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
 				current_payload.SXZT.GPSSXSL = pos.visibleSatelliteNumber;
-				current_payload.DQJD		 = pos.longitude * RAD_TO_DEG; // 当前经度 (度)
-				current_payload.DQWD		 = pos.latitude * RAD_TO_DEG;  // 当前纬度 (度)
-				current_payload.JDGD		 = pos.altitude;			   // 海拔高度
+				current_payload.DQJD		 = pos.longitude * _DEFINED RAD_TO_DEG; // 当前经度 (度)
+				current_payload.DQWD		 = pos.latitude * _DEFINED	RAD_TO_DEG; // 当前纬度 (度)
+				current_payload.JDGD		 = pos.altitude;						// 海拔高度
 				// TODO: 根据 pos.gnssFixStatus 和 pos.gpsFixStatus 来填充 SFSL 和 SXDW
 			}
 
@@ -744,7 +744,7 @@ namespace plane::services
 			[action, name = _STD string(commandName)](void) -> _DJI T_DjiReturnCode
 			{
 				LOG_INFO("线程池任务：发送航线动作 '{}'...", name);
-				_DJI T_DjiReturnCode returnCode = DjiWaypointV3_Action(action);
+				_DJI T_DjiReturnCode returnCode { _DJI DjiWaypointV3_Action(action) };
 				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 				{
 					LOG_ERROR("发送航线动作 '{}' 失败, 错误: {}", name, plane::utils::djiReturnCodeToString(returnCode));
@@ -760,7 +760,7 @@ namespace plane::services
 			[](void) -> _DJI T_DjiReturnCode
 			{
 				LOG_INFO("线程池任务：执行起飞...");
-				_DJI T_DjiReturnCode returnCode = _DJI DjiFlightController_StartTakeoff();
+				_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_StartTakeoff() };
 				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 				{
 					LOG_ERROR("起飞失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
@@ -814,7 +814,7 @@ namespace plane::services
 			});
 	}
 
-	_STD future<T_DjiReturnCode> PSDKAdapter::waypointAsync(const _STD vector<_STD uint8_t>& kmzData)
+	_STD future<T_DjiReturnCode> PSDKAdapter::waypointAsync(const _DEFINED _KMZ_DATA_TYPE& kmzData)
 	{
 		return this->command_pool_->enqueue(
 			[this, data = kmzData](void) -> _DJI T_DjiReturnCode
@@ -912,7 +912,7 @@ namespace plane::services
 			});
 	}
 
-	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::setControlStrategyAsync(int strategyCode)
+	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::setControlStrategyAsync(const _DEFINED _PTZ_CONTROL_STRATEGY_TYPE& strategyCode)
 	{
 		return this->executePsdkCommandAsync(
 			[strategyCode](void) -> _DJI T_DjiReturnCode
@@ -968,7 +968,7 @@ namespace plane::services
 			});
 	}
 
-	void PSDKAdapter::setCameraStreamSource(const _STD string& source)
+	void PSDKAdapter::setCameraStreamSource(const _DEFINED _VIDEO_SOURCE_TYPE& source)
 	{
 		(void)this->executePsdkCommandAsync(
 			[source](void) -> _DJI T_DjiReturnCode
@@ -1018,8 +1018,6 @@ namespace plane::services
 			});
 	}
 
-	// ... 在这里实现所有其他 PSDK API 的封装 ...
-
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::stopWaypointMissionAsync(void)
 	{
 		return this->executeWaypointActionAsync(_DJI DJI_WAYPOINT_V3_ACTION_STOP);
@@ -1035,12 +1033,15 @@ namespace plane::services
 		return this->executeWaypointActionAsync(_DJI DJI_WAYPOINT_V3_ACTION_RESUME);
 	}
 
+	// ... 在这里实现所有其他 PSDK API 的封装 ...
+
 	void PSDKAdapter::commandProcessingLoop(void)
 	{
 		LOG_INFO("PSDK 命令处理线程已进入循环。");
+		auto& eventManager { plane::services::EventManager::getInstance() };
 		while (this->run_command_processing_)
 		{
-			auto& queue { plane::services::EventManager::getInstance().getCommandQueue() };
+			auto& queue { eventManager.getCommandQueue() };
 			queue.wait();
 			if (!this->run_command_processing_)
 			{

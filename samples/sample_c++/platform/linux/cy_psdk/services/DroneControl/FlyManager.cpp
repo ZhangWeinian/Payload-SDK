@@ -23,7 +23,7 @@ namespace plane::services
 		// TODO: 调用 PSDK 的单点飞行 API
 	}
 
-	void FlyManager::waypoint(const _STD vector<_STD uint8_t>& kmzData)
+	void FlyManager::waypoint(const _DEFINED _KMZ_DATA_TYPE& kmzData)
 	{
 		LOG_INFO("FlyManager: 发送【航线任务】命令事件 (从内存数据 {} 字节)...", kmzData.size());
 		if (kmzData.empty())
@@ -52,7 +52,7 @@ namespace plane::services
 			return;
 		}
 
-		_STD vector<_STD uint8_t> kmzData { _STD istreambuf_iterator<char>(fileStream), _STD istreambuf_iterator<char>() };
+		_DEFINED _KMZ_DATA_TYPE kmzData { _STD istreambuf_iterator<char>(fileStream), _STD istreambuf_iterator<char>() };
 
 		this->waypoint(kmzData);
 	}
@@ -82,7 +82,7 @@ namespace plane::services
 		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::Land, _STD monostate {});
 	}
 
-	void FlyManager::setControlStrategy(int strategyCode)
+	void FlyManager::setControlStrategy(const _DEFINED _PTZ_CONTROL_STRATEGY_TYPE& strategyCode)
 	{
 		LOG_INFO("FlyManager: 发送【设置云台控制策略】命令事件...");
 		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::SetControlStrategy,

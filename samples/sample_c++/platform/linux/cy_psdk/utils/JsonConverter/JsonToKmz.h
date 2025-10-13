@@ -14,7 +14,7 @@ namespace plane::utils
 	class JsonToKmzConverter
 	{
 	public:
-		_NODISCARD static _STD		  optional<_STD vector<_STD uint8_t>>
+		_NODISCARD static _STD		  optional<_DEFINED _KMZ_DATA_TYPE>
 									  convertWaypointsToKmz(const _STD vector<plane::protocol::Waypoint>& waypoints,
 															const plane::protocol::WaypointPayload&		  missionInfo = {}) noexcept;
 

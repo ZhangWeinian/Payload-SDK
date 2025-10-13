@@ -80,6 +80,23 @@
 	#define _CLI ::CLI::
 #endif
 
-constexpr inline auto	MATH_PI { 3.14159265358979323846 };
-constexpr inline auto	EARTH_RADIUS_M { 6'371'000.0 };
-constexpr inline double RAD_TO_DEG { 180.0 / MATH_PI };
+#ifndef _DEFINED
+	#define _DEFINED
+
+	#if __has_include(<vector>) && !defined(_KMZ_DATA_TYPE)
+		#define _KMZ_DATA_TYPE _STD vector<_STD uint8_t>
+	#endif
+
+	#ifndef _PTZ_CONTROL_STRATEGY_TYPE
+		#define _PTZ_CONTROL_STRATEGY_TYPE int
+	#endif
+
+	#if __has_include(<string>) && !defined(_VIDEO_SOURCE_TYPE)
+		#define _VIDEO_SOURCE_TYPE _STD string
+	#endif
+
+constexpr inline auto MATH_PI { 3.14159265358979323846 };
+constexpr inline auto EARTH_RADIUS_M { 6'371'000.0 };
+constexpr inline auto RAD_TO_DEG { 180.0 / _DEFINED MATH_PI };
+
+#endif
