@@ -16,26 +16,26 @@ FILE_TO_DELETE = os.path.join("application", "main.cpp")
 APP_INFO_PATH = os.path.join("application", "dji_sdk_app_info.h")
 APP_INFO_BEFORE = textwrap.dedent(
     """\
-    #define USER_APP_NAME               "your_app_name"
-    #define USER_APP_ID                 "your_app_id"
-    #define USER_APP_KEY                "your_app_key"
-    #define USER_APP_LICENSE            "your_app_license"
-    #define USER_DEVELOPER_ACCOUNT      "your_developer_account"
-    #define USER_BAUD_RATE              "460800"
+#define USER_APP_NAME               "your_app_name"
+#define USER_APP_ID                 "your_app_id"
+#define USER_APP_KEY                "your_app_key"
+#define USER_APP_LICENSE            "your_app_license"
+#define USER_DEVELOPER_ACCOUNT      "your_developer_account"
+#define USER_BAUD_RATE              "460800"
 """
 )
 APP_INFO_AFTER = textwrap.dedent(
     """\
-    #define USER_APP_NAME               "test"
-    #define USER_APP_ID                 "168809"
-    #define USER_APP_KEY                "fa42c26a9253e8d492b12e0baf83fdb"
-    #define USER_APP_LICENSE                                                                                                         \\
-     "yEduca4jloV78YzpEXaJ2W9Ys6VWMpRkTX3nOO4OyWdZBnDV59xyWm5kkvg+"                                                                  \\
-     "zyBibGjIc2PuAoRxAzOXIMWXahiG0cfR17naHK1MeQgmsJKDQPi7tbOehUges3m4ib71tZ3sO4TFEZGRsz8MJWrPRTqsnNgzqnkhh7lAq+"                    \\
-     "pJVn8u1UbH5GOCj2qrzzR9pW2UJiboIcZPSA5N0ygDHg+A4MdFWuRBHxIOIKPOR0MdHf1x2P1VVoOiJCvwcOm98ztlOzaCrWXPdutyPJynGyHQrBNA3ZdpdnmCt7+" \\
-     "hCo17lhXxUa+3jFxWDSA9aaf3KM9ZlBdC0daaGzT3QAs3Rkj42w=="
-    #define USER_DEVELOPER_ACCOUNT      "accepted"
-    #define USER_BAUD_RATE              "460800"
+#define USER_APP_NAME               "test"
+#define USER_APP_ID                 "168809"
+#define USER_APP_KEY                "fa42c26a9253e8d492b12e0baf83fdb"
+#define USER_APP_LICENSE                                                                                                         \\
+    "yEduca4jloV78YzpEXaJ2W9Ys6VWMpRkTX3nOO4OyWdZBnDV59xyWm5kkvg+"                                                                  \\
+    "zyBibGjIc2PuAoRxAzOXIMWXahiG0cfR17naHK1MeQgmsJKDQPi7tbOehUges3m4ib71tZ3sO4TFEZGRsz8MJWrPRTqsnNgzqnkhh7lAq+"                    \\
+    "pJVn8u1UbH5GOCj2qrzzR9pW2UJiboIcZPSA5N0ygDHg+A4MdFWuRBHxIOIKPOR0MdHf1x2P1VVoOiJCvwcOm98ztlOzaCrWXPdutyPJynGyHQrBNA3ZdpdnmCt7+" \\
+    "hCo17lhXxUa+3jFxWDSA9aaf3KM9ZlBdC0daaGzT3QAs3Rkj42w=="
+#define USER_DEVELOPER_ACCOUNT      "accepted"
+#define USER_BAUD_RATE              "460800"
 """
 )
 
@@ -43,14 +43,14 @@ APP_INFO_AFTER = textwrap.dedent(
 UART_INFO_PATH = os.path.join("hal", "hal_uart.h")
 UART_INFO_BEFORE = textwrap.dedent(
     """\
-    #define LINUX_UART_DEV1    "/dev/ttyUSB0"
-    #define LINUX_UART_DEV2    "/dev/ttyACM0"
+#define LINUX_UART_DEV1    "/dev/ttyUSB0"
+#define LINUX_UART_DEV2    "/dev/ttyACM0"
 """
 )
 UART_INFO_AFTER = textwrap.dedent(
     """\
-    #define LINUX_UART_DEV1    "/dev/ttyUSB0"
-    #define LINUX_UART_DEV2    ""
+#define LINUX_UART_DEV1    "/dev/ttyUSB0"
+#define LINUX_UART_DEV2    ""
 """
 )
 
@@ -58,12 +58,26 @@ UART_INFO_AFTER = textwrap.dedent(
 APP_CPP_PATH = os.path.join("application", "application.cpp")
 LOG_BLOCK_1_BEFORE = textwrap.dedent(
     """\
-    returnCode = DjiLogger_AddConsole(&printConsole);
-    if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
-     throw std::runtime_error("Add printf console error.");
+    if (DjiUser_LocalWriteFsInit(DJI_LOG_PATH) != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+        throw std::runtime_error("File system init error.");
     }"""
 )
+
 LOG_BLOCK_1_AFTER = textwrap.dedent(
+    """\
+    // if (DjiUser_LocalWriteFsInit(DJI_LOG_PATH) != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+    //  throw std::runtime_error("File system init error.");
+    // }"""
+)
+
+LOG_BLOCK_2_BEFORE = textwrap.dedent(
+    """\
+    returnCode = DjiLogger_AddConsole(&printConsole);
+    if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+        throw std::runtime_error("Add printf console error.");
+    }"""
+)
+LOG_BLOCK_2_AFTER = textwrap.dedent(
     """\
     // returnCode = DjiLogger_AddConsole(&printConsole);
     // if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -71,14 +85,14 @@ LOG_BLOCK_1_AFTER = textwrap.dedent(
     // }"""
 )
 
-LOG_BLOCK_2_BEFORE = textwrap.dedent(
+LOG_BLOCK_3_BEFORE = textwrap.dedent(
     """\
     returnCode = DjiLogger_AddConsole(&localRecordConsole);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
-     throw std::runtime_error("Add printf console error.");
+        throw std::runtime_error("Add printf console error.");
     }"""
 )
-LOG_BLOCK_2_AFTER = textwrap.dedent(
+LOG_BLOCK_3_AFTER = textwrap.dedent(
     """\
     // returnCode = DjiLogger_AddConsole(&localRecordConsole);
     // if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -186,6 +200,11 @@ def main():
     print("\n   -> 更新日志重定向 (区块2)...")
     success_log2 = apply_modification(
         APP_CPP_PATH, LOG_BLOCK_2_BEFORE, LOG_BLOCK_2_AFTER
+    )
+
+    print("\n   -> 更新日志重定向 (区块3)...")
+    success_log2 = success_log2 and apply_modification(
+        APP_CPP_PATH, LOG_BLOCK_3_BEFORE, LOG_BLOCK_3_AFTER
     )
 
     print("\n-----------------------------------------")

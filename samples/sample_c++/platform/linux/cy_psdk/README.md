@@ -97,6 +97,10 @@ python3 configure_new_module.py
 
 ```cpp
 // 修改前：
+if (DjiUser_LocalWriteFsInit(DJI_LOG_PATH) != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+ throw std::runtime_error("File system init error.");
+}
+
 returnCode = DjiLogger_AddConsole(&printConsole);
 if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
  throw std::runtime_error("Add printf console error.");
@@ -108,6 +112,10 @@ if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
 }
 
 // 修改后：
+// if (DjiUser_LocalWriteFsInit(DJI_LOG_PATH) != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+//  throw std::runtime_error("File system init error.");
+// }
+
 // returnCode = DjiLogger_AddConsole(&printConsole);
 // if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
 //  throw std::runtime_error("Add printf console error.");

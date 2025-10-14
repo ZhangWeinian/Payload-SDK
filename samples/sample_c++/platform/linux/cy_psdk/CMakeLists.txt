@@ -221,27 +221,21 @@ set (CONFIG_DEST_FILE "${MAIN_OUTPUT_PATH}/config.yml")
 set (RUN_SCRIPT_DEST_FILE "${MAIN_OUTPUT_PATH}/run.sh")
 set (LIBS_DEST_DIR "${MAIN_OUTPUT_PATH}/libs")
 
-add_custom_command (
-	OUTPUT ${CONFIG_DEST_FILE}
+add_custom_target (
+	copy_runtime_files
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CONFIG_SOURCE_FILE} ${CONFIG_DEST_FILE}
-	DEPENDS ${CONFIG_SOURCE_FILE}
-	COMMENT "正在复制配置文件..."
-)
-add_custom_command (
-	OUTPUT ${RUN_SCRIPT_DEST_FILE}
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_SCRIPT_SOURCE_FILE} ${RUN_SCRIPT_DEST_FILE}
-	DEPENDS ${RUN_SCRIPT_SOURCE_FILE}
-	COMMENT "正在复制运行脚本..."
+	DEPENDS ${CONFIG_SOURCE_FILE} ${RUN_SCRIPT_SOURCE_FILE}
+	COMMENT "正在复制运行时文件 (config.yml, run.sh)..."
 )
-add_custom_target (copy_runtime_files ALL DEPENDS ${CONFIG_DEST_FILE} ${RUN_SCRIPT_DEST_FILE})
 
 add_custom_command (
 	TARGET copy_runtime_files
 	POST_BUILD
 	COMMAND chmod +x ${RUN_SCRIPT_DEST_FILE}
+	COMMENT "为 run.sh 添加可执行权限..."
+	VERBATIM
 )
-
-add_dependencies (${MAIN_TARGET_NAME} copy_runtime_files)
 
 if(EXISTS ${SYSTEM_LIBS_SOURCE_DIR})
 	file (
@@ -249,13 +243,19 @@ if(EXISTS ${SYSTEM_LIBS_SOURCE_DIR})
 		LIST_DIRECTORIES false
 		"${SYSTEM_LIBS_SOURCE_DIR}/*"
 	)
+
 	add_custom_target (
 		copy_system_libs
-		SOURCES ${LIB_FILES}
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBS_DEST_DIR}"
 		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${SYSTEM_LIBS_SOURCE_DIR} "${LIBS_DEST_DIR}"
+		DEPENDS ${LIB_FILES}
 		COMMENT "正在复制系统库..."
 	)
+endif()
+
+add_dependencies (${MAIN_TARGET_NAME} copy_runtime_files)
+
+if(TARGET copy_system_libs)
 	add_dependencies (${MAIN_TARGET_NAME} copy_system_libs)
 endif()
 
@@ -263,15 +263,15 @@ endif()
 set (SYNC_LATEST_SCRIPT "${CMAKE_SOURCE_DIR}/bash/sync_latest.sh")
 set (LATEST_BUILD_DIR "${CMAKE_SOURCE_DIR}/build/bin")
 
-add_custom_command (
-	TARGET ${MAIN_TARGET_NAME}
-	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E echo ""
+add_custom_target (
+	sync_latest ALL
 	COMMAND ${CMAKE_COMMAND} -E echo "--- [同步到 build/bin] ---"
 	COMMAND /bin/bash ${SYNC_LATEST_SCRIPT} "${MAIN_OUTPUT_PATH}" "${LATEST_BUILD_DIR}"
-	COMMENT "执行构建后处理"
+	COMMENT "正在将最新构建同步到 build/bin 目录..."
 	VERBATIM
 )
+
+add_dependencies (sync_latest ${MAIN_TARGET_NAME})
 
 # 11. 显示最终构建信息
 pretty_message (

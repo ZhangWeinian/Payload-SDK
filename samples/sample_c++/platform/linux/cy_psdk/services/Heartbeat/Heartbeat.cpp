@@ -40,7 +40,7 @@ namespace plane::services
 		try
 		{
 			this->heartbeat_thread_ = _STD thread(&Heartbeat::runLoop, this, interval);
-			LOG_INFO("心跳服务已启动，频率: {}ms。", interval.count());
+			LOG_INFO("心跳服务已启动，频率: {}ms 。", interval.count());
 			return true;
 		}
 		catch (const _STD exception& e)
@@ -73,13 +73,12 @@ namespace plane::services
 
 	void Heartbeat::runLoop(_STD_CHRONO milliseconds interval)
 	{
+		auto nextWakeUpTime { _STD_CHRONO steady_clock::now() };
 		while (this->running_)
 		{
+			nextWakeUpTime += interval;
 			plane::services::EventManager::getInstance().publishSystemEvent(plane::services::EventManager::SystemEvent::HeartbeatTick);
-			while (this->running_ && _STD_CHRONO steady_clock::now() < (_STD_CHRONO steady_clock::now() + interval))
-			{
-				_STD this_thread::sleep_for(_STD_CHRONO milliseconds(100));
-			}
+			_STD this_thread::sleep_until(nextWakeUpTime);
 		}
 	}
 } // namespace plane::services
