@@ -61,9 +61,10 @@ namespace plane::services
 											   plane::protocol::NedVelocityPayload,		// 发送 NED 速度指令
 
 											   // 对于没有直接对应结构体的，使用基本类型
-											   _DEFINED _STD vector<_STD uint8_t>,
-											   _DEFINED int,
-											   _DEFINED _STD string>;
+											   _DEFINED _KMZ_DATA_TYPE,				// 航线任务
+											   _DEFINED _PTZ_CONTROL_STRATEGY_TYPE, // 设置云台控制策略
+											   _DEFINED _VIDEO_SOURCE_TYPE			// 切换视频源
+											   >;
 		using CommandQueue = _EVENTPP EventQueue<CommandEvent, void(const CommandEvent&, const CommandData&)>;
 
 		// PSDK 状态事件

@@ -1,4 +1,4 @@
-// cy_psdk/services/PSDK/PSDKAdapter/PSDKAdapter.cpp
+// cy_psdk/services/PSDK/PSDKAdapter.cpp
 
 #include "PSDKAdapter.h"
 

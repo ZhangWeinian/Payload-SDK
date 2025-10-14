@@ -1,4 +1,4 @@
-// cy_psdk/services/PSDK/PSDKManager/PSDKManager.cpp
+// cy_psdk/services/PSDK/PSDKManager.cpp
 
 #include "PSDKManager.h"
 
@@ -10,7 +10,7 @@
 #include "application.hpp"
 
 #include "config/ConfigManager.h"
-#include "services/PSDK/PSDKAdapter/PSDKAdapter.h"
+#include "services/PSDK/PSDKAdapter.h"
 #include "utils/DjiErrorUtils.h"
 #include "utils/Logger.h"
 

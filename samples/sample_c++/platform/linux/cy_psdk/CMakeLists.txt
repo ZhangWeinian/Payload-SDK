@@ -208,9 +208,9 @@ target_link_libraries (
 			${LEAK_SANITIZER_LINK_LIBS}
 )
 
-if(TARGET deps)
-	add_dependencies (${MAIN_TARGET_NAME} deps)
-endif()
+# if(TARGET deps)
+# 	add_dependencies (${MAIN_TARGET_NAME} deps)
+# endif()
 
 # 9. 构建时文件复制
 set (CONFIG_SOURCE_FILE "${CMAKE_SOURCE_DIR}/config/config.yml")

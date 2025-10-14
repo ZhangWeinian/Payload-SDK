@@ -1,4 +1,4 @@
-// cy_psdk/services/PSDK/PSDKManager/PSDKManager.h
+// cy_psdk/services/PSDK/PSDKManager.h
 
 #pragma once
 

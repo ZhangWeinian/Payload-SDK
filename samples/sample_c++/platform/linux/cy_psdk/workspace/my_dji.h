@@ -3,11 +3,11 @@
 #pragma once
 
 #include "config/ConfigManager.h"
-#include "services/Heartbeat/HeartbeatService.h"
+#include "services/Heartbeat/Heartbeat.h"
 #include "services/MQTT/Handler/LogicHandler.h"
 #include "services/MQTT/Service.h"
-#include "services/PSDK/PSDKAdapter/PSDKAdapter.h"
-#include "services/PSDK/PSDKManager/PSDKManager.h"
+#include "services/PSDK/PSDKAdapter.h"
+#include "services/PSDK/PSDKManager.h"
 #include "services/Telemetry/TelemetryReporter.h"
 #include "utils/Logger.h"
 
@@ -94,7 +94,7 @@ namespace plane::my_dji
 		}
 
 		// 尝试启动心跳服务
-		if (!plane::services::HeartbeatService::getInstance().start())
+		if (!plane::services::Heartbeat::getInstance().start())
 		{
 			LOG_ERROR("错误: 心跳服务启动失败，程序退出。");
 			return;
@@ -130,7 +130,7 @@ namespace plane::my_dji
 		LOG_INFO("收到退出信号, 正在关闭应用程序...");
 
 		plane::services::TelemetryReporter::getInstance().stop();
-		plane::services::HeartbeatService::getInstance().stop();
+		plane::services::Heartbeat::getInstance().stop();
 		plane::services::MQTTService::getInstance().stop();
 
 		if (config.isStandardProceduresEnabled())

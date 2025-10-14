@@ -1,18 +1,19 @@
-// cy_psdk/services/Heartbeat/HeartbeatService.cpp
+// cy_psdk/services/Heartbeat/Heartbeat.cpp
 
-#include "HeartbeatService.h"
+#include "Heartbeat.h"
+
 #include "services/EventManager/EventManager.h"
 #include "utils/Logger.h"
 
 namespace plane::services
 {
-	HeartbeatService& HeartbeatService::getInstance(void) noexcept
+	Heartbeat& Heartbeat::getInstance(void) noexcept
 	{
-		static HeartbeatService instance {};
+		static Heartbeat instance {};
 		return instance;
 	}
 
-	HeartbeatService::~HeartbeatService(void) noexcept
+	Heartbeat::~Heartbeat(void) noexcept
 	{
 		try
 		{
@@ -28,17 +29,17 @@ namespace plane::services
 		}
 	}
 
-	bool HeartbeatService::start(_STD_CHRONO milliseconds interval)
+	bool Heartbeat::start(_STD_CHRONO milliseconds interval)
 	{
 		if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))
 		{
-			LOG_WARN("HeartbeatService 已经启动，请勿重复调用 start()。");
+			LOG_WARN("Heartbeat 已经启动，请勿重复调用 start()。");
 			return true;
 		}
 
 		try
 		{
-			this->heartbeat_thread_ = _STD thread(&HeartbeatService::runLoop, this, interval);
+			this->heartbeat_thread_ = _STD thread(&Heartbeat::runLoop, this, interval);
 			LOG_INFO("心跳服务已启动，频率: {}ms。", interval.count());
 			return true;
 		}
@@ -56,7 +57,7 @@ namespace plane::services
 		}
 	}
 
-	void HeartbeatService::stop(void)
+	void Heartbeat::stop(void)
 	{
 		if (bool expected { true }; !this->running_.compare_exchange_strong(expected, false))
 		{
@@ -70,7 +71,7 @@ namespace plane::services
 		LOG_INFO("心跳服务已停止。");
 	}
 
-	void HeartbeatService::runLoop(_STD_CHRONO milliseconds interval)
+	void Heartbeat::runLoop(_STD_CHRONO milliseconds interval)
 	{
 		while (this->running_)
 		{
