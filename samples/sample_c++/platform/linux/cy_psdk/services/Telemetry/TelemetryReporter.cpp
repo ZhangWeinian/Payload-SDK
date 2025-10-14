@@ -133,7 +133,7 @@ namespace plane::services
 
 	void TelemetryReporter::stop(void)
 	{
-		if (bool expected { true}; !this->running_.compare_exchange_strong(expected, false))
+		if (bool expected { true }; !this->running_.compare_exchange_strong(expected, false))
 		{
 			return;
 		}
@@ -251,14 +251,15 @@ namespace plane::services
 																  .ZBZT	 = 1 }
 								};
 								LOG_INFO("准备上报飞行状态...");
-								this->publishJson(plane::services::TOPIC_DRONE_STATUS,
-												  plane::utils::JsonConverter::buildStatusReportJson(payload));
+								(void)this->publishJson(plane::services::TOPIC_DRONE_STATUS,
+														plane::utils::JsonConverter::buildStatusReportJson(payload));
 							}
 						}
 						else if constexpr (_STD is_same_v<T, plane::protocol::HealthStatusPayload>)
 						{
 							LOG_INFO("准备上报健康状态...");
-							this->publishJson(plane::services::TOPIC_HEALTH_MANAGE, plane::utils::JsonConverter::buildHealthStatusJson(event));
+							(void)this->publishJson(plane::services::TOPIC_HEALTH_MANAGE,
+													plane::utils::JsonConverter::buildHealthStatusJson(event));
 						}
 						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3MissionState>)
 						{
@@ -266,7 +267,7 @@ namespace plane::services
 							progress.ZT	  = static_cast<int>(event.state);
 							progress.DQHD = event.currentWaypointIndex;
 							progress.RWID = _STD to_string(event.wayLineId);
-							// this->publishJson(plane::services::TOPIC_MISSION_PROGRESS,
+							// (void)this->publishJson(plane::services::TOPIC_MISSION_PROGRESS,
 							// 				  plane::utils::JsonConverter::buildMissionProgressJson(progress));
 						}
 						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3ActionState>)
@@ -312,7 +313,7 @@ namespace plane::services
 																   .YSRTSP =
 																	   _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ip_address) };
 
-				this->publishJson(plane::services::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
+				(void)this->publishJson(plane::services::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
 
 				LOG_TRACE("已通过心跳事件上报固定信息 (MissionInfoPayload) 。");
 			});

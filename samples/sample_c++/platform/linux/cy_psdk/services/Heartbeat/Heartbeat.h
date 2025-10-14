@@ -14,8 +14,11 @@ namespace plane::services
 	public:
 		static Heartbeat& getInstance(void) noexcept;
 
-		_NODISCARD bool	  start(_STD_CHRONO milliseconds interval = _STD_CHRONO seconds(1));
-		void			  stop(void);
+		// 启动心跳服务，interval 参数指定心跳间隔，默认为 1 秒
+		_NODISCARD bool start(_STD_CHRONO milliseconds interval = _STD_CHRONO seconds(1));
+
+		// 停止心跳服务
+		void stop(void);
 
 	private:
 		explicit Heartbeat(void) noexcept = default;

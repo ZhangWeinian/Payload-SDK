@@ -96,21 +96,28 @@ namespace plane::services
 
 		static EventManager&			  getInstance(void) noexcept;
 
-		void							  publishCommand(CommandEvent event, const CommandData& data);
-		void							  publishStatus(PSDKEvent event, const PSDKEventData& data);
-		void							  publishSystemEvent(SystemEvent event, const SystemEventData& data = _STD monostate {});
+		// 发布一个命令事件
+		void publishCommand(CommandEvent event, const CommandData& data);
 
-		// 获取各事件队列/分发器的引用
+		// 发布一个 PSDK 状态事件
+		void publishStatus(PSDKEvent event, const PSDKEventData& data);
+
+		// 发布一个系统事件
+		void publishSystemEvent(SystemEvent event, const SystemEventData& data = _STD monostate {});
+
+		// 获取命令事件队列的引用
 		CommandQueue& getCommandQueue(void) noexcept
 		{
 			return this->command_queue_;
 		}
 
+		// 获取状态事件分发器的引用
 		StatusDispatcher& getStatusDispatcher(void) noexcept
 		{
 			return this->status_dispatcher_;
 		}
 
+		// 获取系统事件分发器的引用
 		SystemDispatcher& getSystemDispatcher(void) noexcept
 		{
 			return this->system_dispatcher_;

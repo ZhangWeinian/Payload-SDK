@@ -27,8 +27,12 @@ namespace plane::services
 	{
 	public:
 		static TelemetryReporter& getInstance(void) noexcept;
-		_NODISCARD bool			  start(void);
-		void					  stop(void);
+
+		// 启动遥测上报服务
+		_NODISCARD bool start(void);
+
+		// 停止遥测上报服务
+		void stop(void);
 
 	private:
 		explicit TelemetryReporter(void) noexcept;
@@ -36,10 +40,17 @@ namespace plane::services
 		TelemetryReporter(const TelemetryReporter&) noexcept			= delete;
 		TelemetryReporter& operator=(const TelemetryReporter&) noexcept = delete;
 
-		bool			   publishJson(_STD string_view topic, _STD string_view statusJson) noexcept;
-		void			   onPSDKEvent(const plane::services::EventManager::PSDKEventData& eventData);
-		void			   onHeartbeatTick(const plane::services::EventManager::SystemEventData& eventData);
-		void			   runWatchdogCheck(void) noexcept;
+		// 发布 JSON 字符串到 MQTT 主题
+		_NODISCARD bool publishJson(_STD string_view topic, _STD string_view statusJson) noexcept;
+
+		// PSDK 事件处理相关
+		void onPSDKEvent(const plane::services::EventManager::PSDKEventData& eventData);
+
+		// 系统事件处理相关
+		void onHeartbeatTick(const plane::services::EventManager::SystemEventData& eventData);
+
+		// 启动看门狗检查
+		void runWatchdogCheck(void) noexcept;
 
 		_STD unique_ptr<_EVENTPP ScopedRemover<plane::services::EventManager::StatusDispatcher>> psdk_event_remover_ {};
 		_STD unique_ptr<_EVENTPP ScopedRemover<plane::services::EventManager::SystemDispatcher>> system_event_remover_ {};

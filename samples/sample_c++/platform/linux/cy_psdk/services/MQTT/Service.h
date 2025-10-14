@@ -64,10 +64,13 @@ namespace plane::services
 		// 检查当前是否已连接到 MQTT 服务器
 		_NODISCARD bool isConnected(void) const noexcept;
 
+		// 发布消息到指定的 MQTT 主题，返回是否成功入队
 		_NODISCARD bool publish(_STD string_view topic, _STD string_view payload) noexcept;
-		void			subscribe(_STD string_view topic) noexcept;
 
-		Impl&			getImpl(void) noexcept
+		// 订阅指定的 MQTT 主题
+		void  subscribe(_STD string_view topic) noexcept;
+
+		Impl& getImpl(void) noexcept
 		{
 			assert(impl_ != nullptr && "Impl pointer is null");
 			return *impl_;
@@ -87,7 +90,10 @@ namespace plane::services
 
 		friend class MqttCallback;
 
-		void	   senderLoop(void) noexcept;
+		// MQTT 消息发送线程主循环
+		void senderLoop(void) noexcept;
+
+		// 设置连接状态
 		void	   setConnected(bool status) noexcept;
 
 		_STD mutex mutex_ {};
