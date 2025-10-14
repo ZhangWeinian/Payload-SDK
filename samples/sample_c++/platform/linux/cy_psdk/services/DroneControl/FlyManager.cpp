@@ -28,7 +28,7 @@ namespace plane::services
 		LOG_INFO("FlyManager: 发送【航线任务】命令事件 (从内存数据 {} 字节)...", kmzData.size());
 		if (kmzData.empty())
 		{
-			LOG_ERROR("航线任务事件发送失败：KMZ 数据为空。");
+			LOG_ERROR("航线任务事件发送失败: KMZ 数据为空。");
 			return;
 		}
 		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::WaypointMission, kmzData);
@@ -41,14 +41,14 @@ namespace plane::services
 		_STD_FS path path(kmzFilePath);
 		if (!_STD_FS exists(path))
 		{
-			LOG_ERROR("航线任务事件发送失败：KMZ 文件 '{}' 不存在。", kmzFilePath);
+			LOG_ERROR("航线任务事件发送失败: KMZ 文件 '{}' 不存在。", kmzFilePath);
 			return;
 		}
 
 		_STD ifstream fileStream(path, _STD ios::binary);
 		if (!fileStream)
 		{
-			LOG_ERROR("航线任务事件发送失败：无法打开 KMZ 文件 '{}'。", kmzFilePath);
+			LOG_ERROR("航线任务事件发送失败: 无法打开 KMZ 文件 '{}'。", kmzFilePath);
 			return;
 		}
 

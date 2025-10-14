@@ -5,7 +5,7 @@ plane:
     code: "10010101"
 
 features:
-    enable_full_psdk: true
+    enable_full_psdk: false
     enable_debug_log: true
     skip_rc: false
     use_test_kmz: false

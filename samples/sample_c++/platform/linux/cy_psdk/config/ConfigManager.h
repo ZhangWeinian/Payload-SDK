@@ -23,28 +23,28 @@ namespace plane::config
 		// 加载并检查配置文件
 		_NODISCARD bool loadAndCheck(const _STD string& filepath) noexcept;
 
-		// 获取配置项：获取 MQTT 服务器地址
+		// 获取配置项: 获取 MQTT 服务器地址
 		_NODISCARD _STD string getMqttUrl(void) const noexcept;
 
-		// 获取配置项：获取 MQTT 客户端 ID
+		// 获取配置项: 获取 MQTT 客户端 ID
 		_NODISCARD _STD string getMqttClientId(void) const noexcept;
 
-		// 获取配置项：获取飞机序列号
+		// 获取配置项: 获取飞机序列号
 		_NODISCARD _STD string getPlaneCode(void) const noexcept;
 
-		// 检查配置项：是否启用 PSDK 标准流程
+		// 检查配置项: 是否启用 PSDK 标准流程
 		_NODISCARD bool isStandardProceduresEnabled(void) const noexcept;
 
-		// 检查配置项：是否启用 DEBUG 级别的调试日志
+		// 检查配置项: 是否启用 DEBUG 级别的调试日志
 		_NODISCARD bool isLogLevelDebug(void) const noexcept;
 
-		// 检查配置项：是否跳过遥控器检测
+		// 检查配置项: 是否跳过遥控器检测
 		_NODISCARD bool isSkipRC(void) const noexcept;
 
-		// 检查配置项：是否使用测试 KMZ 文件
+		// 检查配置项: 是否使用测试 KMZ 文件
 		_NODISCARD bool isTestKmzFile(void) const noexcept;
 
-		// 检查配置项：是否同时保存 KMZ 文件
+		// 检查配置项: 是否同时保存 KMZ 文件
 		_NODISCARD bool isSaveKmz(void) const noexcept;
 
 	private:

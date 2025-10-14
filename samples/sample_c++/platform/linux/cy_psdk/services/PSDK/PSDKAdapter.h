@@ -236,7 +236,7 @@ namespace plane::services
 			* @brief 提供 1 号云台的俯仰（pitch）、横滚（roll）、偏航（yaw）角度，最高更新频率达 50Hz 。
 			*
 			* @details 云台角度的参考坐标系是附着于云台的 NED 坐标系。
-			*          该主题使用了一个过于通用的数据结构 Vector3f 。各分量含义如下：
+			*          该主题使用了一个过于通用的数据结构 Vector3f 。各分量含义如下:
 			*          |  数据结构元素  |      含义      |
 			*          |  Vector3f.x  |  俯仰角（pitch）|
 			*          |  Vector3f.y  |  横滚角（roll） |

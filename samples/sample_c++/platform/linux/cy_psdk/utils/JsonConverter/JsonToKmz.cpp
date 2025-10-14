@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <mutex>
 #include <pwd.h>
 #include <sstream>
 #include <unistd.h>
@@ -27,6 +28,7 @@ namespace plane::utils
 	namespace
 	{
 		static _STD_FS path g_latestKmzFilePath {};
+		static _STD mutex	g_kmzPathMutex {};
 
 		class InMemoryZipArchive
 		{
@@ -44,6 +46,8 @@ namespace plane::utils
 					return;
 				}
 
+				_LIBZIP					 zip_source_keep(this->source_);
+
 				this->archive_ = _LIBZIP zip_open_from_source(this->source_, ZIP_CREATE | ZIP_TRUNCATE, &error);
 				if (!this->archive_)
 				{
@@ -59,13 +63,13 @@ namespace plane::utils
 				if (this->archive_)
 				{
 					_LIBZIP zip_discard(this->archive_);
+					this->archive_ = nullptr;
 				}
-				this->archive_ = nullptr;
 				if (this->source_)
 				{
 					_LIBZIP zip_source_free(this->source_);
+					this->source_ = nullptr;
 				}
-				this->source_ = nullptr;
 			}
 
 			bool addFile(const _STD string& path_in_zip, const _STD string& content)
@@ -82,7 +86,7 @@ namespace plane::utils
 					return false;
 				}
 
-				if (_LIBZIP zip_file_add(this->archive_, path_in_zip.c_str(), content_source, ZIP_FL_ENC_UTF_8) < 0)
+				if (_LIBZIP zip_file_add(this->archive_, path_in_zip.c_str(), content_source, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE) < 0)
 				{
 					LOG_ERROR("无法将 '{}' 添加到 KMZ: {}", path_in_zip, _LIBZIP zip_strerror(this->archive_));
 					_LIBZIP zip_source_free(content_source);
@@ -91,7 +95,7 @@ namespace plane::utils
 				return true;
 			}
 
-			_STD optional<_STD vector<uint8_t>> getFinalData(void)
+			_STD optional<_DEFINED _KMZ_DATA_TYPE> getFinalData(void)
 			{
 				if (!this->source_ || !this->archive_)
 				{
@@ -103,8 +107,6 @@ namespace plane::utils
 					LOG_ERROR("关闭内存归档时出错: {}", _LIBZIP zip_error_strerror(_LIBZIP zip_get_error(this->archive_)));
 					_LIBZIP zip_discard(this->archive_);
 					this->archive_ = nullptr;
-					_LIBZIP zip_source_free(this->source_);
-					this->source_ = nullptr;
 					return _STD nullopt;
 				}
 				this->archive_		   = nullptr;
@@ -121,8 +123,7 @@ namespace plane::utils
 
 				if (_LIBZIP zip_source_open(this->source_) < 0)
 				{
-					_LIBZIP zip_error_t* err { _LIBZIP zip_source_error(this->source_) };
-					LOG_ERROR("无法打开内存 zip 源进行读取: {}", _LIBZIP zip_error_strerror(err));
+					LOG_ERROR("无法打开最终的 zip 数据源进行读取: {}", _LIBZIP zip_error_strerror(_LIBZIP zip_source_error(this->source_)));
 					return _STD nullopt;
 				}
 
@@ -136,17 +137,19 @@ namespace plane::utils
 					});
 
 				_LIBZIP zip_stat_t st {};
+				_LIBZIP			   zip_stat_init(&st);
 				if (_LIBZIP zip_source_stat(this->source_, &st) < 0 || !(st.valid & ZIP_STAT_SIZE))
 				{
-					LOG_ERROR("无法获取内存 zip 源的大小");
+					LOG_ERROR("无法获取内存 zip 源的大小: {}", _LIBZIP zip_error_strerror(_LIBZIP zip_source_error(this->source_)));
 					return _STD nullopt;
 				}
 
 				_DEFINED _KMZ_DATA_TYPE data(st.size);
-				if (_LIBZIP zip_int64_t bytes_read { _LIBZIP zip_source_read(this->source_, data.data(), st.size) };
-					bytes_read < 0 || static_cast<_LIBZIP zip_uint64_t>(bytes_read) != st.size)
+				_LIBZIP zip_int64_t		bytes_read { _LIBZIP zip_source_read(this->source_, data.data(), data.size()) };
+
+				if (bytes_read < 0 || (_LIBZIP zip_uint64_t)bytes_read != st.size)
 				{
-					LOG_ERROR("从内存 zip 源读取数据不完整");
+					LOG_ERROR("从内存 zip 源读取数据不完整. 错误: {}", _LIBZIP zip_error_strerror(_LIBZIP zip_source_error(this->source_)));
 					return _STD nullopt;
 				}
 
@@ -159,11 +162,11 @@ namespace plane::utils
 			}
 
 		private:
-			explicit InMemoryZipArchive(const InMemoryZipArchive&) noexcept		= delete;
-			InMemoryZipArchive&	  operator=(const InMemoryZipArchive&) noexcept = delete;
+			_LIBZIP zip_t*		  archive_ {};
+			_LIBZIP zip_source_t* source_ {};
 
-			_LIBZIP zip_t*		  archive_ { nullptr };
-			_LIBZIP zip_source_t* source_ { nullptr };
+			InMemoryZipArchive(const InMemoryZipArchive&)			 = delete;
+			InMemoryZipArchive& operator=(const InMemoryZipArchive&) = delete;
 		};
 
 		inline _STD optional<_STD_FS path> getKmzStorageDir(void) noexcept
@@ -496,6 +499,7 @@ namespace plane::utils
 						outFile.write(reinterpret_cast<const char*>(kmzData.data()), kmzData.size());
 						outFile.close();
 
+						_STD lock_guard<_STD mutex>	  lock(g_kmzPathMutex);
 						g_latestKmzFilePath = _STD_FS absolute(kmzFilePath);
 						LOG_INFO("已成功将 KMZ 数据保存到文件: {}", g_latestKmzFilePath.string());
 					}
@@ -521,6 +525,7 @@ namespace plane::utils
 
 	_STD string JsonToKmzConverter::getKmzFilePath(void) noexcept
 	{
+		_STD lock_guard<_STD mutex> lock(g_kmzPathMutex);
 		return g_latestKmzFilePath.string();
 	}
 } // namespace plane::utils

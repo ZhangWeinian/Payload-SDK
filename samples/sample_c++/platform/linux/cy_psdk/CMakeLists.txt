@@ -112,7 +112,7 @@ elseif(DEVICE_SYSTEM_ID STREQUAL "aarch64")
 	set (TOOLCHAIN_NAME aarch64-linux-gnu-gcc)
 	set (PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_AARCH64=1")
 else()
-	message (FATAL_ERROR "错误！检测到不支持的平台：${DEVICE_SYSTEM_ID}")
+	message (FATAL_ERROR "错误！检测到不支持的平台: ${DEVICE_SYSTEM_ID}")
 endif()
 
 # 7. 依赖查找与配置

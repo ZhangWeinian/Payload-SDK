@@ -2,8 +2,10 @@
 
 #pragma once
 
+#include "config/ConfigManager.h"
 #include "protocol/DroneDataClass.h"
 #include "protocol/HeartbeatDataClass.h"
+#include "utils/Logger.h"
 
 #include <dji_typedef.h>
 #include <dji_waypoint_v3.h>
@@ -123,5 +125,6 @@ namespace plane::services
 		CommandQueue	 command_queue_ {};
 		StatusDispatcher status_dispatcher_ {};
 		SystemDispatcher system_dispatcher_ {};
+		const bool		 is_full_psdk_ { plane::config::ConfigManager::getInstance().isStandardProceduresEnabled() };
 	};
 } // namespace plane::services
