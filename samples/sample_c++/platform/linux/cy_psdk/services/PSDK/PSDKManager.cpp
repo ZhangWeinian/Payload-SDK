@@ -8,7 +8,6 @@
 #include <dji_platform.h>
 
 #include "application.hpp"
-
 #include "config/ConfigManager.h"
 #include "services/PSDK/PSDKAdapter.h"
 #include "utils/DjiErrorUtils.h"

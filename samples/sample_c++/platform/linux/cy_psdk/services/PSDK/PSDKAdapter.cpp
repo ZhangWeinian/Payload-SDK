@@ -409,18 +409,6 @@ namespace plane::services
 		this->sub_status_.batteryInfo		  = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
 		this->sub_status_.gimbalAngles		  = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
 
-		if (_DJI T_DjiReturnCode returnCode { _DJI DjiWaypointV3_RegMissionStateCallback(missionStateCallbackEntry) };
-			returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			LOG_ERROR("注册 Waypoint V3 任务状态回调失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-		}
-
-		if (_DJI T_DjiReturnCode returnCode { DjiWaypointV3_RegActionStateCallback(actionStateCallbackEntry) };
-			returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			LOG_ERROR("注册 Waypoint V3 动作状态回调失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
-		}
-
 		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_RegHmsInfoCallback(hmsInfoCallbackEntry) };
 			returnCode != _DJI	 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 		{
@@ -859,6 +847,18 @@ namespace plane::services
 							_DJI DjiWaypointV3_DeInit();
 						});
 
+					returnCode = _DJI DjiWaypointV3_RegMissionStateCallback(this->missionStateCallbackEntry);
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("注册 Waypoint 任务状态回调失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+					}
+
+					returnCode = _DJI DjiWaypointV3_RegActionStateCallback(this->actionStateCallbackEntry);
+					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("注册 Waypoint 动作状态回调失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
+					}
+
 					LOG_INFO("线程池任务: 开始上传 {} 字节的 KMZ 数据...", data.size());
 					returnCode = _DJI DjiWaypointV3_UploadKmzFile(data.data(), data.size());
 					if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
@@ -867,8 +867,8 @@ namespace plane::services
 						return returnCode;
 					}
 
-					this->mission_completion_promise_				= _STD make_unique<_STD promise<_DJI T_DjiReturnCode>>();
-					_STD future<_DJI T_DjiReturnCode> missionFuture = { this->mission_completion_promise_->get_future() };
+					this->mission_completion_promise_ = _STD make_unique<_STD promise<_DJI T_DjiReturnCode>>();
+					_STD future<_DJI T_DjiReturnCode> missionFuture { this->mission_completion_promise_->get_future() };
 
 					LOG_INFO("线程池任务: 启动航线任务...");
 					returnCode = _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_START);

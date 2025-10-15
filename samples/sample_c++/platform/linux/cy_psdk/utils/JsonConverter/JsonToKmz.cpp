@@ -345,7 +345,6 @@ namespace plane::utils
 					placemark.point.latitude							= waypoints[i].WD;
 					placemark.executeHeight								= waypoints[i].GD;
 					placemark.waypointSpeed								= waypoints[i].SD;
-
 					placemark.waypointHeadingParam.waypointHeadingAngle = _UNNAMED calculateHeadingAngle(waypoints[i], waypoints[i + 1]);
 
 					if (i == 1)
@@ -452,7 +451,7 @@ namespace plane::utils
 			g_latestKmzFilePath.clear();
 			if (waypoints.empty())
 			{
-				LOG_ERROR("无法生成 KMZ，航点列表为空。");
+				LOG_ERROR("无法生成 KMZ ，航点列表为空。");
 				return _STD nullopt;
 			}
 
