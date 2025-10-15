@@ -9,6 +9,8 @@
 #include "protocol/AppConfigDataClass.h"
 
 #include <yaml-cpp/yaml.h>
+
+#include <filesystem>
 #include <string>
 
 #include "define.h"
@@ -21,7 +23,7 @@ namespace plane::config
 		static ConfigManager& getInstance(void) noexcept;
 
 		// 加载并检查配置文件
-		_NODISCARD bool loadAndCheck(const _STD string& filepath) noexcept;
+		_NODISCARD bool loadAndCheck(_STD_FS path filepath = "") noexcept;
 
 		// 获取配置项: 获取 MQTT 服务器地址
 		_NODISCARD _STD string getMqttUrl(void) const noexcept;

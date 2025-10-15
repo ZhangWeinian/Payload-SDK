@@ -70,7 +70,7 @@ namespace plane::utils
 				console_sink->set_pattern("[%m-%d %H:%M:%S.%e] [%^%l%$] [th.%t] [%s:%#] %v");
 				sinks.push_back(console_sink);
 
-				_STD_FS path log_directory("logs");
+				_STD_FS path log_directory("/tmp/cy_psdk/logs");
 				_STD_FS		 create_directories(log_directory);
 
 				auto		 now { _STD_CHRONO system_clock::now() };
@@ -119,7 +119,7 @@ namespace plane::utils
 
 		void	manageLogFiles(const _STD_FS path& log_dir, const _STD_FS path& new_log_file, _STD size_t max_files)
 		{
-			_STD_FS path	latest_link { log_dir / "latest.log" };
+			_STD_FS path	latest_link { _STD_FS read_symlink("/proc/self/exe").parent_path() / "latest.log" };
 			_STD error_code ec {};
 			if (_STD_FS exists(latest_link, ec))
 			{

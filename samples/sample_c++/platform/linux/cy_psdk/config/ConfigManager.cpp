@@ -17,11 +17,26 @@ namespace plane::config
 		return instance;
 	}
 
-	bool ConfigManager::loadAndCheck(const _STD string& filepath) noexcept
+	bool ConfigManager::loadAndCheck(_STD_FS path filepath) noexcept
 	{
 		if (this->loaded_)
 		{
 			return true;
+		}
+
+		if (filepath.empty())
+		{
+			LOG_DEBUG("未提供配置文件路径，将自动查找可执行文件目录下的 'config.yml'");
+			try
+			{
+				filepath = _STD_FS read_symlink("/proc/self/exe").parent_path() / "config.yml";
+				LOG_INFO("自动检测到配置文件路径为: {}", filepath.string());
+			}
+			catch (const _STD_FS filesystem_error& e)
+			{
+				LOG_ERROR("自动获取可执行文件路径失败: {}", e.what());
+				return false;
+			}
 		}
 
 		if (this->app_config_.mqttClientId.empty())
@@ -34,12 +49,12 @@ namespace plane::config
 		{
 			if (_STD ifstream file(filepath); !file.good())
 			{
-				LOG_ERROR("配置文件未找到: {}", filepath);
+				LOG_ERROR("配置文件未找到: {}", filepath.string());
 				return false;
 			}
 
 			this->config_node_ = _YAML LoadFile(filepath);
-			LOG_DEBUG("成功加载配置文件: {}", filepath);
+			LOG_DEBUG("成功加载配置文件: {}", filepath.string());
 
 			if (!this->validateConfig())
 			{
@@ -49,12 +64,12 @@ namespace plane::config
 
 			this->loaded_ = true;
 
-			LOG_INFO("配置文件 '{}' 加载并验证成功", filepath);
+			LOG_INFO("配置文件 '{}' 加载并验证成功", filepath.string());
 			return true;
 		}
 		catch (const _YAML Exception& e)
 		{
-			LOG_ERROR("解析 YAML 配置文件 '{}' 失败: {}", filepath, e.what());
+			LOG_ERROR("解析 YAML 配置文件 '{}' 失败: {}", filepath.string(), e.what());
 			return false;
 		}
 		catch (const _STD exception& e)

@@ -50,7 +50,7 @@ namespace plane::my_dji
 		auto& config { plane::config::ConfigManager::getInstance() };
 
 		// 尝试加载配置文件
-		if (!config.loadAndCheck("config.yml"))
+		if (!config.loadAndCheck())
 		{
 			LOG_ERROR("错误: 配置文件加载失败，程序退出。");
 			return;

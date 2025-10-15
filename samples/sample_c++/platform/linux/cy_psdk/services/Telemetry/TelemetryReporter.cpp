@@ -250,14 +250,14 @@ namespace plane::services
 																  .SPXY	 = "RTSP",
 																  .ZBZT	 = 1 }
 								};
-								LOG_INFO("准备上报飞行状态...");
+								LOG_DEBUG("准备上报飞行状态...");
 								(void)this->publishJson(plane::services::TOPIC_DRONE_STATUS,
 														plane::utils::JsonConverter::buildStatusReportJson(payload));
 							}
 						}
 						else if constexpr (_STD is_same_v<T, plane::protocol::HealthStatusPayload>)
 						{
-							LOG_INFO("准备上报健康状态...");
+							LOG_DEBUG("准备上报健康状态...");
 							(void)this->publishJson(plane::services::TOPIC_HEALTH_MANAGE,
 													plane::utils::JsonConverter::buildHealthStatusJson(event));
 						}
