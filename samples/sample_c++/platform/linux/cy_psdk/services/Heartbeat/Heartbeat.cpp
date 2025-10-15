@@ -73,12 +73,12 @@ namespace plane::services
 
 	void Heartbeat::runLoop(_STD_CHRONO milliseconds interval)
 	{
-		auto nextWakeUpTime { _STD_CHRONO steady_clock::now() };
+		auto next_wakeup_time { _STD_CHRONO steady_clock::now() };
 		while (this->running_)
 		{
-			nextWakeUpTime += interval;
+			next_wakeup_time += interval;
 			plane::services::EventManager::getInstance().publishSystemEvent(plane::services::EventManager::SystemEvent::HeartbeatTick);
-			_STD this_thread::sleep_until(nextWakeUpTime);
+			_STD this_thread::sleep_until(next_wakeup_time);
 		}
 	}
 } // namespace plane::services

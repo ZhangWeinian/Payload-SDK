@@ -16,8 +16,8 @@
 
 namespace plane::services
 {
-	class MqttCallback: public _MQTT callback,
-						public _MQTT iaction_listener
+	class MqttCallback final: public _MQTT callback,
+							  public _MQTT iaction_listener
 	{
 	public:
 		explicit MqttCallback(plane::services::MQTTService* service): service_(service) {}
@@ -136,14 +136,14 @@ namespace plane::services
 			this->impl_->callback = _STD make_shared<MqttCallback>(this);
 			this->impl_->client->set_callback(*(this->impl_)->callback);
 
-			_MQTT connect_options connOpts {};
-			connOpts.set_keep_alive_interval(30);
-			connOpts.set_clean_session(true);
-			connOpts.set_automatic_reconnect(true);
-			connOpts.set_mqtt_version(MQTTVERSION_5);
+			_MQTT connect_options conn_opts {};
+			conn_opts.set_keep_alive_interval(30);
+			conn_opts.set_clean_session(true);
+			conn_opts.set_automatic_reconnect(true);
+			conn_opts.set_mqtt_version(MQTTVERSION_5);
 
 			LOG_INFO("MQTT 服务启动成功, 等待连接建立...");
-			this->impl_->client->connect(connOpts);
+			this->impl_->client->connect(conn_opts);
 
 			this->impl_->runSender	  = true;
 			this->impl_->senderThread = _STD thread(&MQTTService::senderLoop, this);
@@ -305,7 +305,7 @@ namespace plane::services
 		}
 	}
 
-	void MQTTService::senderLoop() noexcept
+	void MQTTService::senderLoop(void) noexcept
 	{
 		LOG_DEBUG("MQTT 发送者线程循环开始。");
 

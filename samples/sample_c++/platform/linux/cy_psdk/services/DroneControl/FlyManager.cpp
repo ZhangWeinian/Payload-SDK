@@ -38,23 +38,23 @@ namespace plane::services
 	{
 		LOG_INFO("FlyManager: 正在处理【航线任务】(从文件: {})", kmzFilePath);
 
-		_STD_FS path path(kmzFilePath);
-		if (!_STD_FS exists(path))
+		_STD_FS path kmz_file_path(kmzFilePath);
+		if (!_STD_FS exists(kmz_file_path))
 		{
 			LOG_ERROR("航线任务事件发送失败: KMZ 文件 '{}' 不存在。", kmzFilePath);
 			return;
 		}
 
-		_STD ifstream fileStream(path, _STD ios::binary);
-		if (!fileStream)
+		_STD ifstream file_stream(kmz_file_path, _STD ios::binary);
+		if (!file_stream)
 		{
 			LOG_ERROR("航线任务事件发送失败: 无法打开 KMZ 文件 '{}'。", kmzFilePath);
 			return;
 		}
 
-		_DEFINED _KMZ_DATA_TYPE kmzData { _STD istreambuf_iterator<char>(fileStream), _STD istreambuf_iterator<char>() };
+		_DEFINED _KMZ_DATA_TYPE kmz_data { _STD istreambuf_iterator<char>(file_stream), _STD istreambuf_iterator<char>() };
 
-		this->waypoint(kmzData);
+		this->waypoint(kmz_data);
 	}
 
 	void FlyManager::takeoff(const plane::protocol::TakeoffPayload& takeoffParams)

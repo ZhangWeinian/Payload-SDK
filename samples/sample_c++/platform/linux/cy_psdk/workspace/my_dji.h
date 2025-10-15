@@ -59,11 +59,11 @@ namespace plane::my_dji
 		// 根据配置设置日志级别
 		if (config.isLogLevelDebug())
 		{
-			_SPDLOG set_level(_SPDLOG level::trace);
+			plane::utils::Logger::getInstance().setLevel(_SPDLOG level::trace);
 		}
 		else
 		{
-			_SPDLOG set_level(_SPDLOG level::info);
+			plane::utils::Logger::getInstance().setLevel(_SPDLOG level::info);
 		}
 
 		// 如果启用标准 PSDK 作业流程，则初始化 PSDKManager 和 PSDKAdapter

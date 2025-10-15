@@ -15,12 +15,6 @@
 
 namespace plane::services
 {
-	enum class FlyTaskState
-	{
-		IDLE,
-		RUNNING
-	};
-
 	class FlyManager
 	{
 	public:

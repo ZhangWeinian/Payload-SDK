@@ -37,6 +37,6 @@ namespace plane::services
 		LogicHandler& operator=(const LogicHandler&) noexcept = delete;
 
 		template<typename PayloadType, typename Func>
-		void handleCommand(_STD string_view command_name, const n_json& payloadJson, Func&& handler);
+		void handleCommand(_STD string_view commandName, const n_json& payloadJson, Func&& handler);
 	};
 } // namespace plane::services

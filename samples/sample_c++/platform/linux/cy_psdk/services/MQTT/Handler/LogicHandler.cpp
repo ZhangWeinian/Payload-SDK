@@ -31,7 +31,7 @@ namespace plane::services
 		try
 		{
 			LOG_DEBUG("正在初始化 MQTT 业务逻辑处理器...");
-			auto& msg_handler { MqttMessageHandler::getInstance() };
+			auto& msg_handler { plane::services::MqttMessageHandler::getInstance() };
 
 			msg_handler.registerHandler(plane::services::TOPIC_MISSION_CONTROL,
 										"XFHXRW",
@@ -69,7 +69,7 @@ namespace plane::services
 	}
 
 	template<typename PayloadType, typename Func>
-	void LogicHandler::handleCommand(_STD string_view command_name, const n_json& payloadJson, Func&& handler)
+	void LogicHandler::handleCommand(_STD string_view commandName, const n_json& payloadJson, Func&& handler)
 	{
 		if constexpr (_STD is_same_v<PayloadType, _STD monostate>)
 		{
@@ -79,7 +79,7 @@ namespace plane::services
 			}
 			catch (const _STD exception& e)
 			{
-				LOG_ERROR("执行【{}】指令时发生异常: {}", command_name, e.what());
+				LOG_ERROR("执行【{}】指令时发生异常: {}", commandName, e.what());
 			}
 		}
 		else
@@ -90,11 +90,11 @@ namespace plane::services
 			}
 			catch (const n_json::exception& e)
 			{
-				LOG_ERROR("解析【{}】指令失败: {}, payloadJson:\n{}", command_name, e.what(), payloadJson.dump(4));
+				LOG_ERROR("解析【{}】指令失败: {}, payloadJson:\n{}", commandName, e.what(), payloadJson.dump(4));
 			}
 			catch (const _STD exception& e)
 			{
-				LOG_ERROR("执行【{}】指令时发生异常: {}", command_name, e.what());
+				LOG_ERROR("执行【{}】指令时发生异常: {}", commandName, e.what());
 			}
 		}
 	}
@@ -134,9 +134,9 @@ namespace plane::services
 					else
 					{
 						LOG_INFO("[MQTT] 收到并准备执行【航线任务】, 共 {} 个航点", payload.HDJ.size());
-						if (auto kmzData { plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload) }; kmzData)
+						if (auto kmz_data { plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload) }; kmz_data)
 						{
-							plane::services::FlyManager::getInstance().waypoint(*kmzData);
+							plane::services::FlyManager::getInstance().waypoint(*kmz_data);
 						}
 						else
 						{

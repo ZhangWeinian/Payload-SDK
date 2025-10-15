@@ -95,11 +95,11 @@ namespace plane::utils
 			n_json j = n_json::parse(jsonString);
 			if (j.contains("ZBID"))
 			{
-				_STD string targetPlaneCode { j.at("ZBID").get<_STD string>() };
-				_STD string localPlaneCode { plane::config::ConfigManager::getInstance().getPlaneCode() };
-				if (targetPlaneCode != localPlaneCode)
+				_STD string target_plane_code { j.at("ZBID").get<_STD string>() };
+				_STD string local_plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
+				if (target_plane_code != local_plane_code)
 				{
-					LOG_DEBUG("收到发往其他设备 ({}) 的消息, 本机 ({}) 已忽略。", targetPlaneCode, localPlaneCode);
+					LOG_DEBUG("收到发往其他设备 ({}) 的消息, 本机 ({}) 已忽略。", target_plane_code, local_plane_code);
 					return;
 				}
 			}
@@ -109,9 +109,9 @@ namespace plane::utils
 				return;
 			}
 
-			_STD string messageType { j.at("XXLX").get<_STD string>() };
-			n_json		payloadJson = j.value("XXXX", n_json {});
-			plane::services::MqttMessageHandler::getInstance().routeMessage(topic, messageType, payloadJson);
+			_STD string message_type { j.at("XXLX").get<_STD string>() };
+			n_json		payload_json = j.value("XXXX", n_json {});
+			plane::services::MqttMessageHandler::getInstance().routeMessage(topic, message_type, payload_json);
 		}
 		catch (const n_json::exception& e)
 		{

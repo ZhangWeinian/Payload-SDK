@@ -56,7 +56,6 @@ namespace plane::utils
 			{
 				this->cached_ip_.reset();
 			}
-
 			return result;
 		}
 
@@ -86,7 +85,7 @@ namespace plane::utils
 
 			if (ip.starts_with("172."sv))
 			{
-				if (auto dot_pos = ip.find('.', 4); dot_pos != _STD string_view::npos)
+				if (auto dot_pos { ip.find('.', 4) }; dot_pos != _STD string_view::npos)
 				{
 					_STD string_view segment { ip.substr(4, dot_pos - 4) };
 					int				 value { 0 };
@@ -131,7 +130,6 @@ namespace plane::utils
 		_STD optional<_STD string> getDeviceIpv4AddressImpl(void) const noexcept
 		{
 			using namespace _STD literals;
-
 			struct ifaddrs*		 ifaddr { nullptr };
 			if (_CSTD getifaddrs(&ifaddr) == -1)
 			{
@@ -149,7 +147,6 @@ namespace plane::utils
 				});
 
 			_STD vector<_STD pair<_STD string, _STD string>> addresses {};
-
 			for (auto* ifa { ifaddr }; ifa != nullptr; ifa = ifa->ifa_next)
 			{
 				if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET || !ifa->ifa_name)
@@ -185,30 +182,30 @@ namespace plane::utils
 				return _STD nullopt;
 			}
 
-			auto highPriorityIt = _STD find_if(addresses.begin(),
-											   addresses.end(),
-											   [&](const auto& pair)
-											   {
-												   return this->isHighPriorityInterface(pair.first);
-											   });
+			auto high_priority_it = _STD find_if(addresses.begin(),
+												 addresses.end(),
+												 [&](const auto& pair)
+												 {
+													 return this->isHighPriorityInterface(pair.first);
+												 });
 
-			if (highPriorityIt != addresses.end())
+			if (high_priority_it != addresses.end())
 			{
-				LOG_INFO("已优先选择 Wi-Fi/以太网 IP 地址: {} ({})", highPriorityIt->second, highPriorityIt->first);
-				return highPriorityIt->second;
+				LOG_INFO("已优先选择 Wi-Fi/以太网 IP 地址: {} ({})", high_priority_it->second, high_priority_it->first);
+				return high_priority_it->second;
 			}
 
-			auto siteLocalIt = _STD find_if(addresses.begin(),
-											addresses.end(),
-											[&](const auto& pair)
-											{
-												return this->isSiteLocalAddress(pair.second);
-											});
+			auto site_local_it = _STD find_if(addresses.begin(),
+											  addresses.end(),
+											  [&](const auto& pair)
+											  {
+												  return this->isSiteLocalAddress(pair.second);
+											  });
 
-			if (siteLocalIt != addresses.end())
+			if (site_local_it != addresses.end())
 			{
-				LOG_INFO("未找到 Wi-Fi/以太网 IP, 已选择局域网 IP: {} ({})", siteLocalIt->second, siteLocalIt->first);
-				return siteLocalIt->second;
+				LOG_INFO("未找到 Wi-Fi/以太网 IP, 已选择局域网 IP: {} ({})", site_local_it->second, site_local_it->first);
+				return site_local_it->second;
 			}
 
 			const auto& [name, ip] { addresses.front() };

@@ -89,9 +89,9 @@ namespace plane::services
 														  this->onPSDKEvent(data);
 													  });
 
-			auto& systemDispatcher { plane::services::EventManager::getInstance().getSystemDispatcher() };
+			auto& system_dispatcher { plane::services::EventManager::getInstance().getSystemDispatcher() };
 			this->system_event_remover_ =
-				_STD make_unique<_EVENTPP ScopedRemover<plane::services::EventManager::SystemDispatcher>>(systemDispatcher);
+				_STD make_unique<_EVENTPP ScopedRemover<plane::services::EventManager::SystemDispatcher>>(system_dispatcher);
 
 			this->system_event_remover_->appendListener(plane::services::EventManager::SystemEvent::HeartbeatTick,
 														[this](const plane::services::EventManager::SystemEventData& data)
@@ -328,8 +328,8 @@ namespace plane::services
 		}
 
 		const auto now { _STD_CHRONO steady_clock::now() };
-		const auto lastUpdate { this->last_health_ping_time_.load() };
-		if (now - lastUpdate > this->PSDK_WATCHDOG_TIMEOUT)
+		const auto last_update { this->last_health_ping_time_.load() };
+		if (now - last_update > this->PSDK_WATCHDOG_TIMEOUT)
 		{
 			LOG_ERROR("看门狗超时！PSDK 数据源已超过 {} 秒没有更新！", this->PSDK_WATCHDOG_TIMEOUT.count());
 		}

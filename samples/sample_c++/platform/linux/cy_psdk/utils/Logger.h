@@ -97,6 +97,19 @@ namespace plane::utils
 			}
 		}
 
+		void setLevel(_SPDLOG level::level_enum level) noexcept
+		{
+			if (this->logger_)
+			{
+				this->logger_->set_level(level);
+				LOG_INFO("日志级别已动态调整为: {}", _SPDLOG level::to_string_view(level));
+			}
+			else
+			{
+				STD_PRINTLN_ERROR("请勿在 Logger 初始化之前设置日志级别！");
+			}
+		}
+
 		// 记录日志，支持格式化参数
 		// loc: 日志调用位置（文件名、行号、函数名）
 		// lvl: 日志级别
@@ -117,7 +130,7 @@ namespace plane::utils
 		Logger(const Logger&) noexcept			  = delete;
 		Logger& operator=(const Logger&) noexcept = delete;
 
-		void	manageLogFiles(const _STD_FS path& log_dir, const _STD_FS path& new_log_file, _STD size_t max_files)
+		void	manageLogFiles(const _STD_FS path& logDir, const _STD_FS path& newLogFile, _STD size_t maxFilesCount)
 		{
 			_STD_FS path	latest_link { _STD_FS read_symlink("/proc/self/exe").parent_path() / "latest.log" };
 			_STD error_code ec {};
@@ -126,14 +139,14 @@ namespace plane::utils
 				_STD_FS remove(latest_link, ec);
 			}
 
-			_STD_FS create_symlink(_STD_FS absolute(new_log_file), latest_link, ec);
+			_STD_FS create_symlink(_STD_FS absolute(newLogFile), latest_link, ec);
 			if (ec)
 			{
 				LOG_WARN("创建日志软链接 'latest.log' 失败: {}", ec.message());
 			}
 
 			_STD vector<_STD_FS path> log_files {};
-			for (const auto& entry : _STD_FS directory_iterator(log_dir))
+			for (const auto& entry : _STD_FS directory_iterator(logDir))
 			{
 				if (entry.is_regular_file() && entry.path().extension() == ".log" && entry.path().filename() != "latest.log")
 				{
@@ -141,12 +154,12 @@ namespace plane::utils
 				}
 			}
 
-			if (log_files.size() > max_files)
+			if (log_files.size() > maxFilesCount)
 			{
 				_STD sort(log_files.begin(), log_files.end());
 
-				LOG_INFO("日志文件数量 ({}) 已超过最大限制 ({})，正在删除最旧的文件...", log_files.size(), max_files);
-				_STD size_t files_to_delete { log_files.size() - max_files };
+				LOG_INFO("日志文件数量 ({}) 已超过最大限制 ({})，正在删除最旧的文件...", log_files.size(), maxFilesCount);
+				_STD size_t files_to_delete { log_files.size() - maxFilesCount };
 				for (_STD size_t i { 0 }; i < files_to_delete; ++i)
 				{
 					_STD_FS remove(log_files[i], ec);
