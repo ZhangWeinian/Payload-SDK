@@ -108,14 +108,15 @@ namespace plane::services
 			{
 				if (plane::config::ConfigManager::getInstance().isTestKmzFile())
 				{
-					LOG_INFO("测试指定航线 /tmp/kmz/1.kmz");
-					if (_STD_FS exists("/tmp/kmz/1.kmz"))
+					_STD string_view test_kmz_path { plane::config::ConfigManager::getInstance().getTestKmzFilePath() };
+					LOG_INFO("测试指定航线: {}", test_kmz_path);
+					if (_STD_FS exists(test_kmz_path))
 					{
-						plane::services::FlyManager::getInstance().waypoint("/tmp/kmz/1.kmz"sv);
+						plane::services::FlyManager::getInstance().waypoint(test_kmz_path);
 					}
 					else
 					{
-						LOG_ERROR("测试指定航线 /tmp/kmz/1.kmz 不存在");
+						LOG_ERROR("测试指定航线 {} 不存在", test_kmz_path);
 					}
 				}
 				else
@@ -136,7 +137,7 @@ namespace plane::services
 						LOG_INFO("[MQTT] 收到并准备执行【航线任务】, 共 {} 个航点", payload.HDJ.size());
 						if (auto kmz_data { plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload) }; kmz_data)
 						{
-							plane::services::FlyManager::getInstance().waypoint(*kmz_data);
+							plane::services::FlyManager::getInstance().waypoint(kmz_data.value());
 						}
 						else
 						{
@@ -290,11 +291,11 @@ namespace plane::services
 	void LogicHandler::handleNedVelocity(const n_json& payloadJson) noexcept
 	{
 		this->handleCommand<plane::protocol::NedVelocityPayload>(
-			"NED速度控制",
+			"NED 速度控制",
 			payloadJson,
 			[&](const auto& payload)
 			{
-				LOG_INFO("[MQTT] 收到【NED速度控制】指令: 北向速度={}, 东向速度={}, 地向速度={}, 偏航角速率={}",
+				LOG_INFO("[MQTT] 收到【NED 速度控制】指令: 北向速度={}, 东向速度={}, 地向速度={}, 偏航角速率={}",
 						 payload.SDN,
 						 payload.SDD,
 						 payload.SDX,

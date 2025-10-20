@@ -108,13 +108,13 @@ namespace plane::config
 
 			if (this->config_node_["plane"] && this->config_node_["plane"]["code"])
 			{
-				_STD string code { this->config_node_["plane"]["code"].as<_STD string>() };
-				if (code.empty())
+				_STD string plane_code { this->config_node_["plane"]["code"].as<_STD string>() };
+				if (plane_code.empty())
 				{
 					LOG_ERROR("Plane Code 不能为空");
 					return false;
 				}
-				this->app_config_.planeCode = code;
+				this->app_config_.planeCode = plane_code;
 			}
 			else
 			{
@@ -124,20 +124,28 @@ namespace plane::config
 
 			if (this->config_node_["features"])
 			{
-				const auto& features				= this->config_node_["features"];
+				const auto& features				  = this->config_node_["features"];
 
-				this->app_config_.enableFullPSDK	= features["enable_full_psdk"].as<bool>(false);
-				this->app_config_.enableDebugLog	= features["enable_debug_log"].as<bool>(false);
-				this->app_config_.enableSkipRC		= features["skip_rc"].as<bool>(false);
-				this->app_config_.enableUseTestKmz	= features["use_test_kmz"].as<bool>(false);
-				this->app_config_.enableSaveKmzFile = features["save_kmz_file"].as<bool>(false);
+				this->app_config_.enableFullPSDK	  = features["enable_full_psdk"].as<bool>(false);
+				this->app_config_.enableTraceLogLevel = features["enable_trace_log"].as<bool>(false);
+				this->app_config_.enableSkipRC		  = features["skip_rc"].as<bool>(false);
+				this->app_config_.enableSaveKmzFile	  = features["save_kmz_file"].as<bool>(false);
+				this->app_config_.enableUseTestKmz	  = features["use_test_kmz"].as<bool>(false);
+				this->app_config_.testKmzFilePath	  = features["test_kmz_file_path"].as<_STD string>("/tmp/kmz/1.kmz");
 
-				LOG_TRACE("功能开关配置加载详情: \n    FullPSDK={}\n    DebugLog={}\n    SkipRC={}\n    TestKMZ={}\n    SaveKMZ={}",
+				LOG_TRACE("功能开关配置加载详情: \n"
+						  "    FullPSDK={}\n"
+						  "    TraceLog={}\n"
+						  "    SkipRC={}\n"
+						  "    SaveKMZ={}\n"
+						  "    TestKMZ={}\n"
+						  "    TestKMZPath={}",
 						  this->app_config_.enableFullPSDK,
-						  this->app_config_.enableDebugLog,
+						  this->app_config_.enableTraceLogLevel,
 						  this->app_config_.enableSkipRC,
+						  this->app_config_.enableSaveKmzFile,
 						  this->app_config_.enableUseTestKmz,
-						  this->app_config_.enableSaveKmzFile);
+						  this->app_config_.testKmzFilePath);
 			}
 			else
 			{
@@ -170,6 +178,7 @@ namespace plane::config
 		{
 			LOG_ERROR("生成 MQTT Client ID 时发生未知异常");
 		}
+		LOG_WARN("使用回退的 MQTT Client ID");
 		return "cv_fallback_client_id";
 	}
 
@@ -193,9 +202,9 @@ namespace plane::config
 		return this->getConfigValue(this->app_config_.enableFullPSDK);
 	}
 
-	bool ConfigManager::isLogLevelDebug(void) const noexcept
+	bool ConfigManager::isTraceLogLevel(void) const noexcept
 	{
-		return this->getConfigValue(this->app_config_.enableDebugLog);
+		return this->getConfigValue(this->app_config_.enableTraceLogLevel);
 	}
 
 	bool ConfigManager::isSkipRC(void) const noexcept
@@ -211,6 +220,11 @@ namespace plane::config
 	bool ConfigManager::isSaveKmz(void) const noexcept
 	{
 		return this->getConfigValue(this->app_config_.enableSaveKmzFile);
+	}
+
+	_STD string_view ConfigManager::getTestKmzFilePath(void) const noexcept
+	{
+		return this->getConfigValue(this->app_config_.testKmzFilePath);
 	}
 
 	template<typename ValueType, typename DefaultType>

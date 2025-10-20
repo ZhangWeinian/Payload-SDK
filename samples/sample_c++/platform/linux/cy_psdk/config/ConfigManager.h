@@ -10,6 +10,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <string_view>
 #include <type_traits>
 #include <filesystem>
 #include <iterator>
@@ -40,7 +41,7 @@ namespace plane::config
 		_NODISCARD bool isStandardProceduresEnabled(void) const noexcept;
 
 		// 检查配置项: 是否启用 DEBUG 级别的调试日志
-		_NODISCARD bool isLogLevelDebug(void) const noexcept;
+		_NODISCARD bool isTraceLogLevel(void) const noexcept;
 
 		// 检查配置项: 是否跳过遥控器检测
 		_NODISCARD bool isSkipRC(void) const noexcept;
@@ -50,6 +51,9 @@ namespace plane::config
 
 		// 检查配置项: 是否同时保存 KMZ 文件
 		_NODISCARD bool isSaveKmz(void) const noexcept;
+
+		// 获取配置项: 获取测试 KMZ 文件路径
+		_NODISCARD _STD string_view getTestKmzFilePath(void) const noexcept;
 
 	private:
 		explicit ConfigManager(void) noexcept		   = default;

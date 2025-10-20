@@ -4,10 +4,10 @@
 
 #include <nlohmann/json.hpp>
 
+#include <string_view>
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <vector>
 
 #include "define.h"
 
@@ -17,14 +17,15 @@ namespace plane::protocol
 
 	struct AppConfigData
 	{
-		_STD string mqttUrl {};
-		_STD string planeSn {};
-		_STD string planeCode {};
-		_STD string mqttClientId {};
-		bool		enableFullPSDK { false };
-		bool		enableDebugLog { false };
-		bool		enableSkipRC { false };
-		bool		enableUseTestKmz { false };
-		bool		enableSaveKmzFile { false };
+		_STD string		 mqttUrl {};
+		_STD string		 planeSn {};
+		_STD string		 planeCode {};
+		_STD string		 mqttClientId {};
+		bool			 enableFullPSDK { false };
+		bool			 enableTraceLogLevel { false };
+		bool			 enableSkipRC { false };
+		bool			 enableSaveKmzFile { false };
+		bool			 enableUseTestKmz { false };
+		_STD string_view testKmzFilePath {};
 	};
 } // namespace plane::protocol

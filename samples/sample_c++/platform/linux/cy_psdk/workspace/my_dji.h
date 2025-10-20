@@ -57,7 +57,7 @@ namespace plane::my_dji
 		}
 
 		// 根据配置设置日志级别
-		if (config.isLogLevelDebug())
+		if (config.isTraceLogLevel())
 		{
 			plane::utils::Logger::getInstance().setLocalLogFileLevel(_SPDLOG level::trace);
 		}

@@ -64,7 +64,6 @@ namespace plane::utils
 			try
 			{
 				_STD vector<_SPDLOG sink_ptr> sinks {};
-
 				auto						  console_sink { _STD make_shared<_SPDLOG sinks::stdout_color_sink_mt>() };
 				console_sink->set_level(console_level);
 				console_sink->set_pattern("[%m-%d %H:%M:%S.%e] [%^%l%$] [th.%t] [%s:%#] %v");

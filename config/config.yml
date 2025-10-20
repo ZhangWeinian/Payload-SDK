@@ -6,7 +6,8 @@ plane:
 
 features:
     enable_full_psdk: false
-    enable_debug_log: true
+    enable_trace_log: false
     skip_rc: false
-    use_test_kmz: false
     save_kmz_file: true
+    use_test_kmz: false
+    test_kmz_file_path: "/tmp/kmz/1.kmz"
