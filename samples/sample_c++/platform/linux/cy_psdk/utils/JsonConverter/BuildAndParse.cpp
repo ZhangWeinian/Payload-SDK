@@ -6,6 +6,8 @@
 #include "services/MQTT/Handler/MessageHandler.h"
 #include "utils/Logger.h"
 
+#include "fmt/format.h"
+
 #include <chrono>
 #include <iomanip>
 #include <sstream>
@@ -37,7 +39,7 @@ namespace plane::utils
 		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
 		auto					 now { _UNNAMED getCurrentTimestampMs() };
 		plane::protocol::NetworkMessage<plane::protocol::StatusPayload> msg { .ZBID = plane_code,
-																			  .XXID = "SBZT-" + plane_code + "-" + _STD to_string(now),
+																			  .XXID = _FMT format("SBZT-{}-{}", plane_code, now),
 																			  .XXLX = "SBZT",
 																			  .SJC	= now,
 																			  .SBSJ = _UNNAMED formatTimestamp(now),
@@ -51,7 +53,7 @@ namespace plane::utils
 		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
 		auto					 now { _UNNAMED getCurrentTimestampMs() };
 		plane::protocol::NetworkMessage<plane::protocol::MissionInfoPayload> msg { .ZBID = plane_code,
-																				   .XXID = "GDXX-" + plane_code + "-" + _STD to_string(now),
+																				   .XXID = _FMT format("GDXX-{}-{}", plane_code, now),
 																				   .XXLX = "GDXX",
 																				   .SJC	 = now,
 																				   .SBSJ = _UNNAMED formatTimestamp(now),
@@ -65,7 +67,7 @@ namespace plane::utils
 		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
 		auto					 now { _UNNAMED getCurrentTimestampMs() };
 		plane::protocol::NetworkMessage<plane::protocol::HealthStatusPayload> msg { .ZBID = plane_code,
-																					.XXID = "JKGL-" + plane_code + "-" + _STD to_string(now),
+																					.XXID = _FMT format("JKGL-{}-{}", plane_code, now),
 																					.XXLX = "JKGL",
 																					.SJC  = now,
 																					.SBSJ = _UNNAMED formatTimestamp(now),
@@ -79,7 +81,7 @@ namespace plane::utils
 		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
 		auto					 now { _UNNAMED getCurrentTimestampMs() };
 		plane::protocol::NetworkMessage<plane::protocol::MissionProgressPayload> msg { .ZBID = plane_code,
-																					   .XXID = "RWJD-" + plane_code + "-" + _STD to_string(now),
+																					   .XXID = _FMT format("RWJD-{}-{}", plane_code, now),
 																					   .XXLX = "RWJD",
 																					   .SJC	 = now,
 																					   .SBSJ = _UNNAMED formatTimestamp(now),

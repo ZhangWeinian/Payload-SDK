@@ -10,7 +10,9 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <type_traits>
 #include <filesystem>
+#include <iterator>
 #include <string>
 
 #include "define.h"
@@ -56,13 +58,18 @@ namespace plane::config
 		ConfigManager& operator=(const ConfigManager&) = delete;
 
 		// 获取一个随机生成的唯一客户端 ID
-		_NODISCARD static _STD string generateUniqueClientId(void) noexcept;
+		_NODISCARD _STD string getNewGenerateUniqueClientId(void) noexcept;
 
 		// 验证配置文件的内容是否合法
-		_NODISCARD bool				   validateConfig(void) noexcept;
+		_NODISCARD bool validateConfig(void) noexcept;
 
-		_YAML Node					   config_node_ {};
-		bool						   loaded_ { false };
-		plane::protocol::AppConfigData app_config_ {};
+		// 根据是否加载配置文件，返回相应的成员变量或默认值
+		template<typename ValueType, typename DefaultType = ValueType>
+		_NODISCARD _STD common_type_t<ValueType, DefaultType> getConfigValue(const ValueType&	value_if_loaded,
+																			 const DefaultType& default_value = {}) const noexcept;
+
+		_YAML Node											  config_node_ {};
+		bool												  loaded_ { false };
+		plane::protocol::AppConfigData						  app_config_ {};
 	};
 } // namespace plane::config

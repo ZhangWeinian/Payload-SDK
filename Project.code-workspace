@@ -125,7 +125,8 @@
 			"rope": "cpp",
 			"slist": "cpp",
 			"spanstream": "cpp",
-			"stdfloat": "cpp"
+			"stdfloat": "cpp",
+			"stacktrace": "cpp"
 		}
 	}
 }

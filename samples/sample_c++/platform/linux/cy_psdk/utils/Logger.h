@@ -97,12 +97,13 @@ namespace plane::utils
 			}
 		}
 
-		void setLevel(_SPDLOG level::level_enum level) noexcept
+		// 动态调整本地日志记录的级别
+		void setLocalLogFileLevel(_SPDLOG level::level_enum level) noexcept
 		{
 			if (this->logger_)
 			{
 				this->logger_->set_level(level);
-				LOG_INFO("日志级别已动态调整为: {}", _SPDLOG level::to_string_view(level));
+				LOG_INFO("本地记录的日志级别已动态调整为: {}", _SPDLOG level::to_string_view(level));
 			}
 			else
 			{
@@ -111,10 +112,6 @@ namespace plane::utils
 		}
 
 		// 记录日志，支持格式化参数
-		// loc: 日志调用位置（文件名、行号、函数名）
-		// lvl: 日志级别
-		// fmt: 格式化字符串
-		// args: 格式化参数
 		template<typename... Args>
 		void log(_SPDLOG source_loc loc, _SPDLOG level::level_enum lvl, _SPDLOG format_string_t<Args...> fmt, Args&&... args) const noexcept
 		{

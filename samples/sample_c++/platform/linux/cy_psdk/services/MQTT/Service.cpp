@@ -59,7 +59,7 @@ namespace plane::services
 
 		void delivery_complete(_MQTT delivery_token_ptr token) override
 		{
-			LOG_DEBUG("MQTT 消息发送完成, 令牌: {}", token ? token->get_message_id() : -1);
+			LOG_TRACE("MQTT 消息发送完成, 令牌: {}", token ? token->get_message_id() : -1);
 		}
 
 		void on_failure(const _MQTT token& tok) override

@@ -145,9 +145,8 @@ namespace plane::utils
 				}
 
 				_DEFINED _KMZ_DATA_TYPE data(st.size);
-				_LIBZIP zip_int64_t		bytes_read { _LIBZIP zip_source_read(this->source_, data.data(), data.size()) };
-
-				if (bytes_read < 0 || (_LIBZIP zip_uint64_t)bytes_read != st.size)
+				if (_LIBZIP zip_int64_t bytes_read { _LIBZIP zip_source_read(this->source_, data.data(), data.size()) };
+					bytes_read < 0 || static_cast<_LIBZIP zip_uint64_t>(bytes_read) != st.size)
 				{
 					LOG_ERROR("从内存 zip 源读取数据不完整. 错误: {}", _LIBZIP zip_error_strerror(_LIBZIP zip_source_error(this->source_)));
 					return _STD nullopt;
@@ -193,7 +192,7 @@ namespace plane::utils
 
 						if (_CSTD chmod(kmz_storage_dir.c_str(), 0777) != 0)
 						{
-							LOG_ERROR("无法设置目录 '{}' 的权限为 777: errno={}", kmz_storage_dir.string(), errno);
+							LOG_ERROR("无法设置目录 '{}' 的权限为 777 : errno={}", kmz_storage_dir.string(), errno);
 							return false;
 						}
 					}
@@ -236,6 +235,7 @@ namespace plane::utils
 
 			if (!is_initialized)
 			{
+				LOG_ERROR("KMZ 存储目录未初始化");
 				return _STD nullopt;
 			}
 
@@ -307,8 +307,8 @@ namespace plane::utils
 
 			if (!waypoints.empty())
 			{
-				plane::protocol::wpml::WpmlActionGroup takeoff_group {};
-				takeoff_group.actionTriggerType = "takeoff";
+				plane::protocol::wpml::WpmlActionGroup ag {};
+				ag.actionTriggerType = "takeoff";
 
 				plane::protocol::wpml::WpmlAction gimbal_rotate {};
 				gimbal_rotate.actionId										 = 0;
@@ -316,12 +316,12 @@ namespace plane::utils
 				gimbal_rotate.actionActuatorFuncParam.payloadPositionIndex	 = 7;
 				gimbal_rotate.actionActuatorFuncParam.gimbalYawRotateEnable	 = 1;
 				gimbal_rotate.actionActuatorFuncParam.gimbalPitchRotateAngle = waypoints[0].YTFYJ.value_or(-90.0);
-				takeoff_group.actions.push_back(gimbal_rotate);
+				ag.actions.push_back(gimbal_rotate);
 
 				plane::protocol::wpml::WpmlAction hover {};
 				hover.actionId			 = 1;
 				hover.actionActuatorFunc = "hover";
-				takeoff_group.actions.push_back(hover);
+				ag.actions.push_back(hover);
 
 				plane::protocol::wpml::WpmlPlacemark first_placemark {};
 				first_placemark.index			= 0;
@@ -335,7 +335,7 @@ namespace plane::utils
 					first_placemark.waypointHeadingParam.waypointHeadingAngle = _UNNAMED calculateHeadingAngle(waypoints[0], waypoints[1]);
 				}
 
-				// first_placemark.actionGroups.push_back(takeoff_group);
+				// first_placemark.actionGroups.push_back(ag);
 				wpml_file.document.folder.placemarks.push_back(first_placemark);
 
 				for (_STD size_t i { 1 }; i < size - 1; ++i)
@@ -410,7 +410,6 @@ namespace plane::utils
 											   const plane::protocol::WaypointPayload&		 missionInfo) noexcept
 		{
 			plane::protocol::kml::TemplateKmlFile kml_file {};
-			_STD size_t							  size { waypoints.size() };
 
 			if (!waypoints.empty())
 			{
@@ -419,6 +418,7 @@ namespace plane::utils
 				kml_file.document.missionConfig.globalTransitionalSpeed = waypoints[0].SD;
 			}
 
+			_STD size_t size { waypoints.size() };
 			for (_STD size_t i { 0 }; i < size; ++i)
 			{
 				const auto&							wp { waypoints[i] };
@@ -427,10 +427,8 @@ namespace plane::utils
 				pm.index				 = i;
 				pm.point.longitude		 = wp.JD;
 				pm.point.latitude		 = wp.WD;
-
 				pm.height				 = wp.GD;
 				pm.ellipsoidHeight		 = wp.GD;
-
 				pm.useGlobalHeight		 = 1;
 				pm.useGlobalSpeed		 = 1;
 				pm.useGlobalHeadingParam = 1;
@@ -468,6 +466,7 @@ namespace plane::utils
 
 			if (!archive.addFile("wpmz/waylines.wpml", waylines_wpml) || !archive.addFile("wpmz/template.kml", template_kml))
 			{
+				LOG_ERROR("将文件添加到内存归档失败。");
 				return _STD nullopt;
 			}
 

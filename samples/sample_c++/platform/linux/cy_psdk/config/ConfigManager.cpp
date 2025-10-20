@@ -4,6 +4,13 @@
 
 #include "utils/Logger.h"
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <fmt/format.h>
+
+#include <algorithm>
+#include <array>
 #include <fstream>
 #include <iomanip>
 #include <random>
@@ -41,7 +48,7 @@ namespace plane::config
 
 		if (this->app_config_.mqttClientId.empty())
 		{
-			this->app_config_.mqttClientId = this->generateUniqueClientId();
+			this->app_config_.mqttClientId = this->getNewGenerateUniqueClientId();
 			LOG_DEBUG("运行时 MQTT Client ID 已生成: {}", this->app_config_.mqttClientId);
 		}
 
@@ -125,16 +132,16 @@ namespace plane::config
 				this->app_config_.enableUseTestKmz	= features["use_test_kmz"].as<bool>(false);
 				this->app_config_.enableSaveKmzFile = features["save_kmz_file"].as<bool>(false);
 
-				LOG_INFO("功能开关配置加载: FullPSDK={}, DebugLog={}, SkipRC={}, TestKMZ={}, SaveKMZ={}",
-						 this->app_config_.enableFullPSDK,
-						 this->app_config_.enableDebugLog,
-						 this->app_config_.enableSkipRC,
-						 this->app_config_.enableUseTestKmz,
-						 this->app_config_.enableSaveKmzFile);
+				LOG_TRACE("功能开关配置加载详情: \n    FullPSDK={}\n    DebugLog={}\n    SkipRC={}\n    TestKMZ={}\n    SaveKMZ={}",
+						  this->app_config_.enableFullPSDK,
+						  this->app_config_.enableDebugLog,
+						  this->app_config_.enableSkipRC,
+						  this->app_config_.enableUseTestKmz,
+						  this->app_config_.enableSaveKmzFile);
 			}
 			else
 			{
-				LOG_INFO("配置文件中未找到 'features' 部分，所有功能开关将使用默认值 (false)。");
+				LOG_WARN("配置文件中未找到 'features' 部分，所有功能开关将使用默认值。");
 			}
 
 			return true;
@@ -146,82 +153,78 @@ namespace plane::config
 		}
 	}
 
-	_STD string ConfigManager::generateUniqueClientId(void) noexcept
+	_STD string ConfigManager::getNewGenerateUniqueClientId(void) noexcept
 	{
-		_STD random_device rd {};
-		_STD mt19937	   gen(rd());
-		_STD uniform_int_distribution<> dis(0, 15);
-		_STD uniform_int_distribution<> dis2(8, 11);
-
-		_STD stringstream				ss {};
-		ss << _STD						hex;
-
-		for (int i { 0 }; i < 32; i++)
+		try
 		{
-			if (i == 12)
-			{
-				ss << 4;
-			}
-			else if (i == 16)
-			{
-				ss << dis2(gen);
-			}
-			else
-			{
-				ss << dis(gen);
-			}
+			_BOOST uuids::uuid uuid { _BOOST uuids::random_generator {}() };
+			_STD string		   uuid_str { _BOOST uuids::to_string(uuid) };
+			uuid_str.erase(_STD remove(uuid_str.begin(), uuid_str.end(), '-'), uuid_str.end());
+			return _FMT format("cv_{}", uuid_str);
 		}
-
-		return "cv_" + ss.str();
+		catch (const _STD exception& e)
+		{
+			LOG_ERROR("生成 MQTT Client ID 时发生异常: {}", e.what());
+		}
+		catch (...)
+		{
+			LOG_ERROR("生成 MQTT Client ID 时发生未知异常");
+		}
+		return "cv_fallback_client_id";
 	}
 
 	_STD string ConfigManager::getMqttUrl(void) const noexcept
 	{
-		if (this->loaded_)
-		{
-			return this->app_config_.mqttUrl;
-		}
-		LOG_WARN("配置未加载或 MQTT URL 无效, 返回空字符串");
-		return "";
+		return this->getConfigValue(this->app_config_.mqttUrl);
 	}
 
 	_STD string ConfigManager::getMqttClientId(void) const noexcept
 	{
-		return this->app_config_.mqttClientId;
+		return this->getConfigValue(this->app_config_.mqttClientId);
 	}
 
 	_STD string ConfigManager::getPlaneCode(void) const noexcept
 	{
-		if (this->loaded_)
-		{
-			return this->app_config_.planeCode;
-		}
-		LOG_WARN("配置未加载或 PlaneCode 无效, 返回空字符串");
-		return "";
+		return this->getConfigValue(this->app_config_.planeCode);
 	}
 
 	bool ConfigManager::isStandardProceduresEnabled(void) const noexcept
 	{
-		return this->loaded_ && this->app_config_.enableFullPSDK;
+		return this->getConfigValue(this->app_config_.enableFullPSDK);
 	}
 
 	bool ConfigManager::isLogLevelDebug(void) const noexcept
 	{
-		return this->loaded_ && this->app_config_.enableDebugLog;
+		return this->getConfigValue(this->app_config_.enableDebugLog);
 	}
 
 	bool ConfigManager::isSkipRC(void) const noexcept
 	{
-		return this->loaded_ && this->app_config_.enableSkipRC;
+		return this->getConfigValue(this->app_config_.enableSkipRC);
 	}
 
 	bool ConfigManager::isTestKmzFile(void) const noexcept
 	{
-		return this->loaded_ && this->app_config_.enableUseTestKmz;
+		return this->getConfigValue(this->app_config_.enableUseTestKmz);
 	}
 
 	bool ConfigManager::isSaveKmz(void) const noexcept
 	{
-		return this->loaded_ && this->app_config_.enableSaveKmzFile;
+		return this->getConfigValue(this->app_config_.enableSaveKmzFile);
+	}
+
+	template<typename ValueType, typename DefaultType>
+	_NODISCARD _STD common_type_t<ValueType, DefaultType> ConfigManager::getConfigValue(const ValueType&   value_if_loaded,
+																						const DefaultType& default_value) const noexcept
+	{
+		if (this->loaded_)
+		{
+			return value_if_loaded;
+		}
+		else
+		{
+			LOG_WARN("配置未加载，返回配置的默认值: {}", default_value);
+			return default_value;
+		}
 	}
 } // namespace plane::config
