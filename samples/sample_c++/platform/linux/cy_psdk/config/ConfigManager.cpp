@@ -49,7 +49,7 @@ namespace plane::config
 		if (this->app_config_.mqttClientId.empty())
 		{
 			this->app_config_.mqttClientId = this->getNewGenerateUniqueClientId();
-			LOG_DEBUG("运行时 MQTT Client ID 已生成: {}", this->app_config_.mqttClientId);
+			LOG_ERROR("运行时 MQTT Client ID 已生成: {}", this->app_config_.mqttClientId);
 		}
 
 		try
@@ -88,11 +88,12 @@ namespace plane::config
 
 	bool ConfigManager::validateConfig(void) noexcept
 	{
+		using namespace _STD literals;
 		try
 		{
 			if (this->config_node_["mqtt"] && this->config_node_["mqtt"]["url"])
 			{
-				_STD string url { this->config_node_["mqtt"]["url"].as<_STD string>() };
+				_STD string_view url { this->config_node_["mqtt"]["url"].as<_STD string_view>() };
 				if (url.empty())
 				{
 					LOG_ERROR("MQTT URL 不能为空");
@@ -108,7 +109,7 @@ namespace plane::config
 
 			if (this->config_node_["plane"] && this->config_node_["plane"]["code"])
 			{
-				_STD string plane_code { this->config_node_["plane"]["code"].as<_STD string>() };
+				_STD string_view plane_code { this->config_node_["plane"]["code"].as<_STD string_view>() };
 				if (plane_code.empty())
 				{
 					LOG_ERROR("Plane Code 不能为空");
@@ -131,7 +132,7 @@ namespace plane::config
 				this->app_config_.enableSkipRC		  = features["skip_rc"].as<bool>(false);
 				this->app_config_.enableSaveKmzFile	  = features["save_kmz_file"].as<bool>(false);
 				this->app_config_.enableUseTestKmz	  = features["use_test_kmz"].as<bool>(false);
-				this->app_config_.testKmzFilePath	  = features["test_kmz_file_path"].as<_STD string>("/tmp/kmz/1.kmz");
+				this->app_config_.testKmzFilePath	  = features["test_kmz_file_path"].as<_STD string_view>(""sv);
 
 				LOG_TRACE("功能开关配置加载详情: \n"
 						  "    FullPSDK={}\n"
@@ -163,6 +164,8 @@ namespace plane::config
 
 	_STD string ConfigManager::getNewGenerateUniqueClientId(void) noexcept
 	{
+		using namespace _STD literals;
+
 		try
 		{
 			_BOOST uuids::uuid uuid { _BOOST uuids::random_generator {}() };
@@ -182,7 +185,7 @@ namespace plane::config
 		return "cv_fallback_client_id";
 	}
 
-	_STD string ConfigManager::getMqttUrl(void) const noexcept
+	_STD string_view ConfigManager::getMqttUrl(void) const noexcept
 	{
 		return this->getConfigValue(this->app_config_.mqttUrl);
 	}
@@ -192,7 +195,7 @@ namespace plane::config
 		return this->getConfigValue(this->app_config_.mqttClientId);
 	}
 
-	_STD string ConfigManager::getPlaneCode(void) const noexcept
+	_STD string_view ConfigManager::getPlaneCode(void) const noexcept
 	{
 		return this->getConfigValue(this->app_config_.planeCode);
 	}

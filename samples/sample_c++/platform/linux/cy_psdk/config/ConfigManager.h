@@ -14,7 +14,6 @@
 #include <type_traits>
 #include <filesystem>
 #include <iterator>
-#include <string>
 
 #include "define.h"
 
@@ -29,13 +28,13 @@ namespace plane::config
 		_NODISCARD bool loadAndCheck(_STD_FS path filepath = "") noexcept;
 
 		// 获取配置项: 获取 MQTT 服务器地址
-		_NODISCARD _STD string getMqttUrl(void) const noexcept;
+		_NODISCARD _STD string_view getMqttUrl(void) const noexcept;
 
 		// 获取配置项: 获取 MQTT 客户端 ID
 		_NODISCARD _STD string getMqttClientId(void) const noexcept;
 
 		// 获取配置项: 获取飞机序列号
-		_NODISCARD _STD string getPlaneCode(void) const noexcept;
+		_NODISCARD _STD string_view getPlaneCode(void) const noexcept;
 
 		// 检查配置项: 是否启用 PSDK 标准流程
 		_NODISCARD bool isStandardProceduresEnabled(void) const noexcept;

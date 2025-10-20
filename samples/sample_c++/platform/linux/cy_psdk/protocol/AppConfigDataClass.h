@@ -17,9 +17,9 @@ namespace plane::protocol
 
 	struct AppConfigData
 	{
-		_STD string		 mqttUrl {};
-		_STD string		 planeSn {};
-		_STD string		 planeCode {};
+		_STD string_view mqttUrl {};
+		_STD string_view planeSn {};
+		_STD string_view planeCode {};
 		_STD string		 mqttClientId {};
 		bool			 enableFullPSDK { false };
 		bool			 enableTraceLogLevel { false };

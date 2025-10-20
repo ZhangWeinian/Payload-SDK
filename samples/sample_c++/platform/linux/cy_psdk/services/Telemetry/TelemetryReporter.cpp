@@ -300,11 +300,11 @@ namespace plane::services
 					return;
 				}
 
-				static const auto ip_address { plane::utils::NetworkUtils::getInstance().getDeviceIpv4Address().value_or("N/A") };
-				static const auto plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
+				static const auto		 ip_address { plane::utils::NetworkUtils::getInstance().getDeviceIpv4Address().value_or("N/A") };
+				static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
 				if (plane_code.empty())
 				{
-					LOG_WARN("无法获取飞机编码 (PlaneCode) ，跳过本次固定信息心跳上报。");
+					LOG_WARN("无法获取飞机 PlaneCode ，跳过本次固定信息心跳上报。");
 					return;
 				}
 
