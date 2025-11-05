@@ -79,6 +79,7 @@ include_directories (
     ../../../../../../../modules/authentication/ciu98/huada_lib/inc
     ../../../../../../../modules/authentication
     ../../../../../../../modules/authentication/ciu98
+    ../../../../../../../modules/network_rtk/include
     ../../drivers/CMSIS/include
     ../../drivers/CMSIS/GD/GD32F5xx/Include
     ../../drivers/BSP

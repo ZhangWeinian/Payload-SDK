@@ -66,6 +66,14 @@ typedef struct {
     uint8_t majorVersion;
 } T_DjiAircraftVersion;
 
+/**
+ * @brief enhanced transmission state.
+ */
+typedef enum {
+    DJI_ENHANCEED_TRANSMISSION_STATE_DISABLED = 0, /**< Mobile app image transmission setting, Enhanced transmission disabled */
+    DJI_ENHANCEED_TRANSMISSION_STATE_ENABLED  = 3, /**< Mobile app image transmission setting, Enhanced transmission enabled. */
+} E_DjiEnhancedTransmissionState;
+
 /* Exported functions --------------------------------------------------------*/
 /**
  * @brief Basic information about the aircraft system, including aircraft type and DJI adapter type.
@@ -96,6 +104,13 @@ T_DjiReturnCode DjiAircraftInfo_GetConnectionStatus(bool *isConnected);
  * @return Execution result.
  */
 T_DjiReturnCode DjiAircraftInfo_GetAircraftVersion(T_DjiAircraftVersion *aircraftVersion);
+
+/**
+ * @brief Get Enhanced Transmission state, which is set in the mobile app image transmission setting -- Enhanced Transmission.
+ * @param aircraftVersion: Enhanced Transmission state.
+ * @return Execution result.
+ */
+T_DjiReturnCode DjiAircraftInfo_GetEnhancedTransmission(E_DjiEnhancedTransmissionState *state);
 
 #ifdef __cplusplus
 }

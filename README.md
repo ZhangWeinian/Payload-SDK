@@ -1,8 +1,8 @@
 # DJI Payload SDK (PSDK)
 
-![](https://img.shields.io/badge/version-V3.13.1-purple.svg)
-![](https://img.shields.io/badge/platform-linux_|_rtos-red.svg)
-![](https://img.shields.io/badge/license-MIT-cyan.svg)
+![](https://img.shields.io/badge/version-V3.14.0-pink.svg)
+![](https://img.shields.io/badge/platform-linux_|_rtos-orange.svg)
+![](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ## What is the DJI Payload SDK?
 
@@ -23,20 +23,20 @@ to get the latest version information.
 
 ## Latest Release
 
-The latest release version of PSDK is 3.13.1. This version of Payload SDK mainly add some new features support and fixed some
+The latest release version of PSDK is 3.14.0. This version of Payload SDK mainly add some new features support and fixed some
 bugs. Please refer to the release notes for detailed changes list.
 
-### Released Feature List
+### Release Feature List
+- **Added support for the Zenmuse L3 model**
+- **Added custom network RTK functionality**
+- **Added support for using the L2 camera with the M400 drone**
+- **Added long-distance flight marking functionality for the M400 drone**
+- **Added support for modifying startup apps for the M400 drone**
+- **Added documentation for the M400 software license**
 
-* Supports Mavic 3TA  model
+### Fixes and Optimizations
+- **Optimized support for using the onboard network with the M400 drone**
 
-### Bug Fixes and Performance Improvements
-* Fixed an issue where the `DjiCore_Init` API failed on the Matrice 300.
-* Fixed an issue where quaternion data subscription failed for the Matrice 350 RTK.
-* Fixed occasional failures in the `DjiCore_Deinit` API.
-* Fixed occasional crashes caused by custom HMS modules.
-* Changed the default to not support RC-less flight. and exposed the `DjiFlightController_SetRCLostActionEnableStatus` API to disable or enable actions when the RC is lost.
-Note If you need to use RC-less flight, you must call this interface to disable RC-lost actions after `DjiFlightController_Init`. See the interface header file documentation for details.  
 ## License
 
 Payload SDK codebase is MIT-licensed. Please refer to the LICENSE file for detailed information.

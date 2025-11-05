@@ -29,7 +29,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include <dji_typedef.h>
-
+#include <widget/test_widget.h>
 #ifdef __cplusplus
 extern "C" {
 #endif

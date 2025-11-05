@@ -29,8 +29,10 @@
 #include "dji_logger.h"
 #include "hms/test_hms.h"
 #include "dji_hms_customization.h"
+#include "dji_aircraft_info.h"
 
 /* Private constants ---------------------------------------------------------*/
+#define DJI_HMS_ERROR_NETWORK_IS_POOR   (0x1E020004)
 
 /* Private types -------------------------------------------------------------*/
 
@@ -108,6 +110,54 @@ void DjiUser_RunHmsEnhanceSample(void)
     osalHandler->TaskSleepMs(4000);
     DjiHmsCustomization_AlarmEnhancedCtrl(DJI_HMS_ALARM_ENHANCED_ACTION_EXIT_ALL, setting);
     USER_LOG_INFO("AlarmEnhaned exit.");
+}
+
+void DjiUser_RunHmsNetworkSample(void)
+{
+    T_DjiOsalHandler *osalHandler = DjiPlatform_GetOsalHandler();
+    char inputSelectSample;
+    T_DjiReturnCode returnCode = 0;
+    E_DjiEnhancedTransmissionState state = DJI_ENHANCEED_TRANSMISSION_STATE_DISABLED;
+
+start:
+    osalHandler->TaskSleepMs(100);
+
+    std::cout
+        << "\n"
+        << "| Available commands:                                                                              |\n"
+        << "| [1] Get Enhanced Transmission state                                                              |\n"
+        << "| [2] send Network hms msg                                                                         |\n"
+        << "| [3] clear Network hms msg                                                                        |\n"
+        << "| [q] Quit                                                                                         |\n"
+        << std::endl;
+
+    std::cin >> inputSelectSample;
+    switch (inputSelectSample) {
+        case '1':
+            DjiAircraftInfo_GetEnhancedTransmission(&state);
+            goto start;
+        case '2':
+            returnCode = DjiHmsCustomization_InjectHmsErrorCode(DJI_HMS_ERROR_NETWORK_IS_POOR, DJI_HMS_ERROR_LEVEL_WARN);
+            if (returnCode == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+                USER_LOG_INFO("InjectHmsErrorCode success");
+            } else {
+                USER_LOG_ERROR("InjectHmsErrorCode fail");
+            }
+            goto start;
+        case '3':
+            returnCode = DjiHmsCustomization_EliminateHmsErrorCode(DJI_HMS_ERROR_NETWORK_IS_POOR);
+            if (returnCode == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+                USER_LOG_INFO("EliminateHmsErrorCode success");
+            } else {
+                USER_LOG_ERROR("EliminateHmsErrorCode fail");
+            }
+            goto start;
+        case 'q':
+            break;
+        default:
+            USER_LOG_ERROR("Input command is invalid");
+            goto start;
+    }
 }
 
 /* Private functions definition-----------------------------------------------*/

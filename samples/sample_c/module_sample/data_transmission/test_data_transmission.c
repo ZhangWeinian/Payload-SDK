@@ -38,6 +38,10 @@
 #define DATA_TRANSMISSION_TASK_STACK_SIZE   (2048)
 
 /* Private types -------------------------------------------------------------*/
+typedef struct {
+    E_DjiChannelAddress channelAddress;
+    T_DjiReturnCode (*callback)(const uint8_t *data, uint16_t len);
+} ChannelCallbackEntry;
 
 /* Private functions declaration ---------------------------------------------*/
 static void *UserDataTransmission_Task(void *arg);
@@ -49,10 +53,25 @@ static T_DjiReturnCode ReceiveDataFromPayload1(const uint8_t *data, uint16_t len
 static T_DjiReturnCode ReceiveDataFromPayload2(const uint8_t *data, uint16_t len);
 static T_DjiReturnCode ReceiveDataFromPayload3(const uint8_t *data, uint16_t len);
 
+static T_DjiReturnCode ReceiveDataFromPayload4(const uint8_t *data, uint16_t len);
+static T_DjiReturnCode ReceiveDataFromPayload5(const uint8_t *data, uint16_t len);
+static T_DjiReturnCode ReceiveDataFromPayload6(const uint8_t *data, uint16_t len);
+static T_DjiReturnCode ReceiveDataFromPayload7(const uint8_t *data, uint16_t len);
+static T_DjiReturnCode ReceiveDataFromPayload8(const uint8_t *data, uint16_t len);
 /* Private variables ---------------------------------------------------------*/
 static T_DjiTaskHandle s_userDataTransmissionThread;
 static T_DjiAircraftInfoBaseInfo s_aircraftInfoBaseInfo;
 
+static const ChannelCallbackEntry g_channelCallbacks[] = {
+    {DJI_CHANNEL_ADDRESS_PAYLOAD_PORT_NO1, ReceiveDataFromPayload1},
+    {DJI_CHANNEL_ADDRESS_PAYLOAD_PORT_NO2, ReceiveDataFromPayload2},
+    {DJI_CHANNEL_ADDRESS_PAYLOAD_PORT_NO3, ReceiveDataFromPayload3},
+    {DJI_CHANNEL_ADDRESS_EXTENSION_PORT_V2_NO4, ReceiveDataFromPayload4},
+    {DJI_CHANNEL_ADDRESS_EXTENSION_PORT_V2_NO5, ReceiveDataFromPayload5},
+    {DJI_CHANNEL_ADDRESS_EXTENSION_PORT_V2_NO6, ReceiveDataFromPayload6},
+    {DJI_CHANNEL_ADDRESS_EXTENSION_PORT_V2_NO7, ReceiveDataFromPayload7},
+    {DJI_CHANNEL_ADDRESS_EXTENSION_PORT_V2_NO8, ReceiveDataFromPayload8},
+};
 /* Exported functions definition ---------------------------------------------*/
 T_DjiReturnCode DjiTest_DataTransmissionStartService(void)
 {
@@ -99,8 +118,18 @@ T_DjiReturnCode DjiTest_DataTransmissionStartService(void)
     }
 
     if (s_aircraftInfoBaseInfo.aircraftType == DJI_AIRCRAFT_TYPE_M400) {
+        uint8_t Channel_Callback_count = (sizeof(g_channelCallbacks) / sizeof(g_channelCallbacks[0]));
+        for (uint8_t i = 0; i < Channel_Callback_count; i++) {
+            const ChannelCallbackEntry *entry = &g_channelCallbacks[i];
+            T_DjiReturnCode djiStat = 
+                            DjiLowSpeedDataChannel_RegRecvDataCallback(entry->channelAddress, entry->callback);
+
+            if (djiStat != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+                USER_LOG_ERROR("register receive data from channel %d error.", entry->channelAddress);
+                return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+            }
+        }
         USER_LOG_INFO("Only supports small data transmission between PSDK and MSDK.");
-        return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
     } else if (s_aircraftInfoBaseInfo.mountPosition == DJI_MOUNT_POSITION_PAYLOAD_PORT_NO1 ||
         s_aircraftInfoBaseInfo.mountPosition == DJI_MOUNT_POSITION_PAYLOAD_PORT_NO2 ||
         s_aircraftInfoBaseInfo.mountPosition == DJI_MOUNT_POSITION_PAYLOAD_PORT_NO3) {
@@ -236,54 +265,75 @@ static void *UserDataTransmission_Task(void *arg)
             }
         }
 
-        if (s_aircraftInfoBaseInfo.mountPosition == DJI_MOUNT_POSITION_PAYLOAD_PORT_NO1 ||
-            s_aircraftInfoBaseInfo.mountPosition == DJI_MOUNT_POSITION_PAYLOAD_PORT_NO2 ||
-            s_aircraftInfoBaseInfo.mountPosition == DJI_MOUNT_POSITION_PAYLOAD_PORT_NO3) {
-            channelAddress = DJI_CHANNEL_ADDRESS_EXTENSION_PORT;
+        if (s_aircraftInfoBaseInfo.aircraftType == DJI_AIRCRAFT_TYPE_M400){
+            /*!< Code Example for Data Transmission Between PSDK and PSDK. */
+            /*!< Only support Psdk on M400. */
+            /*
+            channelAddress = DJI_CHANNEL_ADDRESS_EXTENSION_PORT_V2_NO1;
             djiStat = DjiLowSpeedDataChannel_SendData(channelAddress, dataToBeSent, sizeof(dataToBeSent));
             if (djiStat != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-                USER_LOG_ERROR("send data to extension port error.");
+                USER_LOG_ERROR("send data to psdk error port1.");
 
             djiStat = DjiLowSpeedDataChannel_GetSendDataState(channelAddress, &state);
             if (djiStat == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
                 USER_LOG_DEBUG(
-                    "send to extension port state: realtimeBandwidthBeforeFlowController: %d, realtimeBandwidthAfterFlowController: %d, busyState: %d.",
+                    "send to psdk state: realtimeBandwidthBeforeFlowController: %d, realtimeBandwidthAfterFlowController: %d, busyState: %d.",
                     state.realtimeBandwidthBeforeFlowController, state.realtimeBandwidthAfterFlowController,
                     state.busyState);
             } else {
-                USER_LOG_ERROR("get send to extension port channel state error.");
+                USER_LOG_ERROR("get send to psdk channel state error.");
             }
-
-            if (DjiPlatform_GetSocketHandler() != NULL) {
-#ifdef SYSTEM_ARCH_LINUX
-                djiStat = DjiHighSpeedDataChannel_SendDataStreamData(dataToBeSent, sizeof(dataToBeSent));
+            */
+        }else{
+            if (s_aircraftInfoBaseInfo.mountPosition == DJI_MOUNT_POSITION_PAYLOAD_PORT_NO1 ||
+                s_aircraftInfoBaseInfo.mountPosition == DJI_MOUNT_POSITION_PAYLOAD_PORT_NO2 ||
+                s_aircraftInfoBaseInfo.mountPosition == DJI_MOUNT_POSITION_PAYLOAD_PORT_NO3) {
+                channelAddress = DJI_CHANNEL_ADDRESS_EXTENSION_PORT;
+                djiStat = DjiLowSpeedDataChannel_SendData(channelAddress, dataToBeSent, sizeof(dataToBeSent));
                 if (djiStat != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-                    USER_LOG_ERROR("send data to data stream error.");
+                    USER_LOG_ERROR("send data to extension port error.");
 
-                djiStat = DjiHighSpeedDataChannel_GetDataStreamState(&state);
+                djiStat = DjiLowSpeedDataChannel_GetSendDataState(channelAddress, &state);
                 if (djiStat == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
                     USER_LOG_DEBUG(
-                        "data stream state: realtimeBandwidthLimit: %d, realtimeBandwidthBeforeFlowController: %d, busyState: %d.",
-                        state.realtimeBandwidthLimit, state.realtimeBandwidthBeforeFlowController, state.busyState);
+                        "send to extension port state: realtimeBandwidthBeforeFlowController: %d, realtimeBandwidthAfterFlowController: %d, busyState: %d.",
+                        state.realtimeBandwidthBeforeFlowController, state.realtimeBandwidthAfterFlowController,
+                        state.busyState);
                 } else {
-                    USER_LOG_ERROR("get data stream state error.");
+                    USER_LOG_ERROR("get send to extension port channel state error.");
                 }
-#endif
-            }
-        } else if (s_aircraftInfoBaseInfo.mountPosition == DJI_MOUNT_POSITION_EXTENSION_PORT) {
-            channelAddress = DJI_CHANNEL_ADDRESS_PAYLOAD_PORT_NO1;
-            djiStat = DjiLowSpeedDataChannel_SendData(channelAddress, dataToBeSent, sizeof(dataToBeSent));
-            if (djiStat != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-                USER_LOG_ERROR("send data to extension port error.");
 
-            djiStat = DjiLowSpeedDataChannel_GetSendDataState(channelAddress, &state);
-            if (djiStat == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
-                USER_LOG_DEBUG(
-                    "send to extension port state: realtimeBandwidthBeforeFlowController: %d, realtimeBandwidthAfterFlowController: %d, busyState: %d.",
-                    state.realtimeBandwidthBeforeFlowController, state.realtimeBandwidthAfterFlowController,
-                    state.busyState);
-            } else {
-                USER_LOG_ERROR("get send to extension port channel state error.");
+                if (DjiPlatform_GetSocketHandler() != NULL) {
+    #ifdef SYSTEM_ARCH_LINUX
+                    djiStat = DjiHighSpeedDataChannel_SendDataStreamData(dataToBeSent, sizeof(dataToBeSent));
+                    if (djiStat != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+                        USER_LOG_ERROR("send data to data stream error.");
+
+                    djiStat = DjiHighSpeedDataChannel_GetDataStreamState(&state);
+                    if (djiStat == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+                        USER_LOG_DEBUG(
+                            "data stream state: realtimeBandwidthLimit: %d, realtimeBandwidthBeforeFlowController: %d, busyState: %d.",
+                            state.realtimeBandwidthLimit, state.realtimeBandwidthBeforeFlowController, state.busyState);
+                    } else {
+                        USER_LOG_ERROR("get data stream state error.");
+                    }
+    #endif
+                }
+            } else if (s_aircraftInfoBaseInfo.mountPosition == DJI_MOUNT_POSITION_EXTENSION_PORT) {
+                channelAddress = DJI_CHANNEL_ADDRESS_PAYLOAD_PORT_NO1;
+                djiStat = DjiLowSpeedDataChannel_SendData(channelAddress, dataToBeSent, sizeof(dataToBeSent));
+                if (djiStat != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+                    USER_LOG_ERROR("send data to extension port error.");
+
+                djiStat = DjiLowSpeedDataChannel_GetSendDataState(channelAddress, &state);
+                if (djiStat == DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+                    USER_LOG_DEBUG(
+                        "send to extension port state: realtimeBandwidthBeforeFlowController: %d, realtimeBandwidthAfterFlowController: %d, busyState: %d.",
+                        state.realtimeBandwidthBeforeFlowController, state.realtimeBandwidthAfterFlowController,
+                        state.busyState);
+                } else {
+                    USER_LOG_ERROR("get send to extension port channel state error.");
+                }
             }
         }
     }
@@ -392,6 +442,34 @@ static T_DjiReturnCode ReceiveDataFromPayload2(const uint8_t *data, uint16_t len
 static T_DjiReturnCode ReceiveDataFromPayload3(const uint8_t *data, uint16_t len)
 {
     USER_LOG_INFO("Receive from payload on port 3");
+    return ReceiveDataFromPayload(data, len);
+}
+
+static T_DjiReturnCode ReceiveDataFromPayload4(const uint8_t *data, uint16_t len)
+{
+    USER_LOG_INFO("Receive from payload on port 4");
+    return ReceiveDataFromPayload(data, len);
+}
+static T_DjiReturnCode ReceiveDataFromPayload5(const uint8_t *data, uint16_t len)
+{
+    USER_LOG_INFO("Receive from payload on port 5");
+    return ReceiveDataFromPayload(data, len);
+}
+
+static T_DjiReturnCode ReceiveDataFromPayload6(const uint8_t *data, uint16_t len)
+{
+    USER_LOG_INFO("Receive from payload on port 6");
+    return ReceiveDataFromPayload(data, len);
+}
+
+static T_DjiReturnCode ReceiveDataFromPayload7(const uint8_t *data, uint16_t len)
+{
+    USER_LOG_INFO("Receive from payload on port 7");
+    return ReceiveDataFromPayload(data, len);
+}
+static T_DjiReturnCode ReceiveDataFromPayload8(const uint8_t *data, uint16_t len)
+{
+    USER_LOG_INFO("Receive from payload on port 8");
     return ReceiveDataFromPayload(data, len);
 }
 

@@ -55,9 +55,9 @@
 #include "dji_sdk_config.h"
 
 /* Private constants ---------------------------------------------------------*/
-#define DJI_LOG_PATH                    "logs/DJI"
-#define DJI_LOG_INDEX_FILE_NAME         "logs/index"
-#define DJI_LOG_FOLDER_NAME             "logs"
+#define DJI_LOG_PATH                    "data/logs/DJI"
+#define DJI_LOG_INDEX_FILE_NAME         "data/logs/index"
+#define DJI_LOG_FOLDER_NAME             "data/logs"
 #define DJI_LOG_PATH_MAX_SIZE           (128)
 #define DJI_LOG_FOLDER_NAME_MAX_SIZE    (32)
 #define DJI_LOG_MAX_COUNT               (10)
@@ -97,9 +97,9 @@ int main(int argc, char **argv)
     T_DjiAircraftInfoBaseInfo aircraftInfoBaseInfo;
     T_DjiAircraftVersion aircraftInfoVersion;
     T_DjiFirmwareVersion firmwareVersion = {
-        .majorVersion = 0,
+        .majorVersion = 1,
         .minorVersion = 0,
-        .modifyVersion = 7,
+        .modifyVersion = 0,
         .debugVersion = 0,
     };
 

@@ -59,7 +59,7 @@
 #include "upgrade/test_upgrade.h"
 #include "power_management/test_power_management.h"
 #include "tethered_battery/test_tethered_battery.h"
-
+#include "FreeRTOS.h"
 /* Private constants ---------------------------------------------------------*/
 #define RUN_INDICATE_TASK_FREQ_1HZ        1
 #define RUN_INDICATE_TASK_FREQ_0D1HZ      0.1f
@@ -440,8 +440,8 @@ void DjiUser_MonitorTask(void const *argument)
            }
 
            currentTaskStatusArraySize = uxTaskGetSystemState(currentTaskStatusArray, currentTaskStatusArraySize, NULL);
-           USER_LOG_DEBUG("task information:");
-           USER_LOG_DEBUG("task name\trun time (%%)\tstack left (byte)\tnumber");
+           USER_LOG_INFO("task information:");
+           USER_LOG_INFO("task name\trun time (%%)\tstack left (byte)\tnumber");
            for (i = 0; i < currentTaskStatusArraySize; i++) {
                cpuOccupyPercentage = 0;
                for (j = 0; j < lastTaskStatusArraySize; ++j) {
@@ -452,7 +452,7 @@ void DjiUser_MonitorTask(void const *argument)
                        break;
                    }
                }
-               USER_LOG_DEBUG("%-16s\t%u\t%u\t%u", currentTaskStatusArray[i].pcTaskName, cpuOccupyPercentage,
+               USER_LOG_INFO("%-16s\t%u\t%u\t%u", currentTaskStatusArray[i].pcTaskName, cpuOccupyPercentage,
                               (unsigned int) currentTaskStatusArray[i].usStackHighWaterMark * sizeof(StackType_t),
                               (unsigned int) currentTaskStatusArray[i].xTaskNumber);
            }

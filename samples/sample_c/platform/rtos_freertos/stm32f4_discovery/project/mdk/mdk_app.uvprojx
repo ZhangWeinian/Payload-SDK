@@ -1015,6 +1015,11 @@
 </File>
 <File>
 <FileType>5</FileType>
+<FileName>dji_network_rtk.h</FileName>
+<FilePath>..\..\..\..\..\..\..\psdk_lib\include\dji_network_rtk.h</FilePath>
+</File>
+<File>
+<FileType>5</FileType>
 <FileName>dji_open_ar.h</FileName>
 <FilePath>..\..\..\..\..\..\..\psdk_lib\include\dji_open_ar.h</FilePath>
 </File>

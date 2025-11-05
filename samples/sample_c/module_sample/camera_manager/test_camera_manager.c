@@ -65,6 +65,7 @@ static const T_DjiTestCameraTypeStr s_cameraTypeStrList[] = {
     {DJI_CAMERA_TYPE_P1,      "Zenmuse P1"},
     {DJI_CAMERA_TYPE_L1,      "Zenmuse L1"},
     {DJI_CAMERA_TYPE_L2,      "Zenmuse L2"},
+    {DJI_CAMERA_TYPE_L3,      "Zenmuse L3"},
     {DJI_CAMERA_TYPE_H20N,    "Zenmuse H20N"},
     {DJI_CAMERA_TYPE_M30,     "M30 Camera"},
     {DJI_CAMERA_TYPE_M30T,    "M30T Camera"},
@@ -1214,6 +1215,7 @@ T_DjiReturnCode DjiTest_CameraManagerRunSample(E_DjiMountPosition mountPosition,
                 || DJI_CAMERA_TYPE_M3D == cameraType || DJI_CAMERA_TYPE_M3TD == cameraType
                 || DJI_CAMERA_TYPE_M4T == cameraType || DJI_CAMERA_TYPE_M4E == cameraType
 				|| DJI_CAMERA_TYPE_M4TD == cameraType || DJI_CAMERA_TYPE_M4D == cameraType
+                || DJI_CAMERA_TYPE_L3 == cameraType
             ) {
                 USER_LOG_INFO("Camera type %s does not support night scene mode!",
                               s_cameraTypeStrList[DjiTest_CameraManagerGetCameraTypeIndex(cameraType)].cameraTypeStr);
@@ -1904,37 +1906,62 @@ T_DjiReturnCode DjiTest_CameraManagerRunSample(E_DjiMountPosition mountPosition,
                 goto exitCameraModule;
             }
 
-            returnCode = DjiCameraManager_GetMeteringPointRegionRange(mountPosition, &horizonRegionNum, &viticalRegionNum);
-            if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-            {
-                USER_LOG_ERROR("Get metering point region range failed!");
-                goto exitCameraModule;
+            if (cameraType == DJI_CAMERA_TYPE_L3) {
+                dji_f32_t inputXFloat, inputYFloat;
+                dji_f32_t getXFloat, getYFloat;
+
+                printf("Input nomorlized meterting point (x, y) you want to set: ");
+                scanf("%f %f", &inputXFloat, &inputYFloat);
+
+                USER_LOG_INFO("Try to set metering point as (%f, %f)", inputXFloat, inputYFloat);
+                returnCode = DjiCameraManager_SetMeteringPointNormalized(mountPosition, inputXFloat, inputYFloat);
+                if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+                    USER_LOG_ERROR("Set metering point failed");
+                    goto exitCameraModule;
+                }
+
+                osalHandler->TaskSleepMs(500);
+
+                returnCode = DjiCameraManager_GetMeteringPointNormalized(mountPosition, &getXFloat, &getYFloat);
+                if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+                    USER_LOG_ERROR("Get metering point failed");
+                    goto exitCameraModule;
+                }
+
+                USER_LOG_INFO("Current metering point in normalized: (%f, %f)", getXFloat, getYFloat);
+
+            } else {
+                returnCode = DjiCameraManager_GetMeteringPointRegionRange(mountPosition, &horizonRegionNum, &viticalRegionNum);
+                if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+                    USER_LOG_ERROR("Get metering point region range failed!");
+                    goto exitCameraModule;
+                }
+
+                USER_LOG_INFO("region range: horizon %d, vitical %d", horizonRegionNum, viticalRegionNum);
+
+                osalHandler->TaskSleepMs(5);
+                printf("Input meterting point (x, y) you want to set: ");
+                scanf("%d %d", &x, &y);
+
+                USER_LOG_INFO("Try to set metering point as (%d, %d)", (uint8_t)x, (uint8_t)y);
+                returnCode = DjiCameraManager_SetMeteringPoint(mountPosition, x, y);
+                if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+                    USER_LOG_ERROR("Set metering point failed");
+                    goto exitCameraModule;
+                }
+
+                osalHandler->TaskSleepMs(500);
+
+                returnCode = DjiCameraManager_GetMeteringPoint(mountPosition, &getX, &getY);
+                if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+                    USER_LOG_ERROR("Get metering point failed");
+                    goto exitCameraModule;
+                }
+
+                USER_LOG_INFO("Current metering point: (%d, %d)", getX, getY);
             }
 
-            USER_LOG_INFO("region range: horizon %d, vitical %d", horizonRegionNum, viticalRegionNum);
 
-            osalHandler->TaskSleepMs(5);
-            printf("Input meterting point (x, y) you want to set: ");
-            scanf("%d %d", &x, &y);
-
-            USER_LOG_INFO("Try to set metering point as (%d, %d)", (uint8_t)x, (uint8_t)y);
-            returnCode = DjiCameraManager_SetMeteringPoint(mountPosition, x, y);
-            if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-            {
-                USER_LOG_ERROR("Set metering point failed");
-                goto exitCameraModule;
-            }
-
-            osalHandler->TaskSleepMs(500);
-
-            returnCode = DjiCameraManager_GetMeteringPoint(mountPosition, &getX, &getY);
-            if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-            {
-                USER_LOG_ERROR("Get metering point failed");
-                goto exitCameraModule;
-            }
-
-            USER_LOG_INFO("Current metering point: (%d, %d)", getX, getY);
 
             break;
         }
@@ -1947,7 +1974,7 @@ T_DjiReturnCode DjiTest_CameraManagerRunSample(E_DjiMountPosition mountPosition,
                 cameraType == DJI_CAMERA_TYPE_M3E || cameraType == DJI_CAMERA_TYPE_M3D ||
                 cameraType == DJI_CAMERA_TYPE_L2 || cameraType == DJI_CAMERA_TYPE_H30 ||
                 cameraType == DJI_CAMERA_TYPE_M4TD || cameraType == DJI_CAMERA_TYPE_M4D ||
-                cameraType == DJI_CAMERA_TYPE_M4T) {
+                cameraType == DJI_CAMERA_TYPE_M4T || cameraType == DJI_CAMERA_TYPE_L3) {
                 USER_LOG_WARN("Camera type %s don't support FFC function.",
                               s_cameraTypeStrList[DjiTest_CameraManagerGetCameraTypeIndex(cameraType)].cameraTypeStr);
                 goto exitCameraModule;
@@ -1995,7 +2022,7 @@ T_DjiReturnCode DjiTest_CameraManagerRunSample(E_DjiMountPosition mountPosition,
                 cameraType == DJI_CAMERA_TYPE_M3E || cameraType == DJI_CAMERA_TYPE_M3D ||
                 cameraType == DJI_CAMERA_TYPE_L2 || cameraType == DJI_CAMERA_TYPE_H30 ||
                 cameraType == DJI_CAMERA_TYPE_M4TD || cameraType == DJI_CAMERA_TYPE_M4D ||
-                cameraType == DJI_CAMERA_TYPE_M4T) {
+                cameraType == DJI_CAMERA_TYPE_M4T || cameraType == DJI_CAMERA_TYPE_L3) {
                 USER_LOG_WARN("Camera type %s don't support infrared function.",
                               s_cameraTypeStrList[DjiTest_CameraManagerGetCameraTypeIndex(cameraType)].cameraTypeStr);
                 goto exitCameraModule;

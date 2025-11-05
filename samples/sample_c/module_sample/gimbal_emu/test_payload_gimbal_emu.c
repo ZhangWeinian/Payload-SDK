@@ -238,6 +238,8 @@ T_DjiReturnCode DjiTest_GimbalRotate(E_DjiGimbalRotationMode rotationMode,
         case DJI_GIMBAL_ROTATION_MODE_RELATIVE_ANGLE:
             USER_LOG_INFO("gimbal relative rotate angle: pitch %d, roll %d, yaw %d.", rotationValue.pitch,
                           rotationValue.roll, rotationValue.yaw);
+            DjiTest_WidgetLogAppend("relative mod: pitch %d, roll %d, yaw %d.", rotationValue.pitch,
+                          rotationValue.roll, rotationValue.yaw);
             USER_LOG_DEBUG("gimbal relative rotate action time: %d.",
                            rotationProperty.relativeAngleRotation.actionTime);
 
@@ -699,6 +701,7 @@ static T_DjiReturnCode StartCalibrate(void)
         return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
     }
 
+    DjiTest_WidgetLogAppend("calibrate gimbal.");
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
@@ -724,6 +727,7 @@ static T_DjiReturnCode SetControllerSmoothFactor(uint8_t smoothingFactor, E_DjiG
         return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
     }
 
+    DjiTest_WidgetLogAppend("set smooth factor: factor %d, axis %d.", smoothingFactor, axis);
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
@@ -744,6 +748,7 @@ static T_DjiReturnCode SetPitchRangeExtensionEnabled(bool enabledFlag)
         return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
     }
 
+    DjiTest_WidgetLogAppend("set gimbal pitch range extension enable: %d.", enabledFlag);
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
@@ -770,6 +775,7 @@ static T_DjiReturnCode SetControllerMaxSpeedPercentage(uint8_t maxSpeedPercentag
         return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
     }
 
+    DjiTest_WidgetLogAppend("set gimbal max speed: %d, axis %d.", maxSpeedPercentage, axis);
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
@@ -796,6 +802,8 @@ static T_DjiReturnCode RestoreFactorySettings(void)
         return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
     }
 
+    DjiTest_WidgetLogAppend("restore gimbal factory settings.");
+
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
@@ -816,6 +824,8 @@ static T_DjiReturnCode SetMode(E_DjiGimbalMode mode)
         USER_LOG_ERROR("mutex unlock error");
         return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
     }
+
+    DjiTest_WidgetLogAppend("set gimbal mode: %d.", mode);
 
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
@@ -898,6 +908,8 @@ unlock2:
         return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
     }
 
+    DjiTest_WidgetLogAppend("reset gimbal: %d.", mode);
+
     return djiReturnCode;
 }
 
@@ -971,6 +983,8 @@ unlock:
         return DJI_ERROR_SYSTEM_MODULE_CODE_OUT_OF_RANGE;
     }
 
+    DjiTest_WidgetLogAppend("gimbal fine tune angle: pitch %d, roll %d, yaw %d.", fineTuneAngle.pitch,
+                  fineTuneAngle.roll, fineTuneAngle.yaw);
     return djiReturnCode;
 }
 

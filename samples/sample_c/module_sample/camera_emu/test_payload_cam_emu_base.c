@@ -41,8 +41,8 @@
 #define SDCARD_TOTAL_SPACE_IN_MB                (32 * 1024)
 #define SDCARD_PER_PHOTO_SPACE_IN_MB            (4)
 #define SDCARD_PER_SECONDS_RECORD_SPACE_IN_MB   (2)
-#define ZOOM_OPTICAL_FOCAL_MAX_LENGTH           (300)
-#define ZOOM_OPTICAL_FOCAL_MIN_LENGTH           (10)
+#define ZOOM_OPTICAL_FOCAL_MAX_LENGTH           (200*240)
+#define ZOOM_OPTICAL_FOCAL_MIN_LENGTH           (1.2*240)
 #define ZOOM_OPTICAL_FOCAL_LENGTH_STEP          (10)
 #define ZOOM_OPTICAL_FOCAL_LENGTH_CTRL_STEP     (5)
 #define ZOOM_DIGITAL_BASE_FACTOR                (1.0)
@@ -357,6 +357,7 @@ static T_DjiReturnCode SetShootPhotoMode(E_DjiCameraShootPhotoMode mode)
 
     s_cameraShootPhotoMode = mode;
     USER_LOG_INFO("set shoot photo mode:%d", mode);
+    DjiTest_WidgetLogAppend("set shoot photo mode:%d", mode);
 
     returnCode = osalHandler->MutexUnlock(s_commonMutex);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -402,6 +403,7 @@ static T_DjiReturnCode SetPhotoBurstCount(E_DjiCameraBurstCount burstCount)
 
     s_cameraBurstCount = burstCount;
     USER_LOG_INFO("set photo burst count:%d", burstCount);
+    DjiTest_WidgetLogAppend("set photo burst count:%d", burstCount);
 
     returnCode = osalHandler->MutexUnlock(s_commonMutex);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -450,6 +452,9 @@ static T_DjiReturnCode SetPhotoTimeIntervalSettings(T_DjiCameraPhotoTimeInterval
     s_cameraPhotoTimeIntervalSettings.timeIntervalMilliseconds = settings.timeIntervalMilliseconds;
     USER_LOG_INFO("set photo interval settings count:%d seconds:%d.%d", settings.captureCount,
                   settings.timeIntervalSeconds, settings.timeIntervalMilliseconds / 100);
+    DjiTest_WidgetLogAppend("set photo interval: %d - %d.%d", settings.captureCount,
+                  settings.timeIntervalSeconds, settings.timeIntervalMilliseconds / 100);
+
     s_cameraState.currentPhotoShootingIntervalCount = settings.captureCount;
 
     returnCode = osalHandler->MutexUnlock(s_commonMutex);
@@ -517,6 +522,7 @@ static T_DjiReturnCode FormatSDCard(void)
     }
 
     USER_LOG_INFO("format sdcard");
+    DjiTest_WidgetLogAppend("format sdcard");
 
     memset(&s_cameraSDCardState, 0, sizeof(T_DjiCameraSDCardState));
     s_cameraSDCardState.isInserted = true;
@@ -539,6 +545,7 @@ static T_DjiReturnCode FormatSDCard(void)
 static T_DjiReturnCode SetMeteringMode(E_DjiCameraMeteringMode mode)
 {
     USER_LOG_INFO("set metering mode:%d", mode);
+    DjiTest_WidgetLogAppend("set metering mode:%d", mode);
     s_cameraMeteringMode = mode;
 
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
@@ -554,6 +561,7 @@ static T_DjiReturnCode GetMeteringMode(E_DjiCameraMeteringMode *mode)
 static T_DjiReturnCode SetSpotMeteringTarget(T_DjiCameraSpotMeteringTarget target)
 {
     USER_LOG_INFO("set spot metering area col:%d row:%d", target.col, target.row);
+    DjiTest_WidgetLogAppend("set spot metering area col:%d row:%d", target.col, target.row);
     memcpy(&s_cameraSpotMeteringTarget, &target, sizeof(T_DjiCameraSpotMeteringTarget));
 
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
@@ -569,6 +577,7 @@ static T_DjiReturnCode GetSpotMeteringTarget(T_DjiCameraSpotMeteringTarget *targ
 static T_DjiReturnCode SetFocusMode(E_DjiCameraFocusMode mode)
 {
     USER_LOG_INFO("set focus mode:%d", mode);
+    DjiTest_WidgetLogAppend("set focus mode:%d", mode);
     s_cameraFocusMode = mode;
 
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
@@ -584,6 +593,7 @@ static T_DjiReturnCode GetFocusMode(E_DjiCameraFocusMode *mode)
 static T_DjiReturnCode SetFocusTarget(T_DjiCameraPointInScreen target)
 {
     USER_LOG_INFO("set focus target x:%.2f y:%.2f", target.focusX, target.focusY);
+    DjiTest_WidgetLogAppend("set focus target x:%.2f y:%.2f", target.focusX, target.focusY);
     memcpy(&s_cameraFocusTarget, &target, sizeof(T_DjiCameraPointInScreen));
 
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
@@ -599,6 +609,7 @@ static T_DjiReturnCode GetFocusTarget(T_DjiCameraPointInScreen *target)
 static T_DjiReturnCode SetFocusAssistantSettings(T_DjiCameraFocusAssistantSettings settings)
 {
     USER_LOG_INFO("set focus assistant setting MF:%d AF:%d", settings.isEnabledMF, settings.isEnabledAF);
+    DjiTest_WidgetLogAppend("set focus assistant setting MF:%d AF:%d", settings.isEnabledMF, settings.isEnabledAF);
     memcpy(&s_cameraFocusAssistantSettings, &settings, sizeof(T_DjiCameraFocusAssistantSettings));
 
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
@@ -614,6 +625,7 @@ static T_DjiReturnCode GetFocusAssistantSettings(T_DjiCameraFocusAssistantSettin
 static T_DjiReturnCode SetFocusRingValue(uint32_t value)
 {
     USER_LOG_INFO("set focus ring value:%d", value);
+    DjiTest_WidgetLogAppend("set focus ring value:%d", value);
     s_cameraFocusRingValue = value;
 
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
@@ -645,6 +657,7 @@ static T_DjiReturnCode SetDigitalZoomFactor(dji_f32_t factor)
     }
 
     USER_LOG_INFO("set digital zoom factor:%.2f", factor);
+    DjiTest_WidgetLogAppend("set digital zoom factor:%.2f", factor);
     s_cameraDigitalZoomFactor = factor;
 
     returnCode = osalHandler->MutexUnlock(s_zoomMutex);
@@ -668,9 +681,10 @@ static T_DjiReturnCode SetOpticalZoomFocalLength(uint32_t focalLength)
     }
 
     USER_LOG_INFO("set optical zoom focal length:%d", focalLength);
+    DjiTest_WidgetLogAppend("set optical zoom focal length:%d", focalLength);
     s_isOpticalZoomReachLimit = false;
     s_cameraDigitalZoomFactor = ZOOM_DIGITAL_BASE_FACTOR;
-    s_cameraOpticalZoomFocalLength = ZOOM_OPTICAL_FOCAL_MIN_LENGTH;
+    s_cameraOpticalZoomFocalLength = focalLength;
 
     returnCode = osalHandler->MutexUnlock(s_zoomMutex);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -723,7 +737,8 @@ static T_DjiReturnCode StartContinuousOpticalZoom(E_DjiCameraZoomDirection direc
         return returnCode;
     }
 
-    USER_LOG_INFO("start continuous optical zoom direction:%d speed:%d", direction, speed);
+    DjiTest_WidgetLogAppend("continuous optical zoom dir:%d speed:%d", direction, speed);
+    USER_LOG_INFO("continuous optical zoom direction:%d speed:%d", direction, speed);
     s_isStartContinuousOpticalZoom = true;
     s_cameraZoomDirection = direction;
     s_cameraZoomSpeed = speed;
@@ -749,6 +764,7 @@ static T_DjiReturnCode StopContinuousOpticalZoom(void)
     }
 
     USER_LOG_INFO("stop continuous optical zoom");
+    DjiTest_WidgetLogAppend("stop continuous optical zoom");
     s_isStartContinuousOpticalZoom = false;
     s_cameraZoomDirection = DJI_CAMERA_ZOOM_DIRECTION_OUT;
     s_cameraZoomSpeed = DJI_CAMERA_ZOOM_SPEED_NORMAL;
@@ -786,6 +802,7 @@ static T_DjiReturnCode GetTapZoomState(T_DjiCameraTapZoomState *state)
 
 static T_DjiReturnCode SetTapZoomEnabled(bool enabledFlag)
 {
+    DjiTest_WidgetLogAppend("set tap zoom enabled flag: %d.", enabledFlag);
     USER_LOG_INFO("set tap zoom enabled flag: %d.", enabledFlag);
     s_isTapZoomEnabled = enabledFlag;
 
@@ -802,6 +819,7 @@ static T_DjiReturnCode GetTapZoomEnabled(bool *enabledFlag)
 static T_DjiReturnCode SetTapZoomMultiplier(uint8_t multiplier)
 {
     USER_LOG_INFO("set tap zoom multiplier: %d.", multiplier);
+    DjiTest_WidgetLogAppend("set tap zoom multiplier: %d.", multiplier);
     s_tapZoomMultiplier = multiplier;
 
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
@@ -824,6 +842,7 @@ static T_DjiReturnCode TapZoomAtTarget(T_DjiCameraPointInScreen target)
     T_DjiOsalHandler *osalHandler = DjiPlatform_GetOsalHandler();
 
     USER_LOG_INFO("tap zoom at target: x %f, y %f.", target.focusX, target.focusY);
+    DjiTest_WidgetLogAppend("tap zoom at target: x %f, y %f.", target.focusX, target.focusY);
 
     if (s_isTapZoomEnabled != true) {
         USER_LOG_WARN("tap zoom is not enabled.");

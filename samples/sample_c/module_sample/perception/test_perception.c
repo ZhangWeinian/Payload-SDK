@@ -65,7 +65,7 @@ T_DjiReturnCode DjiTest_PerceptionRunSample(E_DjiPerceptionDirection direction)
     DjiTest_WidgetLogAppend("Perception sample start");
 
     USER_LOG_INFO("--> Step 1: Init Perception module");
-    DjiTest_WidgetLogAppend("--> Step 1: Init Perception module");
+    DjiTest_WidgetLogAppend("Step 1: Init Perception module");
     returnCode = DjiPerception_Init();
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
         USER_LOG_ERROR("Perception init failed, error code: 0x%08X", returnCode);
@@ -75,7 +75,7 @@ T_DjiReturnCode DjiTest_PerceptionRunSample(E_DjiPerceptionDirection direction)
     s_perceptionImageCount = 0;
 
     USER_LOG_INFO("--> Step 2: Get stereo camera parameters\r\n");
-    DjiTest_WidgetLogAppend("--> Step 2: Get stereo camera parameters\r\n");
+    DjiTest_WidgetLogAppend("Step 2: Get stereo camera parameters\r\n");
     returnCode = DjiPerception_GetStereoCameraParameters(&cameraParametersetersPacket);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
         USER_LOG_ERROR("Get stereo camera parameters failed, error code: 0x%08X", returnCode);
@@ -95,6 +95,8 @@ T_DjiReturnCode DjiTest_PerceptionRunSample(E_DjiPerceptionDirection direction)
                           cameraParametersetersPacket.cameraParameters[i].leftIntrinsics[6],
                           cameraParametersetersPacket.cameraParameters[i].leftIntrinsics[7],
                           cameraParametersetersPacket.cameraParameters[i].leftIntrinsics[8]);
+            DjiTest_WidgetLogAppend("rcv [%-05s] leftIntrinsics ",
+                          directionName[cameraParametersetersPacket.cameraParameters[i].direction].name);
             USER_LOG_INFO("[%-05s] rightIntrinsics = {%f, %f, %f, %f, %f, %f, %f, %f, %f }",
                           directionName[cameraParametersetersPacket.cameraParameters[i].direction].name,
                           cameraParametersetersPacket.cameraParameters[i].rightIntrinsics[0],
@@ -106,6 +108,8 @@ T_DjiReturnCode DjiTest_PerceptionRunSample(E_DjiPerceptionDirection direction)
                           cameraParametersetersPacket.cameraParameters[i].rightIntrinsics[6],
                           cameraParametersetersPacket.cameraParameters[i].rightIntrinsics[7],
                           cameraParametersetersPacket.cameraParameters[i].rightIntrinsics[8]);
+            DjiTest_WidgetLogAppend("rcv [%-05s] rightIntrinsics",
+                          directionName[cameraParametersetersPacket.cameraParameters[i].direction].name);
             USER_LOG_INFO("[%-05s] rotationLeftInRight = {%f, %f, %f, %f, %f, %f, %f, %f, %f }",
                           directionName[cameraParametersetersPacket.cameraParameters[i].direction].name,
                           cameraParametersetersPacket.cameraParameters[i].rotationLeftInRight[0],
@@ -117,16 +121,20 @@ T_DjiReturnCode DjiTest_PerceptionRunSample(E_DjiPerceptionDirection direction)
                           cameraParametersetersPacket.cameraParameters[i].rotationLeftInRight[6],
                           cameraParametersetersPacket.cameraParameters[i].rotationLeftInRight[7],
                           cameraParametersetersPacket.cameraParameters[i].rotationLeftInRight[8]);
+            DjiTest_WidgetLogAppend("rcv [%-05s] rotationLeftInRight",
+                          directionName[cameraParametersetersPacket.cameraParameters[i].direction].name);
             USER_LOG_INFO("[%-05s] translationLeftInRight = {%f, %f, %f }\r\n",
                           directionName[cameraParametersetersPacket.cameraParameters[i].direction].name,
                           cameraParametersetersPacket.cameraParameters[i].translationLeftInRight[0],
                           cameraParametersetersPacket.cameraParameters[i].translationLeftInRight[1],
                           cameraParametersetersPacket.cameraParameters[i].translationLeftInRight[2]);
+            DjiTest_WidgetLogAppend("rcv [%-05s] translationLeftInRight\r\n",
+                          directionName[cameraParametersetersPacket.cameraParameters[i].direction].name);
             osalHandler->TaskSleepMs(100);
         }
 
     USER_LOG_INFO("--> Step 3: Subscribe perception image\r\n");
-    DjiTest_WidgetLogAppend("--> Step 3: Subscribe perception image\r\n");
+    DjiTest_WidgetLogAppend("Step 3: Subscribe perception image\r\n");
     returnCode = DjiPerception_SubscribePerceptionImage(direction, DjiTest_PerceptionImageCallback);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
         USER_LOG_ERROR("Subscribe perception image failed, error code: 0x%08X", returnCode);
@@ -136,7 +144,7 @@ T_DjiReturnCode DjiTest_PerceptionRunSample(E_DjiPerceptionDirection direction)
     osalHandler->TaskSleepMs(5000);
 
     USER_LOG_INFO("--> Step 4: Unsubscribe perception image");
-    DjiTest_WidgetLogAppend("--> Step 4: Unsubscribe perception image");
+    DjiTest_WidgetLogAppend("Step 4: Unsubscribe perception image");
     returnCode = DjiPerception_UnsubscribePerceptionImage(direction);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
         USER_LOG_ERROR("Unsubscribe perception image failed, error code: 0x%08X", returnCode);
@@ -144,7 +152,7 @@ T_DjiReturnCode DjiTest_PerceptionRunSample(E_DjiPerceptionDirection direction)
     }
 
     USER_LOG_INFO("--> Step 5: Deinit Perception module");
-    DjiTest_WidgetLogAppend("--> Step 5: Deinit Perception module");
+    DjiTest_WidgetLogAppend("Step 5: Deinit Perception module");
     returnCode = DjiPerception_Deinit();
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
         USER_LOG_ERROR("Perception deinit failed, error code: 0x%08X", returnCode);
@@ -153,6 +161,7 @@ T_DjiReturnCode DjiTest_PerceptionRunSample(E_DjiPerceptionDirection direction)
 
 out:
     USER_LOG_INFO("Perception sample end");
+    DjiTest_WidgetLogAppend("Perception sample end");
 
     return returnCode;
 }
@@ -199,6 +208,11 @@ static void DjiTest_PerceptionImageCallback(T_DjiPerceptionImageInfo imageInfo, 
             directionName[imageInfo.rawInfo.direction].name,
             s_perceptionImageCount,
             directionName[imageInfo.rawInfo.direction].name,
+            imageInfo.dataType,
+            imageInfo.rawInfo.width,
+            imageInfo.rawInfo.height);
+        DjiTest_WidgetLogAppend(
+            "Save image: dir:%s, pos:%d, size:%dx%d",
             imageInfo.dataType,
             imageInfo.rawInfo.width,
             imageInfo.rawInfo.height);

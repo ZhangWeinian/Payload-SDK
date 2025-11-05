@@ -52,6 +52,23 @@ static void DjiTest_PayloadCameraStreamCallback(E_DjiLiveViewCameraPosition posi
                                                 uint32_t bufLen);
 
 /* Exported functions definition ---------------------------------------------*/
+
+void DjiTest_LiveviewSample(void)
+{
+    int pos;
+
+    do {
+        printf("Please enter the camera mount position (valid values: 1 or 2): ");
+        scanf("%d", &pos);
+
+        if (pos != 1 && pos != 2) {
+            printf("Invalid input, please enter 1 or 2.\n");
+        }
+    } while (pos != 1 && pos != 2);
+
+    DjiTest_LiveviewRunSample((E_DjiMountPosition)pos);
+}
+
 T_DjiReturnCode DjiTest_LiveviewRunSample(E_DjiMountPosition mountPosition)
 {
     T_DjiReturnCode returnCode;
@@ -98,7 +115,7 @@ T_DjiReturnCode DjiTest_LiveviewRunSample(E_DjiMountPosition mountPosition)
         }
     }
 
-    if (aircraftInfoBaseInfo.aircraftSeries == DJI_AIRCRAFT_SERIES_M400 
+    if (aircraftInfoBaseInfo.aircraftSeries == DJI_AIRCRAFT_SERIES_M400
         && aircraftInfoBaseInfo.mountPositionType == DJI_MOUNT_POSITION_TYPE_MANIFOLD3_ONBOARD)
     {
         // XXX:  On MANIFOLD3, FPV and MAIN CAMERA SOURCE_DEFAULT streams cannot be subscribed to at the same time.

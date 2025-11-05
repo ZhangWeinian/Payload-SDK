@@ -31,15 +31,21 @@
 #include <stdio.h>
 #include "dji_sdk_config.h"
 #include "file_binary_array_list_en.h"
+#include <stdarg.h>
 
 /* Private constants ---------------------------------------------------------*/
 #define WIDGET_DIR_PATH_LEN_MAX         (256)
 #define WIDGET_TASK_STACK_SIZE          (2048)
+#define WIDGET_LOG_STRING_MAX_SIZE      (64)
+#define WIDGET_LOG_LINE_MAX_NUM         (4)
 
 /* Private types -------------------------------------------------------------*/
+typedef struct {
+    bool valid;
+    char content[WIDGET_LOG_STRING_MAX_SIZE];
+} T_DjiTestWidgetLog;
 
 /* Private functions declaration ---------------------------------------------*/
-static void *DjiTest_WidgetTask(void *arg);
 static T_DjiReturnCode DjiTestWidget_SetWidgetValue(E_DjiWidgetType widgetType, uint32_t index, int32_t value,
                                                     void *userData);
 static T_DjiReturnCode DjiTestWidget_GetWidgetValue(E_DjiWidgetType widgetType, uint32_t index, int32_t *value,
@@ -49,7 +55,7 @@ static T_DjiReturnCode DjiTestWidget_GetWidgetValue(E_DjiWidgetType widgetType, 
 static T_DjiTaskHandle s_widgetTestThread;
 static bool s_isWidgetFileDirPathConfigured = false;
 static char s_widgetFileDirPath[DJI_FILE_PATH_SIZE_MAX] = {0};
-
+static T_DjiTestWidgetLog s_djiTestWidgetLog[WIDGET_LOG_LINE_MAX_NUM] = {0};
 static const T_DjiWidgetHandlerListItem s_widgetHandlerList[] = {
     {0, DJI_WIDGET_TYPE_BUTTON,        DjiTestWidget_SetWidgetValue, DjiTestWidget_GetWidgetValue, NULL},
     {1, DJI_WIDGET_TYPE_LIST,          DjiTestWidget_SetWidgetValue, DjiTestWidget_GetWidgetValue, NULL},
@@ -75,6 +81,34 @@ static const uint32_t s_widgetHandlerListCount = sizeof(s_widgetHandlerList) / s
 static int32_t s_widgetValueList[sizeof(s_widgetHandlerList) / sizeof(T_DjiWidgetHandlerListItem)] = {0};
 
 /* Exported functions definition ---------------------------------------------*/
+
+
+void DjiTest_WidgetLogAppend(const char *fmt, ...)
+{
+    va_list args;
+    char string[WIDGET_LOG_STRING_MAX_SIZE];
+    int32_t i;
+
+    va_start(args, fmt);
+    vsnprintf(string, WIDGET_LOG_STRING_MAX_SIZE, fmt, args);
+    va_end(args);
+
+    for (i = 0; i < WIDGET_LOG_LINE_MAX_NUM; ++i) {
+        if (s_djiTestWidgetLog[i].valid == false) {
+            s_djiTestWidgetLog[i].valid = true;
+            strcpy(s_djiTestWidgetLog[i].content, string);
+            break;
+        }
+    }
+
+    if (i == WIDGET_LOG_LINE_MAX_NUM) {
+        for (i = 0; i < WIDGET_LOG_LINE_MAX_NUM - 1; i++) {
+            strcpy(s_djiTestWidgetLog[i].content, s_djiTestWidgetLog[i + 1].content);
+        }
+        strcpy(s_djiTestWidgetLog[WIDGET_LOG_LINE_MAX_NUM - 1].content, string);
+    }
+}
+
 T_DjiReturnCode DjiTest_WidgetStartService(void)
 {
     T_DjiReturnCode djiStat;
@@ -174,20 +208,13 @@ T_DjiReturnCode DjiTest_WidgetSetConfigFilePath(const char *path)
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
-__attribute__((weak)) void DjiTest_WidgetLogAppend(const char *fmt, ...)
-{
-
-}
-
 #ifndef __CC_ARM
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #pragma GCC diagnostic ignored "-Wreturn-type"
 #pragma GCC diagnostic ignored "-Wformat"
 #endif
-
-/* Private functions definition-----------------------------------------------*/
-static void *DjiTest_WidgetTask(void *arg)
+void *DjiTest_WidgetTask(void *arg)
 {
     char message[DJI_WIDGET_FLOATING_WINDOW_MSG_MAX_LEN];
     uint32_t sysTimeMs = 0;
@@ -202,35 +229,34 @@ static void *DjiTest_WidgetTask(void *arg)
             USER_LOG_ERROR("Get system time ms error, stat = 0x%08llX", djiStat);
         }
 
-#ifndef USER_FIRMWARE_MAJOR_VERSION
-        snprintf(message, DJI_WIDGET_FLOATING_WINDOW_MSG_MAX_LEN, "System time : %u ms", sysTimeMs);
-#else
         snprintf(message, DJI_WIDGET_FLOATING_WINDOW_MSG_MAX_LEN,
-                 "System time : %u ms\r\nVersion: v%02d.%02d.%02d.%02d\r\nBuild time: %s %s", sysTimeMs,
-                 USER_FIRMWARE_MAJOR_VERSION, USER_FIRMWARE_MINOR_VERSION,
-                 USER_FIRMWARE_MODIFY_VERSION, USER_FIRMWARE_DEBUG_VERSION,
-                 __DATE__, __TIME__);
-#endif
-
+                 "System time : %ld ms \r\n%s \r\n%s \r\n%s \r\n%s \r\n",
+                 sysTimeMs,
+                 s_djiTestWidgetLog[0].content,
+                 s_djiTestWidgetLog[1].content,
+                 s_djiTestWidgetLog[2].content,
+                 s_djiTestWidgetLog[3].content);
 
         djiStat = DjiWidgetFloatingWindow_ShowMessage(message);
         if (djiStat != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
             USER_LOG_ERROR("Floating window show message error, stat = 0x%08llX", djiStat);
         }
 
-        osalHandler->TaskSleepMs(1000);
+        osalHandler->TaskSleepMs(200);
     }
 }
-
 #ifndef __CC_ARM
 #pragma GCC diagnostic pop
 #endif
+
+/* Private functions definition-----------------------------------------------*/
 
 static T_DjiReturnCode DjiTestWidget_SetWidgetValue(E_DjiWidgetType widgetType, uint32_t index, int32_t value,
                                                     void *userData)
 {
     USER_UTIL_UNUSED(userData);
 
+    DjiTest_WidgetLogAppend("Set widget: typ %s idx %d val %d\n", s_widgetTypeNameArray[widgetType], index, value);
     USER_LOG_INFO("Set widget value, widgetType = %s, widgetIndex = %d ,widgetValue = %d",
                   s_widgetTypeNameArray[widgetType], index, value);
     s_widgetValueList[index] = value;

@@ -615,6 +615,9 @@ DjiUser_FlightCtrlJoystickCtrlAuthSwitchEventCb(T_DjiFlightControllerJoystickCtr
         case DJI_FLIGHT_CONTROLLER_NERA_FLIGHT_BOUNDARY_RESET_JOYSTICK_CTRL_AUTH_EVENT :
             USER_LOG_INFO("[Event] Current joystick ctrl authority is reset to rc due to near boundary\r\n");
             break;
+        case DJI_FLIGHT_CONTROLLER_DOCK_REQUEST_CHANGE_JOYSTICK_CTRL_AUTH_EVENT :
+            USER_LOG_INFO("[Event]Current joystick ctrl authority is change due to the dock request\r\n");
+            break;
         default:
             USER_LOG_INFO("[Event] Unknown joystick ctrl authority event\r\n");
     }

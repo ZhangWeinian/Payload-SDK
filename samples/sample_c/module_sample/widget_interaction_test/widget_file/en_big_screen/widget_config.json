@@ -218,6 +218,12 @@
           },
           {
             "item_name": "28_test_cammgr-thermometry"
+          },
+          {
+            "item_name": "29_test_network-rtk-start"
+          },
+          {
+            "item_name": "30_test_network-rtk-stop"
           }
         ]
       },

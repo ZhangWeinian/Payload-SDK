@@ -36,11 +36,12 @@
 #include "../common/osal/osal_fs.h"
 #include "../common/osal/osal_socket.h"
 #include "../hal/hal_usb_bulk.h"
+#include "hms/test_hms.h"
 
 /* Private constants ---------------------------------------------------------*/
-#define DJI_LOG_PATH                    "logs/DJI"
-#define DJI_LOG_INDEX_FILE_NAME         "logs/index"
-#define DJI_LOG_FOLDER_NAME             "logs"
+#define DJI_LOG_PATH                    "data/logs/DJI"
+#define DJI_LOG_INDEX_FILE_NAME         "data/logs/index"
+#define DJI_LOG_FOLDER_NAME             "data/logs"
 #define DJI_LOG_PATH_MAX_SIZE           (128)
 #define DJI_LOG_FOLDER_NAME_MAX_SIZE    (32)
 #define DJI_SYSTEM_CMD_STR_MAX_SIZE     (64)
@@ -233,6 +234,12 @@ void Application::DjiUser_ApplicationStart()
     returnCode = DjiTest_WidgetStartService();
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
         USER_LOG_ERROR("widget sample init error");
+    }
+
+    returnCode = DjiTest_HmsCustomizationStartService();
+    if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
+        USER_LOG_ERROR("DjiTest_HmsCustomizationStartService, error code:0x%08llX", returnCode);
+        return;
     }
 
     returnCode = DjiCore_ApplicationStart();

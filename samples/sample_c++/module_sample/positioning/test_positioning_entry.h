@@ -1,10 +1,10 @@
 /**
  ********************************************************************
- * @file    test_positioning.h
- * @brief   This is the header file for "test_positioning.c", defining the structure and
+ * @file    test_positioning_entry.h
+ * @brief   This is the header file for "test_flight_controller_entry.c", defining the structure and
  * (exported) function prototypes.
  *
- * @copyright (c) 2021 DJI. All rights reserved.
+ * @copyright (c) 2018 DJI. All rights reserved.
  *
  * All information contained herein is, and remains, the property of DJI.
  * The intellectual and technical concepts contained herein are proprietary
@@ -24,35 +24,17 @@
  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef TEST_POSITIONING_H
-#define TEST_POSITIONING_H
+#ifndef TEST_POSITIOING_ENTRY_H
+#define TEST_POSITIOING_ENTRY_H
 
 /* Includes ------------------------------------------------------------------*/
-#include "dji_typedef.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /* Exported constants --------------------------------------------------------*/
 
-typedef enum {
-    DJI_TEST_NETWORK_RTK_START =  0,
-    DJI_TEST_NETWORK_RTK_STOP = 1,
-} E_DjiTestNetworkRtkCtrl;
-
-
 /* Exported types ------------------------------------------------------------*/
 
-
 /* Exported functions --------------------------------------------------------*/
-T_DjiReturnCode DjiTest_PositioningStartService(void);
-T_DjiReturnCode DjiTest_NetworkRtkOnBoardService(E_DjiTestNetworkRtkCtrl ctrl);
+T_DjiReturnCode DjiTest_RunOnboardRTKSample(void);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif // TEST_POSITIONING_H
-
+#endif // TEST_FLIGHT_CONTROLLER_ENTRY_H
 /************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/

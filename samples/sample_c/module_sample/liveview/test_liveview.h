@@ -39,6 +39,7 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 
 /* Exported functions --------------------------------------------------------*/
+void DjiTest_LiveviewSample(void);
 T_DjiReturnCode DjiTest_LiveviewRunSample(E_DjiMountPosition mountPosition);
 
 #ifdef __cplusplus

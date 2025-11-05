@@ -30,6 +30,7 @@
 #include "dji_waypoint_v3.h"
 #include "waypoint_file_c/waypoint_v3_test_file_kmz.h"
 #include "dji_fc_subscription.h"
+#include "widget_interaction_test/test_widget_interaction.h"
 
 /* Private constants ---------------------------------------------------------*/
 #define DJI_TEST_WAYPOINT_V3_KMZ_FILE_PATH_LEN_MAX         (256)
@@ -134,6 +135,7 @@ T_DjiReturnCode DjiTest_WaypointV3RunSample(void)
     }
 #endif
 
+    DjiTest_WidgetLogAppend("Execute start action");
     USER_LOG_INFO("Execute start action");
     returnCode = DjiWaypointV3_Action(DJI_WAYPOINT_V3_ACTION_START);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -158,6 +160,7 @@ close_file:
         goto out;
     }
 
+    DjiTest_WidgetLogAppend("aircraft on the ground, motors stoped...");
     USER_LOG_INFO("The aircraft is on the ground and motors are stoped...");
     returnCode = DjiTest_WaypointV3WaitEndFlightStatus(DJI_FC_SUBSCRIPTION_FLIGHT_STATUS_STOPED);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -165,6 +168,7 @@ close_file:
         goto out;
     }
 
+    DjiTest_WidgetLogAppend("aircraft on the ground, motors rotating...");
     USER_LOG_INFO("The aircraft is on the ground and motors are rotating...");
     returnCode = DjiTest_WaypointV3WaitEndFlightStatus(DJI_FC_SUBSCRIPTION_FLIGHT_STATUS_ON_GROUND);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -172,6 +176,7 @@ close_file:
         goto out;
     }
 
+    DjiTest_WidgetLogAppend("aircraft in the air...");
     USER_LOG_INFO("The aircraft is in the air...");
     returnCode = DjiTest_WaypointV3WaitEndFlightStatus(DJI_FC_SUBSCRIPTION_FLIGHT_STATUS_IN_AIR);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -179,6 +184,7 @@ close_file:
         goto out;
     }
 
+    DjiTest_WidgetLogAppend("aircraft on the ground, motors rotating...");
     USER_LOG_INFO("The aircraft is on the ground and motors are rotating...");
     returnCode = DjiTest_WaypointV3WaitEndFlightStatus(DJI_FC_SUBSCRIPTION_FLIGHT_STATUS_ON_GROUND);
     if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
@@ -200,6 +206,7 @@ close_file:
         goto out;
     }
 
+    DjiTest_WidgetLogAppend("aircraft on the ground, motor toped.");
     USER_LOG_INFO("The aircraft is on the ground now, and motor are stoped.");
 
 out:
@@ -225,6 +232,9 @@ static T_DjiReturnCode DjiTest_WaypointV3MissionStateCallback(T_DjiWaypointV3Mis
     USER_LOG_INFO("Waypoint v3 mission state: %d, current waypoint index: %d, wayLine id: %d", missionState.state,
                   missionState.currentWaypointIndex, missionState.wayLineId);
 
+    DjiTest_WidgetLogAppend("WP3 mission: %d, wp idx: %d, wL id: %d", missionState.state,
+                  missionState.currentWaypointIndex, missionState.wayLineId);
+
     memcpy(&s_lastWaypointV3MissionState, &missionState, sizeof(T_DjiWaypointV3MissionState));
 
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
@@ -238,6 +248,10 @@ static T_DjiReturnCode DjiTest_WaypointV3ActionStateCallback(T_DjiWaypointV3Acti
         actionState.currentWaypointIndex, actionState.wayLineId,
         actionState.actionGroupId, actionState.actionId);
 
+    DjiTest_WidgetLogAppend("WP3 action :%d,  wp idx:%d, wL id:%d, ac:%d-%d",
+                            actionState.state,
+                            actionState.currentWaypointIndex, actionState.wayLineId,
+                            actionState.actionGroupId, actionState.actionId);
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 #endif

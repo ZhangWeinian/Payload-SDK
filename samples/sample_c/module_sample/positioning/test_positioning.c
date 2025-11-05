@@ -27,6 +27,7 @@
 #include <fc_subscription/test_fc_subscription.h>
 #include "test_positioning.h"
 #include "dji_positioning.h"
+#include "dji_network_rtk.h"
 #include "dji_logger.h"
 #include "utils/util_misc.h"
 #include "dji_platform.h"
@@ -81,7 +82,7 @@ T_DjiReturnCode DjiTest_PositioningStartService(void)
     if (osalHandler->TaskCreate("user_positioning_task", DjiTest_PositioningTask,
                                 POSITIONING_TASK_STACK_SIZE, NULL, &s_userPositioningThread) !=
         DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
-        USER_LOG_ERROR("user positioning task create error.");
+        USER_LOG_ERROR("user ps_extensionPortSampleIndexositioning task create error.");
         return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
     }
 #else
@@ -112,6 +113,51 @@ T_DjiReturnCode DjiTest_PositioningStartService(void)
         return djiStat;
     }
 
+    return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
+}
+
+static void DjiTest_ReceiveNetworkRtkStateCallback(E_DjiNetworkRtkOnboardState state)
+{
+    USER_LOG_INFO("Network rtk state: %d", state);
+}
+
+T_DjiReturnCode DjiTest_NetworkRtkOnBoardService(E_DjiTestNetworkRtkCtrl ctrl)
+{
+    T_DjiReturnCode djiStat;
+    USER_LOG_INFO("Network rtk service %s..", ctrl == DJI_TEST_NETWORK_RTK_START ? "start":"stop");
+    switch (ctrl)
+    {
+    case DJI_TEST_NETWORK_RTK_START:
+        djiStat = DjiNetworkRtk_RegReceiveNetworkRtkStateCallback(DjiTest_ReceiveNetworkRtkStateCallback);
+        if (djiStat != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+        {
+            USER_LOG_ERROR("Register receive network rtk state callback error.");
+            return djiStat;
+        }
+        /* example account */
+        T_DjiNetworkRtkServiceConfig config = {
+            .account = "12345",
+            .password = "12345",
+            .host = "12345",
+            .port = "123",
+            .mountPoint = "234",
+        };
+        djiStat = DjiNetworkRtk_StartService(&config);
+        if (djiStat != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+        {
+            USER_LOG_ERROR("start network rtk on aircraft error.");
+            return djiStat;
+        }
+        break;
+    case DJI_TEST_NETWORK_RTK_STOP:
+        djiStat = DjiNetworkRtk_StopService();
+        if (djiStat != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+        {
+            USER_LOG_ERROR("stop network rtk on aircraft error.");
+            return djiStat;
+        }
+        break;
+    }
     return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
