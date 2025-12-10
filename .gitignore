@@ -6,7 +6,7 @@
 /external_libs/**/build/
 
 # VS Code 配置
-.vscode/
+# .vscode/
 
 # 其他编译产物
 *.o
