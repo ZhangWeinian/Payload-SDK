@@ -3,10 +3,6 @@
 		{
 			"path": ".",
 			"name": "PSDK"
-		},
-		{
-			"name": "CodeFormatFile",
-			"path": "../CodeFormatFile"
 		}
 	],
 	"settings": {

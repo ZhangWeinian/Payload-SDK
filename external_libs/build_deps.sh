@@ -31,7 +31,7 @@ else
 fi
 
 check_and_install_deps() {
-	REQUIRED_PKGS="build-essential libopenmpi-dev openmpi-bin python3-dev"
+	REQUIRED_PKGS="build-essential libopenmpi-dev openmpi-bin python3-dev libudev-dev libusb-1.0-0-dev libbz2-dev libzstd-dev"
 	MISSING_PKGS=""
 	printf "%s\n" "${COLOR_BLUE}--- [ 检查系统依赖 ] ---${COLOR_NC}"
 
