@@ -30,7 +30,6 @@ namespace plane::services
 		PSDKManager(const PSDKManager&)			   = delete;
 		PSDKManager& operator=(const PSDKManager&) = delete;
 
-		_STD unique_ptr<_DJI Application> dji_application_ {};
 		_STD atomic<bool> running_ { false };
 	};
 } // namespace plane::services

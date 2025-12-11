@@ -5,6 +5,7 @@
 */
 
 #pragma once
+#include <dji_logger.h>
 
 #include "protocol/AppConfigDataClass.h"
 
@@ -39,8 +40,11 @@ namespace plane::config
 		// 检查配置项: 是否启用 PSDK 标准流程
 		_NODISCARD bool isStandardProceduresEnabled(void) const noexcept;
 
-		// 检查配置项: 是否启用 DEBUG 级别的调试日志
+		// 检查配置项: 是否启用 TRACE 级别的调试日志
 		_NODISCARD bool isTraceLogLevel(void) const noexcept;
+
+		// 获取配置项: 获取 PSDK 日志级别
+		_NODISCARD _DJI E_DjiLoggerConsoleLogLevel getPsdkLogLevel(void) const noexcept;
 
 		// 检查配置项: 是否跳过遥控器检测
 		_NODISCARD bool isSkipRC(void) const noexcept;

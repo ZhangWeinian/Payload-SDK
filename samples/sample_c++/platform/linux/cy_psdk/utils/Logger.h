@@ -63,24 +63,29 @@ namespace plane::utils
 
 			try
 			{
+				// 创建控制台和文件日志接收器
 				_STD vector<_SPDLOG sink_ptr> sinks {};
 				auto						  console_sink { _STD make_shared<_SPDLOG sinks::stdout_color_sink_mt>() };
 				console_sink->set_level(console_level);
 				console_sink->set_pattern("[%m-%d %H:%M:%S.%e] [%^%l%$] [th.%t] [%s:%#] %v");
 				sinks.push_back(console_sink);
 
+				// 创建日志文件，按时间戳命名以避免覆盖
 				_STD_FS path log_directory("/tmp/cy_psdk/logs");
 				_STD_FS		 create_directories(log_directory);
 
+				// 生成基于当前时间的日志文件名
 				auto		 now { _STD_CHRONO system_clock::now() };
 				_STD string	 timestamp_str { _FMT format("{:%Y%m%d_%H%M%S}", now) };
 				_STD_FS path log_filepath { log_directory / _FMT format("psdk_app_{}.log", timestamp_str) };
 
-				auto		 file_sink { _STD make_shared<_SPDLOG sinks::basic_file_sink_mt>(log_filepath.string(), false) };
+				// 创建文件日志接收器
+				auto file_sink { _STD make_shared<_SPDLOG sinks::basic_file_sink_mt>(log_filepath.string(), false) };
 				file_sink->set_level(_SPDLOG level::trace);
 				file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [th.%t] [%s:%#] %v");
 				sinks.push_back(file_sink);
 
+				// 创建 Logger 实例
 				this->logger_ = _STD make_shared<_SPDLOG logger>("psdk_logger", sinks.begin(), sinks.end());
 				this->logger_->set_level(_SPDLOG level::trace);
 				this->logger_->flush_on(_SPDLOG level::warn);
@@ -126,8 +131,10 @@ namespace plane::utils
 		Logger(const Logger&) noexcept			  = delete;
 		Logger& operator=(const Logger&) noexcept = delete;
 
-		void	manageLogFiles(const _STD_FS path& logDir, const _STD_FS path& newLogFile, _STD size_t maxFilesCount)
+		// 管理日志文件数量，删除最旧的文件以限制总数
+		void manageLogFiles(const _STD_FS path& logDir, const _STD_FS path& newLogFile, _STD size_t maxFilesCount)
 		{
+			// 创建或更新指向最新日志文件的符号链接
 			_STD_FS path	latest_link { _STD_FS read_symlink("/proc/self/exe").parent_path() / "latest.log" };
 			_STD error_code ec {};
 			if (_STD_FS exists(latest_link, ec))
@@ -135,12 +142,14 @@ namespace plane::utils
 				_STD_FS remove(latest_link, ec);
 			}
 
+			// 创建指向最新日志文件的符号链接
 			_STD_FS create_symlink(_STD_FS absolute(newLogFile), latest_link, ec);
 			if (ec)
 			{
 				LOG_WARN("创建日志软链接 'latest.log' 失败: {}", ec.message());
 			}
 
+			// 检查日志目录中的日志文件数量，删除最旧的文件以限制总数
 			_STD vector<_STD_FS path> log_files {};
 			for (const auto& entry : _STD_FS directory_iterator(logDir))
 			{
@@ -150,6 +159,7 @@ namespace plane::utils
 				}
 			}
 
+			// 如果日志文件数量超过限制，则删除最旧的文件
 			if (log_files.size() > maxFilesCount)
 			{
 				_STD sort(log_files.begin(), log_files.end());

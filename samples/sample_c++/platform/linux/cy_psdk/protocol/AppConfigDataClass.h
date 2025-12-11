@@ -23,6 +23,7 @@ namespace plane::protocol
 		_STD string		 mqttClientId {};
 		bool			 enableFullPSDK { false };
 		bool			 enableTraceLogLevel { false };
+		_STD uint8_t	 psdkLogLevel { 3 };
 		bool			 enableSkipRC { false };
 		bool			 enableSaveKmzFile { false };
 		bool			 enableUseTestKmz { false };

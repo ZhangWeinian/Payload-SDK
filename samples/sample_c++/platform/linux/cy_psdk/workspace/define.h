@@ -28,6 +28,10 @@
 	#define _UNNAMED
 #endif
 
+#ifndef _THIS
+	#define _THIS
+#endif
+
 #if __has_include(<chrono>) && !defined(_STD_CHRONO)
 	#define _STD_CHRONO ::std::chrono::
 #endif

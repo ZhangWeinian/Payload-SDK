@@ -20,13 +20,18 @@ namespace plane::services
 {
 	namespace
 	{
+		// 将 PSDK 日志重定向到 spdlog
 		_DJI T_DjiReturnCode psdkLogRedirectCallback(const _STD uint8_t* data, _STD uint16_t dataLen)
 		{
 			_STD string_view message(reinterpret_cast<const char*>(data), dataLen);
+
+			// 移除末尾的换行符
 			if (!message.empty() && (message.back() == '\n' || message.back() == '\r'))
 			{
 				message.remove_suffix(1);
 			}
+
+			// 输出到 spdlog
 			LOG_INFO("[PSDK] {}", message);
 			return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 		}
@@ -44,6 +49,7 @@ namespace plane::services
 	{
 		try
 		{
+			LOG_DEBUG("PSDKManager 正在析构...");
 			this->stop();
 		}
 		catch (const _STD exception& e)
@@ -58,22 +64,32 @@ namespace plane::services
 
 	bool PSDKManager::start(int argc, char* argv[])
 	{
+		// 确保幂等性
 		if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))
 		{
 			LOG_WARN("PSDKManager::start() 被重复调用，已忽略。");
 			return true;
 		}
+		else
+		{
+			LOG_DEBUG("PSDKManager::start() 正在执行...");
+		}
+
+		// 获取配置管理器实例
+		const auto& config { plane::config::ConfigManager::getInstance() };
 
 		try
 		{
 			LOG_INFO("--- PSDK 底层服务初始化开始 ---");
 
-			_DJI T_DjiLoggerConsole		console = { 0 };
-			console.consoleLevel				= _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_DEBUG;
-			console.func						= _UNNAMED	   psdkLogRedirectCallback;
-			console.isSupportColor				= true;
+			// 初始化 DJI Application
+			_DJI Application application(argc, argv);
 
-			if (_DJI DjiLogger_AddConsole(&console) != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			// 重定向 PSDK 日志到 spdlog
+			if (_DJI T_DjiLoggerConsole console = { .func			= _UNNAMED psdkLogRedirectCallback,
+													.consoleLevel	= static_cast<uint8_t>(config.getPsdkLogLevel()),
+													.isSupportColor = true };
+				_DJI DjiLogger_AddConsole(&console) != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
 				LOG_WARN("重定向 PSDK 日志失败。可能会看到重复或格式不一的日志。");
 			}
@@ -82,16 +98,16 @@ namespace plane::services
 				LOG_INFO("PSDK 日志已成功重定向到 spdlog 。");
 			}
 
-			this->dji_application_ = _STD make_unique<_DJI Application>(argc, argv);
-
 			LOG_INFO("DJI PSDK Application 初始化完成。");
 
+			// 初始化 HMS 模块
 			if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_Init() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
 				LOG_WARN("HMS 模块初始化失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
 			}
 			LOG_INFO("HMS 模块初始化完成。");
 
+			// 启动 PSDK 适配器
 			if (!plane::services::PSDKAdapter::getInstance().setup())
 			{
 				LOG_ERROR("PSDK 适配器 setup 失败！");
@@ -99,7 +115,8 @@ namespace plane::services
 			}
 			LOG_INFO("PSDK 适配器 setup 完成。");
 
-			if (const auto& config { plane::config::ConfigManager::getInstance() }; config.isStandardProceduresEnabled() && config.isSkipRC())
+			// 根据配置决定是否禁用遥控器检测
+			if (config.isStandardProceduresEnabled() && config.isSkipRC())
 			{
 				if (_DJI T_DjiReturnCode returnCode {
 						_DJI DjiFlightController_SetRCLostActionEnableStatus(_DJI DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
@@ -132,6 +149,7 @@ namespace plane::services
 
 	void PSDKManager::stop(void)
 	{
+		// 确保幂等性
 		if (bool expected { true }; !this->running_.compare_exchange_strong(expected, false))
 		{
 			return;
@@ -139,17 +157,17 @@ namespace plane::services
 
 		LOG_INFO("--- PSDK 底层服务反初始化开始 ---");
 
+		// 停止 PSDK 适配器
 		plane::services::PSDKAdapter::getInstance().cleanup();
 		LOG_INFO("PSDK 适配器 cleanup 完成。");
 
+		// 反初始化 HMS 模块
 		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 		{
 			LOG_WARN("HMS 模块反初始化失败, 错误: {}", plane::utils::djiReturnCodeToString(returnCode));
 		}
 
-		this->dji_application_.reset();
 		LOG_INFO("DJI PSDK Application 已反初始化。");
-
 		LOG_INFO("--- PSDK 底层服务反初始化完成 ---");
 	}
 } // namespace plane::services

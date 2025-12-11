@@ -129,6 +129,7 @@ namespace plane::config
 
 				this->app_config_.enableFullPSDK	  = features["enable_full_psdk"].as<bool>(false);
 				this->app_config_.enableTraceLogLevel = features["enable_trace_log"].as<bool>(false);
+				this->app_config_.psdkLogLevel		  = features["set_psdk_log_level"].as<_STD uint8_t>(3);
 				this->app_config_.enableSkipRC		  = features["skip_rc"].as<bool>(false);
 				this->app_config_.enableSaveKmzFile	  = features["save_kmz_file"].as<bool>(false);
 				this->app_config_.enableUseTestKmz	  = features["use_test_kmz"].as<bool>(false);
@@ -208,6 +209,38 @@ namespace plane::config
 	bool ConfigManager::isTraceLogLevel(void) const noexcept
 	{
 		return this->getConfigValue(this->app_config_.enableTraceLogLevel);
+	}
+
+	_DJI E_DjiLoggerConsoleLogLevel ConfigManager::getPsdkLogLevel(void) const noexcept
+	{
+		auto mapLogLevel = [](_STD uint8_t level) -> _DJI E_DjiLoggerConsoleLogLevel
+		{
+			switch (level)
+			{
+				case 0:
+				{
+					return _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_ERROR;
+				}
+				case 1:
+				{
+					return _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_WARN;
+				}
+				case 2:
+				{
+					return _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_INFO;
+				}
+				case 3:
+				{
+					return _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_DEBUG;
+				}
+				default:
+				{
+					return _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_DEBUG;
+				}
+			}
+		};
+
+		return mapLogLevel(this->getConfigValue(this->app_config_.psdkLogLevel, 3));
 	}
 
 	bool ConfigManager::isSkipRC(void) const noexcept
