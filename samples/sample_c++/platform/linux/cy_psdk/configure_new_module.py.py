@@ -29,7 +29,7 @@ APP_INFO_AFTER = textwrap.dedent(
 #define USER_APP_NAME               "test"
 #define USER_APP_ID                 "168809"
 #define USER_APP_KEY                "fa42c26a9253e8d492b12e0baf83fdb"
-#define USER_APP_LICENSE                                                                                                         \\
+#define USER_APP_LICENSE                                                                                                            \\
     "yEduca4jloV78YzpEXaJ2W9Ys6VWMpRkTX3nOO4OyWdZBnDV59xyWm5kkvg+"                                                                  \\
     "zyBibGjIc2PuAoRxAzOXIMWXahiG0cfR17naHK1MeQgmsJKDQPi7tbOehUges3m4ib71tZ3sO4TFEZGRsz8MJWrPRTqsnNgzqnkhh7lAq+"                    \\
     "pJVn8u1UbH5GOCj2qrzzR9pW2UJiboIcZPSA5N0ygDHg+A4MdFWuRBHxIOIKPOR0MdHf1x2P1VVoOiJCvwcOm98ztlOzaCrWXPdutyPJynGyHQrBNA3ZdpdnmCt7+" \\
