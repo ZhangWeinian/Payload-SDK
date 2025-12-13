@@ -1,54 +1,53 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required (VERSION 3.30)
+project (DJI_PSDK_APP_TOPLEVEL CXX C)
 
-if (NOT USE_SYSTEM_ARCH)
-    # select use platform 'LINUX' or 'RTOS' here, reset cache and reload cmake project
-    set(USE_SYSTEM_ARCH LINUX)
-endif ()
+# 1. 构建环境检查
+if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+	message (FATAL_ERROR "错误：不允许在源代码目录中进行构建。请创建一个独立的构建目录。")
+endif()
 
-if (USE_SYSTEM_ARCH MATCHES RTOS)
-    cmake_minimum_required(VERSION 3.15)
-    set(CMAKE_C_COMPILER arm-none-eabi-gcc)
-    set(CMAKE_CXX_COMPILER arm-none-eabi-g++)
-    set(CMAKE_ASM_COMPILER arm-none-eabi-gcc)
-    set(CMAKE_AR arm-none-eabi-ar)
-    set(CMAKE_OBJCOPY arm-none-eabi-objcopy)
-    set(CMAKE_OBJDUMP arm-none-eabi-objdump)
-    set(SIZE arm-none-eabi-size)
-    set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-endif ()
+if(TREAT_WARNINGS_AS_ERRORS)
+	if(MSVC)
+		add_compile_options (/WX)
+	else()
+		add_compile_options (-Werror)
+	endif()
+endif()
 
-project(entry)
+# 2. 第三方依赖管理
+set (DEPS_SOURCE_DIR "${CMAKE_SOURCE_DIR}/external_libs")
+set (DEPS_BUILD_SCRIPT "${DEPS_SOURCE_DIR}/build_deps.sh")
 
-# Disable in-source builds to prevent source tree corruption.
-if (" ${CMAKE_SOURCE_DIR}" STREQUAL " ${CMAKE_BINARY_DIR}")
-    message(FATAL_ERROR "FATAL: In-source builds are not allowed.
-       You should create a separate directory for build files.")
-endif ()
+if(EXISTS "${DEPS_BUILD_SCRIPT}")
+	add_custom_target (
+		deps
+		COMMAND ${CMAKE_COMMAND} -E echo "正在通过脚本构建第三方依赖..."
+		COMMAND bash "${DEPS_BUILD_SCRIPT}"
+		WORKING_DIRECTORY "${DEPS_SOURCE_DIR}"
+		COMMENT "构建所有依赖项的静态库。如有需要，请手动运行此目标。"
+	)
+else()
+	message (WARNING "未找到脚本 build_deps.sh 。依赖构建目标 'deps' 将不可用。")
+endif()
 
-if (USE_SYSTEM_ARCH MATCHES LINUX)
-    add_definitions(-DSYSTEM_ARCH_LINUX)
-    add_subdirectory(samples/sample_c/platform/linux/manifold2)
-    add_subdirectory(samples/sample_c++/platform/linux/manifold2)
-    
-    execute_process(COMMAND uname -m OUTPUT_VARIABLE DEVICE_SYSTEM_ID)
-    if (DEVICE_SYSTEM_ID MATCHES x86_64)
-        set(LIBRARY_PATH psdk_lib/lib/x86_64-linux-gnu-gcc)
-    elseif (DEVICE_SYSTEM_ID MATCHES aarch64)
-        set(LIBRARY_PATH psdk_lib/lib/aarch64-linux-gnu-gcc)
-    else ()
-        message(FATAL_ERROR "FATAL: Please confirm your platform.")
-    endif ()
+if(NOT EXISTS "${DEPS_SOURCE_DIR}/install")
+	message (WARNING "第三方库似乎尚未构建。\n   请考虑先为 'deps' 目标执行构建命令：\n   cmake --build <构建目录> --target deps")
+endif()
 
-    install(FILES ${LIBRARY_PATH}/libpayloadsdk.a
-            DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-            )
+# 3. 平台选择与项目引导
+set (
+	TARGET_PLATFORM
+	"LINUX"
+	CACHE STRING "选择目标平台：LINUX 或 RTOS"
+)
 
-    install(DIRECTORY psdk_lib/include
-            DESTINATION "${CMAKE_INSTALL_PREFIX}"
-            )
-elseif (USE_SYSTEM_ARCH MATCHES RTOS)
-    add_definitions(-DSYSTEM_ARCH_RTOS)
-    add_subdirectory(samples/sample_c/platform/rtos_freertos/stm32f4_discovery/project/armgcc)
-endif ()
+message (STATUS "当前选择的目标平台：${TARGET_PLATFORM}")
 
-add_custom_target(${PROJECT_NAME} ALL)
+if(TARGET_PLATFORM STREQUAL "LINUX")
+	add_compile_definitions (SYSTEM_ARCH_LINUX)
+	add_subdirectory (samples/sample_c++/platform/linux/cy_psdk)
+elseif(TARGET_PLATFORM STREQUAL "RTOS")
+	add_compile_definitions (SYSTEM_ARCH_RTOS)
+else()
+	message (FATAL_ERROR "不支持的目标平台 '${TARGET_PLATFORM}'。有效选项为 'LINUX' 或 'RTOS' 。")
+endif()
