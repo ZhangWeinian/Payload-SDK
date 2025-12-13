@@ -1,0 +1,132 @@
+{
+	"version": 3,
+	"vendor": {
+		"psdk": {
+			"common-warnings": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wformat=2 -Wunused"
+		}
+	},
+	"configurePresets": [
+		{
+			"name": "base",
+			"hidden": true,
+			"generator": "Ninja",
+			"cacheVariables": {
+				"CMAKE_CXX_COMPILER": "/usr/bin/g++-13",
+				"CMAKE_C_COMPILER": "/usr/bin/gcc-13",
+				"CMAKE_PREFIX_PATH": "${sourceDir}/external_libs/install",
+				"BOOST_ROOT": "${sourceDir}/external_libs/install",
+				"Boost_ROOT": "${sourceDir}/external_libs/install",
+				"Boost_NO_SYSTEM_PATHS": "ON",
+				"Boost_USE_STATIC_LIBS": "ON",
+				"CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+				"CMAKE_COLOR_DIAGNOSTICS": "ON",
+				"CMAKE_CXX_STANDARD": "20",
+				"CMAKE_CXX_STANDARD_REQUIRED": "ON",
+				"CMAKE_CXX_EXTENSIONS": "OFF",
+				"CMAKE_C_STANDARD": "17",
+				"CMAKE_C_STANDARD_REQUIRED": "ON",
+				"CMAKE_C_EXTENSIONS": "OFF",
+				"BUILD_SHARED_LIBS": "ON",
+				"TREAT_WARNINGS_AS_ERRORS": {
+					"type": "BOOL",
+					"value": "FALSE"
+				}
+			}
+		},
+		{
+			"name": "debug",
+			"displayName": "Debug",
+			"description": "带有调试符号和地址/未定义行为检测",
+			"inherits": "base",
+			"binaryDir": "${sourceDir}/build/debug",
+			"installDir": "${sourceDir}/install/debug",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug",
+				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/debug",
+				"CMAKE_CXX_FLAGS_DEBUG": "${vendor.psdk.common-warnings} -g3 -O0 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=undefined",
+				"CMAKE_C_FLAGS_DEBUG": "${vendor.psdk.common-warnings} -g3 -O0 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=undefined",
+				"BUILD_TESTING": "ON"
+			}
+		},
+		{
+			"name": "release",
+			"displayName": "Release",
+			"description": "优化的发布构建，注重性能",
+			"inherits": "base",
+			"binaryDir": "${sourceDir}/build/release",
+			"installDir": "${sourceDir}/install/release",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release",
+				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/release",
+				"CMAKE_CXX_FLAGS_RELEASE": "${vendor.psdk.common-warnings} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+				"CMAKE_C_FLAGS_RELEASE": "${vendor.psdk.common-warnings} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+				"CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections -Wl,-z,relro,-z,now",
+				"CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections",
+				"CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+				"BUILD_TESTING": "OFF",
+				"TREAT_WARNINGS_AS_ERRORS": "ON"
+			}
+		},
+		{
+			"name": "redbi",
+			"displayName": "RelWithDebInfo",
+			"description": "带有调试符号的优化构建",
+			"inherits": "base",
+			"binaryDir": "${sourceDir}/build/redbi",
+			"installDir": "${sourceDir}/install/redbi",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo",
+				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/redbi",
+				"CMAKE_CXX_FLAGS_RELWITHDEBINFO": "${vendor.psdk.common-warnings} -O2 -g -DNDEBUG",
+				"CMAKE_C_FLAGS_RELWITHDEBINFO": "${vendor.psdk.common-warnings} -O2 -g -DNDEBUG",
+				"BUILD_TESTING": "ON"
+			}
+		}
+	],
+	"buildPresets": [
+		{
+			"name": "debug",
+			"displayName": "Build Debug",
+			"configurePreset": "debug",
+			"targets": ["all"]
+		},
+		{
+			"name": "release",
+			"displayName": "Build Release",
+			"configurePreset": "release",
+			"cleanFirst": true
+		},
+		{
+			"name": "redbi",
+			"displayName": "Build RelWithDebInfo",
+			"configurePreset": "redbi"
+		},
+		{
+			"name": "install-debug",
+			"displayName": "Install Debug",
+			"configurePreset": "debug",
+			"targets": ["install"]
+		},
+		{
+			"name": "install-release",
+			"displayName": "Install Release",
+			"configurePreset": "release",
+			"targets": ["install"]
+		}
+	],
+	"testPresets": [
+		{
+			"name": "debug",
+			"displayName": "Test Debug",
+			"configurePreset": "debug",
+			"output": { "outputOnFailure": true, "verbosity": "verbose" },
+			"execution": { "noTestsAction": "error", "stopOnFailure": false }
+		},
+		{
+			"name": "release",
+			"displayName": "Test Release",
+			"configurePreset": "release",
+			"output": { "outputOnFailure": true }
+		}
+	]
+}
