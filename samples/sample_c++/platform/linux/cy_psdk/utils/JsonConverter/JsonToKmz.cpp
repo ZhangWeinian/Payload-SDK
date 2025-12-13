@@ -170,7 +170,9 @@ namespace plane::utils
 
 		inline _STD optional<_STD_FS path> getKmzStorageDir(void) noexcept
 		{
-			static _STD_FS path kmz_storage_dir { "/tmp/cy_psdk/kmz" };
+			static _STD_FS path exe_path { _STD_FS read_symlink("/proc/self/exe") };
+			static _STD_FS path exe_dir { exe_path.parent_path() };
+			static _STD_FS path kmz_storage_dir { exe_dir / "kmz" };
 
 			static bool			is_initialized = []
 			{

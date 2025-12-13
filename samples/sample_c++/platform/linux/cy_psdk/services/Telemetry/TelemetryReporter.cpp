@@ -50,6 +50,10 @@ namespace plane::services
 			LOG_WARN("TelemetryReporter::start() 被重复调用，已忽略。");
 			return true;
 		}
+		else
+		{
+			LOG_DEBUG("TelemetryReporter::start() 正在执行...");
+		}
 
 		try
 		{

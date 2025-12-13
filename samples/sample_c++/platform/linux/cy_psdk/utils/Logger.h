@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -71,8 +72,15 @@ namespace plane::utils
 				sinks.push_back(console_sink);
 
 				// 创建日志文件，按时间戳命名以避免覆盖
-				_STD_FS path log_directory("/tmp/cy_psdk/logs");
-				_STD_FS		 create_directories(log_directory);
+				_STD_FS path exe_path { _STD_FS read_symlink("/proc/self/exe") };
+				_STD_FS path exe_dir { exe_path.parent_path() };
+				_STD_FS path log_directory { exe_dir / "logs" };
+
+				// 如果 logs 目录不存在，则创建
+				if (!_STD_FS exists(log_directory))
+				{
+					_STD_FS create_directories(log_directory);
+				}
 
 				// 生成基于当前时间的日志文件名
 				auto		 now { _STD_CHRONO system_clock::now() };
@@ -122,6 +130,65 @@ namespace plane::utils
 			if (this->logger_)
 			{
 				this->logger_->log(loc, lvl, fmt, _STD forward<Args>(args)...);
+			}
+		}
+
+		void logPsdk(const _STD string& rawMessage)
+		{
+			if (!this->logger_)
+			{
+				return;
+			}
+
+			try
+			{
+				// 正则表达式解释：
+				// (?:\x1b\[[0-9;]*m)? : 匹配并忽略开头的 ANSI 颜色码
+				// \s*([\d\.]+)        : 捕获组1 - PSDK运行时间戳
+				// \s+([^\s]+)         : 捕获组2 - 模块名
+				// \s+\[(\w+)\]        : 捕获组3 - 日志级别
+				// \s+([^:]+:\d+)      : 捕获组4 - 文件名:行号
+				// \s+(.*?)            : 捕获组5 - 实际消息内容
+				// (?:\x1b\[0m)?\s*$   : 匹配并忽略结尾的 ANSI 重置码和空格
+				static const _STD regex pattern(
+					R"((?:\x1b\[[0-9;]*m)?\s*([\d\.]+)\s+([^\s]+)\s+\[(\w+)\]\s+([^:]+:\d+)\s+(.*?)(?:\x1b\[0m)?\s*$)");
+
+				if (_STD smatch matches {}; _STD regex_search(rawMessage, matches, pattern) && matches.size() == 6)
+				{
+					_STD string psdk_time { matches[1].str() };
+					_STD string module { matches[2].str() };
+					_STD string level_str { matches[3].str() };
+					_STD string file_line { matches[4].str() };
+					_STD string content { matches[5].str() };
+
+					// 映射日志级别
+					_SPDLOG level::level_enum log_level { _SPDLOG level::info };
+					if (level_str == "Error")
+					{
+						log_level = _SPDLOG level::err;
+					}
+					else if (level_str == "Warn")
+					{
+						log_level = _SPDLOG level::warn;
+					}
+					else if (level_str == "Debug")
+					{
+						log_level = _SPDLOG level::debug;
+					}
+
+					this->logger_->log(log_level, "[PSDK:{}] {} ({})", module, content, file_line);
+				}
+				else
+				{
+					// 如果正则匹配失败，则进行简单的去除颜色码处理后输出
+					_STD string cleanMsg { _STD regex_replace(rawMessage, _STD regex(R"(\x1b\[[0-9;]*m)"), "") };
+					this->logger_->log(_SPDLOG level::info, "[PSDK] {}", cleanMsg);
+				}
+			}
+			catch (...)
+			{
+				// 防止正则解析异常导致崩溃
+				this->logger_->log(_SPDLOG level::info, "[PSDK] {}", rawMessage);
 			}
 		}
 

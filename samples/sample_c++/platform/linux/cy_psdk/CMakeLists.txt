@@ -208,9 +208,9 @@ target_link_libraries (
 			${LEAK_SANITIZER_LINK_LIBS}
 )
 
-# if(TARGET deps)
-# 	add_dependencies (${MAIN_TARGET_NAME} deps)
-# endif()
+if(TARGET deps)
+	add_dependencies (${MAIN_TARGET_NAME} deps)
+endif()
 
 # 9. 构建时文件复制
 set (CONFIG_SOURCE_FILE "${CMAKE_SOURCE_DIR}/config/config.yml")
@@ -259,9 +259,24 @@ if(TARGET copy_system_libs)
 	add_dependencies (${MAIN_TARGET_NAME} copy_system_libs)
 endif()
 
-# 10. 构建后处理 (打包与同步)
+# 10. 构建后处理 (MD5 生成、打包与同步)
 set (SYNC_LATEST_SCRIPT "${CMAKE_SOURCE_DIR}/bash/sync_latest.sh")
+set (GEN_MD5_SCRIPT "${CMAKE_SOURCE_DIR}/bash/gen_md5.sh")
 set (LATEST_BUILD_DIR "${CMAKE_SOURCE_DIR}/build/bin")
+
+add_custom_target(
+	generate_md5
+	COMMAND chmod +x ${GEN_MD5_SCRIPT}
+	COMMAND /bin/bash ${GEN_MD5_SCRIPT} "${MAIN_OUTPUT_PATH}"
+	COMMENT "正在为构建产物生成 MD5 校验和..."
+	VERBATIM
+)
+
+add_dependencies(generate_md5 ${MAIN_TARGET_NAME} copy_runtime_files)
+
+if(TARGET copy_system_libs)
+	add_dependencies(generate_md5 copy_system_libs)
+endif()
 
 add_custom_target (
 	sync_latest ALL
@@ -271,7 +286,7 @@ add_custom_target (
 	VERBATIM
 )
 
-add_dependencies (sync_latest ${MAIN_TARGET_NAME})
+add_dependencies (sync_latest generate_md5 ${MAIN_TARGET_NAME})
 
 # 11. 显示最终构建信息
 pretty_message (

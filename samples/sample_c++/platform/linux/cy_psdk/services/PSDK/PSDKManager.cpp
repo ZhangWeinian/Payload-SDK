@@ -23,16 +23,12 @@ namespace plane::services
 		// 将 PSDK 日志重定向到 spdlog
 		_DJI T_DjiReturnCode psdkLogRedirectCallback(const _STD uint8_t* data, _STD uint16_t dataLen)
 		{
-			_STD string_view message(reinterpret_cast<const char*>(data), dataLen);
-
-			// 移除末尾的换行符
-			if (!message.empty() && (message.back() == '\n' || message.back() == '\r'))
+			_STD string message(reinterpret_cast<const char*>(data), dataLen);
+			while (!message.empty() && (message.back() == '\n' || message.back() == '\r'))
 			{
-				message.remove_suffix(1);
+				message.pop_back();
 			}
-
-			// 输出到 spdlog
-			LOG_INFO("[PSDK] {}", message);
+			plane::utils::Logger::getInstance().logPsdk(message);
 			return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 		}
 	} // namespace
@@ -83,6 +79,7 @@ namespace plane::services
 			LOG_INFO("--- PSDK 底层服务初始化开始 ---");
 
 			// 初始化 DJI Application
+			LOG_INFO("初始化 PSDK CORE , 请等待...");
 			_DJI Application application(argc, argv);
 
 			// 重定向 PSDK 日志到 spdlog

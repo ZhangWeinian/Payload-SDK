@@ -940,6 +940,7 @@ namespace plane::services
 						{
 							LOG_DEBUG("正在通过 ScopeGuard 调用 DjiWaypointV3_DeInit()...");
 							_DJI DjiWaypointV3_DeInit();
+							LOG_INFO("DjiWaypointV3 已反初始化");
 						});
 
 					return_code = _DJI DjiWaypointV3_RegMissionStateCallback(this->missionStateCallbackEntry);

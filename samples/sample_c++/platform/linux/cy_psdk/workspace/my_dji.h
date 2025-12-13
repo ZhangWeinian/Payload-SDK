@@ -149,7 +149,7 @@ namespace plane::my_dji
 		LOG_INFO("==========================================================");
 
 		// 主循环，等待退出信号
-		while (!g_should_exit)
+		while (true)
 		{
 			_STD this_thread::sleep_for(_STD_CHRONO milliseconds(500));
 		}

@@ -8,9 +8,9 @@ plane:
 
 # 功能配置
 features:
-    enable_full_psdk: false # 是否启用完整 PSDK 作业流程
+    enable_full_psdk: true # 是否启用完整 PSDK 作业流程
     enable_trace_log: false # 是否设置最高日志级别为 TRACE
-    set_psdk_log_level: 3 # 设置 PSDK 日志级别, 约定 - 0: ERROR 1: WARN 2: INFO 3: DEBUG
+    set_psdk_log_level: 1 # 设置 PSDK 日志级别, 约定 - 0: ERROR 1: WARN 2: INFO 3: DEBUG
     skip_rc: false # 是否尝试跳过遥控器检测
     save_kmz_file: true # 是否保存 KMZ 文件到本地
     use_test_kmz: false # 是否使用测试 KMZ 文件
