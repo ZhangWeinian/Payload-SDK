@@ -23,7 +23,7 @@ namespace plane::services
 	}
 
 	TelemetryReporter::TelemetryReporter(void) noexcept:
-		event_processing_pool_(_STD make_unique<_THREADPOOL ThreadPool>(2)),
+		event_processing_pool_(_STD make_unique<_THREADPOOL ThreadPool>(6)),
 		last_health_ping_time_(_STD chrono::steady_clock::now())
 	{}
 
@@ -119,6 +119,7 @@ namespace plane::services
 			}
 
 			LOG_INFO("遥测上报服务已启动。");
+
 			return true;
 		}
 		catch (const _STD exception& ex)
@@ -243,9 +244,11 @@ namespace plane::services
 							}
 
 							auto			  payload { event };
-							static const auto ip { plane::utils::NetworkUtils::getInstance().getDeviceIpv4Address().value_or("[Not Find]") };
+							static const auto ip {
+								plane::utils::NetworkUtils::getInstance().getDeviceIpv4Address().value_or("[找不到有效的 IP ]")
+							};
 
-							static int		  status_counter { 0 };
+							static int status_counter { 0 };
 							if (++status_counter >= 5)
 							{
 								status_counter = 0;
@@ -254,7 +257,9 @@ namespace plane::services
 																  .SPXY	 = "RTSP",
 																  .ZBZT	 = 1 }
 								};
+
 								LOG_DEBUG("准备上报飞行状态...");
+
 								(void)this->publishJson(plane::services::TOPIC_DRONE_STATUS,
 														plane::utils::JsonConverter::buildStatusReportJson(payload));
 							}
@@ -262,6 +267,7 @@ namespace plane::services
 						else if constexpr (_STD is_same_v<T, plane::protocol::HealthStatusPayload>)
 						{
 							LOG_DEBUG("准备上报健康状态...");
+
 							(void)this->publishJson(plane::services::TOPIC_HEALTH_MANAGE,
 													plane::utils::JsonConverter::buildHealthStatusJson(event));
 						}

@@ -32,14 +32,12 @@
 #include <dji_platform.h>
 #include <csignal>
 
-
 #include "../common/osal/osal.h"
 #include "../common/osal/osal_fs.h"
 #include "../common/osal/osal_socket.h"
 #include "../manifold2/hal/hal_network.h"
 #include "../manifold2/hal/hal_uart.h"
 #include "../manifold2/hal/hal_usb_bulk.h"
-
 
 #include "data_transmission/test_data_transmission.h"
 #include "utils/dji_config_manager.h"
@@ -49,7 +47,6 @@
 #include <camera_emu/test_payload_cam_emu_media.h>
 #include <gimbal_emu/test_payload_gimbal_emu.h>
 #include <power_management/test_power_management.h>
-
 
 /* Private constants ---------------------------------------------------------*/
 #define DJI_LOG_PATH				 "Logs/DJI"
@@ -262,7 +259,7 @@ void Application::DjiUser_ApplicationStart()
 	};
 
 	// attention: when the program is hand up ctrl-c will generate the coredump file
-	// signal(SIGTERM, DjiUser_NormalExitHandler);
+	signal(SIGTERM, DjiUser_NormalExitHandler);
 
 #if DJI_USE_SDK_CONFIG_BY_JSON
 	DjiUserConfigManager_GetAppInfo(&userInfo);

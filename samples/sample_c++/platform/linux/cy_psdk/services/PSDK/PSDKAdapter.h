@@ -255,12 +255,15 @@ namespace plane::services
 		_STD thread		   acquisition_thread_ {};
 		_STD thread		   command_processing_thread_ {};
 		_STD vector<_STD uint32_t> last_hms_error_codes_ {};
-		_STD atomic<State> state_ { State::STOPPED };
+		_STD atomic<_THIS State> state_ { _THIS State::STOPPED };
 		_STD atomic<bool> run_acquisition_ { false };
 		_STD atomic<bool> run_command_processing_ { false };
 		_STD unique_ptr<_THREADPOOL ThreadPool> command_pool_ {};
 		_STD unique_ptr<_STD promise<_DJI T_DjiReturnCode>> mission_completion_promise_ {};
 		_STD unique_ptr<_EVENTPP ScopedRemover<plane::services::EventManager::CommandQueue>> command_queue_remover_ {};
+
+		_DJI T_DjiWaypointV3MissionState													 last_mission_state_ {};
+
 		plane::protocol::StatusPayload														 latest_payload_ {};
 		constexpr static auto ACQUISITION_INTERVAL { _STD_CHRONO milliseconds(20) };
 	};

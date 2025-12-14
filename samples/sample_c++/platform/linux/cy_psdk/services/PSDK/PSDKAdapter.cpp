@@ -197,7 +197,7 @@ namespace plane::services
 			});
 	}
 
-	PSDKAdapter::PSDKAdapter(void) noexcept: command_pool_(_STD make_unique<ThreadPool>(2))
+	PSDKAdapter::PSDKAdapter(void) noexcept: command_pool_(_STD make_unique<ThreadPool>(6))
 	{
 		LOG_INFO("PSDKAdapter 正在初始化并设置 CommandQueue 的监听器...");
 
@@ -304,6 +304,7 @@ namespace plane::services
 			{
 				LOG_DEBUG("PSDKAdapter 状态从 STOPPED 切换到 STARTING。");
 			}
+
 			LOG_INFO("PSDKAdapter 启动流程开始...");
 
 			// 启动数据采集线程
@@ -345,17 +346,20 @@ namespace plane::services
 		// 启动失败时，确保状态回滚到 STOPPED
 		this->run_acquisition_		  = false;
 		this->run_command_processing_ = false;
+		this->state_				  = _THIS State::STOPPED;
+
 		if (this->acquisition_thread_.joinable())
 		{
 			LOG_DEBUG("等待 PSDK 数据采集线程结束...");
 			this->acquisition_thread_.join();
 		}
+
 		if (this->command_processing_thread_.joinable())
 		{
 			LOG_DEBUG("等待 PSDK 命令处理线程结束...");
 			this->command_processing_thread_.join();
 		}
-		this->state_ = _THIS State::STOPPED;
+
 		return false;
 	}
 
@@ -398,6 +402,7 @@ namespace plane::services
 		{
 			LOG_DEBUG("PSDK 命令处理线程状态切换为停止。");
 			plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::Takeoff, _STD monostate {});
+
 			if (this->command_processing_thread_.joinable())
 			{
 				this->command_processing_thread_.join();
@@ -460,6 +465,7 @@ namespace plane::services
 						  topicName,
 						  plane::utils::djiReturnCodeToString(return_code),
 						  return_code);
+
 				return false;
 			}
 			else
@@ -490,6 +496,7 @@ namespace plane::services
 		}
 
 		LOG_INFO("PSDK 适配器准备就绪。");
+
 		return true;
 	}
 
@@ -725,6 +732,10 @@ namespace plane::services
 				current_error_codes.push_back(hmsInfoTable.hmsInfo[i].errorCode);
 			}
 		}
+		else
+		{
+			LOG_DEBUG("收到 HMS 信息回调，但当前无告警。");
+		}
 
 		_STD sort(current_error_codes.begin(), current_error_codes.end());
 
@@ -784,6 +795,7 @@ namespace plane::services
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::executePsdkCommandAsync(CommandLogic&& logic, const _STD source_location& location)
 	{
 		const char* command_name { location.function_name() };
+
 		return this->command_pool_->enqueue(
 			[this, name = _STD string(command_name), logic = _STD forward<CommandLogic>(logic)](void) -> _DJI T_DjiReturnCode
 			{
@@ -815,6 +827,7 @@ namespace plane::services
 	_STD future<T_DjiReturnCode> PSDKAdapter::executeWaypointActionAsync(_DJI E_DjiWaypointV3Action action, const _STD source_location& location)
 	{
 		const char* command_name { location.function_name() };
+
 		return this->executePsdkCommandAsync(
 			[action, name = _STD string(command_name)](void) -> _DJI T_DjiReturnCode
 			{
@@ -824,6 +837,7 @@ namespace plane::services
 				{
 					LOG_ERROR("发送航线动作 '{}' 失败, 错误: {}", name, plane::utils::djiReturnCodeToString(return_code));
 				}
+
 				return return_code;
 			},
 			location);
@@ -832,6 +846,7 @@ namespace plane::services
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::takeoffAsync(const plane::protocol::TakeoffPayload& takeoffParams)
 	{
 		LOG_INFO("收到起飞请求，起飞高度: {} 米", takeoffParams.MBGD.value_or(-1.0));
+
 		return this->executePsdkCommandAsync(
 			[](void) -> _DJI T_DjiReturnCode
 			{
@@ -841,6 +856,7 @@ namespace plane::services
 				{
 					LOG_ERROR("起飞失败, 错误: {}", plane::utils::djiReturnCodeToString(return_code));
 				}
+
 				return return_code;
 			});
 	}
@@ -848,6 +864,7 @@ namespace plane::services
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::goHomeAsync(void)
 	{
 		LOG_INFO("收到返航请求");
+
 		return this->executePsdkCommandAsync(
 			[](void) -> _DJI T_DjiReturnCode
 			{
@@ -857,6 +874,7 @@ namespace plane::services
 				{
 					LOG_ERROR("返航失败, 错误: {}", plane::utils::djiReturnCodeToString(return_code));
 				}
+
 				return return_code;
 			});
 	}
@@ -864,6 +882,7 @@ namespace plane::services
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::hoverAsync(void)
 	{
 		LOG_INFO("收到一键悬停请求");
+
 		return this->executePsdkCommandAsync(
 			[](void) -> _DJI T_DjiReturnCode
 			{
@@ -873,6 +892,7 @@ namespace plane::services
 				{
 					LOG_ERROR("一键悬停失败, 错误: {}", plane::utils::djiReturnCodeToString(return_code));
 				}
+
 				return return_code;
 			});
 	}
@@ -880,6 +900,7 @@ namespace plane::services
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::landAsync(void)
 	{
 		LOG_INFO("收到降落请求");
+
 		return this->executePsdkCommandAsync(
 			[](void) -> _DJI T_DjiReturnCode
 			{
@@ -889,6 +910,7 @@ namespace plane::services
 				{
 					LOG_ERROR("降落失败, 错误: {}", plane::utils::djiReturnCodeToString(return_code));
 				}
+
 				return return_code;
 			});
 	}
@@ -896,118 +918,134 @@ namespace plane::services
 	_STD future<T_DjiReturnCode> PSDKAdapter::waypointAsync(const _DEFINED _KMZ_DATA_TYPE& kmzData)
 	{
 		LOG_INFO("收到航线任务请求，KMZ 数据大小: {} 字节", kmzData.size());
-		return this->command_pool_->enqueue(
-			[this, data = kmzData](void) -> _DJI T_DjiReturnCode
-			{
-				try
-				{
-					if (this->state_ != _THIS State::RUNNING)
-					{
-						LOG_WARN("PSDKAdapter 不在运行状态，航线任务被取消。");
-						return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
-					}
 
-					_STD unique_lock<_STD mutex> lock(this->psdk_command_mutex_);
+		// 专门起一个线程来处理航线任务，避免阻塞线程池中的其他任务
+		return _STD async(_STD								   launch::async,
+						  [this, data = kmzData](void) -> _DJI T_DjiReturnCode
+						  {
+							  _DJI T_DjiReturnCode return_code { _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS };
 
-					if (this->state_ != _THIS State::RUNNING)
-					{
-						LOG_WARN("PSDKAdapter 不在运行状态，航线任务被取消。");
-						return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
-					}
+							  // 如果当前状态不是 RUNNING，则拒绝执行航线任务
+							  if (this->state_ != _THIS State::RUNNING)
+							  {
+								  LOG_WARN("PSDKAdapter 当前未处于 RUNNING 状态，航线任务请求被拒绝。");
+								  return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
+							  }
 
-					if (!plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
-					{
-						LOG_WARN("环境变量 FULL_PSDK 未设置或不为 '1', 航点任务操作被禁止。");
-						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
-					}
+							  // 如果 KMZ 数据为空，则返回错误
+							  if (data.empty())
+							  {
+								  LOG_ERROR("提供的 KMZ 数据为空，无法执行航线任务。");
+								  return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_INVALID_PARAMETER;
+							  }
 
-					if (data.empty())
-					{
-						LOG_ERROR("航线任务失败: KMZ 数据为空。");
-						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_INVALID_PARAMETER;
-					}
+							  // 加锁初始化 Promise
+							  {
+								  _STD unique_lock<_STD mutex>			   lock(this->psdk_command_mutex_);
+								  this->mission_completion_promise_ = _STD make_unique<_STD promise<_DJI T_DjiReturnCode>>();
+								  this->last_mission_state_			= {};
+							  }
 
-					LOG_DEBUG("正在初始化 Waypoint V3 模块...");
-					_DJI T_DjiReturnCode return_code { _DJI DjiWaypointV3_Init() };
-					if (return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-					{
-						LOG_ERROR("Waypoint V3 初始化失败: {}", plane::utils::djiReturnCodeToString(return_code));
-						return return_code;
-					}
+							  // 获取 Future 用于等待
+							  _STD future<_DJI T_DjiReturnCode> mission_future { this->mission_completion_promise_->get_future() };
 
-					auto deinit_guard = _GSL finally(
-						[]
-						{
-							LOG_DEBUG("正在通过 ScopeGuard 调用 DjiWaypointV3_DeInit()...");
-							_DJI DjiWaypointV3_DeInit();
-							LOG_INFO("DjiWaypointV3 已反初始化");
-						});
+							  // 初始化 Waypoint V3 模块
+							  LOG_DEBUG("正在初始化 Waypoint V3 模块...");
+							  if (return_code = _DJI DjiWaypointV3_Init(); return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+							  {
+								  LOG_ERROR("Waypoint V3 初始化失败: {}", plane::utils::djiReturnCodeToString(return_code));
+								  return return_code;
+							  }
 
-					return_code = _DJI DjiWaypointV3_RegMissionStateCallback(this->missionStateCallbackEntry);
-					if (return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-					{
-						LOG_ERROR("注册 Waypoint 任务状态回调失败, 错误: {}", plane::utils::djiReturnCodeToString(return_code));
-					}
+							  try
+							  {
+								  // 注册任务状态回调
+								  if (return_code = _DJI  DjiWaypointV3_RegMissionStateCallback(this->missionStateCallbackEntry);
+									  return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+								  {
+									  LOG_ERROR("注册航线任务状态回调失败: {}", plane::utils::djiReturnCodeToString(return_code));
+									  throw return_code;
+								  }
 
-					return_code = _DJI DjiWaypointV3_RegActionStateCallback(this->actionStateCallbackEntry);
-					if (return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-					{
-						LOG_ERROR("注册 Waypoint 动作状态回调失败, 错误: {}", plane::utils::djiReturnCodeToString(return_code));
-					}
+								  // 注册动作状态回调
+								  if (return_code = _DJI  DjiWaypointV3_RegActionStateCallback(this->actionStateCallbackEntry);
+									  return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+								  {
+									  LOG_ERROR("注册航线动作状态回调失败: {}", plane::utils::djiReturnCodeToString(return_code));
+									  throw return_code;
+								  }
 
-					LOG_INFO("线程池任务: 开始上传 {} 字节的 KMZ 数据...", data.size());
-					return_code = _DJI DjiWaypointV3_UploadKmzFile(data.data(), data.size());
-					if (return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-					{
-						LOG_ERROR("上传 KMZ 数据失败, 错误: {}", plane::utils::djiReturnCodeToString(return_code));
-						return return_code;
-					}
+								  // 上传 KMZ 数据
+								  LOG_INFO("正在上传 KMZ 数据...");
+								  if (return_code = _DJI  DjiWaypointV3_UploadKmzFile(data.data(), data.size());
+									  return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+								  {
+									  LOG_ERROR("上传 KMZ 数据失败: {}", plane::utils::djiReturnCodeToString(return_code));
+									  throw return_code;
+								  }
 
-					this->mission_completion_promise_ = _STD make_unique<_STD promise<_DJI T_DjiReturnCode>>();
-					_STD future<_DJI T_DjiReturnCode> mission_future { this->mission_completion_promise_->get_future() };
+								  // 启动航线任务
+								  LOG_INFO("启动航线任务...");
+								  if (return_code = _DJI  DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_START);
+									  return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+								  {
+									  LOG_ERROR("启动航线任务失败: {}", plane::utils::djiReturnCodeToString(return_code));
+									  throw return_code;
+								  }
 
-					LOG_INFO("线程池任务: 启动航线任务...");
-					return_code = _DJI DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_START);
-					if (return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-					{
-						LOG_ERROR("启动航线任务失败, 错误: {}", plane::utils::djiReturnCodeToString(return_code));
-						this->mission_completion_promise_.reset();
-						return return_code;
-					}
+								  // 阻塞等待任务完成, 等待回调函数通知 "IDLE" 或 "FINISHED" , 至多等待 60 分钟
+								  LOG_INFO("航线任务已启动，等待完成...");
+								  if (_STD future_status status { mission_future.wait_for(_STD_CHRONO minutes(60)) };
+									  status == _STD	 future_status::ready)
+								  {
+									  return_code = mission_future.get();
+									  LOG_INFO("航线任务结束 (回调确认: {})", plane::utils::djiReturnCodeToString(return_code));
+								  }
+								  else
+								  {
+									  LOG_ERROR("航线任务超时或异常！尝试发送停止指令...");
+									  _DJI				 DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_STOP);
+									  return_code = _DJI DJI_ERROR_SYSTEM_MODULE_CODE_TIMEOUT;
+								  }
 
-					lock.unlock();
-					LOG_INFO("航线任务已启动，工作线程等待来自回调的完成信号...");
+								  // 注销回调函数
+								  _DJI DjiWaypointV3_RegMissionStateCallback(nullptr);
+								  _DJI DjiWaypointV3_RegActionStateCallback(nullptr);
 
-					_DJI T_DjiReturnCode final_status { mission_future.get() };
-					if (final_status == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-					{
-						LOG_INFO("航线任务成功完成 (由回调确认)。");
-					}
-					else
-					{
-						LOG_ERROR("航线任务失败或被中断 (由回调确认)，最终状态: {} (0x{:08X})",
-								  plane::utils::djiReturnCodeToString(final_status),
-								  final_status);
-					}
+								  _STD this_thread::sleep_for(_STD_CHRONO milliseconds(500));
 
-					return final_status;
-				}
-				catch (const _STD exception& e)
-				{
-					LOG_ERROR("PSDKAdapter::waypointV3 任务在线程池中捕获到标准异常: {}", e.what());
-					return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
-				}
-				catch (...)
-				{
-					LOG_ERROR("PSDKAdapter::waypointV3 任务在线程池中捕获到未知异常！");
-					return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
-				}
-			});
+								  LOG_INFO("正在反初始化 Waypoint V3 模块...");
+								  _DJI DjiWaypointV3_DeInit();
+							  }
+							  catch (_DJI T_DjiReturnCode err_code)
+							  {
+								  LOG_ERROR("航线启动流程发生错误: {}", plane::utils::djiReturnCodeToString(err_code));
+								  _DJI DjiWaypointV3_RegMissionStateCallback(nullptr);
+								  _DJI DjiWaypointV3_RegActionStateCallback(nullptr);
+								  _DJI DjiWaypointV3_DeInit();
+								  return err_code;
+							  }
+							  catch (...)
+							  {
+								  LOG_ERROR("捕获到未知异常，强制清理...");
+								  _DJI		  DjiWaypointV3_DeInit();
+								  return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
+							  }
+
+							  // 清理 Promise
+							  {
+								  _STD lock_guard<_STD mutex> re_lock(this->psdk_command_mutex_);
+								  this->mission_completion_promise_.reset();
+							  }
+
+							  return return_code;
+						  });
 	}
 
 	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::setControlStrategyAsync(const _DEFINED _PTZ_CONTROL_STRATEGY_TYPE& strategyCode)
 	{
 		LOG_INFO("收到设置控制策略请求，代码: {}", strategyCode);
+
 		return this->executePsdkCommandAsync(
 			[strategyCode](void) -> _DJI T_DjiReturnCode
 			{
@@ -1017,6 +1055,7 @@ namespace plane::services
 				{
 					LOG_ERROR("设置控制策略失败, 错误: {}", plane::utils::djiReturnCodeToString(return_code));
 				}
+
 				return return_code;
 			});
 	}
@@ -1030,6 +1069,7 @@ namespace plane::services
 				 circleParams.SD,
 				 circleParams.BJ,
 				 circleParams.QS);
+
 		return this->executePsdkCommandAsync(
 			[circleParams](void) -> _DJI T_DjiReturnCode
 			{
@@ -1045,6 +1085,7 @@ namespace plane::services
 				{
 					LOG_ERROR("环绕飞行失败, 错误: {}", plane::utils::djiReturnCodeToString(return_code));
 				}
+
 				return return_code;
 			});
 	}
@@ -1052,6 +1093,7 @@ namespace plane::services
 	void PSDKAdapter::rotateGimbal(const plane::protocol::GimbalControlPayload& payload)
 	{
 		LOG_INFO("收到云台控制请求, 俯仰角: {}, 偏航角: {}, 模式: {}", payload.FYJ, payload.PHJ, payload.MS);
+
 		(void)this->executePsdkCommandAsync(
 			[payload](void) -> _DJI T_DjiReturnCode
 			{
@@ -1066,6 +1108,7 @@ namespace plane::services
 				 payload.XJSY.value_or("null"),
 				 payload.XJLX.value_or("null"),
 				 payload.BJB.value_or(-1.0));
+
 		(void)this->executePsdkCommandAsync(
 			[payload](void) -> _DJI T_DjiReturnCode
 			{
@@ -1073,6 +1116,7 @@ namespace plane::services
 						 payload.XJSY.value_or("null"),
 						 payload.XJLX.value_or("null"),
 						 payload.BJB.value_or(-1));
+
 				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
 			});
 	}
@@ -1080,6 +1124,7 @@ namespace plane::services
 	void PSDKAdapter::setCameraStreamSource(const _DEFINED _VIDEO_SOURCE_TYPE& source)
 	{
 		LOG_INFO("收到切换视频源请求, 源: {}", source);
+
 		(void)this->executePsdkCommandAsync(
 			[source](void) -> _DJI T_DjiReturnCode
 			{
@@ -1091,6 +1136,7 @@ namespace plane::services
 	void PSDKAdapter::sendRawStickData(const plane::protocol::StickDataPayload& payload)
 	{
 		LOG_INFO("收到虚拟摇杆数据, 油门: {}, 偏航: {}, 俯仰: {}, 横滚: {}", payload.YML, payload.PHL, payload.FYL, payload.HGL);
+
 		(void)this->executePsdkCommandAsync(
 			[payload](void) -> _DJI T_DjiReturnCode
 			{
@@ -1099,6 +1145,7 @@ namespace plane::services
 						  payload.PHL,
 						  payload.FYL,
 						  payload.HGL);
+
 				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
 			});
 	}
@@ -1106,6 +1153,7 @@ namespace plane::services
 	void PSDKAdapter::enableVirtualStick(const plane::protocol::StickModeSwitchPayload& payload)
 	{
 		LOG_INFO("收到开启虚拟摇杆请求, 模式: {}", payload.YGMS);
+
 		(void)this->executePsdkCommandAsync(
 			[payload](void) -> _DJI T_DjiReturnCode
 			{
@@ -1117,6 +1165,7 @@ namespace plane::services
 	void PSDKAdapter::disableVirtualStick(const plane::protocol::StickModeSwitchPayload& payload)
 	{
 		LOG_INFO("收到关闭虚拟摇杆请求, 模式: {}", payload.YGMS);
+
 		(void)this->executePsdkCommandAsync(
 			[payload](void) -> _DJI T_DjiReturnCode
 			{
@@ -1128,6 +1177,7 @@ namespace plane::services
 	void PSDKAdapter::sendNedVelocityCommand(const plane::protocol::NedVelocityPayload& payload)
 	{
 		LOG_INFO("收到 NED 速度指令, 北向: {}, 东向: {}, 地向: {}, 偏航角速率: {}", payload.SDN, payload.SDD, payload.SDX, payload.PHJ);
+
 		(void)this->executePsdkCommandAsync(
 			[payload](void) -> _DJI T_DjiReturnCode
 			{
@@ -1136,6 +1186,7 @@ namespace plane::services
 						  payload.SDD,
 						  payload.SDX,
 						  payload.PHJ);
+
 				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
 			});
 	}

@@ -16,6 +16,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <thread>
 
@@ -29,16 +30,20 @@ namespace plane::my_dji
 
 		void			  signalHandler(int signum)
 		{
-			LOG_DEBUG("捕获到信号 {}, 正在准备退出...", signum);
-			g_should_exit = true;
+			static bool s_is_stopping { false };
+			if (!s_is_stopping)
+			{
+				LOG_WARN("\n>>> 捕获到信号 {}, 正在请求退出... <<<", signum);
+				g_should_exit = true;
+				s_is_stopping = true;
+			}
 		}
 	} // namespace
 
 	void runMyApplication(int argc, char* argv[])
 	{
-		// 注册信号处理函数
-		_CSTD signal(SIGINT, _UNNAMED signalHandler);
-		_CSTD signal(SIGTERM, _UNNAMED signalHandler);
+		// 持有 DJI Application 实例，确保其生命周期贯穿整个应用程序运行期间
+		_STD unique_ptr<_DJI Application> PSDK_application_ { nullptr };
 
 		// 日志系统初始化（必须最先初始化）
 		plane::utils::Logger::getInstance().init();
@@ -71,6 +76,24 @@ namespace plane::my_dji
 		{
 			LOG_DEBUG("已启用标准 PSDK 作业流程。");
 
+			// 初始化 DJI Application
+			try
+			{
+				LOG_INFO("初始化 PSDK CORE , 请等待...");
+				PSDK_application_ = _STD make_unique<_DJI Application>(argc, argv);
+			}
+			catch (const _STD exception& e)
+			{
+				LOG_ERROR("PSDK CORE 初始化异常: {}", e.what());
+				return;
+			}
+			catch (...)
+			{
+				LOG_ERROR("PSDK CORE 初始化发生未知异常: <non-std exception>");
+				return;
+			}
+
+			// 尝试启动 PSDK 底层服务
 			if (!plane::services::PSDKManager::getInstance().start(argc, argv))
 			{
 				LOG_ERROR("PSDK 底层服务初始化失败，程序退出。");
@@ -81,6 +104,7 @@ namespace plane::my_dji
 				LOG_DEBUG("PSDK 底层服务已成功启动。");
 			}
 
+			// 尝试启动 PSDK 适配器服务
 			if (!plane::services::PSDKAdapter::getInstance().start())
 			{
 				LOG_ERROR("PSDK 适配器运行时启动失败！");
@@ -148,8 +172,12 @@ namespace plane::my_dji
 		LOG_INFO("                    按 Ctrl+C 退出。");
 		LOG_INFO("==========================================================");
 
+		// 注册信号处理
+		_CSTD signal(SIGINT, _UNNAMED signalHandler);
+		_CSTD signal(SIGTERM, _UNNAMED signalHandler);
+
 		// 主循环，等待退出信号
-		while (true)
+		while (!g_should_exit)
 		{
 			_STD this_thread::sleep_for(_STD_CHRONO milliseconds(500));
 		}
@@ -167,6 +195,12 @@ namespace plane::my_dji
 		{
 			plane::services::PSDKManager::getInstance().stop();
 			plane::services::PSDKAdapter::getInstance().stop();
+
+			if (PSDK_application_)
+			{
+				PSDK_application_.reset();
+				LOG_DEBUG("PSDK CORE 已成功关闭。");
+			}
 		}
 
 		// 等待一段时间确保所有服务已正确关闭

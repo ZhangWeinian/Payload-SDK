@@ -78,10 +78,6 @@ namespace plane::services
 		{
 			LOG_INFO("--- PSDK 底层服务初始化开始 ---");
 
-			// 初始化 DJI Application
-			LOG_INFO("初始化 PSDK CORE , 请等待...");
-			_DJI Application application(argc, argv);
-
 			// 重定向 PSDK 日志到 spdlog
 			if (_DJI T_DjiLoggerConsole console = { .func			= _UNNAMED psdkLogRedirectCallback,
 													.consoleLevel	= static_cast<uint8_t>(config.getPsdkLogLevel()),
