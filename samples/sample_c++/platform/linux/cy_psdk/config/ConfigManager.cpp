@@ -1,6 +1,6 @@
 // cy_psdk/cinfig/ConfigManager.cpp
 
-#include "ConfigManager.h"
+#include "config/ConfigManager.h"
 
 #include "utils/Logger.h"
 

@@ -1,12 +1,12 @@
-// cy_psdk/services/MQTT/Handler/LogicHandler.cpp
+// cy_psdk/manager/MQTT/Handler/LogicHandler.cpp
 
 #include "LogicHandler.h"
 
 #include "config/ConfigManager.h"
+#include "manager/DroneControl/FlyManager.h"
+#include "manager/MQTT/Handler/MessageHandler.h"
+#include "manager/MQTT/Topics.h"
 #include "protocol/DroneDataClass.h"
-#include "services/DroneControl/FlyManager.h"
-#include "services/MQTT/Handler/MessageHandler.h"
-#include "services/MQTT/Topics.h"
 #include "utils/JsonConverter/JsonToKmz.h"
 #include "utils/Logger.h"
 
@@ -14,7 +14,7 @@
 #include <filesystem>
 #include <functional>
 
-namespace plane::services
+namespace plane::manager
 {
 	using n_json = _NLOHMANN_JSON json;
 
@@ -31,32 +31,30 @@ namespace plane::services
 		try
 		{
 			LOG_DEBUG("正在初始化 MQTT 业务逻辑处理器...");
-			auto& msg_handler { plane::services::MqttMessageHandler::getInstance() };
+			auto& msg_handler { plane::manager::MqttMessageHandler::getInstance() };
 
-			msg_handler.registerHandler(plane::services::TOPIC_MISSION_CONTROL,
+			msg_handler.registerHandler(plane::manager::TOPIC_MISSION_CONTROL,
 										"XFHXRW",
 										_STD bind_front(&LogicHandler::handleWaypointMission, this));
-			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "QF", _STD bind_front(&LogicHandler::handleTakeoff, this));
-			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "FH", _STD bind_front(&LogicHandler::handleGoHome, this));
-			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "XT", _STD bind_front(&LogicHandler::handleHover, this));
-			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "JL", _STD bind_front(&LogicHandler::handleLand, this));
-			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL,
+			msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "QF", _STD bind_front(&LogicHandler::handleTakeoff, this));
+			msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "FH", _STD bind_front(&LogicHandler::handleGoHome, this));
+			msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "XT", _STD bind_front(&LogicHandler::handleHover, this));
+			msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "JL", _STD bind_front(&LogicHandler::handleLand, this));
+			msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL,
 										"YTJSCL",
 										_STD bind_front(&LogicHandler::handleControlStrategySwitch, this));
-			msg_handler.registerHandler(plane::services::TOPIC_COMMAND_CONTROL, "ZNHR", _STD bind_front(&LogicHandler::handleCircleFly, this));
-			msg_handler.registerHandler(plane::services::TOPIC_PAYLOAD_CONTROL,
+			msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "ZNHR", _STD bind_front(&LogicHandler::handleCircleFly, this));
+			msg_handler.registerHandler(plane::manager::TOPIC_PAYLOAD_CONTROL,
 										"YTKZ",
 										_STD bind_front(&LogicHandler::handleGimbalControl, this));
-			msg_handler.registerHandler(plane::services::TOPIC_PAYLOAD_CONTROL,
+			msg_handler.registerHandler(plane::manager::TOPIC_PAYLOAD_CONTROL,
 										"BJKZ",
 										_STD bind_front(&LogicHandler::handleCameraControl, this));
-			msg_handler.registerHandler(plane::services::TOPIC_ROCKER_CONTROL, "YGFXZL", _STD bind_front(&LogicHandler::handleStickData, this));
-			msg_handler.registerHandler(plane::services::TOPIC_ROCKER_CONTROL,
+			msg_handler.registerHandler(plane::manager::TOPIC_ROCKER_CONTROL, "YGFXZL", _STD bind_front(&LogicHandler::handleStickData, this));
+			msg_handler.registerHandler(plane::manager::TOPIC_ROCKER_CONTROL,
 										"YGMSQH",
 										_STD bind_front(&LogicHandler::handleStickModeSwitch, this));
-			msg_handler.registerHandler(plane::services::TOPIC_VELOCITY_CONTROL,
-										"SDKZ",
-										_STD bind_front(&LogicHandler::handleNedVelocity, this));
+			msg_handler.registerHandler(plane::manager::TOPIC_VELOCITY_CONTROL, "SDKZ", _STD bind_front(&LogicHandler::handleNedVelocity, this));
 
 			LOG_INFO("MQTT 业务逻辑处理器初始化成功");
 			return true;
@@ -112,7 +110,7 @@ namespace plane::services
 					LOG_INFO("测试指定航线: {}", test_kmz_path);
 					if (_STD_FS exists(test_kmz_path))
 					{
-						plane::services::FlyManager::getInstance().waypoint(test_kmz_path);
+						plane::manager::FlyManager::getInstance().waypoint(test_kmz_path);
 					}
 					else
 					{
@@ -130,14 +128,14 @@ namespace plane::services
 					if (payload.HDJ.size() == 1)
 					{
 						LOG_INFO("[MQTT] 收到并准备执行【单航点任务】");
-						plane::services::FlyManager::getInstance().flyToPoint(payload.HDJ[0]);
+						plane::manager::FlyManager::getInstance().flyToPoint(payload.HDJ[0]);
 					}
 					else
 					{
 						LOG_INFO("[MQTT] 收到并准备执行【航线任务】, 共 {} 个航点", payload.HDJ.size());
 						if (auto kmz_data { plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload) }; kmz_data)
 						{
-							plane::services::FlyManager::getInstance().waypoint(kmz_data.value());
+							plane::manager::FlyManager::getInstance().waypoint(kmz_data.value());
 						}
 						else
 						{
@@ -156,7 +154,7 @@ namespace plane::services
 															 [&](const auto& payload)
 															 {
 																 LOG_INFO("[MQTT] 收到【起飞】指令");
-																 plane::services::FlyManager::getInstance().takeoff(payload);
+																 plane::manager::FlyManager::getInstance().takeoff(payload);
 															 });
 	}
 
@@ -167,7 +165,7 @@ namespace plane::services
 											[&]
 											{
 												LOG_INFO("[MQTT] 收到【返航】指令");
-												plane::services::FlyManager::getInstance().goHome();
+												plane::manager::FlyManager::getInstance().goHome();
 											});
 	}
 
@@ -178,7 +176,7 @@ namespace plane::services
 											[&]
 											{
 												LOG_INFO("[MQTT] 收到【悬停】指令");
-												plane::services::FlyManager::getInstance().hover();
+												plane::manager::FlyManager::getInstance().hover();
 											});
 	}
 
@@ -189,7 +187,7 @@ namespace plane::services
 											[&]
 											{
 												LOG_INFO("[MQTT] 收到【降落】指令");
-												plane::services::FlyManager::getInstance().land();
+												plane::manager::FlyManager::getInstance().land();
 											});
 	}
 
@@ -203,7 +201,7 @@ namespace plane::services
 				if (payload.YTJSCL)
 				{
 					LOG_INFO("[MQTT] 收到【云台控制策略切换】指令, 策略代码: {}", *payload.YTJSCL);
-					plane::services::FlyManager::getInstance().setControlStrategy(*payload.YTJSCL);
+					plane::manager::FlyManager::getInstance().setControlStrategy(*payload.YTJSCL);
 				}
 			});
 	}
@@ -215,7 +213,7 @@ namespace plane::services
 															   [&](const auto& payload)
 															   {
 																   LOG_INFO("[MQTT] 收到【智能环绕】指令");
-																   plane::services::FlyManager::getInstance().flyCircleAroundPoint(payload);
+																   plane::manager::FlyManager::getInstance().flyCircleAroundPoint(payload);
 															   });
 	}
 
@@ -229,12 +227,12 @@ namespace plane::services
 				if (payload.MS == 0) // 角度控制
 				{
 					LOG_INFO("[MQTT] 收到【云台角度控制】指令: pitch={}, yaw={}", payload.FYJ, payload.PHJ);
-					plane::services::FlyManager::getInstance().rotateGimbal(payload);
+					plane::manager::FlyManager::getInstance().rotateGimbal(payload);
 				}
 				else // 速度控制
 				{
 					LOG_INFO("[MQTT] 收到【云台速度控制】指令: pitch={}, yaw={}", payload.FYJ, payload.PHJ);
-					plane::services::FlyManager::getInstance().rotateGimbalBySpeed(payload);
+					plane::manager::FlyManager::getInstance().rotateGimbalBySpeed(payload);
 				}
 			});
 	}
@@ -248,12 +246,12 @@ namespace plane::services
 																	 if (payload.BJB)
 																	 {
 																		 LOG_INFO("[MQTT] 收到【相机变焦】指令: factor={}", *payload.BJB);
-																		 plane::services::FlyManager::getInstance().setCameraZoomFactor(payload);
+																		 plane::manager::FlyManager::getInstance().setCameraZoomFactor(payload);
 																	 }
 																	 if (payload.XJLX)
 																	 {
 																		 LOG_INFO("[MQTT] 收到【相机视频源切换】指令: source={}", *payload.XJLX);
-																		 plane::services::FlyManager::getInstance().setCameraStreamSource(
+																		 plane::manager::FlyManager::getInstance().setCameraStreamSource(
 																			 payload);
 																	 }
 																 });
@@ -272,7 +270,7 @@ namespace plane::services
 						 payload.FYL,
 						 payload.HGL);
 
-				plane::services::FlyManager::getInstance().sendRawStickData(payload);
+				plane::manager::FlyManager::getInstance().sendRawStickData(payload);
 			});
 	}
 
@@ -283,7 +281,7 @@ namespace plane::services
 																	 [&](const auto& payload)
 																	 {
 																		 LOG_INFO("[MQTT] 收到【虚拟摇杆模式切换】指令: mode={}", payload.YGMS);
-																		 plane::services::FlyManager::getInstance().enableVirtualStick(
+																		 plane::manager::FlyManager::getInstance().enableVirtualStick(
 																			 payload.YGMS);
 																	 });
 	}
@@ -300,7 +298,7 @@ namespace plane::services
 						 payload.SDD,
 						 payload.SDX,
 						 payload.PHJ);
-				plane::services::FlyManager::getInstance().sendNedVelocityCommand(payload);
+				plane::manager::FlyManager::getInstance().sendNedVelocityCommand(payload);
 			});
 	}
-} // namespace plane::services
+} // namespace plane::manager

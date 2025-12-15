@@ -1,4 +1,4 @@
-// cy_psdk/services/DroneControl/FlyManager.h
+// cy_psdk/manager/DroneControl/FlyManager.h
 
 #pragma once
 
@@ -13,7 +13,7 @@
 
 #include "define.h"
 
-namespace plane::services
+namespace plane::manager
 {
 	class FlyManager
 	{
@@ -50,4 +50,4 @@ namespace plane::services
 		FlyManager(const FlyManager&) noexcept			  = delete;
 		FlyManager& operator=(const FlyManager&) noexcept = delete;
 	};
-} // namespace plane::services
+} // namespace plane::manager

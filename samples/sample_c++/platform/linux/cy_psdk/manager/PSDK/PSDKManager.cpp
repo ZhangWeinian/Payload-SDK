@@ -1,4 +1,4 @@
-// cy_psdk/services/PSDK/PSDKManager.cpp
+// cy_psdk/manager/PSDK/PSDKManager.cpp
 
 #include "PSDKManager.h"
 
@@ -9,14 +9,14 @@
 
 #include "application.hpp"
 #include "config/ConfigManager.h"
-#include "services/PSDK/PSDKAdapter.h"
+#include "manager/PSDK/PSDKAdapter.h"
 #include "utils/DjiErrorUtils.h"
 #include "utils/Logger.h"
 
 #include <chrono>
 #include <string>
 
-namespace plane::services
+namespace plane::manager
 {
 	namespace
 	{
@@ -101,12 +101,12 @@ namespace plane::services
 			LOG_INFO("HMS 模块初始化完成。");
 
 			// 启动 PSDK 适配器
-			if (!plane::services::PSDKAdapter::getInstance().setup())
+			if (!plane::manager::PSDKAdapter::getInstance().subscribeTelemetryData())
 			{
-				LOG_ERROR("PSDK 适配器 setup 失败！");
+				LOG_ERROR("PSDK 适配器订阅遥测数据失败！");
 				return false;
 			}
-			LOG_INFO("PSDK 适配器 setup 完成。");
+			LOG_INFO("PSDK 适配器订阅遥测数据完成。");
 
 			// 根据配置决定是否禁用遥控器检测
 			if (config.isStandardProceduresEnabled() && config.isSkipRC())
@@ -151,8 +151,8 @@ namespace plane::services
 		LOG_INFO("--- PSDK 底层服务反初始化开始 ---");
 
 		// 停止 PSDK 适配器
-		plane::services::PSDKAdapter::getInstance().cleanup();
-		LOG_INFO("PSDK 适配器 cleanup 完成。");
+		plane::manager::PSDKAdapter::getInstance().unsubscribeTelemetryData();
+		LOG_INFO("PSDK 适配器清理完成。");
 
 		// 反初始化 HMS 模块
 		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
@@ -163,4 +163,4 @@ namespace plane::services
 		LOG_INFO("DJI PSDK Application 已反初始化。");
 		LOG_INFO("--- PSDK 底层服务反初始化完成 ---");
 	}
-} // namespace plane::services
+} // namespace plane::manager

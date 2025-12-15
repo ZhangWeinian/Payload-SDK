@@ -1,4 +1,4 @@
-// cy_psdk/services/MQTT/Handler/MessageHandler.h
+// cy_psdk/manager/MQTT/Handler/MessageHandler.h
 
 #pragma once
 
@@ -12,7 +12,7 @@
 
 #include "define.h"
 
-namespace plane::services
+namespace plane::manager
 {
 	class MqttMessageHandler
 	{
@@ -32,4 +32,4 @@ namespace plane::services
 		_STD map<_STD string_view, _STD map<_STD string_view, LogicHandler>> handler_map_ {};
 		_STD mutex															 handler_mutex_ {};
 	};
-} // namespace plane::services
+} // namespace plane::manager

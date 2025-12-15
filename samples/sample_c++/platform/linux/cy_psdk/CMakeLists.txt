@@ -23,7 +23,7 @@ endfunction()
 
 include (CTest)
 if(BUILD_TESTING)
-	message (STATUS "测试构建已启用 (BUILD_TESTING=ON)")
+	message (STATUS "测试构建已启用")
 	# 在这里添加测试
 	# add_subdirectory(tests)
 endif()
@@ -86,7 +86,7 @@ file (
 	CUSTOM_SOURCES
 	"${CMAKE_CURRENT_SOURCE_DIR}/config/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/protocol/*.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/services/**/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/manager/**/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/utils/**/*.cpp"
 )
 

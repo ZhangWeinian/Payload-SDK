@@ -1,15 +1,15 @@
-// cy_psdk/services/DroneControl/FlyManager.cpp
+// cy_psdk/manager/DroneControl/FlyManager.cpp
 
-#include "FlyManager.h"
+#include "manager/DroneControl/FlyManager.h"
 
-#include "services/PSDK/PSDKAdapter.h"
+#include "manager/PSDK/PSDKAdapter.h"
 #include "utils/JsonConverter/JsonToKmz.h"
 #include "utils/Logger.h"
 
 #include <filesystem>
 #include <fstream>
 
-namespace plane::services
+namespace plane::manager
 {
 	FlyManager& FlyManager::getInstance(void) noexcept
 	{
@@ -31,7 +31,7 @@ namespace plane::services
 			LOG_ERROR("航线任务事件发送失败: KMZ 数据为空。");
 			return;
 		}
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::WaypointMission, kmzData);
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::WaypointMission, kmzData);
 	}
 
 	void FlyManager::waypoint(_STD string_view kmzFilePath)
@@ -60,61 +60,60 @@ namespace plane::services
 	void FlyManager::takeoff(const plane::protocol::TakeoffPayload& takeoffParams)
 	{
 		LOG_INFO("FlyManager: 发送【起飞】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::Takeoff, takeoffParams);
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::Takeoff, takeoffParams);
 	}
 
 	void FlyManager::goHome(void)
 	{
 		LOG_INFO("FlyManager: 发送【返航】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::GoHome, _STD monostate {});
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::GoHome, _STD monostate {});
 	}
 
 	void FlyManager::hover(void)
 	{
 		LOG_INFO("FlyManager: 发送【悬停/中断】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::StopWaypointMission,
-																	_STD monostate {});
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::StopWaypointMission,
+																   _STD monostate {});
 	}
 
 	void FlyManager::land(void)
 	{
 		LOG_INFO("FlyManager: 发送【降落】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::Land, _STD monostate {});
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::Land, _STD monostate {});
 	}
 
 	void FlyManager::setControlStrategy(const _DEFINED _PTZ_CONTROL_STRATEGY_TYPE& strategyCode)
 	{
 		LOG_INFO("FlyManager: 发送【设置云台控制策略】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::SetControlStrategy,
-																	strategyCode);
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::SetControlStrategy, strategyCode);
 	}
 
 	void FlyManager::flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams)
 	{
 		LOG_INFO("FlyManager: 发送【环绕飞行】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::FlyCircleAroundPoint,
-																	circleParams);
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::FlyCircleAroundPoint,
+																   circleParams);
 	}
 
 	void FlyManager::pauseWaypointMission()
 	{
 		LOG_INFO("FlyManager: 发送【暂停航线】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::PauseWaypointMission,
-																	_STD monostate {});
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::PauseWaypointMission,
+																   _STD monostate {});
 	}
 
 	void FlyManager::resumeWaypointMission()
 	{
 		LOG_INFO("FlyManager: 发送【恢复航线】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::ResumeWaypointMission,
-																	_STD monostate {});
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::ResumeWaypointMission,
+																   _STD monostate {});
 	}
 
 	void FlyManager::rotateGimbal(const plane::protocol::GimbalControlPayload& gimbalParams) const noexcept
 	{
 		LOG_INFO("FlyManager: 发送【云台角度控制】命令事件: 俯仰角={}, 偏航角={}", gimbalParams.FYJ, gimbalParams.PHJ);
 		// 使用 GimbalControlPayload，MS=0 表示角度控制 (根据你的定义调整)
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::RotateGimbal, gimbalParams);
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::RotateGimbal, gimbalParams);
 	}
 
 	void FlyManager::rotateGimbalBySpeed(const plane::protocol::GimbalControlPayload& gimbalParams) const noexcept
@@ -122,49 +121,48 @@ namespace plane::services
 		LOG_INFO("FlyManager: 发送【云台速度控制】命令事件: 俯仰角={}, 偏航角={}", gimbalParams.FYJ, gimbalParams.PHJ);
 		// 使用 GimbalControlPayload，MS=1 表示速度控制 (根据你的定义调整)
 		// rollSpeed 暂时没有对应字段，如果需要可以扩展 GimbalControlPayload
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::RotateGimbalBySpeed,
-																	gimbalParams);
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::RotateGimbalBySpeed,
+																   gimbalParams);
 	}
 
 	void FlyManager::setCameraZoomFactor(const plane::protocol::ZoomControlPayload& zoomParams) const noexcept
 	{
 		LOG_INFO("FlyManager: 发送【相机变焦】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::SetCameraZoomFactor,
-																	zoomParams);
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::SetCameraZoomFactor, zoomParams);
 	}
 
 	void FlyManager::setCameraStreamSource(const plane::protocol::ZoomControlPayload& zoomParams) const noexcept
 	{
 		LOG_INFO("FlyManager: 发送【切换视频源】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::SetCameraStreamSource,
-																	zoomParams);
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::SetCameraStreamSource,
+																   zoomParams);
 	}
 
 	void FlyManager::sendRawStickData(const plane::protocol::StickDataPayload& stickData) const noexcept
 	{
 		LOG_INFO("FlyManager: 发送【虚拟摇杆数据】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::SendRawStickData, stickData);
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::SendRawStickData, stickData);
 	}
 
 	void FlyManager::enableVirtualStick(bool advancedMode) const noexcept
 	{
 		// YGMS: 0=关闭, 1=启用, 2=启用高级
 		LOG_INFO("FlyManager: 发送【开启虚拟摇杆】命令事件, 高级模式: {}", advancedMode);
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::EnableVirtualStick,
-																	plane::protocol::StickModeSwitchPayload { (advancedMode ? 2 : 1) });
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::EnableVirtualStick,
+																   plane::protocol::StickModeSwitchPayload { (advancedMode ? 2 : 1) });
 	}
 
 	void FlyManager::disableVirtualStick(void) const noexcept
 	{
 		LOG_INFO("FlyManager: 发送【关闭虚拟摇杆】命令事件");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::DisableVirtualStick,
-																	plane::protocol::StickModeSwitchPayload { 0 });
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::DisableVirtualStick,
+																   plane::protocol::StickModeSwitchPayload { 0 });
 	}
 
 	void FlyManager::sendNedVelocityCommand(const plane::protocol::NedVelocityPayload& velocityParams) const noexcept
 	{
 		LOG_INFO("FlyManager: 发送【NED 速度指令】命令事件...");
-		plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::SendNedVelocityCommand,
-																	velocityParams);
+		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::SendNedVelocityCommand,
+																   velocityParams);
 	}
-} // namespace plane::services
+} // namespace plane::manager

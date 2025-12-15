@@ -1,10 +1,10 @@
-// cy_psdk/services/PSDK/PSDKAdapter.h
+// cy_psdk/manager/PSDK/PSDKAdapter.h
 
 #pragma once
 
+#include "manager/EventManager/EventManager.h"
 #include "protocol/DroneDataClass.h"
 #include "protocol/HeartbeatDataClass.h"
-#include "services/EventManager/EventManager.h"
 
 #include <dji_fc_subscription.h>
 #include <dji_hms_manager.h>
@@ -30,7 +30,7 @@
 
 #include "define.h"
 
-namespace plane::services
+namespace plane::manager
 {
 	class PSDKAdapter
 	{
@@ -62,10 +62,10 @@ namespace plane::services
 		};
 
 		// 订阅 PSDK 数据状态、添加 PSDK 状态订阅
-		_NODISCARD bool setup(void) noexcept;
+		_NODISCARD bool subscribeTelemetryData(void) noexcept;
 
 		// 清理 PSDK 适配器状态、移除 PSDK 状态订阅
-		void cleanup(void) noexcept;
+		void unsubscribeTelemetryData(void) noexcept;
 
 		// 从 PSDK 四元数到欧拉角的转换，将 PSDK 飞控订阅的四元数数据转换为以度为单位的 roll（横滚）、pitch（俯仰）、yaw（偏航）三个角度
 		void convertQuaternionToEulerAngle(const _DJI T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept;
@@ -121,16 +121,16 @@ namespace plane::services
 		// 异步执行环绕指定地理点飞行的任务
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> selfPOIAsync(const plane::protocol::CircleFlyPayload& circleParams);
 
-		// 执行云台角度控制指令（设置目标角度或角速度）
+		// 执行云台角度控制指令
 		void rotateGimbal(const plane::protocol::GimbalControlPayload& payload);
 
 		// 设置相机变焦倍数
 		void setCameraZoomFactor(const plane::protocol::ZoomControlPayload& payload);
 
-		// 切换相机视频流源（如主相机、热成像等）
+		// 切换相机视频流源
 		void setCameraStreamSource(const _DEFINED _VIDEO_SOURCE_TYPE& source);
 
-		// 发送原始虚拟摇杆数据（用于精细控制飞行器运动）
+		// 发送原始虚拟摇杆数据
 		void sendRawStickData(const plane::protocol::StickDataPayload& payload);
 
 		// 启用虚拟摇杆控制模式
@@ -156,7 +156,7 @@ namespace plane::services
 
 		// 注册一个回调函数，用于响应指定类型的命令事件
 		template<typename PayloadType, typename Func>
-		void registerCommandListener(plane::services::EventManager::CommandEvent event, Func func);
+		void registerCommandListener(plane::manager::EventManager::CommandEvent event, Func func);
 
 		friend class PSDKManager;
 
@@ -260,11 +260,11 @@ namespace plane::services
 		_STD atomic<bool> run_command_processing_ { false };
 		_STD unique_ptr<_THREADPOOL ThreadPool> command_pool_ {};
 		_STD unique_ptr<_STD promise<_DJI T_DjiReturnCode>> mission_completion_promise_ {};
-		_STD unique_ptr<_EVENTPP ScopedRemover<plane::services::EventManager::CommandQueue>> command_queue_remover_ {};
+		_STD unique_ptr<_EVENTPP ScopedRemover<plane::manager::EventManager::CommandQueue>> command_queue_remover_ {};
 
-		_DJI T_DjiWaypointV3MissionState													 last_mission_state_ {};
+		_DJI T_DjiWaypointV3MissionState													last_mission_state_ {};
 
-		plane::protocol::StatusPayload														 latest_payload_ {};
+		plane::protocol::StatusPayload														latest_payload_ {};
 		constexpr static auto ACQUISITION_INTERVAL { _STD_CHRONO milliseconds(20) };
 	};
-} // namespace plane::services
+} // namespace plane::manager

@@ -1,4 +1,4 @@
-// cy_psdk/services/PSDK/PSDKManager.h
+// cy_psdk/manager/PSDK/PSDKManager.h
 
 #pragma once
 
@@ -11,7 +11,7 @@
 
 class Application;
 
-namespace plane::services
+namespace plane::manager
 {
 	class PSDKManager
 	{
@@ -32,4 +32,4 @@ namespace plane::services
 
 		_STD atomic<bool> running_ { false };
 	};
-} // namespace plane::services
+} // namespace plane::manager

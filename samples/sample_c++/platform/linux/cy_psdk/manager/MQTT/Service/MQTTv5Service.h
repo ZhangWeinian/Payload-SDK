@@ -1,4 +1,4 @@
-// cy_psdk/services/MQTT/Service.h
+// cy_psdk/manager/MQTT/Service.h
 
 #pragma once
 
@@ -18,9 +18,9 @@
 
 #include "define.h"
 
-namespace plane::services
+namespace plane::manager
 {
-	class MQTTService
+	class MQTTv5Service
 	{
 	protected:
 		struct Impl
@@ -50,7 +50,7 @@ namespace plane::services
 		};
 
 	public:
-		static MQTTService& getInstance(void) noexcept;
+		static MQTTv5Service& getInstance(void) noexcept;
 
 		// 启动后端 MQTT 客户端并连接到服务器，这是一个幂等的操作
 		_NODISCARD bool start(void) noexcept;
@@ -83,10 +83,10 @@ namespace plane::services
 		}
 
 	private:
-		explicit MQTTService(void) noexcept = default;
-		~MQTTService(void) noexcept;
-		MQTTService(const MQTTService&) noexcept			= delete;
-		MQTTService& operator=(const MQTTService&) noexcept = delete;
+		explicit MQTTv5Service(void) noexcept = default;
+		~MQTTv5Service(void) noexcept;
+		MQTTv5Service(const MQTTv5Service&) noexcept			= delete;
+		MQTTv5Service& operator=(const MQTTv5Service&) noexcept = delete;
 
 		friend class MqttCallback;
 
@@ -103,4 +103,4 @@ namespace plane::services
 		constexpr static inline _STD size_t MAX_DEQUE_SIZE { 30 };
 		constexpr static inline auto		LOG_THROTTLE_INTERVAL { _STD_CHRONO seconds(5) };
 	};
-} // namespace plane::services
+} // namespace plane::manager

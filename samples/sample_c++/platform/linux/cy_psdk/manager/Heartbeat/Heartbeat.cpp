@@ -1,11 +1,11 @@
-// cy_psdk/services/Heartbeat/Heartbeat.cpp
+// cy_psdk/manager/Heartbeat/Heartbeat.cpp
 
-#include "Heartbeat.h"
+#include "manager/Heartbeat/Heartbeat.h"
 
-#include "services/EventManager/EventManager.h"
+#include "manager/EventManager/EventManager.h"
 #include "utils/Logger.h"
 
-namespace plane::services
+namespace plane::manager
 {
 	Heartbeat& Heartbeat::getInstance(void) noexcept
 	{
@@ -77,8 +77,8 @@ namespace plane::services
 		while (this->running_)
 		{
 			next_wakeup_time += interval;
-			plane::services::EventManager::getInstance().publishSystemEvent(plane::services::EventManager::SystemEvent::HeartbeatTick);
+			plane::manager::EventManager::getInstance().publishSystemEvent(plane::manager::EventManager::SystemEvent::HeartbeatTick);
 			_STD this_thread::sleep_until(next_wakeup_time);
 		}
 	}
-} // namespace plane::services
+} // namespace plane::manager

@@ -1,4 +1,4 @@
-// cy_psdk/services/MQTT/Topics.h
+// cy_psdk/manager/MQTT/Topics.h
 
 #pragma once
 
@@ -6,7 +6,7 @@
 
 #include "define.h"
 
-namespace plane::services
+namespace plane::manager
 {
 	using namespace _STD literals;
 
@@ -21,4 +21,4 @@ namespace plane::services
 	constexpr inline auto TOPIC_PAYLOAD_CONTROL { "/wrgk/uav/payload_control"sv };	 // 有效载荷控制（中心 -> 设备）
 	constexpr inline auto TOPIC_ROCKER_CONTROL { "/wrgk/uav/rocker_control"sv };	 // 摇杆控制（中心 -> 设备）
 	constexpr inline auto TOPIC_VELOCITY_CONTROL { "/wrgk/uav/velocity_control"sv }; // 速度控制（中心 -> 设备）
-} // namespace plane::services
+} // namespace plane::manager

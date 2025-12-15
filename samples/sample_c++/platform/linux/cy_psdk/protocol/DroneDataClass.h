@@ -116,14 +116,14 @@ namespace plane::protocol
 
 	struct MissionControlPayload
 	{
-		_STD string RWID {}; // RWID
-		_STD string RWDZ {}; // RWDZ
+		_STD string RWID {}; // 任务 ID
+		_STD string RWDZ {}; // 任务动作
 	};
 
 	struct LandingPayload
 	{
-		double JD {}; // JD
-		double WD {}; // WD
+		double JD {}; // 经度
+		double WD {}; // 维度
 	};
 
 	struct TakeoffPayload

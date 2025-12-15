@@ -3,12 +3,12 @@
 #pragma once
 
 #include "config/ConfigManager.h"
-#include "services/Heartbeat/Heartbeat.h"
-#include "services/MQTT/Handler/LogicHandler.h"
-#include "services/MQTT/Service.h"
-#include "services/PSDK/PSDKAdapter.h"
-#include "services/PSDK/PSDKManager.h"
-#include "services/Telemetry/TelemetryReporter.h"
+#include "manager/Heartbeat/Heartbeat.h"
+#include "manager/MQTT/Handler/LogicHandler.h"
+#include "manager/MQTT/Service/MQTTv5Service.h"
+#include "manager/PSDK/PSDKAdapter.h"
+#include "manager/PSDK/PSDKManager.h"
+#include "manager/Telemetry/TelemetryReporter.h"
 #include "utils/Logger.h"
 
 #include <atomic>
@@ -94,7 +94,7 @@ namespace plane::my_dji
 			}
 
 			// 尝试启动 PSDK 底层服务
-			if (!plane::services::PSDKManager::getInstance().start(argc, argv))
+			if (!plane::manager::PSDKManager::getInstance().start(argc, argv))
 			{
 				LOG_ERROR("PSDK 底层服务初始化失败，程序退出。");
 				return;
@@ -105,7 +105,7 @@ namespace plane::my_dji
 			}
 
 			// 尝试启动 PSDK 适配器服务
-			if (!plane::services::PSDKAdapter::getInstance().start())
+			if (!plane::manager::PSDKAdapter::getInstance().start())
 			{
 				LOG_ERROR("PSDK 适配器运行时启动失败！");
 				return;
@@ -121,7 +121,7 @@ namespace plane::my_dji
 		}
 
 		// 尝试启动 MQTT 服务
-		if (!plane::services::MQTTService::getInstance().start())
+		if (!plane::manager::MQTTv5Service::getInstance().start())
 		{
 			LOG_ERROR("错误: MQTT 服务启动失败，程序退出。");
 			return;
@@ -132,7 +132,7 @@ namespace plane::my_dji
 		}
 
 		// 尝试启动心跳服务
-		if (!plane::services::Heartbeat::getInstance().start())
+		if (!plane::manager::Heartbeat::getInstance().start())
 		{
 			LOG_ERROR("错误: 心跳服务启动失败，程序退出。");
 			return;
@@ -143,7 +143,7 @@ namespace plane::my_dji
 		}
 
 		// 尝试初始化业务逻辑处理器
-		if (!plane::services::LogicHandler::getInstance().init())
+		if (!plane::manager::LogicHandler::getInstance().init())
 		{
 			LOG_ERROR("错误: 业务逻辑处理器初始化失败，程序退出。");
 			return;
@@ -154,7 +154,7 @@ namespace plane::my_dji
 		}
 
 		// 尝试启动遥测上报服务
-		if (!plane::services::TelemetryReporter::getInstance().start())
+		if (!plane::manager::TelemetryReporter::getInstance().start())
 		{
 			LOG_ERROR("错误: 遥测上报服务启动失败，程序退出。");
 			return;
@@ -186,15 +186,15 @@ namespace plane::my_dji
 		LOG_INFO("收到退出信号, 正在关闭应用程序...");
 
 		// 关闭各服务
-		plane::services::TelemetryReporter::getInstance().stop();
-		plane::services::Heartbeat::getInstance().stop();
-		plane::services::MQTTService::getInstance().stop();
+		plane::manager::TelemetryReporter::getInstance().stop();
+		plane::manager::Heartbeat::getInstance().stop();
+		plane::manager::MQTTv5Service::getInstance().stop();
 
 		// 如果启用标准 PSDK 作业流程，则停止 PSDKAdapter 和 PSDKManager
 		if (config.isStandardProceduresEnabled())
 		{
-			plane::services::PSDKManager::getInstance().stop();
-			plane::services::PSDKAdapter::getInstance().stop();
+			plane::manager::PSDKManager::getInstance().stop();
+			plane::manager::PSDKAdapter::getInstance().stop();
 
 			if (PSDK_application_)
 			{

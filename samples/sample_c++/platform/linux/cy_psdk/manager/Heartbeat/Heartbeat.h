@@ -1,4 +1,4 @@
-// cy_psdk/services/Heartbeat/Heartbeat.h
+// cy_psdk/manager/Heartbeat/Heartbeat.h
 #pragma once
 
 #include <atomic>
@@ -7,7 +7,7 @@
 
 #include "define.h"
 
-namespace plane::services
+namespace plane::manager
 {
 	class Heartbeat
 	{
@@ -31,4 +31,4 @@ namespace plane::services
 		_STD thread heartbeat_thread_ {};
 		_STD atomic<bool> running_ { false };
 	};
-} // namespace plane::services
+} // namespace plane::manager

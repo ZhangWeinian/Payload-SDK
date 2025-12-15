@@ -1,8 +1,8 @@
-// cy_psdk/services/EventManager/EventManager.cpp
+// cy_psdk/manager/EventManager/EventManager.cpp
 
-#include "EventManager.h"
+#include "manager/EventManager/EventManager.h"
 
-namespace plane::services
+namespace plane::manager
 {
 	EventManager& EventManager::getInstance(void) noexcept
 	{
@@ -36,4 +36,4 @@ namespace plane::services
 		LOG_DEBUG("发布系统事件: {}，负载类型: {}", static_cast<int>(event), data.index());
 		this->system_dispatcher_.dispatch(event, data);
 	}
-} // namespace plane::services
+} // namespace plane::manager

@@ -1,4 +1,4 @@
-// cy_psdk/services/PSDK/PSDKAdapter.cpp
+// cy_psdk/manager/PSDK/PSDKAdapter.cpp
 
 #include "PSDKAdapter.h"
 
@@ -22,7 +22,7 @@
 #include <cmath>
 #include <filesystem>
 
-namespace plane::services
+namespace plane::manager
 {
 	using namespace _STD literals;
 
@@ -163,11 +163,11 @@ namespace plane::services
 
 	// 注册命令事件监听器的模板方法
 	template<typename PayloadType, typename Func>
-	void PSDKAdapter::registerCommandListener(plane::services::EventManager::CommandEvent event, Func func)
+	void PSDKAdapter::registerCommandListener(plane::manager::EventManager::CommandEvent event, Func func)
 	{
 		this->command_queue_remover_->appendListener(
 			event,
-			[this, func](const plane::services::EventManager::CommandEvent& event, const plane::services::EventManager::CommandData& data)
+			[this, func](const plane::manager::EventManager::CommandEvent& event, const plane::manager::EventManager::CommandData& data)
 			{
 				// 根据 PayloadType 进行类型匹配和调用
 				if constexpr (_STD is_same_v<PayloadType, _STD monostate>)
@@ -204,64 +204,63 @@ namespace plane::services
 		try
 		{
 			// 订阅 CommandQueue 以接收命令事件
-			auto& command_queue_source { plane::services::EventManager::getInstance().getCommandQueue() };
+			auto& command_queue_source { plane::manager::EventManager::getInstance().getCommandQueue() };
 			this->command_queue_remover_ =
-				_STD make_unique<_EVENTPP ScopedRemover<plane::services::EventManager::CommandQueue>>(command_queue_source);
+				_STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::CommandQueue>>(command_queue_source);
 
 			// 注册各个命令事件的监听器
-			this->registerCommandListener<plane::protocol::TakeoffPayload>(plane::services::EventManager::CommandEvent::Takeoff,
+			this->registerCommandListener<plane::protocol::TakeoffPayload>(plane::manager::EventManager::CommandEvent::Takeoff,
 																		   &PSDKAdapter::takeoffAsync);
 
-			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::GoHome, &PSDKAdapter::goHomeAsync);
+			this->registerCommandListener<_STD monostate>(plane::manager::EventManager::CommandEvent::GoHome, &PSDKAdapter::goHomeAsync);
 
-			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::Hover, &PSDKAdapter::hoverAsync);
+			this->registerCommandListener<_STD monostate>(plane::manager::EventManager::CommandEvent::Hover, &PSDKAdapter::hoverAsync);
 
-			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::Land, &PSDKAdapter::landAsync);
+			this->registerCommandListener<_STD monostate>(plane::manager::EventManager::CommandEvent::Land, &PSDKAdapter::landAsync);
 
-			this->registerCommandListener<_DEFINED _KMZ_DATA_TYPE>(plane::services::EventManager::CommandEvent::WaypointMission,
+			this->registerCommandListener<_DEFINED _KMZ_DATA_TYPE>(plane::manager::EventManager::CommandEvent::WaypointMission,
 																   &PSDKAdapter::waypointAsync);
 
-			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::StopWaypointMission,
+			this->registerCommandListener<_STD monostate>(plane::manager::EventManager::CommandEvent::StopWaypointMission,
 														  &PSDKAdapter::stopWaypointMissionAsync);
 
-			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::PauseWaypointMission,
+			this->registerCommandListener<_STD monostate>(plane::manager::EventManager::CommandEvent::PauseWaypointMission,
 														  &PSDKAdapter::pauseWaypointMissionAsync);
 
-			this->registerCommandListener<_STD monostate>(plane::services::EventManager::CommandEvent::ResumeWaypointMission,
+			this->registerCommandListener<_STD monostate>(plane::manager::EventManager::CommandEvent::ResumeWaypointMission,
 														  &PSDKAdapter::resumeWaypointMissionAsync);
 
-			this->registerCommandListener<plane::protocol::CircleFlyPayload>(plane::services::EventManager::CommandEvent::FlyCircleAroundPoint,
+			this->registerCommandListener<plane::protocol::CircleFlyPayload>(plane::manager::EventManager::CommandEvent::FlyCircleAroundPoint,
 																			 &PSDKAdapter::selfPOIAsync);
 
-			this->registerCommandListener<_DEFINED _PTZ_CONTROL_STRATEGY_TYPE>(plane::services::EventManager::CommandEvent::SetControlStrategy,
+			this->registerCommandListener<_DEFINED _PTZ_CONTROL_STRATEGY_TYPE>(plane::manager::EventManager::CommandEvent::SetControlStrategy,
 																			   &PSDKAdapter::setControlStrategyAsync);
 
-			this->registerCommandListener<plane::protocol::GimbalControlPayload>(plane::services::EventManager::CommandEvent::RotateGimbal,
+			this->registerCommandListener<plane::protocol::GimbalControlPayload>(plane::manager::EventManager::CommandEvent::RotateGimbal,
 																				 &PSDKAdapter::rotateGimbal);
 
-			this->registerCommandListener<plane::protocol::GimbalControlPayload>(
-				plane::services::EventManager::CommandEvent::RotateGimbalBySpeed,
-				&PSDKAdapter::rotateGimbal);
+			this->registerCommandListener<plane::protocol::GimbalControlPayload>(plane::manager::EventManager::CommandEvent::RotateGimbalBySpeed,
+																				 &PSDKAdapter::rotateGimbal);
 
-			this->registerCommandListener<plane::protocol::ZoomControlPayload>(plane::services::EventManager::CommandEvent::SetCameraZoomFactor,
+			this->registerCommandListener<plane::protocol::ZoomControlPayload>(plane::manager::EventManager::CommandEvent::SetCameraZoomFactor,
 																			   &PSDKAdapter::setCameraZoomFactor);
 
-			this->registerCommandListener<_DEFINED _VIDEO_SOURCE_TYPE>(plane::services::EventManager::CommandEvent::SetCameraStreamSource,
+			this->registerCommandListener<_DEFINED _VIDEO_SOURCE_TYPE>(plane::manager::EventManager::CommandEvent::SetCameraStreamSource,
 																	   &PSDKAdapter::setCameraStreamSource);
 
-			this->registerCommandListener<plane::protocol::StickDataPayload>(plane::services::EventManager::CommandEvent::SendRawStickData,
+			this->registerCommandListener<plane::protocol::StickDataPayload>(plane::manager::EventManager::CommandEvent::SendRawStickData,
 																			 &PSDKAdapter::sendRawStickData);
 
 			this->registerCommandListener<plane::protocol::StickModeSwitchPayload>(
-				plane::services::EventManager::CommandEvent::EnableVirtualStick,
+				plane::manager::EventManager::CommandEvent::EnableVirtualStick,
 				&PSDKAdapter::enableVirtualStick);
 
 			this->registerCommandListener<plane::protocol::StickModeSwitchPayload>(
-				plane::services::EventManager::CommandEvent::DisableVirtualStick,
+				plane::manager::EventManager::CommandEvent::DisableVirtualStick,
 				&PSDKAdapter::disableVirtualStick);
 
 			this->registerCommandListener<plane::protocol::NedVelocityPayload>(
-				plane::services::EventManager::CommandEvent::SendNedVelocityCommand,
+				plane::manager::EventManager::CommandEvent::SendNedVelocityCommand,
 				&PSDKAdapter::sendNedVelocityCommand);
 
 			LOG_INFO("所有命令事件监听器已成功注册。");
@@ -401,7 +400,7 @@ namespace plane::services
 		if (this->run_command_processing_.exchange(false))
 		{
 			LOG_DEBUG("PSDK 命令处理线程状态切换为停止。");
-			plane::services::EventManager::getInstance().publishCommand(plane::services::EventManager::CommandEvent::Takeoff, _STD monostate {});
+			plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::Takeoff, _STD monostate {});
 
 			if (this->command_processing_thread_.joinable())
 			{
@@ -449,7 +448,7 @@ namespace plane::services
 		return this->latest_payload_;
 	}
 
-	bool PSDKAdapter::setup(void) noexcept
+	bool PSDKAdapter::subscribeTelemetryData(void) noexcept
 	{
 		LOG_INFO("正在订阅遥测数据主题...");
 
@@ -500,7 +499,7 @@ namespace plane::services
 		return true;
 	}
 
-	void PSDKAdapter::cleanup(void) noexcept
+	void PSDKAdapter::unsubscribeTelemetryData(void) noexcept
 	{
 		LOG_INFO("正在清理 PSDK 适配器 (取消已订阅的主题)...");
 
@@ -669,11 +668,11 @@ namespace plane::services
 			}
 
 			// 发布更新的状态负载事件
-			plane::services::EventManager::getInstance().publishStatus(plane::services::EventManager::PSDKEvent::TelemetryUpdated,
-																	   current_payload);
+			plane::manager::EventManager::getInstance().publishStatus(plane::manager::EventManager::PSDKEvent::TelemetryUpdated,
+																	  current_payload);
 
 			// 发布健康状态心跳事件
-			plane::services::EventManager::getInstance().publishStatus(EventManager::PSDKEvent::HealthPing, _STD_CHRONO steady_clock::now());
+			plane::manager::EventManager::getInstance().publishStatus(EventManager::PSDKEvent::HealthPing, _STD_CHRONO steady_clock::now());
 
 			// 控制采集频率
 			auto end_time { _STD_CHRONO steady_clock::now() };
@@ -693,7 +692,7 @@ namespace plane::services
 				 missionState.currentWaypointIndex,
 				 missionState.wayLineId);
 
-		plane::services::EventManager::getInstance().publishStatus(plane::services::EventManager::PSDKEvent::MissionStateChanged, missionState);
+		plane::manager::EventManager::getInstance().publishStatus(plane::manager::EventManager::PSDKEvent::MissionStateChanged, missionState);
 	}
 
 	_DJI T_DjiReturnCode PSDKAdapter::missionStateCallbackEntry(_DJI T_DjiWaypointV3MissionState missionState)
@@ -711,7 +710,7 @@ namespace plane::services
 				 actionState.actionGroupId,
 				 actionState.actionId);
 
-		plane::services::EventManager::getInstance().publishStatus(plane::services::EventManager::PSDKEvent::ActionStateChanged, actionState);
+		plane::manager::EventManager::getInstance().publishStatus(plane::manager::EventManager::PSDKEvent::ActionStateChanged, actionState);
 	}
 
 	_DJI T_DjiReturnCode PSDKAdapter::actionStateCallbackEntry(_DJI T_DjiWaypointV3ActionState actionState)
@@ -781,7 +780,7 @@ namespace plane::services
 				health_status.GJLB.push_back(our_alert);
 			}
 
-			plane::services::EventManager::getInstance().publishStatus(EventManager::PSDKEvent::HealthStatusUpdated, health_status);
+			plane::manager::EventManager::getInstance().publishStatus(EventManager::PSDKEvent::HealthStatusUpdated, health_status);
 		}
 	}
 
@@ -1214,7 +1213,7 @@ namespace plane::services
 	void PSDKAdapter::commandProcessingLoop(void)
 	{
 		LOG_INFO("PSDK 命令处理线程已进入循环。");
-		auto& event_manager { plane::services::EventManager::getInstance() };
+		auto& event_manager { plane::manager::EventManager::getInstance() };
 		while (this->run_command_processing_)
 		{
 			auto& queue { event_manager.getCommandQueue() };
@@ -1228,4 +1227,4 @@ namespace plane::services
 		}
 		LOG_INFO("PSDK 命令处理线程已退出循环。");
 	}
-} // namespace plane::services
+} // namespace plane::manager

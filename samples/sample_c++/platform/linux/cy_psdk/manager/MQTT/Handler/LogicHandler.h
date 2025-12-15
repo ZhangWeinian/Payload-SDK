@@ -1,4 +1,4 @@
-// cy_psdk/services/MQTT/Handler/LogicHandler.h
+// cy_psdk/manager/MQTT/Handler/LogicHandler.h
 
 #pragma once
 
@@ -6,7 +6,7 @@
 
 #include "define.h"
 
-namespace plane::services
+namespace plane::manager
 {
 	using n_json = _NLOHMANN_JSON json;
 
@@ -39,4 +39,4 @@ namespace plane::services
 		template<typename PayloadType, typename Func>
 		void handleCommand(_STD string_view commandName, const n_json& payloadJson, Func&& handler);
 	};
-} // namespace plane::services
+} // namespace plane::manager

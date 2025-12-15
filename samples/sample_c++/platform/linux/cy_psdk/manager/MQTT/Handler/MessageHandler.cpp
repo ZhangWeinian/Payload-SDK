@@ -1,10 +1,10 @@
-// cy_psdk/services/MQTT/Handler/MessageHandler.cpp
+// cy_psdk/manager/MQTT/Handler/MessageHandler.cpp
 
 #include "MessageHandler.h"
 
 #include "utils/Logger.h"
 
-namespace plane::services
+namespace plane::manager
 {
 	MqttMessageHandler& MqttMessageHandler::getInstance(void) noexcept
 	{
@@ -46,4 +46,4 @@ namespace plane::services
 			LOG_ERROR("处理 MQTT 业务逻辑时发生错误 (topic: {}, type: {}): {}", topic, messageType, e.what());
 		}
 	}
-} // namespace plane::services
+} // namespace plane::manager

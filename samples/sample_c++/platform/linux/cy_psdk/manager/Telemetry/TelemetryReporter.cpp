@@ -1,10 +1,10 @@
-// cy_psdk/services/Telemetry/TelemetryReporter.cpp
+// cy_psdk/manager/Telemetry/TelemetryReporter.cpp
 
 #include "TelemetryReporter.h"
 
 #include "config/ConfigManager.h"
-#include "services/MQTT/Service.h"
-#include "services/MQTT/Topics.h"
+#include "manager/MQTT/Service/MQTTv5Service.h"
+#include "manager/MQTT/Topics.h"
 #include "utils/JsonConverter/BuildAndParse.h"
 #include "utils/Logger.h"
 #include "utils/NetworkUtils.h"
@@ -14,7 +14,7 @@
 
 #include <variant>
 
-namespace plane::services
+namespace plane::manager
 {
 	TelemetryReporter& TelemetryReporter::getInstance(void) noexcept
 	{
@@ -24,7 +24,7 @@ namespace plane::services
 
 	TelemetryReporter::TelemetryReporter(void) noexcept:
 		event_processing_pool_(_STD make_unique<_THREADPOOL ThreadPool>(6)),
-		last_health_ping_time_(_STD chrono::steady_clock::now())
+		last_health_ping_time_(_STD_CHRONO steady_clock::now())
 	{}
 
 	TelemetryReporter::~TelemetryReporter(void) noexcept
@@ -57,29 +57,29 @@ namespace plane::services
 
 		try
 		{
-			auto&							 dispatcher { plane::services::EventManager::getInstance().getStatusDispatcher() };
-			this->psdk_event_remover_ = _STD make_unique<_EVENTPP ScopedRemover<plane::services::EventManager::StatusDispatcher>>(dispatcher);
+			auto&							 dispatcher { plane::manager::EventManager::getInstance().getStatusDispatcher() };
+			this->psdk_event_remover_ = _STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::StatusDispatcher>>(dispatcher);
 
-			this->psdk_event_remover_->appendListener(plane::services::EventManager::PSDKEvent::TelemetryUpdated,
-													  [this](const plane::services::EventManager::PSDKEventData& data)
+			this->psdk_event_remover_->appendListener(plane::manager::EventManager::PSDKEvent::TelemetryUpdated,
+													  [this](const plane::manager::EventManager::PSDKEventData& data)
 													  {
 														  this->onPSDKEvent(data);
 													  });
 
-			this->psdk_event_remover_->appendListener(plane::services::EventManager::PSDKEvent::MissionStateChanged,
-													  [this](const plane::services::EventManager::PSDKEventData& data)
+			this->psdk_event_remover_->appendListener(plane::manager::EventManager::PSDKEvent::MissionStateChanged,
+													  [this](const plane::manager::EventManager::PSDKEventData& data)
 													  {
 														  this->onPSDKEvent(data);
 													  });
 
-			this->psdk_event_remover_->appendListener(plane::services::EventManager::PSDKEvent::ActionStateChanged,
-													  [this](const plane::services::EventManager::PSDKEventData& data)
+			this->psdk_event_remover_->appendListener(plane::manager::EventManager::PSDKEvent::ActionStateChanged,
+													  [this](const plane::manager::EventManager::PSDKEventData& data)
 													  {
 														  this->onPSDKEvent(data);
 													  });
 
-			this->psdk_event_remover_->appendListener(plane::services::EventManager::PSDKEvent::HealthPing,
-													  [this](const plane::services::EventManager::PSDKEventData& data)
+			this->psdk_event_remover_->appendListener(plane::manager::EventManager::PSDKEvent::HealthPing,
+													  [this](const plane::manager::EventManager::PSDKEventData& data)
 													  {
 														  if (auto* p_time { _STD get_if<_STD_CHRONO steady_clock::time_point>(&data) })
 														  {
@@ -87,18 +87,18 @@ namespace plane::services
 														  }
 													  });
 
-			this->psdk_event_remover_->appendListener(plane::services::EventManager::PSDKEvent::HealthStatusUpdated,
-													  [this](const plane::services::EventManager::PSDKEventData& data)
+			this->psdk_event_remover_->appendListener(plane::manager::EventManager::PSDKEvent::HealthStatusUpdated,
+													  [this](const plane::manager::EventManager::PSDKEventData& data)
 													  {
 														  this->onPSDKEvent(data);
 													  });
 
-			auto& system_dispatcher { plane::services::EventManager::getInstance().getSystemDispatcher() };
+			auto& system_dispatcher { plane::manager::EventManager::getInstance().getSystemDispatcher() };
 			this->system_event_remover_ =
-				_STD make_unique<_EVENTPP ScopedRemover<plane::services::EventManager::SystemDispatcher>>(system_dispatcher);
+				_STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::SystemDispatcher>>(system_dispatcher);
 
-			this->system_event_remover_->appendListener(plane::services::EventManager::SystemEvent::HeartbeatTick,
-														[this](const plane::services::EventManager::SystemEventData& data)
+			this->system_event_remover_->appendListener(plane::manager::EventManager::SystemEvent::HeartbeatTick,
+														[this](const plane::manager::EventManager::SystemEventData& data)
 														{
 															this->onHeartbeatTick(data);
 														});
@@ -168,34 +168,34 @@ namespace plane::services
 
 	bool TelemetryReporter::publishJson(_STD string_view topic, _STD string_view statusJson) noexcept
 	{
-		if (!plane::services::MQTTService::getInstance().isConnected())
+		if (!plane::manager::MQTTv5Service::getInstance().isConnected())
 		{
-			LOG_DEBUG("MQTTService 未连接, 无法发布");
+			LOG_DEBUG("MQTTv5Service 未连接, 无法发布");
 			return false;
 		}
 
 		try
 		{
-			if (!plane::services::MQTTService::getInstance().publish(topic, statusJson))
+			if (!plane::manager::MQTTv5Service::getInstance().publish(topic, statusJson))
 			{
-				LOG_DEBUG("MQTTService 在'{}' 发布失败", topic);
+				LOG_DEBUG("MQTTv5Service 在'{}' 发布失败", topic);
 				return false;
 			}
 		}
 		catch (const _STD exception& ex)
 		{
-			LOG_ERROR("MQTTService 在'{}' 发布时出现异常: {}", topic, ex.what());
+			LOG_ERROR("MQTTv5Service 在'{}' 发布时出现异常: {}", topic, ex.what());
 			return false;
 		}
 		catch (...)
 		{
-			LOG_ERROR("MQTTService 在'{}' 发布时出现未知异常", topic);
+			LOG_ERROR("MQTTv5Service 在'{}' 发布时出现未知异常", topic);
 			return false;
 		}
 		return true;
 	}
 
-	void TelemetryReporter::onPSDKEvent(const plane::services::EventManager::PSDKEventData& eventData)
+	void TelemetryReporter::onPSDKEvent(const plane::manager::EventManager::PSDKEventData& eventData)
 	{
 		if (!this->event_processing_pool_)
 		{
@@ -238,7 +238,7 @@ namespace plane::services
 						}
 						else if constexpr (_STD is_same_v<T, plane::protocol::StatusPayload>)
 						{
-							if (!plane::services::MQTTService::getInstance().isConnected())
+							if (!plane::manager::MQTTv5Service::getInstance().isConnected())
 							{
 								return;
 							}
@@ -260,7 +260,7 @@ namespace plane::services
 
 								LOG_DEBUG("准备上报飞行状态...");
 
-								(void)this->publishJson(plane::services::TOPIC_DRONE_STATUS,
+								(void)this->publishJson(plane::manager::TOPIC_DRONE_STATUS,
 														plane::utils::JsonConverter::buildStatusReportJson(payload));
 							}
 						}
@@ -268,7 +268,7 @@ namespace plane::services
 						{
 							LOG_DEBUG("准备上报健康状态...");
 
-							(void)this->publishJson(plane::services::TOPIC_HEALTH_MANAGE,
+							(void)this->publishJson(plane::manager::TOPIC_HEALTH_MANAGE,
 													plane::utils::JsonConverter::buildHealthStatusJson(event));
 						}
 						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3MissionState>)
@@ -277,7 +277,7 @@ namespace plane::services
 							progress.ZT	  = static_cast<int>(event.state);
 							progress.DQHD = event.currentWaypointIndex;
 							progress.RWID = _STD to_string(event.wayLineId);
-							// (void)this->publishJson(plane::services::TOPIC_MISSION_PROGRESS,
+							// (void)this->publishJson(plane::manager::TOPIC_MISSION_PROGRESS,
 							// 				  plane::utils::JsonConverter::buildMissionProgressJson(progress));
 						}
 						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3ActionState>)
@@ -294,7 +294,7 @@ namespace plane::services
 			});
 	}
 
-	void TelemetryReporter::onHeartbeatTick(const plane::services::EventManager::SystemEventData& eventData)
+	void TelemetryReporter::onHeartbeatTick(const plane::manager::EventManager::SystemEventData& eventData)
 	{
 		if (!this->event_processing_pool_)
 		{
@@ -304,7 +304,7 @@ namespace plane::services
 		this->event_processing_pool_->enqueue(
 			[this]
 			{
-				if (!plane::services::MQTTService::getInstance().isConnected())
+				if (!plane::manager::MQTTv5Service::getInstance().isConnected())
 				{
 					LOG_TRACE("MQTT 未连接，跳过本次固定信息心跳上报。");
 					return;
@@ -323,7 +323,7 @@ namespace plane::services
 																   .YSRTSP =
 																	   _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ip_address) };
 
-				(void)this->publishJson(plane::services::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
+				(void)this->publishJson(plane::manager::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
 
 				LOG_TRACE("已通过心跳事件上报固定信息 (MissionInfoPayload) 。");
 			});
@@ -355,4 +355,4 @@ namespace plane::services
 				this->runWatchdogCheck();
 			});
 	}
-} // namespace plane::services
+} // namespace plane::manager

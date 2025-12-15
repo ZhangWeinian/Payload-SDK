@@ -1,9 +1,9 @@
-// cy_psdk/services/Telemetry/TelemetryReporter.h
+// cy_psdk/manager/Telemetry/TelemetryReporter.h
 
 #pragma once
 
+#include "manager/EventManager/EventManager.h"
 #include "protocol/HeartbeatDataClass.h"
-#include "services/EventManager/EventManager.h"
 
 #include <eventpp/eventdispatcher.h>
 #include <eventpp/utilities/scopedremover.h>
@@ -21,7 +21,7 @@
 
 #include "define.h"
 
-namespace plane::services
+namespace plane::manager
 {
 	class TelemetryReporter
 	{
@@ -44,16 +44,16 @@ namespace plane::services
 		_NODISCARD bool publishJson(_STD string_view topic, _STD string_view statusJson) noexcept;
 
 		// PSDK 事件处理相关
-		void onPSDKEvent(const plane::services::EventManager::PSDKEventData& eventData);
+		void onPSDKEvent(const plane::manager::EventManager::PSDKEventData& eventData);
 
 		// 系统事件处理相关
-		void onHeartbeatTick(const plane::services::EventManager::SystemEventData& eventData);
+		void onHeartbeatTick(const plane::manager::EventManager::SystemEventData& eventData);
 
 		// 启动看门狗检查
 		void runWatchdogCheck(void) noexcept;
 
-		_STD unique_ptr<_EVENTPP ScopedRemover<plane::services::EventManager::StatusDispatcher>> psdk_event_remover_ {};
-		_STD unique_ptr<_EVENTPP ScopedRemover<plane::services::EventManager::SystemDispatcher>> system_event_remover_ {};
+		_STD unique_ptr<_EVENTPP ScopedRemover<plane::manager::EventManager::StatusDispatcher>> psdk_event_remover_ {};
+		_STD unique_ptr<_EVENTPP ScopedRemover<plane::manager::EventManager::SystemDispatcher>> system_event_remover_ {};
 		_STD unique_ptr<_THREADPOOL ThreadPool> event_processing_pool_ {};
 		_STD atomic<bool> run_watchdog_ { false };
 		_STD atomic<bool> running_ { false };
@@ -63,4 +63,4 @@ namespace plane::services
 		constexpr static auto	 MAX_EVENT_QUEUE_SIZE { 100 };
 		constexpr static auto	 PSDK_WATCHDOG_TIMEOUT { _STD_CHRONO seconds(1) };
 	};
-} // namespace plane::services
+} // namespace plane::manager

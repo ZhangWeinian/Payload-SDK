@@ -1,10 +1,10 @@
-// cy_psdk/services/MQTT/Service.cpp
+// cy_psdk/manager/MQTT/MQTTv5Service.cpp
 
-#include "Service.h"
+#include "manager/MQTT/Service/MQTTv5Service.h"
 
 #include "config/ConfigManager.h"
-#include "services/MQTT/Handler/MessageHandler.h"
-#include "services/MQTT/Topics.h"
+#include "manager/MQTT/Handler/MessageHandler.h"
+#include "manager/MQTT/Topics.h"
 #include "utils/JsonConverter/BuildAndParse.h"
 #include "utils/Logger.h"
 
@@ -14,23 +14,23 @@
 #include <chrono>
 #include <thread>
 
-namespace plane::services
+namespace plane::manager
 {
 	class MqttCallback final: public _MQTT callback,
 							  public _MQTT iaction_listener
 	{
 	public:
-		explicit MqttCallback(plane::services::MQTTService* service): service_(service) {}
+		explicit MqttCallback(plane::manager::MQTTv5Service* service): service_(service) {}
 
 		void connected(const _STD string& cause) override
 		{
 			this->service_->setConnected(true);
 			LOG_INFO("MQTT 连接成功！");
-			this->service_->subscribe(plane::services::TOPIC_MISSION_CONTROL);
-			this->service_->subscribe(plane::services::TOPIC_COMMAND_CONTROL);
-			this->service_->subscribe(plane::services::TOPIC_PAYLOAD_CONTROL);
-			this->service_->subscribe(plane::services::TOPIC_ROCKER_CONTROL);
-			this->service_->subscribe(plane::services::TOPIC_VELOCITY_CONTROL);
+			this->service_->subscribe(plane::manager::TOPIC_MISSION_CONTROL);
+			this->service_->subscribe(plane::manager::TOPIC_COMMAND_CONTROL);
+			this->service_->subscribe(plane::manager::TOPIC_PAYLOAD_CONTROL);
+			this->service_->subscribe(plane::manager::TOPIC_ROCKER_CONTROL);
+			this->service_->subscribe(plane::manager::TOPIC_VELOCITY_CONTROL);
 			LOG_INFO("MQTT 初始主题订阅成功！");
 		}
 
@@ -73,10 +73,10 @@ namespace plane::services
 		}
 
 	private:
-		MQTTService* service_ {};
+		MQTTv5Service* service_ {};
 	};
 
-	MQTTService::~MQTTService(void) noexcept
+	MQTTv5Service::~MQTTv5Service(void) noexcept
 	{
 		try
 		{
@@ -92,7 +92,7 @@ namespace plane::services
 		}
 	}
 
-	bool MQTTService::start(void) noexcept
+	bool MQTTv5Service::start(void) noexcept
 	{
 		if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))
 		{
@@ -146,7 +146,7 @@ namespace plane::services
 			this->impl_->client->connect(conn_opts);
 
 			this->impl_->runSender	  = true;
-			this->impl_->senderThread = _STD thread(&MQTTService::senderLoop, this);
+			this->impl_->senderThread = _STD thread(&MQTTv5Service::senderLoop, this);
 			LOG_INFO("MQTT 异步发送线程已启动。");
 
 			return true;
@@ -170,7 +170,7 @@ namespace plane::services
 		return false;
 	}
 
-	void MQTTService::stop(void) noexcept
+	void MQTTv5Service::stop(void) noexcept
 	{
 		if (bool expected { true }; !this->running_.compare_exchange_strong(expected, false))
 		{
@@ -198,15 +198,15 @@ namespace plane::services
 		}
 		catch (const _MQTT exception& ex)
 		{
-			LOG_ERROR("MQTTService 停止异常（来自 MQTT）: {}", ex.what());
+			LOG_ERROR("MQTTv5Service 停止异常（来自 MQTT）: {}", ex.what());
 		}
 		catch (const _STD exception& ex)
 		{
-			LOG_ERROR("MQTTService 停止发生未知异常: {}", ex.what());
+			LOG_ERROR("MQTTv5Service 停止发生未知异常: {}", ex.what());
 		}
 		catch (...)
 		{
-			LOG_ERROR("MQTTService 停止发生未知异常: <non-std exception>");
+			LOG_ERROR("MQTTv5Service 停止发生未知异常: <non-std exception>");
 		}
 
 		this->impl_.reset(new Impl());
@@ -214,7 +214,7 @@ namespace plane::services
 		LOG_INFO("MQTT 服务已停止。");
 	}
 
-	void MQTTService::restart(void) noexcept
+	void MQTTv5Service::restart(void) noexcept
 	{
 		LOG_INFO("正在请求重启 MQTT 服务...");
 		this->stop();
@@ -222,23 +222,23 @@ namespace plane::services
 		(void)this->start();
 	}
 
-	void MQTTService::setConnected(bool status) noexcept
+	void MQTTv5Service::setConnected(bool status) noexcept
 	{
 		this->connected_.store(status, _STD memory_order_release);
 	}
 
-	bool MQTTService::isConnected(void) const noexcept
+	bool MQTTv5Service::isConnected(void) const noexcept
 	{
 		return this->connected_.load(_STD memory_order_acquire);
 	}
 
-	MQTTService& MQTTService::getInstance(void) noexcept
+	MQTTv5Service& MQTTv5Service::getInstance(void) noexcept
 	{
-		static MQTTService instance {};
+		static MQTTv5Service instance {};
 		return instance;
 	}
 
-	bool MQTTService::publish(_STD string_view topic, _STD string_view payload) noexcept
+	bool MQTTv5Service::publish(_STD string_view topic, _STD string_view payload) noexcept
 	{
 		if (!this->impl_->runSender)
 		{
@@ -277,7 +277,7 @@ namespace plane::services
 		return true;
 	}
 
-	void MQTTService::subscribe(_STD string_view topic) noexcept
+	void MQTTv5Service::subscribe(_STD string_view topic) noexcept
 	{
 		_STD lock_guard<_STD mutex> lock(this->mutex_);
 		if (!this->isConnected() || !this->impl_->client)
@@ -305,7 +305,7 @@ namespace plane::services
 		}
 	}
 
-	void MQTTService::senderLoop(void) noexcept
+	void MQTTv5Service::senderLoop(void) noexcept
 	{
 		LOG_DEBUG("MQTT 发送者线程循环开始。");
 
@@ -359,4 +359,4 @@ namespace plane::services
 
 		LOG_INFO("MQTT 发送者线程循环已结束。");
 	}
-} // namespace plane::services
+} // namespace plane::manager

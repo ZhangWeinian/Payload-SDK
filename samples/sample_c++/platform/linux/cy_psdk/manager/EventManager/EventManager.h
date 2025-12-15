@@ -20,7 +20,7 @@
 
 #include "define.h"
 
-namespace plane::services
+namespace plane::manager
 {
 	class EventManager
 	{
@@ -40,33 +40,34 @@ namespace plane::services
 			FlyCircleAroundPoint,  // 环绕飞行
 
 			// 即时指令
-			RotateGimbal,			// 云台控制
-			RotateGimbalBySpeed,	// 云台速度控制
-			SetCameraZoomFactor,	// 相机变焦
-			SetControlStrategy,		// 设置云台控制策略
-			SetCameraStreamSource,	// 切换视频源
-			SendRawStickData,		// 发送虚拟摇杆数据
-			EnableVirtualStick,		// 启用虚拟摇杆
-			DisableVirtualStick,	// 禁用虚拟摇杆
-			SendNedVelocityCommand, // 发送 NED 速度指令
+			RotateGimbal,		   // 云台控制
+			RotateGimbalBySpeed,   // 云台速度控制
+			SetCameraZoomFactor,   // 相机变焦
+			SetControlStrategy,	   // 设置云台控制策略
+			SetCameraStreamSource, // 切换视频源
+			SendRawStickData,	   // 发送虚拟摇杆数据
+			EnableVirtualStick,	   // 启用虚拟摇杆
+			DisableVirtualStick,   // 禁用虚拟摇杆
+			SendNedVelocityCommand // 发送 NED 速度指令
 		};
 
-		using CommandData  = _STD	   variant<_STD monostate, // 用于没有参数的命令
+		using CommandData = _STD variant<
+			_STD monostate, // 用于没有参数的命令
 
-											   // 对应 DroneDataClass 中的结构体
-											   plane::protocol::TakeoffPayload,			// 起飞
-											   plane::protocol::CircleFlyPayload,		// 围绕点飞行
-											   plane::protocol::GimbalControlPayload,	// 云台控制
-											   plane::protocol::ZoomControlPayload,		// 相机变焦控制
-											   plane::protocol::StickDataPayload,		// 发送摇杆数据
-											   plane::protocol::StickModeSwitchPayload, // 启用/禁用虚拟摇杆
-											   plane::protocol::NedVelocityPayload,		// 发送 NED 速度指令
+			// 对应 DroneDataClass 中的结构体
+			plane::protocol::TakeoffPayload,		 // 起飞
+			plane::protocol::CircleFlyPayload,		 // 围绕点飞行
+			plane::protocol::GimbalControlPayload,	 // 云台控制
+			plane::protocol::ZoomControlPayload,	 // 相机变焦控制
+			plane::protocol::StickDataPayload,		 // 发送摇杆数据
+			plane::protocol::StickModeSwitchPayload, // 启用/禁用虚拟摇杆
+			plane::protocol::NedVelocityPayload,	 // 发送 NED 速度指令
 
-											   // 对于没有直接对应结构体的，使用基本类型
-											   _DEFINED _KMZ_DATA_TYPE,				// 航线任务
-											   _DEFINED _PTZ_CONTROL_STRATEGY_TYPE, // 设置云台控制策略
-											   _DEFINED _VIDEO_SOURCE_TYPE			// 切换视频源
-											   >;
+			// 对于没有直接对应结构体的，使用基本类型
+			_DEFINED _KMZ_DATA_TYPE,			 // 航线任务
+			_DEFINED _PTZ_CONTROL_STRATEGY_TYPE, // 设置云台控制策略
+			_DEFINED _VIDEO_SOURCE_TYPE			 // 切换视频源
+		>;
 		using CommandQueue = _EVENTPP EventQueue<CommandEvent, void(const CommandEvent&, const CommandData&)>;
 
 		// PSDK 状态事件
@@ -134,4 +135,4 @@ namespace plane::services
 		SystemDispatcher system_dispatcher_ {};
 		const bool		 is_full_psdk_ { plane::config::ConfigManager::getInstance().isStandardProceduresEnabled() };
 	};
-} // namespace plane::services
+} // namespace plane::manager
