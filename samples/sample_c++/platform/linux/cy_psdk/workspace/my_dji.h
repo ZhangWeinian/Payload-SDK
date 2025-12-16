@@ -2,13 +2,15 @@
 
 #pragma once
 
+#include "application.hpp"
+
 #include "config/ConfigManager.h"
-#include "manager/Heartbeat/Heartbeat.h"
-#include "manager/MQTT/Handler/LogicHandler.h"
-#include "manager/MQTT/Service/MQTTv5Service.h"
-#include "manager/PSDK/PSDKAdapter.h"
-#include "manager/PSDK/PSDKManager.h"
-#include "manager/Telemetry/TelemetryReporter.h"
+#include "manager/heartbeat/Heartbeat.h"
+#include "manager/mqtt/handler/LogicHandler.h"
+#include "manager/mqtt/service/MQTTv5Service.h"
+#include "manager/psdk/PSDKAdapter.h"
+#include "manager/psdk/PSDKManager.h"
+#include "manager/telemetry/TelemetryReporter.h"
 #include "utils/Logger.h"
 
 #include <atomic>
@@ -30,12 +32,12 @@ namespace plane::my_dji
 
 		void			  signalHandler(int signum)
 		{
-			static bool s_is_stopping { false };
-			if (!s_is_stopping)
+			static bool is_stopping_ { false };
+			if (!is_stopping_)
 			{
 				LOG_WARN("\n>>> 捕获到信号 {}, 正在请求退出... <<<", signum);
 				g_should_exit = true;
-				s_is_stopping = true;
+				is_stopping_  = true;
 			}
 		}
 	} // namespace
@@ -43,7 +45,7 @@ namespace plane::my_dji
 	void runMyApplication(int argc, char* argv[])
 	{
 		// 持有 DJI Application 实例，确保其生命周期贯穿整个应用程序运行期间
-		_STD unique_ptr<_DJI Application> PSDK_application_ { nullptr };
+		_STD unique_ptr<_DJI Application> PSDK_application_ptr_ { nullptr };
 
 		// 日志系统初始化（必须最先初始化）
 		plane::utils::Logger::getInstance().init();
@@ -74,13 +76,14 @@ namespace plane::my_dji
 		// 如果启用标准 PSDK 作业流程，则初始化 PSDKManager 和 PSDKAdapter
 		if (config.isStandardProceduresEnabled())
 		{
-			LOG_DEBUG("已启用标准 PSDK 作业流程。");
+			LOG_INFO("已启用标准 PSDK 作业流程。");
 
 			// 初始化 DJI Application
 			try
 			{
 				LOG_INFO("初始化 PSDK CORE , 请等待...");
-				PSDK_application_ = _STD make_unique<_DJI Application>(argc, argv);
+				PSDK_application_ptr_ = _STD make_unique<_DJI Application>(argc, argv);
+				_STD						 this_thread::sleep_for(_STD_CHRONO seconds(5));
 			}
 			catch (const _STD exception& e)
 			{
@@ -196,9 +199,9 @@ namespace plane::my_dji
 			plane::manager::PSDKManager::getInstance().stop();
 			plane::manager::PSDKAdapter::getInstance().stop();
 
-			if (PSDK_application_)
+			if (PSDK_application_ptr_)
 			{
-				PSDK_application_.reset();
+				PSDK_application_ptr_.reset();
 				LOG_DEBUG("PSDK CORE 已成功关闭。");
 			}
 		}

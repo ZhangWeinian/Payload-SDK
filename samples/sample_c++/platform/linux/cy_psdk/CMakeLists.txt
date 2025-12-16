@@ -216,7 +216,6 @@ endif()
 set (CONFIG_SOURCE_FILE "${CMAKE_SOURCE_DIR}/config/config.yml")
 set (RUN_SCRIPT_SOURCE_FILE "${CMAKE_SOURCE_DIR}/bash/run.sh")
 set (SYSTEM_LIBS_SOURCE_DIR "${CMAKE_SOURCE_DIR}/system_libs")
-
 set (CONFIG_DEST_FILE "${MAIN_OUTPUT_PATH}/config.yml")
 set (RUN_SCRIPT_DEST_FILE "${MAIN_OUTPUT_PATH}/run.sh")
 set (LIBS_DEST_DIR "${MAIN_OUTPUT_PATH}/libs")
@@ -243,7 +242,6 @@ if(EXISTS ${SYSTEM_LIBS_SOURCE_DIR})
 		LIST_DIRECTORIES false
 		"${SYSTEM_LIBS_SOURCE_DIR}/*"
 	)
-
 	add_custom_target (
 		copy_system_libs
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBS_DEST_DIR}"
@@ -253,18 +251,12 @@ if(EXISTS ${SYSTEM_LIBS_SOURCE_DIR})
 	)
 endif()
 
-add_dependencies (${MAIN_TARGET_NAME} copy_runtime_files)
-
-if(TARGET copy_system_libs)
-	add_dependencies (${MAIN_TARGET_NAME} copy_system_libs)
-endif()
-
 # 10. 构建后处理 (MD5 生成、打包与同步)
 set (SYNC_LATEST_SCRIPT "${CMAKE_SOURCE_DIR}/bash/sync_latest.sh")
 set (GEN_MD5_SCRIPT "${CMAKE_SOURCE_DIR}/bash/gen_md5.sh")
 set (LATEST_BUILD_DIR "${CMAKE_SOURCE_DIR}/build/bin")
 
-add_custom_target(
+add_custom_target (
 	generate_md5
 	COMMAND chmod +x ${GEN_MD5_SCRIPT}
 	COMMAND /bin/bash ${GEN_MD5_SCRIPT} "${MAIN_OUTPUT_PATH}"
@@ -272,10 +264,10 @@ add_custom_target(
 	VERBATIM
 )
 
-add_dependencies(generate_md5 ${MAIN_TARGET_NAME} copy_runtime_files)
+add_dependencies (generate_md5 ${MAIN_TARGET_NAME} copy_runtime_files)
 
 if(TARGET copy_system_libs)
-	add_dependencies(generate_md5 copy_system_libs)
+	add_dependencies (generate_md5 copy_system_libs)
 endif()
 
 add_custom_target (
@@ -286,7 +278,7 @@ add_custom_target (
 	VERBATIM
 )
 
-add_dependencies (sync_latest generate_md5 ${MAIN_TARGET_NAME})
+add_dependencies (sync_latest generate_md5)
 
 # 11. 显示最终构建信息
 pretty_message (

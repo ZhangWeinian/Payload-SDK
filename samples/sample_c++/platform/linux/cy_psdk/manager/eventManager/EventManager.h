@@ -1,0 +1,138 @@
+// cy_psdk/EventManager/services/EventManager.h
+
+#pragma once
+
+#include "config/ConfigManager.h"
+#include "protocol/DroneDataClass.h"
+#include "protocol/HeartbeatDataClass.h"
+#include "utils/Logger.h"
+
+#include <dji_typedef.h>
+#include <dji_waypoint_v3.h>
+
+#include <eventpp/eventdispatcher.h>
+#include <eventpp/eventqueue.h>
+
+#include <chrono>
+#include <string>
+#include <variant>
+#include <vector>
+
+#include "define.h"
+
+namespace plane::manager
+{
+	class EventManager
+	{
+	public:
+		// 命令事件
+		enum class CommandEvent
+		{
+			// 任务指令
+			Takeoff,			   // 起飞
+			GoHome,				   // 返航
+			Hover,				   // 悬停
+			Land,				   // 降落
+			WaypointMission,	   // 航点任务
+			StopWaypointMission,   // 停止航点任务
+			PauseWaypointMission,  // 暂停航点任务
+			ResumeWaypointMission, // 恢复航点任务
+			FlyCircleAroundPoint,  // 环绕飞行
+
+			// 即时指令
+			RotateGimbal,		   // 云台控制
+			RotateGimbalBySpeed,   // 云台速度控制
+			SetCameraZoomFactor,   // 相机变焦
+			SetControlStrategy,	   // 设置云台控制策略
+			SetCameraStreamSource, // 切换视频源
+			SendRawStickData,	   // 发送虚拟摇杆数据
+			EnableVirtualStick,	   // 启用虚拟摇杆
+			DisableVirtualStick,   // 禁用虚拟摇杆
+			SendNedVelocityCommand // 发送 NED 速度指令
+		};
+
+		using CommandData = _STD variant<
+			_STD monostate, // 用于没有参数的命令
+
+			// 对应 DroneDataClass 中的结构体
+			plane::protocol::TakeoffPayload,		 // 起飞
+			plane::protocol::CircleFlyPayload,		 // 围绕点飞行
+			plane::protocol::GimbalControlPayload,	 // 云台控制
+			plane::protocol::ZoomControlPayload,	 // 相机变焦控制
+			plane::protocol::StickDataPayload,		 // 发送摇杆数据
+			plane::protocol::StickModeSwitchPayload, // 启用/禁用虚拟摇杆
+			plane::protocol::NedVelocityPayload,	 // 发送 NED 速度指令
+
+			// 对于没有直接对应结构体的，使用基本类型
+			_DEFINED _KMZ_DATA_TYPE,			 // 航线任务
+			_DEFINED _PTZ_CONTROL_STRATEGY_TYPE, // 设置云台控制策略
+			_DEFINED _VIDEO_SOURCE_TYPE			 // 切换视频源
+		>;
+		using CommandQueue = _EVENTPP EventQueue<_THIS CommandEvent, void(const _THIS CommandEvent&, const CommandData&)>;
+
+		// PSDK 状态事件
+		enum class PSDKEvent
+		{
+			TelemetryUpdated,
+			MissionStateChanged,
+			ActionStateChanged,
+			HealthPing,
+			HealthStatusUpdated
+		};
+		using PSDKEventData	   = _STD		 variant<plane::protocol::StatusPayload,
+													 _DJI		 T_DjiWaypointV3MissionState,
+													 _DJI		 T_DjiWaypointV3ActionState,
+													 _STD_CHRONO steady_clock::time_point,
+													 plane::protocol::HealthStatusPayload>;
+
+		using StatusDispatcher = _EVENTPP EventDispatcher<_THIS PSDKEvent, void(const PSDKEventData&)>;
+
+		enum class SystemEvent
+		{
+			HeartbeatTick
+		};
+
+		using SystemEventData  = _STD	   variant<_STD monostate>;
+		using SystemDispatcher = _EVENTPP EventDispatcher<_THIS SystemEvent, void(const SystemEventData&)>;
+
+		static EventManager&			  getInstance(void) noexcept;
+
+		// 发布一个命令事件
+		void publishCommand(_THIS CommandEvent event, const CommandData& data);
+
+		// 发布一个 PSDK 状态事件
+		void publishStatus(_THIS PSDKEvent event, const PSDKEventData& data);
+
+		// 发布一个系统事件
+		void publishSystemEvent(_THIS SystemEvent event, const SystemEventData& data = _STD monostate {});
+
+		// 获取命令事件队列的引用
+		CommandQueue& getCommandQueue(void) noexcept
+		{
+			return this->command_queue_;
+		}
+
+		// 获取状态事件分发器的引用
+		StatusDispatcher& getStatusDispatcher(void) noexcept
+		{
+			return this->status_dispatcher_;
+		}
+
+		// 获取系统事件分发器的引用
+		SystemDispatcher& getSystemDispatcher(void) noexcept
+		{
+			return this->system_dispatcher_;
+		}
+
+	private:
+		explicit EventManager(void) noexcept			= default;
+		~EventManager(void) noexcept					= default;
+		EventManager(const EventManager&)				= delete;
+		EventManager&	 operator=(const EventManager&) = delete;
+
+		CommandQueue	 command_queue_ {};
+		StatusDispatcher status_dispatcher_ {};
+		SystemDispatcher system_dispatcher_ {};
+		const bool		 is_full_psdk_ { plane::config::ConfigManager::getInstance().isStandardProceduresEnabled() };
+	};
+} // namespace plane::manager

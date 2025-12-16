@@ -12,26 +12,12 @@
 
 namespace plane::utils
 {
-	class DjiErrorConverter
+	class __Dji_error_converter_fun: private __Not_quite_object
 	{
 	public:
-		static DjiErrorConverter& getInstance(void) noexcept
-		{
-			static DjiErrorConverter instance {};
-			return instance;
-		}
+		using __Not_quite_object::__Not_quite_object;
 
-		_STD string_view toString(_DJI T_DjiReturnCode code) const noexcept
-		{
-			if (auto it { this->error_map_.find(code) }; it != this->error_map_.end())
-			{
-				return it->second;
-			}
-			return "UNKNOWN_ERROR_CODE";
-		}
-
-	private:
-		explicit DjiErrorConverter(void) noexcept
+		_STD string_view operator()(_DJI T_DjiReturnCode code) const noexcept
 		{
 			struct ErrorObject
 			{
@@ -40,22 +26,27 @@ namespace plane::utils
 				const char*			 suggestion {};
 			};
 
-			const ErrorObject errorObjects[] = { DJI_ERROR_OBJECTS };
-
-			for (const auto& obj : errorObjects)
+			static const ErrorObject errorObjects[]										 = { DJI_ERROR_OBJECTS };
+			static const _STD unordered_map<_DJI T_DjiReturnCode, const char*> error_map = []
 			{
-				this->error_map_[obj.code] = obj.description;
+				_STD unordered_map<_DJI T_DjiReturnCode, const char*> m {};
+				for (const auto& obj : errorObjects)
+				{
+					m[obj.code] = obj.description;
+				}
+				return m;
+			}();
+
+			if (auto it { error_map.find(code) }; it != error_map.end())
+			{
+				return it->second;
+			}
+			else
+			{
+				return "UNKNOWN_ERROR_CODE";
 			}
 		}
-
-		DjiErrorConverter(const DjiErrorConverter&) noexcept			= delete;
-		DjiErrorConverter& operator=(const DjiErrorConverter&) noexcept = delete;
-
-		_STD unordered_map<_DJI T_DjiReturnCode, const char*> error_map_;
 	};
 
-	inline _STD string_view djiReturnCodeToString(_DJI T_DjiReturnCode code)
-	{
-		return DjiErrorConverter::getInstance().toString(code);
-	}
+	constexpr inline __Dji_error_converter_fun convertDjiError { __Not_quite_object::__Construct_tag {} };
 } // namespace plane::utils

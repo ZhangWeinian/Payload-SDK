@@ -2,6 +2,7 @@
 
 #include "config/ConfigManager.h"
 
+#include "utils/EXEHomePath.h"
 #include "utils/Logger.h"
 
 #include <boost/uuid/uuid.hpp>
@@ -36,7 +37,7 @@ namespace plane::config
 			LOG_DEBUG("未提供配置文件路径，将自动查找可执行文件目录下的 'config.yml'");
 			try
 			{
-				filePath = _STD_FS read_symlink("/proc/self/exe").parent_path() / "config.yml";
+				filePath = plane::utils::getEXEHomePath("config.yml");
 				LOG_INFO("自动检测到配置文件路径为: {}", filePath.string());
 			}
 			catch (const _STD_FS filesystem_error& e)

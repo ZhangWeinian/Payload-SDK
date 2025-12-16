@@ -128,13 +128,19 @@ namespace plane::protocol
 
 	struct TakeoffPayload
 	{
-		_STD optional<double> MBWD {}; // 目标纬度
-		_STD optional<double> MBJD {}; // 目标经度
-		_STD optional<double> MBGD {}; // 目标高度
-		_STD optional<int> FHMS {};	   // 返航模式
-		_STD optional<int> FHGD {};	   // 返航高度
-		_STD optional<int> ZDMSD {};   // 最大速度
-		_STD optional<int> AQJC {};	   // 安全预检
+		_STD optional<double> MBWD {};		// 目标纬度
+		_STD optional<double> MBJD {};		// 目标经度
+		_STD optional<double> MBGD {};		// 目标高度
+		_STD optional<double> AQQFGD {};	// 安全起飞高度
+		_STD optional<int> FHMS {};			// 返航模式
+		_STD optional<int> FHGD {};			// 返航高度
+		_STD optional<int> SKDZ {};			// 失控动作
+		_STD optional<int> ZDSKDZ {};		// 指点失控动作
+		_STD optional<int> ZDFYMS {};		// 指点飞跃模式
+		_STD optional<int> ZDFYGD {};		// 指点飞跃高度
+		_STD optional<_STD string> RWID {}; // 任务 ID
+		_STD optional<int> ZDMSD {};		// 最大速度
+		_STD optional<int> AQJC {};			// 安全预检
 	};
 
 	struct FlyToPoint
@@ -146,14 +152,14 @@ namespace plane::protocol
 
 	struct FlyToPayload
 	{
-		_STD optional<_STD string> FXMBID {}; // 目标点 ID（年+月日+序号）
+		_STD optional<_STD string> FXMBID {}; // 飞行目标 ID
 		_STD optional<double> ZDMSD {};		  // 最大速度
 		_STD vector<FlyToPoint> MBDS {};	  // 目标点坐标集合
 	};
 
 	struct UpdateFlyToPayload
 	{
-		_STD optional<double> ZDMSD;	// 飞行最大速度限制
+		_STD optional<double> ZDMSD;	// 最大速度
 		_STD vector<FlyToPoint> GXMBDS; // 需要更新的航点坐标集合
 	};
 
@@ -228,6 +234,7 @@ namespace plane::protocol
 		double SDD { 0 }; // 东向速度
 		double SDX { 0 }; // 地向速度 (下为正)
 		double PHJ { 0 }; // 偏航角速率
+		int	   MS { 1 };  // 模式 (1:角度控制, 2:角速度控制)
 	};
 
 	template<typename T>
@@ -289,6 +296,6 @@ namespace plane::protocol
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(WaypointAction, LX, CS);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(StickDataPayload, YML, PHL, FYL, HGL);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(StickModeSwitchPayload, YGMS);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(NedVelocityPayload, SDN, SDD, SDX, PHJ);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(NedVelocityPayload, SDN, SDD, SDX, PHJ, MS);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(MissionProgressPayload, RWID, DQHD, ZHD, JD, ZT);
 } // namespace plane::protocol

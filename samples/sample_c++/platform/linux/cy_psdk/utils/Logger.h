@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include "utils/EXEHomePath.h"
+
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -72,9 +74,7 @@ namespace plane::utils
 				sinks.push_back(console_sink);
 
 				// 创建日志文件，按时间戳命名以避免覆盖
-				_STD_FS path exe_path { _STD_FS read_symlink("/proc/self/exe") };
-				_STD_FS path exe_dir { exe_path.parent_path() };
-				_STD_FS path log_directory { exe_dir / "logs" };
+				_STD_FS path log_directory { plane::utils::getEXEHomePath("logs") };
 
 				// 如果 logs 目录不存在，则创建
 				if (!_STD_FS exists(log_directory))
@@ -133,7 +133,7 @@ namespace plane::utils
 			}
 		}
 
-		void logPsdk(const _STD string& rawMessage)
+		void PSDKLogRedirection(const _STD string& rawMessage)
 		{
 			if (!this->logger_)
 			{
@@ -142,7 +142,6 @@ namespace plane::utils
 
 			try
 			{
-				// 正则表达式解释：
 				// (?:\x1b\[[0-9;]*m)? : 匹配并忽略开头的 ANSI 颜色码
 				// \s*([\d\.]+)        : 捕获组1 - PSDK运行时间戳
 				// \s+([^\s]+)         : 捕获组2 - 模块名
@@ -202,7 +201,7 @@ namespace plane::utils
 		void manageLogFiles(const _STD_FS path& logDir, const _STD_FS path& newLogFile, _STD size_t maxFilesCount)
 		{
 			// 创建或更新指向最新日志文件的符号链接
-			_STD_FS path	latest_link { _STD_FS read_symlink("/proc/self/exe").parent_path() / "latest.log" };
+			_STD_FS path	latest_link { plane::utils::getEXEHomePath("latest.log") };
 			_STD error_code ec {};
 			if (_STD_FS exists(latest_link, ec))
 			{

@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include <type_traits>
+#include <functional>
+#include <iterator>
 #include <version>
 
 #ifndef _NODISCARD
@@ -106,5 +109,65 @@
 constexpr inline auto MATH_PI { 3.14159265358979323846 };
 constexpr inline auto EARTH_RADIUS_M { 6'371'000.0 };
 constexpr inline auto RAD_TO_DEG { 180.0 / _DEFINED MATH_PI };
+
+/*-----------------------------------------------------------------------------------------------------*/
+
+template<typename Predicate>
+struct _add_ref_for_function
+{
+	Predicate& pred;
+
+	template<class... Args>
+	constexpr auto operator()(Args&&... args)
+	{
+		if constexpr (_STD is_member_pointer_v<Predicate>)
+		{
+			return _STD invoke(pred, _STD forward<Args>(args)...);
+		}
+		else
+		{
+			return pred(_STD forward<Args>(args)...);
+		}
+	}
+};
+
+template<typename Predicate>
+_NODISCARD constexpr auto _pass_function(Predicate& pred) noexcept
+{
+	constexpr bool _pass_by_value = _STD conjunction_v<
+		_STD bool_constant<sizeof(Predicate) <= sizeof(void*)>, // 检查 Predicate 的大小是否小于或等于指针的大小
+		_STD is_trivially_copy_constructible<Predicate>,		// 检查 Predicate 是否具有平凡的复制构造函数
+		_STD is_trivially_destructible<Predicate>				// 检查 Predicate 是否具有平凡的析构函数
+	>;
+
+	if constexpr (_pass_by_value)
+	{
+		return pred;
+	}
+	else
+	{
+		return _add_ref_for_function<Predicate> { pred };
+	}
+}
+
+class __Not_quite_object
+{
+public:
+	struct __Construct_tag
+	{
+		explicit __Construct_tag() = default;
+	};
+
+	constexpr explicit __Not_quite_object(__Construct_tag) noexcept {}
+
+	__Not_quite_object()									 = delete;
+	__Not_quite_object(const __Not_quite_object&)			 = delete;
+
+	void				operator&() const					 = delete;
+	__Not_quite_object& operator=(const __Not_quite_object&) = delete;
+
+protected:
+	~__Not_quite_object() = default;
+};
 
 #endif

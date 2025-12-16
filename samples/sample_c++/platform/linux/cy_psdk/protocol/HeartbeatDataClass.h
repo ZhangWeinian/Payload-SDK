@@ -70,8 +70,8 @@ namespace plane::protocol
 		_STD string				 CJ {};	  // 厂家
 		_STD string				 XH {};	  // 型号
 		_STD string				 MODE {}; // 飞行模式
-		int						 VSE {};  // 虚拟摇杆启用
-		int						 AME {};  // 高级模式启用
+		int						 VSE {};  // 是否启用虚拟摇杆
+		int						 AME {};  // 是否启用虚拟摇杆高级模式
 	};
 
 	struct MissionInfoPayload
