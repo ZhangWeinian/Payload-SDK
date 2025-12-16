@@ -30,7 +30,7 @@ namespace plane::manager
 	{
 		try
 		{
-			LOG_DEBUG("正在初始化 MQTT 业务逻辑处理器...");
+			LOG_DEBUG("正在初始化 MQTT 业务逻辑处理器");
 			auto& msg_handler { plane::manager::MqttMessageHandler::getInstance() };
 
 			msg_handler.registerHandler(plane::manager::TOPIC_MISSION_CONTROL,
@@ -121,7 +121,7 @@ namespace plane::manager
 				{
 					if (payload.HDJ.empty())
 					{
-						LOG_WARN("[MQTT] 收到的航点任务 (RWID: {}) 中不包含任何航点。", payload.RWID.value_or("N/A"));
+						LOG_WARN("[MQTT] 收到的航点任务 (RWID: {}) 中不包含任何航点", payload.RWID.value_or("N/A"));
 						return;
 					}
 
@@ -139,7 +139,7 @@ namespace plane::manager
 						}
 						else
 						{
-							LOG_ERROR("无法执行航线任务，因为 KMZ 数据生成失败。");
+							LOG_ERROR("无法执行航线任务，因为 KMZ 数据生成失败");
 							return;
 						}
 					}

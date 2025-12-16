@@ -59,7 +59,7 @@ namespace plane::my_dji
 		// 尝试加载配置文件
 		if (!config.loadAndCheck())
 		{
-			LOG_ERROR("错误: 配置文件加载失败，程序退出。");
+			LOG_ERROR("错误: 配置文件加载失败，程序退出");
 			return;
 		}
 
@@ -76,12 +76,12 @@ namespace plane::my_dji
 		// 如果启用标准 PSDK 作业流程，则初始化 PSDKManager 和 PSDKAdapter
 		if (config.isStandardProceduresEnabled())
 		{
-			LOG_INFO("已启用标准 PSDK 作业流程。");
+			LOG_INFO("已启用标准 PSDK 作业流程");
 
 			// 初始化 DJI Application
 			try
 			{
-				LOG_INFO("初始化 PSDK CORE , 请等待...");
+				LOG_INFO("初始化 PSDK CORE , 请等待");
 				PSDK_application_ptr_ = _STD make_unique<_DJI Application>(argc, argv);
 				_STD						 this_thread::sleep_for(_STD_CHRONO seconds(5));
 			}
@@ -99,12 +99,12 @@ namespace plane::my_dji
 			// 尝试启动 PSDK 底层服务
 			if (!plane::manager::PSDKManager::getInstance().start(argc, argv))
 			{
-				LOG_ERROR("PSDK 底层服务初始化失败，程序退出。");
+				LOG_ERROR("PSDK 底层服务初始化失败，程序退出");
 				return;
 			}
 			else
 			{
-				LOG_DEBUG("PSDK 底层服务已成功启动。");
+				LOG_DEBUG("PSDK 底层服务已成功启动");
 			}
 
 			// 尝试启动 PSDK 适配器服务
@@ -115,64 +115,64 @@ namespace plane::my_dji
 			}
 			else
 			{
-				LOG_DEBUG("PSDK 适配器已成功启动。");
+				LOG_DEBUG("PSDK 适配器已成功启动");
 			}
 		}
 		else
 		{
-			LOG_WARN("未启用标准 PSDK 作业流程。");
+			LOG_WARN("未启用标准 PSDK 作业流程");
 		}
 
 		// 尝试启动 MQTT 服务
 		if (!plane::manager::MQTTv5Service::getInstance().start())
 		{
-			LOG_ERROR("错误: MQTT 服务启动失败，程序退出。");
+			LOG_ERROR("错误: MQTT 服务启动失败，程序退出");
 			return;
 		}
 		else
 		{
-			LOG_DEBUG("MQTT 服务已成功启动。");
+			LOG_DEBUG("MQTT 服务已成功启动");
 		}
 
 		// 尝试启动心跳服务
 		if (!plane::manager::Heartbeat::getInstance().start())
 		{
-			LOG_ERROR("错误: 心跳服务启动失败，程序退出。");
+			LOG_ERROR("错误: 心跳服务启动失败，程序退出");
 			return;
 		}
 		else
 		{
-			LOG_DEBUG("心跳服务已成功启动。");
+			LOG_DEBUG("心跳服务已成功启动");
 		}
 
 		// 尝试初始化业务逻辑处理器
 		if (!plane::manager::LogicHandler::getInstance().init())
 		{
-			LOG_ERROR("错误: 业务逻辑处理器初始化失败，程序退出。");
+			LOG_ERROR("错误: 业务逻辑处理器初始化失败，程序退出");
 			return;
 		}
 		else
 		{
-			LOG_DEBUG("业务逻辑处理器已成功初始化。");
+			LOG_DEBUG("业务逻辑处理器已成功初始化");
 		}
 
 		// 尝试启动遥测上报服务
 		if (!plane::manager::TelemetryReporter::getInstance().start())
 		{
-			LOG_ERROR("错误: 遥测上报服务启动失败，程序退出。");
+			LOG_ERROR("错误: 遥测上报服务启动失败，程序退出");
 			return;
 		}
 		else
 		{
-			LOG_DEBUG("遥测上报服务已成功启动。");
+			LOG_DEBUG("遥测上报服务已成功启动");
 		}
 
 		// 等待一段时间让各服务稳定运行，随后报告应用已启动
-		LOG_DEBUG("等待各服务稳定运行...");
+		LOG_DEBUG("等待各服务稳定运行");
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(2));
 		LOG_INFO("==========================================================");
-		LOG_INFO("               应用程序初始化完成, 正在运行中...");
-		LOG_INFO("                    按 Ctrl+C 退出。");
+		LOG_INFO("               应用程序初始化完成, 正在运行中");
+		LOG_INFO("                    按 Ctrl+C 退出");
 		LOG_INFO("==========================================================");
 
 		// 注册信号处理
@@ -186,7 +186,7 @@ namespace plane::my_dji
 		}
 
 		// 收到退出信号，开始关闭各服务
-		LOG_INFO("收到退出信号, 正在关闭应用程序...");
+		LOG_INFO("收到退出信号, 正在关闭应用程序");
 
 		// 关闭各服务
 		plane::manager::TelemetryReporter::getInstance().stop();
@@ -202,12 +202,12 @@ namespace plane::my_dji
 			if (PSDK_application_ptr_)
 			{
 				PSDK_application_ptr_.reset();
-				LOG_DEBUG("PSDK CORE 已成功关闭。");
+				LOG_DEBUG("PSDK CORE 已成功关闭");
 			}
 		}
 
 		// 等待一段时间确保所有服务已正确关闭
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(1));
-		LOG_INFO("应用程序已关闭。");
+		LOG_INFO("应用程序已关闭");
 	}
 } // namespace plane::my_dji

@@ -16,7 +16,7 @@ namespace plane::manager
 	{
 		_STD lock_guard<_STD mutex>					  lock(this->handler_mutex_);
 		this->handler_map_[topic][messageType] = _STD move(handler);
-		LOG_DEBUG("为主题 '{}', 消息类型 '{}' 注册了处理器。", topic, messageType);
+		LOG_DEBUG("为主题 '{}', 消息类型 '{}' 注册了处理器", topic, messageType);
 	}
 
 	void MqttMessageHandler::routeMessage(_STD string_view topic, _STD string_view messageType, const n_json& payloadJson) noexcept
@@ -33,12 +33,12 @@ namespace plane::manager
 				}
 				else
 				{
-					LOG_WARN("主题 '{}' 下收到未注册的消息类型 '{}'。", topic, messageType);
+					LOG_WARN("主题 '{}' 下收到未注册的消息类型 '{}'", topic, messageType);
 				}
 			}
 			else
 			{
-				LOG_WARN("收到未注册主题 '{}' 的消息。", topic);
+				LOG_WARN("收到未注册主题 '{}' 的消息", topic);
 			}
 		}
 		catch (const _STD exception& e)

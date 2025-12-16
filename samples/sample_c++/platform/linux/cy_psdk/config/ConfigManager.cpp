@@ -50,7 +50,7 @@ namespace plane::config
 		if (this->app_config_.mqttClientId.empty())
 		{
 			this->app_config_.mqttClientId = this->getNewGenerateUniqueClientId();
-			LOG_ERROR("运行时 MQTT Client ID 已生成: {}", this->app_config_.mqttClientId);
+			LOG_DEBUG("运行时 MQTT Client ID 已生成: {}", this->app_config_.mqttClientId);
 		}
 
 		try
@@ -152,7 +152,7 @@ namespace plane::config
 			}
 			else
 			{
-				LOG_WARN("配置文件中未找到 'features' 部分，所有功能开关将使用默认值。");
+				LOG_WARN("配置文件中未找到 'features' 部分，所有功能开关将使用默认值");
 			}
 
 			return true;

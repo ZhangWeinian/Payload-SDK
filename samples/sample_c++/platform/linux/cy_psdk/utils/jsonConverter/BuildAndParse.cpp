@@ -101,13 +101,13 @@ namespace plane::utils
 				_STD string local_plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
 				if (target_plane_code != local_plane_code)
 				{
-					LOG_DEBUG("收到发往其他设备 ({}) 的消息, 本机 ({}) 已忽略。", target_plane_code, local_plane_code);
+					LOG_DEBUG("收到发往其他设备 ({}) 的消息, 本机 ({}) 已忽略", target_plane_code, local_plane_code);
 					return;
 				}
 			}
 			else
 			{
-				LOG_WARN("收到的消息缺少 ZBID 字段, 无法验证目标设备。");
+				LOG_WARN("收到的消息缺少 ZBID 字段, 无法验证目标设备");
 				return;
 			}
 

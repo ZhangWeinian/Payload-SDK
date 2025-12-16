@@ -33,14 +33,15 @@ namespace plane::manager
 	{
 		if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))
 		{
-			LOG_WARN("Heartbeat 已经启动，请勿重复调用 start()。");
+			LOG_WARN("Heartbeat 已经启动，请勿重复调用 start()");
 			return true;
 		}
 
 		try
 		{
 			this->heartbeat_thread_ = _STD thread(&Heartbeat::runLoop, this, interval);
-			LOG_INFO("心跳服务已启动，频率: {}ms 。", interval.count());
+			const auto&					   frequency { 1000.0 / static_cast<double>(interval.count()) };
+			LOG_INFO("心跳服务已启动，频率: {:.3f}Hz", frequency);
 			return true;
 		}
 		catch (const _STD exception& e)
@@ -68,7 +69,7 @@ namespace plane::manager
 		{
 			this->heartbeat_thread_.join();
 		}
-		LOG_INFO("心跳服务已停止。");
+		LOG_INFO("心跳服务已停止");
 	}
 
 	void Heartbeat::runLoop(_STD_CHRONO milliseconds interval)

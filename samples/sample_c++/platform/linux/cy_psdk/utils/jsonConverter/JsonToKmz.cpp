@@ -451,7 +451,7 @@ namespace plane::utils
 			g_latestKmzFilePath.clear();
 			if (waypoints.empty())
 			{
-				LOG_ERROR("无法生成 KMZ ，航点列表为空。");
+				LOG_ERROR("无法生成 KMZ ，航点列表为空");
 				return _STD nullopt;
 			}
 
@@ -461,25 +461,25 @@ namespace plane::utils
 			_UNNAMED InMemoryZipArchive archive {};
 			if (!archive)
 			{
-				LOG_ERROR("初始化内存归档器失败。");
+				LOG_ERROR("初始化内存归档器失败");
 				return _STD nullopt;
 			}
 
 			if (!archive.addFile("wpmz/waylines.wpml", waylines_wpml) || !archive.addFile("wpmz/template.kml", template_kml))
 			{
-				LOG_ERROR("将文件添加到内存归档失败。");
+				LOG_ERROR("将文件添加到内存归档失败");
 				return _STD nullopt;
 			}
 
 			auto kmz_data_opt { archive.getFinalData() };
 			if (!kmz_data_opt)
 			{
-				LOG_ERROR("从内存归档中提取最终 KMZ 数据失败。");
+				LOG_ERROR("从内存归档中提取最终 KMZ 数据失败");
 				return _STD nullopt;
 			}
 
 			_DEFINED _KMZ_DATA_TYPE& kmz_data { *kmz_data_opt };
-			LOG_DEBUG("成功在内存中生成 KMZ 数据 ({} 字节)。", kmz_data.size());
+			LOG_DEBUG("成功在内存中生成 KMZ 数据 ({} 字节)", kmz_data.size());
 
 			if (plane::config::ConfigManager::getInstance().isSaveKmz())
 			{
@@ -510,7 +510,7 @@ namespace plane::utils
 				}
 				else
 				{
-					LOG_WARN("无法保存 KMZ 文件，因为存储目录无效。");
+					LOG_WARN("无法保存 KMZ 文件，因为存储目录无效");
 				}
 			}
 

@@ -115,7 +115,7 @@ namespace plane::utils
 			if (this->logger_)
 			{
 				this->logger_->set_level(level);
-				LOG_INFO("本地记录的日志级别已动态调整为: {}", _SPDLOG level::to_string_view(level));
+				LOG_DEBUG("本地记录的日志级别已动态调整为: {}", _SPDLOG level::to_string_view(level));
 			}
 			else
 			{
@@ -230,7 +230,7 @@ namespace plane::utils
 			{
 				_STD sort(log_files.begin(), log_files.end());
 
-				LOG_INFO("日志文件数量 ({}) 已超过最大限制 ({})，正在删除最旧的文件...", log_files.size(), maxFilesCount);
+				LOG_INFO("日志文件数量 ({}) 已超过最大限制 ({})，正在删除最旧的文件", log_files.size(), maxFilesCount);
 				_STD size_t files_to_delete { log_files.size() - maxFilesCount };
 				for (_STD size_t i { 0 }; i < files_to_delete; ++i)
 				{

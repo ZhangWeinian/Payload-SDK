@@ -225,14 +225,14 @@ add_custom_target (
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CONFIG_SOURCE_FILE} ${CONFIG_DEST_FILE}
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_SCRIPT_SOURCE_FILE} ${RUN_SCRIPT_DEST_FILE}
 	DEPENDS ${CONFIG_SOURCE_FILE} ${RUN_SCRIPT_SOURCE_FILE}
-	COMMENT "正在复制运行时文件 (config.yml, run.sh)..."
+	COMMENT "正在复制运行时文件 (config.yml, run.sh)"
 )
 
 add_custom_command (
 	TARGET copy_runtime_files
 	POST_BUILD
 	COMMAND chmod +x ${RUN_SCRIPT_DEST_FILE}
-	COMMENT "为 run.sh 添加可执行权限..."
+	COMMENT "为 run.sh 添加可执行权限"
 	VERBATIM
 )
 
@@ -247,7 +247,7 @@ if(EXISTS ${SYSTEM_LIBS_SOURCE_DIR})
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBS_DEST_DIR}"
 		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${SYSTEM_LIBS_SOURCE_DIR} "${LIBS_DEST_DIR}"
 		DEPENDS ${LIB_FILES}
-		COMMENT "正在复制系统库..."
+		COMMENT "正在复制系统库"
 	)
 endif()
 
@@ -260,7 +260,7 @@ add_custom_target (
 	generate_md5
 	COMMAND chmod +x ${GEN_MD5_SCRIPT}
 	COMMAND /bin/bash ${GEN_MD5_SCRIPT} "${MAIN_OUTPUT_PATH}"
-	COMMENT "正在为构建产物生成 MD5 校验和..."
+	COMMENT "正在为构建产物生成 MD5 校验和"
 	VERBATIM
 )
 
@@ -274,7 +274,7 @@ add_custom_target (
 	sync_latest ALL
 	COMMAND ${CMAKE_COMMAND} -E echo "--- [同步到 build/bin] ---"
 	COMMAND /bin/bash ${SYNC_LATEST_SCRIPT} "${MAIN_OUTPUT_PATH}" "${LATEST_BUILD_DIR}"
-	COMMENT "正在将最新构建同步到 build/bin 目录..."
+	COMMENT "正在将最新构建同步到 build/bin 目录"
 	VERBATIM
 )
 

@@ -102,7 +102,7 @@ namespace plane::manager
 
 		if (this->impl_->client)
 		{
-			LOG_WARN("检测到残留的 MQTT 客户端，将先执行清理...");
+			LOG_WARN("检测到残留的 MQTT 客户端，将先执行清理");
 			try
 			{
 				if (this->impl_->client->is_connected())
@@ -142,12 +142,12 @@ namespace plane::manager
 			conn_opts.set_automatic_reconnect(true);
 			conn_opts.set_mqtt_version(MQTTVERSION_5);
 
-			LOG_INFO("MQTT 服务启动成功, 等待连接建立...");
+			LOG_INFO("MQTT 服务启动成功, 等待连接建立");
 			this->impl_->client->connect(conn_opts);
 
 			this->impl_->runSender	  = true;
 			this->impl_->senderThread = _STD thread(&MQTTv5Service::senderLoop, this);
-			LOG_INFO("MQTT 异步发送线程已启动。");
+			LOG_INFO("MQTT 异步发送线程已启动");
 
 			return true;
 		}
@@ -183,7 +183,7 @@ namespace plane::manager
 			if (this->impl_->senderThread.joinable())
 			{
 				this->impl_->senderThread.join();
-				LOG_DEBUG("MQTT 异步发送线程已停止。");
+				LOG_DEBUG("MQTT 异步发送线程已停止");
 			}
 		}
 
@@ -192,7 +192,7 @@ namespace plane::manager
 			this->impl_->manualDisconnect = true;
 			if (this->impl_->client && this->impl_->client->is_connected())
 			{
-				LOG_INFO("正在断开 MQTT 连接...");
+				LOG_INFO("正在断开 MQTT 连接");
 				this->impl_->client->disconnect()->wait();
 			}
 		}
@@ -211,12 +211,12 @@ namespace plane::manager
 
 		this->impl_.reset(new Impl());
 		this->connected_ = false;
-		LOG_INFO("MQTT 服务已停止。");
+		LOG_INFO("MQTT 服务已停止");
 	}
 
 	void MQTTv5Service::restart(void) noexcept
 	{
-		LOG_INFO("正在请求重启 MQTT 服务...");
+		LOG_INFO("正在请求重启 MQTT 服务");
 		this->stop();
 		_STD this_thread::sleep_for(_STD_CHRONO milliseconds(500));
 		(void)this->start();
@@ -242,7 +242,7 @@ namespace plane::manager
 	{
 		if (!this->impl_->runSender)
 		{
-			LOG_WARN("MQTT 发送服务未运行, 消息被丢弃。");
+			LOG_WARN("MQTT 发送服务未运行, 消息被丢弃");
 			return false;
 		}
 
@@ -255,14 +255,14 @@ namespace plane::manager
 				if (const auto now { _STD_CHRONO steady_clock::now() };
 					!this->impl_->isDroppingMessages || (now - this->impl_->lastDropLogTime > this->LOG_THROTTLE_INTERVAL))
 				{
-					LOG_WARN("MQTT 消息队列已满, 正在丢弃最旧的消息以保证数据新鲜度。此警告将在 {} 秒内抑制。",
+					LOG_WARN("MQTT 消息队列已满, 正在丢弃最旧的消息以保证数据新鲜度。此警告将在 {} 秒内抑制",
 							 this->LOG_THROTTLE_INTERVAL.count());
 					this->impl_->isDroppingMessages = true;
 					this->impl_->lastDropLogTime	= now;
 				}
 				else
 				{
-					LOG_DEBUG("MQTT 消息队列已满, 丢弃最旧消息 (日志已抑制)。");
+					LOG_DEBUG("MQTT 消息队列已满, 丢弃最旧消息 (日志已抑制)");
 				}
 			}
 			else
@@ -282,14 +282,14 @@ namespace plane::manager
 		_STD lock_guard<_STD mutex> lock(this->mutex_);
 		if (!this->isConnected() || !this->impl_->client)
 		{
-			LOG_WARN("MQTT 未连接, 对主题 '{}' 的订阅请求被忽略。", topic);
+			LOG_WARN("MQTT 未连接, 对主题 '{}' 的订阅请求被忽略", topic);
 			return;
 		}
 
 		try
 		{
 			this->impl_->client->subscribe(topic.data(), 1);
-			LOG_DEBUG("已发送订阅主题 '{}' 的请求。", topic);
+			LOG_DEBUG("已发送订阅主题 '{}' 的请求", topic);
 		}
 		catch (const _MQTT exception& ex)
 		{
@@ -307,7 +307,7 @@ namespace plane::manager
 
 	void MQTTv5Service::senderLoop(void) noexcept
 	{
-		LOG_DEBUG("MQTT 发送者线程循环开始。");
+		LOG_DEBUG("MQTT 发送者线程循环开始");
 
 		while (this->impl_->runSender)
 		{
@@ -337,7 +337,7 @@ namespace plane::manager
 
 			if (!this->isConnected() || !this->impl_ || !this->impl_->client)
 			{
-				LOG_WARN("MQTT 未连接, 队列中的一条消息被丢弃。");
+				LOG_WARN("MQTT 未连接, 队列中的一条消息被丢弃");
 				continue;
 			}
 
@@ -353,10 +353,10 @@ namespace plane::manager
 			}
 			catch (...)
 			{
-				LOG_ERROR("发送者线程发布消息 '{}' 时发生未知异常，消息被丢弃。", message.first);
+				LOG_ERROR("发送者线程发布消息 '{}' 时发生未知异常，消息被丢弃", message.first);
 			}
 		}
 
-		LOG_INFO("MQTT 发送者线程循环已结束。");
+		LOG_INFO("MQTT 发送者线程循环已结束");
 	}
 } // namespace plane::manager

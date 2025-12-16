@@ -174,7 +174,7 @@ namespace plane::manager
 				{
 					if (_STD holds_alternative<_STD monostate>(data))
 					{
-						LOG_DEBUG("处理无负载命令事件 '{}'...", static_cast<int>(event));
+						LOG_DEBUG("处理无负载命令事件 '{}'", static_cast<int>(event));
 						_STD invoke(func, this);
 					}
 					else
@@ -186,7 +186,7 @@ namespace plane::manager
 				{
 					if (auto* p { _STD get_if<PayloadType>(&data) })
 					{
-						LOG_DEBUG("处理命令事件 '{}'，负载类型 '{}'...", static_cast<int>(event), typeid(PayloadType).name());
+						LOG_DEBUG("处理命令事件 '{}'，负载类型 '{}'", static_cast<int>(event), typeid(PayloadType).name());
 						_STD invoke(func, this, *p);
 					}
 					else
@@ -199,7 +199,7 @@ namespace plane::manager
 
 	PSDKAdapter::PSDKAdapter(void) noexcept: command_pool_(_STD make_unique<ThreadPool>(6))
 	{
-		LOG_INFO("PSDKAdapter 正在初始化并设置 CommandQueue 的监听器...");
+		LOG_INFO("PSDKAdapter 正在初始化并设置 CommandQueue 的监听器");
 
 		try
 		{
@@ -263,7 +263,7 @@ namespace plane::manager
 				plane::manager::EventManager::CommandEvent::SendNedVelocityCommand,
 				&PSDKAdapter::sendNedVelocityCommand);
 
-			LOG_INFO("所有命令事件监听器已成功注册。");
+			LOG_INFO("所有命令事件监听器已成功注册");
 		}
 		catch (const _STD exception& e)
 		{
@@ -275,7 +275,7 @@ namespace plane::manager
 	{
 		try
 		{
-			LOG_DEBUG("PSDKAdapter 正在析构...");
+			LOG_DEBUG("PSDKAdapter 正在析构");
 			this->stop();
 		}
 		catch (const _STD exception& e)
@@ -296,41 +296,41 @@ namespace plane::manager
 			if (_THIS State expected_state { _THIS State::STOPPED };
 				!this->state_.compare_exchange_strong(expected_state, _THIS State::STARTING))
 			{
-				LOG_WARN("PSDKAdapter::start() 被调用，但服务当前状态为 '{}' (非 STOPPED)，已忽略。", static_cast<int>(this->state_.load()));
+				LOG_WARN("PSDKAdapter::start() 被调用，但服务当前状态为 '{}' (非 STOPPED)，已忽略", static_cast<int>(this->state_.load()));
 				return this->state_ == _THIS State::RUNNING;
 			}
 			else
 			{
-				LOG_DEBUG("PSDKAdapter 状态从 STOPPED 切换到 STARTING。");
+				LOG_DEBUG("PSDKAdapter 状态从 STOPPED 切换到 STARTING");
 			}
 
-			LOG_INFO("PSDKAdapter 启动流程开始...");
+			LOG_INFO("PSDKAdapter 启动流程开始");
 
 			// 启动数据采集线程
 			if (!this->run_acquisition_.exchange(true))
 			{
 				this->acquisition_thread_ = _STD thread(&PSDKAdapter::acquisitionLoop, this);
-				LOG_INFO("PSDK 数据采集线程已启动。");
+				LOG_INFO("PSDK 数据采集线程已启动");
 			}
 			else
 			{
-				LOG_WARN("PSDK 数据采集线程已在运行，跳过启动。");
+				LOG_WARN("PSDK 数据采集线程已在运行，跳过启动");
 			}
 
 			// 启动命令处理线程
 			if (!this->run_command_processing_.exchange(true))
 			{
 				this->command_processing_thread_ = _STD thread(&PSDKAdapter::commandProcessingLoop, this);
-				LOG_INFO("PSDK 命令处理线程已启动。");
+				LOG_INFO("PSDK 命令处理线程已启动");
 			}
 			else
 			{
-				LOG_WARN("PSDK 命令处理线程已在运行，跳过启动。");
+				LOG_WARN("PSDK 命令处理线程已在运行，跳过启动");
 			}
 
 			// 更新状态为 RUNNING
 			this->state_ = _THIS State::RUNNING;
-			LOG_INFO("PSDK 适配器运行时线程已启动。");
+			LOG_INFO("PSDK 适配器运行时线程已启动");
 			return true;
 		}
 		catch (const _STD exception& e)
@@ -349,13 +349,13 @@ namespace plane::manager
 
 		if (this->acquisition_thread_.joinable())
 		{
-			LOG_DEBUG("等待 PSDK 数据采集线程结束...");
+			LOG_DEBUG("等待 PSDK 数据采集线程结束");
 			this->acquisition_thread_.join();
 		}
 
 		if (this->command_processing_thread_.joinable())
 		{
-			LOG_DEBUG("等待 PSDK 命令处理线程结束...");
+			LOG_DEBUG("等待 PSDK 命令处理线程结束");
 			this->command_processing_thread_.join();
 		}
 
@@ -367,12 +367,12 @@ namespace plane::manager
 		// 仅当当前状态为 RUNNING 时才停止服务
 		if (_THIS State expected_state { _THIS State::RUNNING }; !this->state_.compare_exchange_strong(expected_state, _THIS State::STOPPING))
 		{
-			LOG_DEBUG("PSDKAdapter::stop() 被调用，但服务当前未处于 RUNNING 状态，已忽略。");
+			LOG_DEBUG("PSDKAdapter::stop() 被调用，但服务当前未处于 RUNNING 状态，已忽略");
 			return;
 		}
 		else
 		{
-			LOG_DEBUG("PSDKAdapter 状态从 RUNNING 切换到 STOPPING。");
+			LOG_DEBUG("PSDKAdapter 状态从 RUNNING 切换到 STOPPING");
 		}
 
 		LOG_INFO("PSDKAdapter 开始停止流程...（超时时间: {}ms）", timeout.count());
@@ -384,37 +384,37 @@ namespace plane::manager
 			if (this->acquisition_thread_.joinable())
 			{
 				this->acquisition_thread_.join();
-				LOG_INFO("PSDK 数据采集线程已停止。");
+				LOG_INFO("PSDK 数据采集线程已停止");
 			}
 			else
 			{
-				LOG_WARN("PSDK 数据采集线程不可联接，可能未正确启动。");
+				LOG_WARN("PSDK 数据采集线程不可联接，可能未正确启动");
 			}
 		}
 		else
 		{
-			LOG_DEBUG("PSDK 数据采集线程未运行，跳过停止。");
+			LOG_DEBUG("PSDK 数据采集线程未运行，跳过停止");
 		}
 
 		// 停止命令处理线程
 		if (this->run_command_processing_.exchange(false))
 		{
-			LOG_DEBUG("PSDK 命令处理线程状态切换为停止。");
+			LOG_DEBUG("PSDK 命令处理线程状态切换为停止");
 			plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::Takeoff, _STD monostate {});
 
 			if (this->command_processing_thread_.joinable())
 			{
 				this->command_processing_thread_.join();
-				LOG_INFO("PSDK 命令处理线程已停止。");
+				LOG_INFO("PSDK 命令处理线程已停止");
 			}
 			else
 			{
-				LOG_WARN("PSDK 命令处理线程不可联接，可能未正确启动。");
+				LOG_WARN("PSDK 命令处理线程不可联接，可能未正确启动");
 			}
 		}
 		else
 		{
-			LOG_DEBUG("PSDK 命令处理线程未运行，跳过停止。");
+			LOG_DEBUG("PSDK 命令处理线程未运行，跳过停止");
 		}
 
 		// 停止命令执行线程池
@@ -427,18 +427,18 @@ namespace plane::manager
 										 this->command_pool_.reset();
 									 });
 
-			LOG_INFO("正在等待命令线程池中的任务完成...");
+			LOG_INFO("正在等待命令线程池中的任务完成");
 			if (future.wait_for(timeout) == _STD future_status::timeout)
 			{
-				LOG_ERROR("关闭 PSDK 命令线程池超时。可能有一个任务仍在后台运行。stop() 函数将不再等待，继续关闭流程。");
+				LOG_ERROR("关闭 PSDK 命令线程池超时。可能有一个任务仍在后台运行。stop() 函数将不再等待，继续关闭流程");
 			}
 			else
 			{
-				LOG_INFO("PSDK 命令执行线程池已成功关闭。");
+				LOG_INFO("PSDK 命令执行线程池已成功关闭");
 			}
 		}
 
-		LOG_INFO("PSDK 适配器运行时线程已停止。");
+		LOG_INFO("PSDK 适配器运行时线程已停止");
 	}
 
 	plane::protocol::StatusPayload PSDKAdapter::getLatestStatusPayload(void) const noexcept
@@ -450,7 +450,7 @@ namespace plane::manager
 
 	bool PSDKAdapter::subscribeTelemetryData(void) noexcept
 	{
-		LOG_INFO("正在订阅遥测数据主题...");
+		LOG_INFO("正在订阅遥测数据主题");
 
 		// 辅助函数：订阅指定主题并处理错误
 		auto subscribe = [&](_DJI E_DjiFcSubscriptionTopic topic, _STD string_view topicName)
@@ -469,7 +469,7 @@ namespace plane::manager
 			}
 			else
 			{
-				LOG_DEBUG("成功订阅主题 '{}'。", topicName);
+				LOG_DEBUG("成功订阅主题 '{}'", topicName);
 				return true;
 			}
 		};
@@ -491,17 +491,17 @@ namespace plane::manager
 		}
 		else
 		{
-			LOG_INFO("成功注册 HMS 信息回调。");
+			LOG_INFO("成功注册 HMS 信息回调");
 		}
 
-		LOG_INFO("PSDK 适配器准备就绪。");
+		LOG_INFO("PSDK 适配器准备就绪");
 
 		return true;
 	}
 
 	void PSDKAdapter::unsubscribeTelemetryData(void) noexcept
 	{
-		LOG_INFO("正在清理 PSDK 适配器 (取消已订阅的主题)...");
+		LOG_INFO("正在清理 PSDK 适配器 (取消已订阅的主题)");
 
 		// 辅助函数：取消订阅指定主题并处理错误
 		auto unsubscribe = [&](bool was_subscribed, _DJI E_DjiFcSubscriptionTopic topic, _STD string_view topicName)
@@ -519,12 +519,12 @@ namespace plane::manager
 				}
 				else
 				{
-					LOG_DEBUG("成功取消订阅主题 '{}'。", topicName);
+					LOG_DEBUG("成功取消订阅主题 '{}'", topicName);
 				}
 			}
 			else
 			{
-				LOG_DEBUG("主题 '{}' 未订阅，跳过取消订阅。", topicName);
+				LOG_DEBUG("主题 '{}' 未订阅，跳过取消订阅", topicName);
 			}
 		};
 
@@ -733,7 +733,7 @@ namespace plane::manager
 		}
 		else
 		{
-			LOG_DEBUG("收到 HMS 信息回调，但当前无告警。");
+			LOG_DEBUG("收到 HMS 信息回调，但当前无告警");
 		}
 
 		_STD sort(current_error_codes.begin(), current_error_codes.end());
@@ -757,11 +757,11 @@ namespace plane::manager
 		{
 			if (hmsInfoTable.hmsInfoNum > 0)
 			{
-				LOG_INFO("HMS 告警状态发生变化，当前有 {} 条告警，正在上报...", hmsInfoTable.hmsInfoNum);
+				LOG_INFO("HMS 告警状态发生变化，当前有 {} 条告警，正在上报", hmsInfoTable.hmsInfoNum);
 			}
 			else
 			{
-				LOG_INFO("HMS 告警已全部清除，正在上报空列表...");
+				LOG_INFO("HMS 告警已全部清除，正在上报空列表");
 			}
 
 			plane::protocol::HealthStatusPayload health_status {};
@@ -804,7 +804,7 @@ namespace plane::manager
 
 					if (!plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
 					{
-						LOG_WARN("没有启用 PSDK 标准作业流程, 命令 '{}' 被禁止。", name);
+						LOG_WARN("没有启用 PSDK 标准作业流程, 命令 '{}' 被禁止", name);
 						return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT;
 					}
 
@@ -830,7 +830,7 @@ namespace plane::manager
 		return this->executePsdkCommandAsync(
 			[action, name = _STD string(command_name)](void) -> _DJI T_DjiReturnCode
 			{
-				LOG_INFO("线程池任务: 发送航线动作 '{}'...", name);
+				LOG_INFO("线程池任务: 发送航线动作 '{}'", name);
 				_DJI T_DjiReturnCode return_code { _DJI DjiWaypointV3_Action(action) };
 				if (return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 				{
@@ -849,7 +849,7 @@ namespace plane::manager
 		return this->executePsdkCommandAsync(
 			[](void) -> _DJI T_DjiReturnCode
 			{
-				LOG_INFO("线程池任务: 执行起飞...");
+				LOG_INFO("线程池任务: 执行起飞");
 				_DJI T_DjiReturnCode return_code { _DJI DjiFlightController_StartTakeoff() };
 				if (return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 				{
@@ -867,7 +867,7 @@ namespace plane::manager
 		return this->executePsdkCommandAsync(
 			[](void) -> _DJI T_DjiReturnCode
 			{
-				LOG_INFO("线程池任务: 执行返航...");
+				LOG_INFO("线程池任务: 执行返航");
 				_DJI T_DjiReturnCode return_code { _DJI DjiFlightController_StartGoHome() };
 				if (return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 				{
@@ -885,7 +885,7 @@ namespace plane::manager
 		return this->executePsdkCommandAsync(
 			[](void) -> _DJI T_DjiReturnCode
 			{
-				LOG_INFO("线程池任务: 执行一键悬停...");
+				LOG_INFO("线程池任务: 执行一键悬停");
 				_DJI T_DjiReturnCode return_code { _DJI DjiFlightController_ExecuteEmergencyBrakeAction() };
 				if (return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 				{
@@ -903,7 +903,7 @@ namespace plane::manager
 		return this->executePsdkCommandAsync(
 			[](void) -> _DJI T_DjiReturnCode
 			{
-				LOG_INFO("线程池任务: 执行降落...");
+				LOG_INFO("线程池任务: 执行降落");
 				_DJI T_DjiReturnCode return_code { _DJI DjiFlightController_StartLanding() };
 				if (return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 				{
@@ -927,14 +927,14 @@ namespace plane::manager
 							  // 如果当前状态不是 RUNNING，则拒绝执行航线任务
 							  if (this->state_ != _THIS State::RUNNING)
 							  {
-								  LOG_WARN("PSDKAdapter 当前未处于 RUNNING 状态，航线任务请求被拒绝。");
+								  LOG_WARN("PSDKAdapter 当前未处于 RUNNING 状态，航线任务请求被拒绝");
 								  return _DJI DJI_ERROR_WAYPOINT_V3_MODULE_CODE_USER_EXIT;
 							  }
 
 							  // 如果 KMZ 数据为空，则返回错误
 							  if (data.empty())
 							  {
-								  LOG_ERROR("提供的 KMZ 数据为空，无法执行航线任务。");
+								  LOG_ERROR("提供的 KMZ 数据为空，无法执行航线任务");
 								  return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_INVALID_PARAMETER;
 							  }
 
@@ -949,7 +949,7 @@ namespace plane::manager
 							  _STD future<_DJI T_DjiReturnCode> mission_future { this->mission_completion_promise_->get_future() };
 
 							  // 初始化 Waypoint V3 模块
-							  LOG_DEBUG("正在初始化 Waypoint V3 模块...");
+							  LOG_DEBUG("正在初始化 Waypoint V3 模块");
 							  if (return_code = _DJI DjiWaypointV3_Init(); return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 							  {
 								  LOG_ERROR("Waypoint V3 初始化失败: {}", plane::utils::convertDjiError(return_code));
@@ -975,7 +975,7 @@ namespace plane::manager
 								  }
 
 								  // 上传 KMZ 数据
-								  LOG_INFO("正在上传 KMZ 数据...");
+								  LOG_INFO("正在上传 KMZ 数据");
 								  if (return_code = _DJI  DjiWaypointV3_UploadKmzFile(data.data(), data.size());
 									  return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 								  {
@@ -984,7 +984,7 @@ namespace plane::manager
 								  }
 
 								  // 启动航线任务
-								  LOG_INFO("启动航线任务...");
+								  LOG_INFO("启动航线任务");
 								  if (return_code = _DJI  DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_START);
 									  return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 								  {
@@ -993,7 +993,7 @@ namespace plane::manager
 								  }
 
 								  // 阻塞等待任务完成, 等待回调函数通知 "IDLE" 或 "FINISHED" , 至多等待 60 分钟
-								  LOG_INFO("航线任务已启动，等待完成...");
+								  LOG_INFO("航线任务已启动，等待完成");
 								  if (_STD future_status status { mission_future.wait_for(_STD_CHRONO minutes(60)) };
 									  status == _STD	 future_status::ready)
 								  {
@@ -1002,7 +1002,7 @@ namespace plane::manager
 								  }
 								  else
 								  {
-									  LOG_ERROR("航线任务超时或异常！尝试发送停止指令...");
+									  LOG_ERROR("航线任务超时或异常！尝试发送停止指令");
 									  _DJI				 DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_STOP);
 									  return_code = _DJI DJI_ERROR_SYSTEM_MODULE_CODE_TIMEOUT;
 								  }
@@ -1013,7 +1013,7 @@ namespace plane::manager
 
 								  _STD this_thread::sleep_for(_STD_CHRONO milliseconds(500));
 
-								  LOG_INFO("正在反初始化 Waypoint V3 模块...");
+								  LOG_INFO("正在反初始化 Waypoint V3 模块");
 								  _DJI DjiWaypointV3_DeInit();
 							  }
 							  catch (_DJI T_DjiReturnCode err_code)
@@ -1026,7 +1026,7 @@ namespace plane::manager
 							  }
 							  catch (...)
 							  {
-								  LOG_ERROR("捕获到未知异常，强制清理...");
+								  LOG_ERROR("捕获到未知异常，强制清理");
 								  _DJI		  DjiWaypointV3_DeInit();
 								  return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
 							  }
@@ -1156,7 +1156,7 @@ namespace plane::manager
 		(void)this->executePsdkCommandAsync(
 			[payload](void) -> _DJI T_DjiReturnCode
 			{
-				LOG_INFO("线程池任务: 开启虚拟摇杆...");
+				LOG_INFO("线程池任务: 开启虚拟摇杆");
 				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
 			});
 	}
@@ -1168,7 +1168,7 @@ namespace plane::manager
 		(void)this->executePsdkCommandAsync(
 			[payload](void) -> _DJI T_DjiReturnCode
 			{
-				LOG_INFO("线程池任务: 关闭虚拟摇杆...");
+				LOG_INFO("线程池任务: 关闭虚拟摇杆");
 				return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
 			});
 	}
@@ -1217,7 +1217,7 @@ namespace plane::manager
 
 	void PSDKAdapter::commandProcessingLoop(void)
 	{
-		LOG_INFO("PSDK 命令处理线程已进入循环。");
+		LOG_INFO("PSDK 命令处理线程已进入循环");
 		auto& event_manager { plane::manager::EventManager::getInstance() };
 		while (this->run_command_processing_)
 		{
@@ -1227,9 +1227,9 @@ namespace plane::manager
 			{
 				break;
 			}
-			LOG_INFO("命令处理线程: 被唤醒，队列非空，准备处理事件...");
+			LOG_INFO("命令处理线程: 被唤醒，队列非空，准备处理事件");
 			queue.process();
 		}
-		LOG_INFO("PSDK 命令处理线程已退出循环。");
+		LOG_INFO("PSDK 命令处理线程已退出循环");
 	}
 } // namespace plane::manager

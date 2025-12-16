@@ -47,12 +47,12 @@ namespace plane::manager
 	{
 		if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))
 		{
-			LOG_WARN("TelemetryReporter::start() 被重复调用，已忽略。");
+			LOG_WARN("TelemetryReporter::start() 被重复调用，已忽略");
 			return true;
 		}
 		else
 		{
-			LOG_DEBUG("TelemetryReporter::start() 正在执行...");
+			LOG_DEBUG("TelemetryReporter::start() 正在执行");
 		}
 
 		try
@@ -111,14 +111,14 @@ namespace plane::manager
 					{
 						this->runWatchdogCheck();
 					});
-				LOG_INFO("PSDK 看门狗已启动。");
+				LOG_INFO("PSDK 看门狗已启动");
 			}
 			else
 			{
-				LOG_INFO("PSDK 未启用，看门狗将不会启动。");
+				LOG_INFO("PSDK 未启用，看门狗将不会启动");
 			}
 
-			LOG_INFO("遥测上报服务已启动。");
+			LOG_INFO("遥测上报服务已启动");
 
 			return true;
 		}
@@ -148,22 +148,22 @@ namespace plane::manager
 		if (this->system_event_remover_)
 		{
 			this->system_event_remover_.reset();
-			LOG_DEBUG("遥测上报服务已停止 (注销了所有系统事件监听器)。");
+			LOG_DEBUG("遥测上报服务已停止 (注销了所有系统事件监听器)");
 		}
 
 		if (this->psdk_event_remover_)
 		{
 			this->psdk_event_remover_.reset();
-			LOG_DEBUG("遥测上报服务已停止 (注销了所有 PSDK 事件监听器)。");
+			LOG_DEBUG("遥测上报服务已停止 (注销了所有 PSDK 事件监听器)");
 		}
 
 		if (this->event_processing_pool_)
 		{
 			this->event_processing_pool_.reset();
-			LOG_DEBUG("遥测上报服务已停止 (关闭事件处理线程池)。");
+			LOG_DEBUG("遥测上报服务已停止 (关闭事件处理线程池)");
 		}
 
-		LOG_INFO("遥测上报服务已停止。");
+		LOG_INFO("遥测上报服务已停止");
 	}
 
 	bool TelemetryReporter::publishJson(_STD string_view topic, _STD string_view statusJson) noexcept
@@ -209,7 +209,7 @@ namespace plane::manager
 			auto										now { _STD_CHRONO steady_clock::now() };
 			if (now - last_log_time > _STD_CHRONO seconds(5))
 			{
-				LOG_WARN("TelemetryReporter 事件处理队列已满 (超过 {} 个任务)，正在丢弃新事件。", MAX_EVENT_QUEUE_SIZE);
+				LOG_WARN("TelemetryReporter 事件处理队列已满 (超过 {} 个任务)，正在丢弃新事件", MAX_EVENT_QUEUE_SIZE);
 				last_log_time = now;
 			}
 			return;
@@ -258,7 +258,7 @@ namespace plane::manager
 																  .ZBZT	 = 1 }
 								};
 
-								LOG_DEBUG("准备上报飞行状态...");
+								LOG_DEBUG("准备上报飞行状态");
 
 								(void)this->publishJson(plane::manager::TOPIC_STATUS,
 														plane::utils::JsonConverter::buildStatusReportJson(payload));
@@ -266,7 +266,7 @@ namespace plane::manager
 						}
 						else if constexpr (_STD is_same_v<T, plane::protocol::HealthStatusPayload>)
 						{
-							LOG_DEBUG("准备上报健康状态...");
+							LOG_DEBUG("准备上报健康状态");
 
 							(void)this->publishJson(plane::manager::TOPIC_HEALTH_MANAGE,
 													plane::utils::JsonConverter::buildHealthStatusJson(event));
@@ -282,7 +282,7 @@ namespace plane::manager
 						}
 						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3ActionState>)
 						{
-							LOG_DEBUG("接收到航线动作更新...");
+							LOG_DEBUG("接收到航线动作更新");
 							// TODO: 根据需要处理或上报动作状态
 						}
 						else
@@ -306,7 +306,7 @@ namespace plane::manager
 			{
 				if (!plane::manager::MQTTv5Service::getInstance().isConnected())
 				{
-					LOG_TRACE("MQTT 未连接，跳过本次固定信息心跳上报。");
+					LOG_TRACE("MQTT 未连接，跳过本次固定信息心跳上报");
 					return;
 				}
 
@@ -314,7 +314,7 @@ namespace plane::manager
 				static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
 				if (plane_code.empty())
 				{
-					LOG_WARN("无法获取飞机 PlaneCode ，跳过本次固定信息心跳上报。");
+					LOG_WARN("无法获取飞机 PlaneCode ，跳过本次固定信息心跳上报");
 					return;
 				}
 
@@ -325,7 +325,7 @@ namespace plane::manager
 
 				(void)this->publishJson(plane::manager::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
 
-				LOG_TRACE("已通过心跳事件上报固定信息 (MissionInfoPayload) 。");
+				LOG_TRACE("已通过心跳事件上报固定信息 (MissionInfoPayload) ");
 			});
 	}
 
@@ -333,7 +333,7 @@ namespace plane::manager
 	{
 		if (!this->run_watchdog_)
 		{
-			LOG_INFO("看门狗任务收到停止信号，不再调度下一次检查。");
+			LOG_INFO("看门狗任务收到停止信号，不再调度下一次检查");
 			return;
 		}
 
@@ -345,7 +345,7 @@ namespace plane::manager
 		}
 		else
 		{
-			LOG_TRACE("看门狗检查通过，PSDK 数据源正常。");
+			LOG_TRACE("看门狗检查通过，PSDK 数据源正常");
 		}
 
 		this->event_processing_pool_->enqueue(

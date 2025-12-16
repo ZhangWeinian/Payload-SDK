@@ -46,7 +46,7 @@ namespace plane::utils
 				return this->cached_ip_->ip;
 			}
 
-			LOG_DEBUG("缓存失效或不存在，正在重新扫描网络接口...");
+			LOG_DEBUG("缓存失效或不存在，正在重新扫描网络接口");
 			auto result { this->getDeviceIpv4AddressImpl() };
 			if (result)
 			{
@@ -178,7 +178,7 @@ namespace plane::utils
 
 			if (addresses.empty())
 			{
-				LOG_WARN("未找到任何有效的 IPv4 地址。");
+				LOG_WARN("未找到任何有效的 IPv4 地址");
 				return _STD nullopt;
 			}
 
