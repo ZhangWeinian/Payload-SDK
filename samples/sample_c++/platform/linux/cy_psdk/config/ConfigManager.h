@@ -1,10 +1,7 @@
 // cy_psdk/cinfig/ConfigManager.h
 
-/*
-* 读取和管理配置文件
-*/
-
 #pragma once
+
 #include <dji_logger.h>
 
 #include "protocol/AppConfigDataClass.h"

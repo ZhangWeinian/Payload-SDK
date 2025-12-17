@@ -1,8 +1,8 @@
-// cy_psdk/utils/network_utils/GetLocalIPV4.h
+// cy_psdk/utils/network_util/GetLocalIPV4.h
 
 #pragma once
 
-#include "utils/Logger.h"
+#include "utils/log_util/Logger.h"
 
 #include <gsl/gsl>
 

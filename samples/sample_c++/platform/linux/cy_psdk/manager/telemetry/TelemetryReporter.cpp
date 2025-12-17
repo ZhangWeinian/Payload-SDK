@@ -6,8 +6,8 @@
 #include "manager/mqtt/MQTTTopics.h"
 #include "manager/mqtt/service/MQTTv5Service.h"
 #include "utils/json_converter/BuildAndParse.h"
-#include "utils/Logger.h"
-#include "utils/network_utils/GetLocalIPV4.h"
+#include "utils/log_util/Logger.h"
+#include "utils/network_util/GetLocalIPV4.h"
 
 #include <fmt/format.h>
 #include <gsl/gsl>

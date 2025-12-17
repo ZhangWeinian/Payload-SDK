@@ -237,6 +237,11 @@ namespace plane::protocol
 		int	   MS { 1 };  // 模式 (1:角度控制, 2:角速度控制)
 	};
 
+	struct LaserControlPayload
+	{
+		int JGKG {}; // 激光开关 (0:关, 1:开)
+	};
+
 	template<typename T>
 	struct NetworkMessage
 	{
@@ -298,4 +303,5 @@ namespace plane::protocol
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(StickModeSwitchPayload, YGMS);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(NedVelocityPayload, SDN, SDD, SDX, PHJ, MS);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(MissionProgressPayload, RWID, DQHD, ZHD, JD, ZT);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(LaserControlPayload, JGKG);
 } // namespace plane::protocol
