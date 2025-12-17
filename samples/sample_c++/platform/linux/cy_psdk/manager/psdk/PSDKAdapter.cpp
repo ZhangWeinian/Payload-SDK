@@ -2,10 +2,6 @@
 
 #include "manager/psdk/PSDKAdapter.h"
 
-#include "config/ConfigManager.h"
-#include "utils/DjiErrorUtils.h"
-#include "utils/Logger.h"
-
 #include <dji_aircraft_info.h>
 #include <dji_camera_manager.h>
 #include <dji_error.h>
@@ -14,6 +10,10 @@
 #include <dji_hms_info_table.h>
 #include <dji_logger.h>
 #include <dji_waypoint_v3.h>
+
+#include "config/ConfigManager.h"
+#include "utils/DjiErrorUtils.h"
+#include "utils/Logger.h"
 
 #include <fmt/format.h>
 #include <gsl/gsl>

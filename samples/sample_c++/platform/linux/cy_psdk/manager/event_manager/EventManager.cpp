@@ -1,6 +1,6 @@
-// cy_psdk/manager/eventManager/EventManager.cpp
+// cy_psdk/manager/event_manager/EventManager.cpp
 
-#include "manager/eventManager/EventManager.h"
+#include "manager/event_manager/EventManager.h"
 
 namespace plane::manager
 {

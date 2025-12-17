@@ -1,4 +1,4 @@
-// cy_psdk/utils/networkUtils/NetworkUtils.h
+// cy_psdk/utils/network_utils/GetLocalIPV4.h
 
 #pragma once
 
@@ -25,16 +25,12 @@
 
 namespace plane::utils
 {
-	class NetworkUtils
+	class __Get_local_ipv4_fun: private __Not_quite_object
 	{
 	public:
-		static NetworkUtils& getInstance(void) noexcept
-		{
-			static NetworkUtils instance {};
-			return instance;
-		}
+		using __Not_quite_object::__Not_quite_object;
 
-		_NODISCARD _STD optional<_STD string> getDeviceIpv4Address(void) noexcept
+		_NODISCARD _STD optional<_STD string> operator()(void) noexcept
 		{
 			using namespace _STD literals;
 			_STD lock_guard<_STD mutex> lock(this->cache_mutex_);
@@ -65,11 +61,6 @@ namespace plane::utils
 			_STD string ip {};
 			_STD_CHRONO steady_clock::time_point timestamp {};
 		};
-
-		explicit NetworkUtils(void) noexcept		 = default;
-		~NetworkUtils(void) noexcept				 = default;
-		NetworkUtils(const NetworkUtils&)			 = delete;
-		NetworkUtils& operator=(const NetworkUtils&) = delete;
 
 		_STD optional<_THIS CachedResult> cached_ip_ {};
 		_STD mutex						  cache_mutex_ {};
@@ -213,4 +204,6 @@ namespace plane::utils
 			return ip;
 		}
 	};
+
+	inline __Get_local_ipv4_fun getLocalIPV4 { __Not_quite_object::__Construct_tag {} };
 } // namespace plane::utils

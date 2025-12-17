@@ -3,11 +3,11 @@
 #include "manager/mqtt/handler/LogicHandler.h"
 
 #include "config/ConfigManager.h"
-#include "manager/droneControl/FlyManager.h"
+#include "manager/drone_control/FlyManager.h"
 #include "manager/mqtt/handler/MessageHandler.h"
 #include "manager/mqtt/MQTTTopics.h"
 #include "protocol/DroneDataClass.h"
-#include "utils/jsonConverter/JsonToKmz.h"
+#include "utils/json_converter/JsonToKmz.h"
 #include "utils/Logger.h"
 
 #include <string_view>

@@ -5,9 +5,9 @@
 #include "config/ConfigManager.h"
 #include "manager/mqtt/MQTTTopics.h"
 #include "manager/mqtt/service/MQTTv5Service.h"
-#include "utils/jsonConverter/BuildAndParse.h"
+#include "utils/json_converter/BuildAndParse.h"
 #include "utils/Logger.h"
-#include "utils/networkUtils/NetworkUtils.h"
+#include "utils/network_utils/GetLocalIPV4.h"
 
 #include <fmt/format.h>
 #include <gsl/gsl>
@@ -244,11 +244,9 @@ namespace plane::manager
 							}
 
 							auto			  payload { event };
-							static const auto ip {
-								plane::utils::NetworkUtils::getInstance().getDeviceIpv4Address().value_or("[找不到有效的 IP ]")
-							};
+							static const auto ip { plane::utils::getLocalIPV4().value_or("[找不到有效的 IP ]") };
 
-							static int status_counter { 0 };
+							static int		  status_counter { 0 };
 							if (++status_counter >= 5)
 							{
 								status_counter = 0;
@@ -310,7 +308,7 @@ namespace plane::manager
 					return;
 				}
 
-				static const auto		 ip_address { plane::utils::NetworkUtils::getInstance().getDeviceIpv4Address().value_or("N/A") };
+				static const auto		 ip_address { plane::utils::getLocalIPV4().value_or("N/A") };
 				static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
 				if (plane_code.empty())
 				{

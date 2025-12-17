@@ -1,4 +1,4 @@
-// cy_psdk/utils/jsonConverter/BuildAndParse.h
+// cy_psdk/utils/json_converter/BuildAndParse.h
 
 #pragma once
 

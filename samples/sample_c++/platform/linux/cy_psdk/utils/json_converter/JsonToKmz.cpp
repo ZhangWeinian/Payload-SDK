@@ -1,6 +1,6 @@
-// cy_psdk/utils/jsonConverter/JsonToKmz.cpp
+// cy_psdk/utils/json_converter/JsonToKmz.cpp
 
-#include "utils/jsonConverter/JsonToKmz.h"
+#include "utils/json_converter/JsonToKmz.h"
 
 #include "config/ConfigManager.h"
 #include "protocol/KmzDataClass.h"

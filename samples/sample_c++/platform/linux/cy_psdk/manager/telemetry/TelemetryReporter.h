@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "manager/eventManager/EventManager.h"
+#include "manager/event_manager/EventManager.h"
 #include "protocol/HeartbeatDataClass.h"
 
 #include <eventpp/eventdispatcher.h>

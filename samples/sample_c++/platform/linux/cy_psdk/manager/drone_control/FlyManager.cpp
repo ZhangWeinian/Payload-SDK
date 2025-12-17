@@ -1,9 +1,9 @@
-// cy_psdk/manager/droneControl/FlyManager.cpp
+// cy_psdk/manager/drone_control/FlyManager.cpp
 
-#include "manager/droneControl/FlyManager.h"
+#include "manager/drone_control/FlyManager.h"
 
 #include "manager/psdk/PSDKAdapter.h"
-#include "utils/jsonConverter/JsonToKmz.h"
+#include "utils/json_converter/JsonToKmz.h"
 #include "utils/Logger.h"
 
 #include <filesystem>

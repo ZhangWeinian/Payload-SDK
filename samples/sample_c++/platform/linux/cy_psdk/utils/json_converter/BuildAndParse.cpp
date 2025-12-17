@@ -1,12 +1,12 @@
-// cy_psdk/utils/jsonConverter/BuildAndParse.cpp
+// cy_psdk/utils/json_converter/BuildAndParse.cpp
 
-#include "utils/jsonConverter/BuildAndParse.h"
+#include "utils/json_converter/BuildAndParse.h"
 
 #include "config/ConfigManager.h"
 #include "manager/mqtt/handler/MessageHandler.h"
 #include "utils/Logger.h"
 
-#include "fmt/format.h"
+#include <fmt/format.h>
 
 #include <chrono>
 #include <iomanip>

@@ -2,14 +2,14 @@
 
 #pragma once
 
-#include "manager/eventManager/EventManager.h"
-#include "protocol/DroneDataClass.h"
-#include "protocol/HeartbeatDataClass.h"
-
 #include <dji_fc_subscription.h>
 #include <dji_hms_manager.h>
 #include <dji_typedef.h>
 #include <dji_waypoint_v3.h>
+
+#include "manager/event_manager/EventManager.h"
+#include "protocol/DroneDataClass.h"
+#include "protocol/HeartbeatDataClass.h"
 
 #include <eventpp/eventdispatcher.h>
 #include <eventpp/utilities/scopedremover.h>

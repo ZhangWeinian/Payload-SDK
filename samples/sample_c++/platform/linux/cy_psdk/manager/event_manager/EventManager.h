@@ -2,13 +2,13 @@
 
 #pragma once
 
+#include <dji_typedef.h>
+#include <dji_waypoint_v3.h>
+
 #include "config/ConfigManager.h"
 #include "protocol/DroneDataClass.h"
 #include "protocol/HeartbeatDataClass.h"
 #include "utils/Logger.h"
-
-#include <dji_typedef.h>
-#include <dji_waypoint_v3.h>
 
 #include <eventpp/eventdispatcher.h>
 #include <eventpp/eventqueue.h>

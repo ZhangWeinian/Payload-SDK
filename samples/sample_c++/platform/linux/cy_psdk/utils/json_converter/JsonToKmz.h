@@ -1,4 +1,4 @@
-// cy_psdk/utils/jsonConverter/JsonToKmz.h
+// cy_psdk/utils/json_converter/JsonToKmz.h
 
 #pragma once
 

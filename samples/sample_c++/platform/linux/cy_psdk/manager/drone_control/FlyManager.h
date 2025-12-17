@@ -1,4 +1,4 @@
-// cy_psdk/manager/droneControl/FlyManager.h
+// cy_psdk/manager/drone_control/FlyManager.h
 
 #pragma once
 

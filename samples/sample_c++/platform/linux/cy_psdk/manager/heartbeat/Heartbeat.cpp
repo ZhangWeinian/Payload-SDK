@@ -2,7 +2,7 @@
 
 #include "manager/heartbeat/Heartbeat.h"
 
-#include "manager/eventManager/EventManager.h"
+#include "manager/event_manager/EventManager.h"
 #include "utils/Logger.h"
 
 namespace plane::manager

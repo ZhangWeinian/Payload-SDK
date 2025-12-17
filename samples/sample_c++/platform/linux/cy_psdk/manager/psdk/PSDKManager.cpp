@@ -2,12 +2,12 @@
 
 #include "manager/psdk/PSDKManager.h"
 
+#include "application.hpp"
 #include <dji_flight_controller.h>
 #include <dji_hms_manager.h>
 #include <dji_logger.h>
 #include <dji_platform.h>
 
-#include "application.hpp"
 #include "config/ConfigManager.h"
 #include "manager/psdk/PSDKAdapter.h"
 #include "utils/DjiErrorUtils.h"
