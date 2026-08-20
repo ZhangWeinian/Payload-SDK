@@ -1,9 +1,8 @@
 # 构建产物目录
-/build/
-/external_libs/install/
+build/
 
-# 忽略所有子模块中的 build 目录
-/external_libs/**/build/
+# 忽略所有子模块
+external_libs/
 
 # VS Code 配置
 # .vscode/
@@ -22,4 +21,4 @@
 *.swp
 .DS_Store
 
-/artifacts/
+artifacts/

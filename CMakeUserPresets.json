@@ -11,8 +11,8 @@
 			"hidden": true,
 			"generator": "Ninja",
 			"cacheVariables": {
-				"CMAKE_CXX_COMPILER": "/usr/bin/g++-13",
-				"CMAKE_C_COMPILER": "/usr/bin/gcc-13",
+				"CMAKE_CXX_COMPILER": "g++",
+				"CMAKE_C_COMPILER": "gcc",
 				"CMAKE_PREFIX_PATH": "${sourceDir}/external_libs/install",
 				"BOOST_ROOT": "${sourceDir}/external_libs/install",
 				"Boost_ROOT": "${sourceDir}/external_libs/install",

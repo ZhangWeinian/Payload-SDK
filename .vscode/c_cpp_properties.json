@@ -21,10 +21,11 @@
 				"external_libs/install/include/range-v3"
 			],
 			"defines": [],
-			"compilerPath": "/usr/bin/g++-13",
+			"compilerPath": "/usr/bin/g++",
 			"intelliSenseMode": "linux-gcc-arm64",
 			"cStandard": "c17",
-			"cppStandard": "c++20"
+			"cppStandard": "c++20",
+			"configurationProvider": "ms-vscode.cmake-tools"
 		}
 	],
 	"version": 4
