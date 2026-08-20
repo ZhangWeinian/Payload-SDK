@@ -140,7 +140,7 @@ namespace plane::protocol
 		_STD optional<int> ZDFYGD {};		// 指点飞跃高度
 		_STD optional<_STD string> RWID {}; // 任务 ID
 		_STD optional<int> ZDMSD {};		// 最大速度
-		_STD optional<int> AQJC {};			// 安全预检
+		_STD optional<int> AQJC {};			// 安全检查
 	};
 
 	struct FlyToPoint
