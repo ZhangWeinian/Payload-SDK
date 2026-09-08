@@ -1,0 +1,32 @@
+{
+	"$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+	"name": "swarm-agent-psdk",
+	"version-string": "3.15.0",
+	"description": "DJI Payload-SDK 定制应用 (cy_psdk) 的第三方依赖清单",
+	"dependencies": [
+		"cli11",
+		"cereal",
+		"cpp-httplib",
+		"eventpp",
+		"fmt",
+		"gtest",
+		"libzip",
+		"ms-gsl",
+		"nlohmann-json",
+		"opus",
+		{
+			"name": "paho-mqttpp3",
+			"features": ["ssl"]
+		},
+		"pugixml",
+		"range-v3",
+		{
+			"name": "spdlog",
+			"features": ["fmt"]
+		},
+		"tl-expected",
+		"asio",
+		"yaml-cpp"
+	],
+	"builtin-baseline": "04a9d8e5212d01ee1dd9478eadd9caade4f8b0d4"
+}

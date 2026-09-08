@@ -5,9 +5,6 @@
 #include "utils/EXEHomePath.h"
 #include "utils/log_util/Logger.h"
 
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <fmt/format.h>
 
 #include <algorithm>
@@ -136,19 +133,21 @@ namespace plane::config
 				this->app_config_.enableUseTestKmz	  = features["use_test_kmz"].as<bool>(false);
 				this->app_config_.testKmzFilePath	  = features["test_kmz_file_path"].as<_STD string_view>(""sv);
 
-				LOG_TRACE("功能开关配置加载详情: \n"
-						  "    FullPSDK={}\n"
-						  "    TraceLog={}\n"
-						  "    SkipRC={}\n"
-						  "    SaveKMZ={}\n"
-						  "    TestKMZ={}\n"
-						  "    TestKMZPath={}",
-						  this->app_config_.enableFullPSDK,
-						  this->app_config_.enableTraceLogLevel,
-						  this->app_config_.enableSkipRC,
-						  this->app_config_.enableSaveKmzFile,
-						  this->app_config_.enableUseTestKmz,
-						  this->app_config_.testKmzFilePath);
+				LOG_TRACE(
+					"功能开关配置加载详情: \n"
+					"    FullPSDK={}\n"
+					"    TraceLog={}\n"
+					"    SkipRC={}\n"
+					"    SaveKMZ={}\n"
+					"    TestKMZ={}\n"
+					"    TestKMZPath={}",
+					this->app_config_.enableFullPSDK,
+					this->app_config_.enableTraceLogLevel,
+					this->app_config_.enableSkipRC,
+					this->app_config_.enableSaveKmzFile,
+					this->app_config_.enableUseTestKmz,
+					this->app_config_.testKmzFilePath
+				);
 			}
 			else
 			{
@@ -170,9 +169,17 @@ namespace plane::config
 
 		try
 		{
-			_BOOST uuids::uuid uuid { _BOOST uuids::random_generator {}() };
-			_STD string		   uuid_str { _BOOST uuids::to_string(uuid) };
-			uuid_str.erase(_STD remove(uuid_str.begin(), uuid_str.end(), '-'), uuid_str.end());
+			// 使用标准库生成 32 位十六进制随机串作为 Client ID
+			_STD random_device rd {};
+			_STD mt19937_64	   gen { (static_cast<_STD uint64_t>(rd()) << 32) ^ rd() };
+			_STD uniform_int_distribution<int> dist { 0, 15 };
+			constexpr _STD string_view		   hex_chars { "0123456789abcdef" };
+			_STD string						   uuid_str {};
+			uuid_str.reserve(32);
+			for (int i { 0 }; i < 32; ++i)
+			{
+				uuid_str.push_back(hex_chars[static_cast<_STD size_t>(dist(gen))]);
+			}
 			return _FMT format("cv_{}", uuid_str);
 		}
 		catch (const _STD exception& e)
@@ -265,8 +272,8 @@ namespace plane::config
 	}
 
 	template<typename ValueType, typename DefaultType>
-	_NODISCARD _STD common_type_t<ValueType, DefaultType> ConfigManager::getConfigValue(const ValueType&   value_if_loaded,
-																						const DefaultType& default_value) const noexcept
+	_NODISCARD _STD common_type_t<ValueType, DefaultType>
+					ConfigManager::getConfigValue(const ValueType& value_if_loaded, const DefaultType& default_value) const noexcept
 	{
 		if (this->loaded_)
 		{

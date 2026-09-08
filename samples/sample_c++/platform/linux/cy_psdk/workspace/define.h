@@ -87,10 +87,6 @@
 	#define _CLI ::CLI::
 #endif
 
-#if __has_include(<boost/uuid/uuid.hpp>) && !defined(_BOOST)
-	#define _BOOST ::boost::
-#endif
-
 #ifndef _DEFINED
 	#define _DEFINED
 

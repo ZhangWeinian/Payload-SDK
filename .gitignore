@@ -1,11 +1,15 @@
 # 构建产物目录
 build/
 
+# vcpkg manifest 模式: 源码根下 CLI 安装目录 / 各构建树内安装目录
+vcpkg_installed/
+
 # 忽略所有子模块
 external_libs/
 
 # VS Code 配置
 # .vscode/
+.codegraph/
 
 # 其他编译产物
 *.o

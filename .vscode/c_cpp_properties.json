@@ -11,14 +11,7 @@
 				"psdk_lib/include",
 				"samples/sample_c++/module_sample",
 				"samples/sample_c/module_sample",
-				"external_libs/install/include",
-				"external_libs/install/include/absl",
-				"external_libs/install/include/asio",
-				"external_libs/install/include/CLI11",
-				"external_libs/install/include/eventpp",
-				"external_libs/install/include/httplib",
-				"external_libs/install/include/libusb-1.0",
-				"external_libs/install/include/range-v3"
+				"${workspaceFolder}/vcpkg_installed/x64-linux/include"
 			],
 			"defines": [],
 			"compilerPath": "/usr/bin/g++",

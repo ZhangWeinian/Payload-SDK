@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.30)
 project (cy_psdk LANGUAGES CXX C)
 
-# 1. 全局配置与辅助函数
+# 全局配置与辅助函数
 set (CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
 
 if(NOT
@@ -36,7 +36,7 @@ if(NOT CMAKE_BUILD_TYPE)
 	)
 endif()
 
-# 2. 项目信息与版本控制
+# 项目信息与版本控制
 find_package (Git QUIET)
 if(GIT_FOUND)
 	execute_process (
@@ -50,14 +50,13 @@ if(NOT GIT_COMMIT_HASH)
 	set (GIT_COMMIT_HASH "unknown")
 endif()
 
-# 3. 路径与变量定义
+# 路径与变量定义
 set (MAIN_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
 set (PSDK_LIB_DIR "${CMAKE_SOURCE_DIR}/psdk_lib/lib")
 set (PSDK_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/psdk_lib/include")
-set (EXTERNAL_INSTALL_DIR "${CMAKE_SOURCE_DIR}/external_libs/install")
 set (PSDK_SAMPLES_DIR "${CMAKE_SOURCE_DIR}/samples")
 
-# 4. 编译器与构建选项
+# 编译器与构建选项
 if(MEMORY_LEAK_CHECK_ON)
 	add_compile_options (-fsanitize=leak)
 	set (LEAK_SANITIZER_LINK_LIBS asan)
@@ -65,7 +64,7 @@ else()
 	set (LEAK_SANITIZER_LINK_LIBS "")
 endif()
 
-# 5. 主要目标定义与源文件
+# 主要目标定义与源文件
 set (MAIN_TARGET_NAME "${PROJECT_NAME}")
 add_executable (${MAIN_TARGET_NAME})
 
@@ -98,7 +97,7 @@ target_sources (
 			${CUSTOM_SOURCES}
 )
 
-# 6. 平台检测
+# 平台检测
 execute_process (
 	COMMAND uname -m
 	OUTPUT_VARIABLE DEVICE_SYSTEM_ID
@@ -115,58 +114,56 @@ else()
 	message (FATAL_ERROR "错误！检测到不支持的平台: ${DEVICE_SYSTEM_ID}")
 endif()
 
-# 7. 依赖查找与配置
-set (Boost_USE_STATIC_LIBS ON)
-set (Boost_NO_BOOST_CMAKE ON)
-set (Boost_NO_SYSTEM_PATHS ON)
-find_package (Boost 1.80.0 REQUIRED COMPONENTS system thread)
+# 依赖查找与配置
 find_package (Threads REQUIRED)
-find_package (yalantinglibs REQUIRED)
 find_package (OpenSSL REQUIRED)
-
-list (APPEND CMAKE_PREFIX_PATH "${EXTERNAL_INSTALL_DIR}")
-set (
-	STATIC_LIBS
-	pugixml
-	yaml-cpp
-	fmt
-	spdlog
-	zip
-	opus
-	usb-1.0
-	hv_static
-	paho-mqttpp3
-	paho-mqtt3a
-	paho-mqtt3as
-	paho-mqtt3c
-	paho-mqtt3cs
-	absl_synchronization
-	absl_time
-	absl_strings
-	absl_hash
-	absl_raw_hash_set
-	absl_int128
-	absl_base
-	absl_throw_delegate
+find_package (fmt CONFIG REQUIRED)
+find_package (spdlog CONFIG REQUIRED) # vcpkg 中启用 spdlog[fmt], 复用外部 fmt
+find_package (nlohmann_json CONFIG REQUIRED)
+find_package (yaml-cpp CONFIG REQUIRED)
+find_package (pugixml CONFIG REQUIRED)
+find_package (libzip CONFIG REQUIRED)
+find_package (Opus CONFIG REQUIRED) # DJI 官方 C 样例 test_widget_speaker 使用
+find_package (
+	PahoMqttCpp
+	CONFIG
+	REQUIRED
+	HINTS
+	"${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/pahomqttcpp"
 )
+find_package (CLI11 CONFIG REQUIRED)
+find_package (eventpp CONFIG REQUIRED)
+find_package (Microsoft.GSL CONFIG REQUIRED)
 
-foreach(LIB_NAME IN LISTS STATIC_LIBS)
-	find_library (
-		${LIB_NAME}_LIBRARY
-		NAMES ${LIB_NAME}
-		PATHS "${EXTERNAL_INSTALL_DIR}/lib"
-		NO_DEFAULT_PATH REQUIRED
+set (THREADPOOL_BASE_DIR "${CMAKE_CURRENT_BINARY_DIR}/3rdparty")
+set (THREADPOOL_HEADER "${THREADPOOL_BASE_DIR}/ThreadPool/ThreadPool.h")
+if(NOT EXISTS "${THREADPOOL_HEADER}")
+	file (MAKE_DIRECTORY "${THREADPOOL_BASE_DIR}/ThreadPool")
+	file (
+		DOWNLOAD
+		"https://raw.githubusercontent.com/progschj/ThreadPool/9a42ec1329f259a5f4881a291db1dcb8f2ad9040/ThreadPool.h"
+		"${THREADPOOL_HEADER}"
+		STATUS threadpool_dl_status
+		TLS_VERIFY ON
 	)
-	list (APPEND ALL_STATIC_LIBS ${${LIB_NAME}_LIBRARY})
-
-	if(${LIB_NAME}_LIBRARY)
-		message (STATUS "[✓] 找到静态库: ${LIB_NAME} -> ${${LIB_NAME}_LIBRARY}")
-	else()
-		message (FATAL_ERROR "[✗] 找不到必需的静态库: ${LIB_NAME}")
+	list (
+		GET
+		threadpool_dl_status
+		0
+		threadpool_dl_code
+	)
+	if(NOT
+	   threadpool_dl_code
+	   EQUAL
+	   0
+	)
+		message (FATAL_ERROR "下载 progschj/ThreadPool.h 失败: ${threadpool_dl_status}")
 	endif()
-endforeach()
+endif()
+add_library (ThreadPool::ThreadPool INTERFACE IMPORTED)
+set_target_properties (ThreadPool::ThreadPool PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${THREADPOOL_BASE_DIR}")
 
-# 8. 目标属性配置 (Includes, Defines, Links)
+# 目标属性配置 (Includes, Defines, Links)
 target_include_directories (
 	${MAIN_TARGET_NAME}
 	PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -176,14 +173,6 @@ target_include_directories (
 			"${PSDK_INCLUDE_DIR}"
 			"${PSDK_SAMPLES_DIR}/sample_c++/module_sample"
 			"${PSDK_SAMPLES_DIR}/sample_c/module_sample"
-			"${EXTERNAL_INSTALL_DIR}/include"
-			"${EXTERNAL_INSTALL_DIR}/include/absl"
-			"${EXTERNAL_INSTALL_DIR}/include/asio"
-			"${EXTERNAL_INSTALL_DIR}/include/CLI11"
-			"${EXTERNAL_INSTALL_DIR}/include/eventpp"
-			"${EXTERNAL_INSTALL_DIR}/include/httplib"
-			"${EXTERNAL_INSTALL_DIR}/include/libusb-1.0"
-			"${EXTERNAL_INSTALL_DIR}/include/range-v3"
 )
 
 target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE _GNU_SOURCE ${PLATFORM_ARCH_DEFINE})
@@ -191,12 +180,20 @@ target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE _GNU_SOURCE ${PLATFORM_A
 target_link_libraries (
 	${MAIN_TARGET_NAME}
 	PRIVATE "${PSDK_LIB_DIR}/${TOOLCHAIN_NAME}/libpayloadsdk.a"
-			${ALL_STATIC_LIBS}
-			Boost::system
-			Boost::thread
-			yalantinglibs::yalantinglibs
+			fmt::fmt
+			spdlog::spdlog
+			nlohmann_json::nlohmann_json
+			yaml-cpp::yaml-cpp
+			pugixml::pugixml
+			libzip::zip
+			Opus::opus
+			PahoMqttCpp::paho-mqttpp3
 			OpenSSL::SSL
 			OpenSSL::Crypto
+			CLI11::CLI11
+			eventpp::eventpp
+			Microsoft.GSL::GSL
+			ThreadPool::ThreadPool
 			Threads::Threads
 			udev
 			m
@@ -208,11 +205,7 @@ target_link_libraries (
 			${LEAK_SANITIZER_LINK_LIBS}
 )
 
-if(TARGET deps)
-	add_dependencies (${MAIN_TARGET_NAME} deps)
-endif()
-
-# 9. 构建时文件复制
+# 构建时文件复制
 set (CONFIG_SOURCE_FILE "${CMAKE_SOURCE_DIR}/config/config.yml")
 set (RUN_SCRIPT_SOURCE_FILE "${CMAKE_SOURCE_DIR}/bash/run.sh")
 set (SYSTEM_LIBS_SOURCE_DIR "${CMAKE_SOURCE_DIR}/system_libs")
@@ -251,7 +244,7 @@ if(EXISTS ${SYSTEM_LIBS_SOURCE_DIR})
 	)
 endif()
 
-# 10. 构建后处理 (MD5 生成、打包与同步)
+# 构建后处理 (MD5 生成、打包与同步)
 set (SYNC_LATEST_SCRIPT "${CMAKE_SOURCE_DIR}/bash/sync_latest.sh")
 set (GEN_MD5_SCRIPT "${CMAKE_SOURCE_DIR}/bash/gen_md5.sh")
 set (LATEST_BUILD_DIR "${CMAKE_SOURCE_DIR}/build/bin")
@@ -280,10 +273,10 @@ add_custom_target (
 
 add_dependencies (sync_latest generate_md5)
 
-# 11. 显示最终构建信息
+# 显示最终构建信息
 pretty_message (
 	"构建配置"
-	" 主目标名称: ${MAIN_TARGET_NAME}
+	"主目标名称: ${MAIN_TARGET_NAME}
 	构建类型: ${CMAKE_BUILD_TYPE}
 	平台架构: ${DEVICE_SYSTEM_ID}
 	Git 提交哈希: ${GIT_COMMIT_HASH}
