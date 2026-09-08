@@ -76,6 +76,22 @@
 				"CMAKE_C_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
 				"BUILD_TESTING": "ON"
 			}
+		},
+		{
+			"name": "aarch64",
+			"displayName": "AArch64 (RK3588S)",
+			"description": "面向 ARM64 (RK3588S) 的交叉编译; 依赖经 vcpkg arm64-linux triplet 构建",
+			"inherits": "base",
+			"binaryDir": "${sourceDir}/build/aarch64",
+			"installDir": "${sourceDir}/install/aarch64",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release",
+				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/aarch64",
+				"VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed/arm64",
+				"VCPKG_TARGET_TRIPLET": "arm64-linux",
+				"VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/aarch64-linux-gnu.cmake",
+				"BUILD_TESTING": "OFF"
+			}
 		}
 	],
 	"buildPresets": [
@@ -95,6 +111,11 @@
 			"name": "redbi",
 			"displayName": "Build RelWithDebInfo",
 			"configurePreset": "redbi"
+		},
+		{
+			"name": "aarch64",
+			"displayName": "Build AArch64 (RK3588S)",
+			"configurePreset": "aarch64"
 		},
 		{
 			"name": "install-debug",

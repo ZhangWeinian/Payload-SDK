@@ -4,9 +4,6 @@ build/
 # vcpkg manifest 模式: 源码根下 CLI 安装目录 / 各构建树内安装目录
 vcpkg_installed/
 
-# 忽略所有子模块
-external_libs/
-
 # VS Code 配置
 # .vscode/
 .codegraph/
@@ -16,6 +13,9 @@ external_libs/
 *.a
 *.so
 *.la
+
+# system_libs/ 下的运行库需要随版本入库分发, 排除在 *.so 忽略之外
+!system_libs/**/*.so
 
 # 日志文件
 *.log

@@ -97,21 +97,25 @@ target_sources (
 			${CUSTOM_SOURCES}
 )
 
-# 平台检测
-execute_process (
-	COMMAND uname -m
-	OUTPUT_VARIABLE DEVICE_SYSTEM_ID
-	OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+# 平台检测: 交叉编译时 CMAKE_SYSTEM_PROCESSOR 由工具链文件设为 aarch64; 本机构建时其默认与 uname -m 一致
+if(NOT CMAKE_SYSTEM_PROCESSOR)
+	execute_process (
+		COMMAND uname -m
+		OUTPUT_VARIABLE CMAKE_SYSTEM_PROCESSOR
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+endif()
 
-if(DEVICE_SYSTEM_ID STREQUAL "x86_64")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
 	set (TOOLCHAIN_NAME x86_64-linux-gnu-gcc)
 	set (PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_x86_64=1")
-elseif(DEVICE_SYSTEM_ID STREQUAL "aarch64")
+	set (SYSTEM_LIBS_ARCH_SUBDIR "x86_64-linux")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|AARCH64)$")
 	set (TOOLCHAIN_NAME aarch64-linux-gnu-gcc)
 	set (PLATFORM_ARCH_DEFINE "PLATFORM_ARCH_AARCH64=1")
+	set (SYSTEM_LIBS_ARCH_SUBDIR "aarch64-linux")
 else()
-	message (FATAL_ERROR "错误！检测到不支持的平台: ${DEVICE_SYSTEM_ID}")
+	message (FATAL_ERROR "错误！检测到不支持的平台: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
 # 依赖查找与配置
@@ -195,20 +199,16 @@ target_link_libraries (
 			Microsoft.GSL::GSL
 			ThreadPool::ThreadPool
 			Threads::Threads
-			udev
 			m
 			dl
-			bz2
-			zstd
-			z
-			lzma
 			${LEAK_SANITIZER_LINK_LIBS}
 )
 
 # 构建时文件复制
 set (CONFIG_SOURCE_FILE "${CMAKE_SOURCE_DIR}/config/config.yml")
 set (RUN_SCRIPT_SOURCE_FILE "${CMAKE_SOURCE_DIR}/bash/run.sh")
-set (SYSTEM_LIBS_SOURCE_DIR "${CMAKE_SOURCE_DIR}/system_libs")
+# system_libs 按架构分子目录 (x86_64-linux / aarch64-linux), 只拷贝当前构建架构对应的运行库到 libs/ (平铺)
+set (SYSTEM_LIBS_SOURCE_DIR "${CMAKE_SOURCE_DIR}/system_libs/${SYSTEM_LIBS_ARCH_SUBDIR}")
 set (CONFIG_DEST_FILE "${MAIN_OUTPUT_PATH}/config.yml")
 set (RUN_SCRIPT_DEST_FILE "${MAIN_OUTPUT_PATH}/run.sh")
 set (LIBS_DEST_DIR "${MAIN_OUTPUT_PATH}/libs")
@@ -235,13 +235,17 @@ if(EXISTS ${SYSTEM_LIBS_SOURCE_DIR})
 		LIST_DIRECTORIES false
 		"${SYSTEM_LIBS_SOURCE_DIR}/*"
 	)
+	# 先清空 libs/ 再拷贝, 避免残留其他架构/旧版本的运行库
 	add_custom_target (
 		copy_system_libs
+		COMMAND ${CMAKE_COMMAND} -E remove_directory "${LIBS_DEST_DIR}"
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBS_DEST_DIR}"
 		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${SYSTEM_LIBS_SOURCE_DIR} "${LIBS_DEST_DIR}"
 		DEPENDS ${LIB_FILES}
-		COMMENT "正在复制系统库"
+		COMMENT "正在复制系统运行库 (${SYSTEM_LIBS_ARCH_SUBDIR})"
 	)
+else()
+	message (WARNING "未找到 ${SYSTEM_LIBS_ARCH_SUBDIR} 对应的 system_libs 子目录, 将不复制运行库")
 endif()
 
 # 构建后处理 (MD5 生成、打包与同步)
@@ -278,7 +282,7 @@ pretty_message (
 	"构建配置"
 	"主目标名称: ${MAIN_TARGET_NAME}
 	构建类型: ${CMAKE_BUILD_TYPE}
-	平台架构: ${DEVICE_SYSTEM_ID}
+	平台架构: ${CMAKE_SYSTEM_PROCESSOR}
 	Git 提交哈希: ${GIT_COMMIT_HASH}
 	当前构建输出: ${MAIN_OUTPUT_PATH}
 	最新产物目录: ${LATEST_BUILD_DIR}"
