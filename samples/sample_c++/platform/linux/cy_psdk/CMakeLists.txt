@@ -145,6 +145,37 @@ else()
 	message (FATAL_ERROR "错误！检测到不支持的平台: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
+# SwarmCatalogClient (内部基础库, 可选)
+# 发布物约定: release/foundation/SwarmCatalogClient + release/third-party/libhv
+# 平台目录: aarch64→3588s, x86_64→linux_x86 (与 cy_psdk 的 SYSTEM_LIBS_ARCH_SUBDIR 不同)
+option (ENABLE_CATALOG_CLIENT "集成 SwarmCatalogClient 服务目录客户端" ON)
+set (CATALOG_CLIENT_ENABLED FALSE)
+if(ENABLE_CATALOG_CLIENT)
+	set (
+		SWARM_RELEASE_ROOT
+		"${CMAKE_SOURCE_DIR}/../../release"
+		CACHE PATH "Swarm release 发布根目录"
+	)
+	if(SYSTEM_LIBS_ARCH_SUBDIR STREQUAL "aarch64-linux")
+		set (CATALOG_PLATFORM "3588s")
+	else()
+		set (CATALOG_PLATFORM "linux_x86")
+	endif()
+	set (CATALOG_CLIENT_ROOT "${SWARM_RELEASE_ROOT}/foundation/SwarmCatalogClient")
+	set (CATALOG_CLIENT_INCLUDE "${CATALOG_CLIENT_ROOT}/include")
+	# 注: 上游包 install(EXPORT) 把绝对路径/usr/local 写入 Targets (不可重定位), 故不依赖 find_package,
+	#     直接链接发布物 .so 并显式给头文件目录。
+	set (CATALOG_CLIENT_LIB "${CATALOG_CLIENT_ROOT}/lib/${CATALOG_PLATFORM}/libswarm_catalog_client.so")
+	if(EXISTS "${CATALOG_CLIENT_INCLUDE}/catalog_runtime.h" AND EXISTS "${CATALOG_CLIENT_LIB}")
+		set (CATALOG_CLIENT_ENABLED TRUE)
+		message (STATUS "SwarmCatalogClient 已启用 (平台=${CATALOG_PLATFORM}, 发布根=${SWARM_RELEASE_ROOT})")
+	else()
+		message (WARNING "未找到 SwarmCatalogClient 发布物: ${CATALOG_CLIENT_LIB}, 跳过目录客户端集成")
+	endif()
+else()
+	message (STATUS "SwarmCatalogClient 集成已禁用 (ENABLE_CATALOG_CLIENT=OFF)")
+endif()
+
 # 依赖查找与配置
 find_package (Threads REQUIRED)
 find_package (OpenSSL REQUIRED)
@@ -209,6 +240,9 @@ target_include_directories (
 )
 
 target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE _GNU_SOURCE ${PLATFORM_ARCH_DEFINE})
+if(CATALOG_CLIENT_ENABLED)
+	target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE CATALOG_ENABLED=1)
+endif()
 
 target_link_libraries (
 	${MAIN_TARGET_NAME}
@@ -232,6 +266,19 @@ target_link_libraries (
 			dl
 			${LEAK_SANITIZER_LINK_LIBS}
 )
+
+# SwarmCatalogClient 链接与头文件 (启用时; 直接链接发布物, 见上文说明)
+if(CATALOG_CLIENT_ENABLED)
+	# libhv: catalog 客户端运行时依赖, 参与链接以解析其符号 (运行时亦随 libs/ 分发)
+	set (CATALOG_LIBHV_LIB "${SWARM_RELEASE_ROOT}/third-party/libhv/libhv_v1.3.2/${CATALOG_PLATFORM}/lib/libhv.so")
+	target_link_libraries (${MAIN_TARGET_NAME} PRIVATE "${CATALOG_CLIENT_LIB}")
+	if(EXISTS "${CATALOG_LIBHV_LIB}")
+		target_link_libraries (${MAIN_TARGET_NAME} PRIVATE "${CATALOG_LIBHV_LIB}")
+	else()
+		message (WARNING "未找到 libhv 库: ${CATALOG_LIBHV_LIB}")
+	endif()
+	target_include_directories (${MAIN_TARGET_NAME} PRIVATE "${CATALOG_CLIENT_INCLUDE}")
+endif()
 
 # 构建时文件复制
 set (CONFIG_SOURCE_FILE "${CMAKE_SOURCE_DIR}/config/config.yml")
@@ -293,6 +340,38 @@ add_dependencies (generate_checksums ${MAIN_TARGET_NAME} copy_runtime_files)
 
 if(TARGET copy_system_libs)
 	add_dependencies (generate_checksums copy_system_libs)
+endif()
+
+# SwarmCatalogClient 运行库打包进交付 libs/ (SONAME 真身文件, 无软链, 兼容完整性自检)
+#   libswarm_catalog_client.so.2  ← lib/<平台>/libswarm_catalog_client.so.<version> 真身
+#   libhv.so                      ← release/third-party/libhv/.../<平台>/lib/libhv.so
+if(CATALOG_CLIENT_ENABLED)
+	file (GLOB CATALOG_LIB_CANDIDATES "${CATALOG_CLIENT_ROOT}/lib/${CATALOG_PLATFORM}/libswarm_catalog_client.so.*")
+	set (CATALOG_LIB_REAL "")
+	foreach(CATALOG_LIB_CANDIDATE ${CATALOG_LIB_CANDIDATES})
+		if(NOT IS_SYMLINK "${CATALOG_LIB_CANDIDATE}")
+			set (CATALOG_LIB_REAL "${CATALOG_LIB_CANDIDATE}")
+		endif()
+	endforeach()
+	set (LIBHV_SRC_LIB "${SWARM_RELEASE_ROOT}/third-party/libhv/libhv_v1.3.2/${CATALOG_PLATFORM}/lib/libhv.so")
+
+	if(CATALOG_LIB_REAL AND EXISTS "${LIBHV_SRC_LIB}")
+		add_custom_target (
+			copy_catalog_libs
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBS_DEST_DIR}"
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CATALOG_LIB_REAL}"
+					"${LIBS_DEST_DIR}/libswarm_catalog_client.so.2"
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIBHV_SRC_LIB}" "${LIBS_DEST_DIR}/libhv.so"
+			COMMENT "正在复制 SwarmCatalogClient 运行库 (${CATALOG_PLATFORM})"
+		)
+		# 与 copy_system_libs 共用 libs/ 目录, 串行化避免竞态 (system_libs 先删后建)
+		if(TARGET copy_system_libs)
+			add_dependencies (copy_catalog_libs copy_system_libs)
+		endif()
+		add_dependencies (generate_checksums copy_catalog_libs)
+	else()
+		message (WARNING "缺少 SwarmCatalogClient/libhv 运行库文件, 交付目录将不含目录客户端动态库")
+	endif()
 endif()
 
 # 显示最终构建信息

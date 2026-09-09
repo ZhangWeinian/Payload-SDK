@@ -154,6 +154,40 @@ namespace plane::config
 				LOG_WARN("配置文件中未找到 'features' 部分，所有功能开关将使用默认值");
 			}
 
+			// SwarmCatalog 接入配置 (可选; 目录不可用仅告警降级, 不影响主链路)
+			if (this->config_node_["catalog"])
+			{
+				const auto& catalog								 = this->config_node_["catalog"];
+
+				this->app_config_.catalog.enabled				 = catalog["enabled"].as<bool>(false);
+				this->app_config_.catalog.serviceId				 = catalog["service_id"].as<_STD string>(""s);
+				this->app_config_.catalog.serviceName			 = catalog["service_name"].as<_STD string>(""s);
+				this->app_config_.catalog.version				 = catalog["version"].as<_STD string>("1.0.0"s);
+				this->app_config_.catalog.heartbeatIntervalMs	 = catalog["heartbeat_interval_ms"].as<_STD uint32_t>(3000);
+				this->app_config_.catalog.statusReportIntervalMs = catalog["status_report_interval_ms"].as<_STD uint32_t>(10'000);
+
+				if (catalog["discover_broker"])
+				{
+					const auto& broker							 = catalog["discover_broker"];
+					this->app_config_.catalog.discoverBroker	 = broker["enabled"].as<bool>(false);
+					this->app_config_.catalog.brokerServiceId	 = broker["service_id"].as<_STD string>(""s);
+					this->app_config_.catalog.brokerPortProtocol = broker["port_protocol"].as<_STD string>("mqtt"s);
+				}
+
+				LOG_DEBUG(
+					"SwarmCatalog 配置: enabled={}, service_id='{}', service_name='{}', version='{}', discover_broker={}",
+					this->app_config_.catalog.enabled,
+					this->app_config_.catalog.serviceId,
+					this->app_config_.catalog.serviceName,
+					this->app_config_.catalog.version,
+					this->app_config_.catalog.discoverBroker
+				);
+			}
+			else
+			{
+				LOG_WARN("配置文件中未找到 'catalog' 部分，SwarmCatalog 接入默认关闭");
+			}
+
 			return true;
 		}
 		catch (const _STD exception& e)
@@ -269,6 +303,63 @@ namespace plane::config
 	_STD string_view ConfigManager::getTestKmzFilePath(void) const noexcept
 	{
 		return this->getConfigValue(this->app_config_.testKmzFilePath);
+	}
+
+	bool ConfigManager::isCatalogEnabled(void) const noexcept
+	{
+		return this->getConfigValue(this->app_config_.catalog.enabled);
+	}
+
+	_STD string ConfigManager::getCatalogServiceId(void) const noexcept
+	{
+		const auto& id { this->getConfigValue(this->app_config_.catalog.serviceId) };
+		if (!id.empty())
+		{
+			return id;
+		}
+		// 留空时按 "payload-<plane.code>" 自动生成
+		return _FMT format("payload-{}", this->getPlaneCode());
+	}
+
+	_STD string ConfigManager::getCatalogServiceName(void) const noexcept
+	{
+		const auto& name { this->getConfigValue(this->app_config_.catalog.serviceName) };
+		if (!name.empty())
+		{
+			return name;
+		}
+		// 留空时按 "DJI 载荷代理-<plane.code>" 自动生成
+		return _FMT format("DJI 载荷代理-{}", this->getPlaneCode());
+	}
+
+	_STD string ConfigManager::getCatalogVersion(void) const noexcept
+	{
+		return this->getConfigValue(this->app_config_.catalog.version, _STD string { "1.0.0" });
+	}
+
+	_STD uint32_t ConfigManager::getCatalogHeartbeatIntervalMs(void) const noexcept
+	{
+		return this->getConfigValue(this->app_config_.catalog.heartbeatIntervalMs, _STD uint32_t { 3000 });
+	}
+
+	_STD uint32_t ConfigManager::getCatalogStatusReportIntervalMs(void) const noexcept
+	{
+		return this->getConfigValue(this->app_config_.catalog.statusReportIntervalMs, _STD uint32_t { 10'000 });
+	}
+
+	bool ConfigManager::isCatalogBrokerDiscoveryEnabled(void) const noexcept
+	{
+		return this->getConfigValue(this->app_config_.catalog.discoverBroker);
+	}
+
+	_STD string_view ConfigManager::getCatalogBrokerServiceId(void) const noexcept
+	{
+		return this->getConfigValue(this->app_config_.catalog.brokerServiceId);
+	}
+
+	_STD string_view ConfigManager::getCatalogBrokerPortProtocol(void) const noexcept
+	{
+		return this->getConfigValue(this->app_config_.catalog.brokerPortProtocol, _STD string_view { "mqtt" });
 	}
 
 	template<typename ValueType, typename DefaultType>

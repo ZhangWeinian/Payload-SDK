@@ -61,6 +61,9 @@ namespace plane::manager
 		// 重启 MQTT 客户端（等同于 stop() 后紧接着 start()）
 		void restart(void) noexcept;
 
+		// 设置动态 broker 地址覆盖 (SwarmCatalog 服务发现结果); 下次 start()/restart() 时优先使用
+		void setBrokerUrlOverride(_STD string url) noexcept;
+
 		// 检查当前是否已连接到 MQTT 服务器
 		_NODISCARD bool isConnected(void) const noexcept;
 
@@ -94,9 +97,10 @@ namespace plane::manager
 		void senderLoop(void) noexcept;
 
 		// 设置连接状态
-		void	   setConnected(bool status) noexcept;
+		void		setConnected(bool status) noexcept;
 
-		_STD mutex mutex_ {};
+		_STD mutex	mutex_ {};
+		_STD string broker_url_override_ {}; // 动态 broker 覆盖 (Catalog 服务发现), 由 mutex_ 保护
 		_STD atomic<bool> running_ { false };
 		_STD atomic<bool> connected_ { false };
 		_STD unique_ptr<Impl>				impl_ { _STD make_unique<Impl>() };

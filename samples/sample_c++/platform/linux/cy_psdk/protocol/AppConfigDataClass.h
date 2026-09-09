@@ -15,6 +15,20 @@ namespace plane::protocol
 {
 	using n_json = _NLOHMANN_JSON json;
 
+	// SwarmCatalog 服务目录接入配置
+	struct CatalogConfig
+	{
+		bool		  enabled { false };				 // 是否启用 SwarmCatalog 接入
+		_STD string	  serviceId {};						 // 注册 service_id (空 → 运行时按 payload-<planeCode> 生成)
+		_STD string	  serviceName {};					 // 注册 service_name (空 → DJI 载荷代理-<planeCode>)
+		_STD string	  version { "1.0.0" };				 // 注册版本号
+		_STD uint32_t heartbeatIntervalMs { 3000 };		 // 目录心跳间隔
+		_STD uint32_t statusReportIntervalMs { 10'000 }; // 状态快照上报间隔
+		bool		  discoverBroker { false };			 // 是否用目录解析动态 MQTT broker
+		_STD string	  brokerServiceId {};				 // 待解析的"中心"服务 service_id
+		_STD string	  brokerPortProtocol { "mqtt" };	 // 取该服务的哪个端点协议
+	};
+
 	struct AppConfigData
 	{
 		_STD string_view mqttUrl {};					// MQTT 服务器地址
@@ -28,5 +42,7 @@ namespace plane::protocol
 		bool			 enableSaveKmzFile { false };	// 是否启用保存 KMZ 文件
 		bool			 enableUseTestKmz { false };	// 是否启用测试 KMZ 文件
 		_STD string_view testKmzFilePath {};			// 测试 KMZ 文件路径，仅在启用测试 KMZ 文件时有效
+
+		CatalogConfig	 catalog {};					// SwarmCatalog 服务目录接入配置
 	};
 } // namespace plane::protocol

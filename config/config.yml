@@ -15,3 +15,19 @@ features:
     save_kmz_file: true # 是否保存 KMZ 文件到本地
     use_test_kmz: false # 是否使用测试 KMZ 文件
     test_kmz_file_path: "/tmp/kmz/1.kmz" # 测试 KMZ 文件路径, 当 use_test_kmz 为 true 时生效
+
+# SwarmCatalog 服务目录接入 (可选, 非阻塞附属能力)
+# 板端需部署 /etc/catalog.yml (node_id/port/targets), 否则 CatalogRuntime.start() 返回 InvalidArgument, 本模块仅告警降级, 不影响 PSDK/MQTT 主链路。
+catalog:
+    enabled: false # 是否启用目录注册与状态上报
+    # 注册身份: 留空则自动生成 service_id="payload-<plane.code>", service_name="DJI 载荷代理-<plane.code>"
+    service_id: "" # 稳定且唯一的技术标识 (必填时留空自动生成)
+    service_name: "" # 展示名 (留空自动生成)
+    version: "1.0.0" # 注册版本号 (去除首尾空白后最长 128 字符)
+    heartbeat_interval_ms: 3000 # 目录心跳间隔
+    status_report_interval_ms: 10000 # 状态快照上报间隔
+    # 服务发现: 解析"中心"服务的 mqtt 端点作为动态 MQTT broker (目录 READY 后生效; 未配置/解析失败时回退 mqtt.url)
+    discover_broker:
+        enabled: false
+        service_id: "" # "中心"服务的技术标识, 如 swarm.plane.<...>
+        port_protocol: "mqtt" # 取该服务的哪个端点协议

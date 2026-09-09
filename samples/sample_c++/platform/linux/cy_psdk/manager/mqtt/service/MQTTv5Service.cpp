@@ -127,6 +127,14 @@ namespace plane::manager
 		}
 
 		_STD string url { plane::config::ConfigManager::getInstance().getMqttUrl() };
+		{
+			// Catalog 服务发现结果优先于静态配置
+			_STD lock_guard<_STD mutex> lock { this->mutex_ };
+			if (!this->broker_url_override_.empty())
+			{
+				url = this->broker_url_override_;
+			}
+		}
 		_STD string cid { plane::config::ConfigManager::getInstance().getMqttClientId() };
 		LOG_INFO("MQTT 服务配置: 服务器={}, 客户端ID={}", url, cid);
 
@@ -222,6 +230,13 @@ namespace plane::manager
 		(void)this->start();
 	}
 
+	void MQTTv5Service::setBrokerUrlOverride(_STD string url) noexcept
+	{
+		_STD lock_guard<_STD mutex>		  lock { this->mutex_ };
+		this->broker_url_override_ = _STD move(url);
+		LOG_INFO("MQTT broker 地址已更新为: {}", this->broker_url_override_);
+	}
+
 	void MQTTv5Service::setConnected(bool status) noexcept
 	{
 		this->connected_.store(status, _STD memory_order_release);
@@ -255,8 +270,10 @@ namespace plane::manager
 				if (const auto now { _STD_CHRONO steady_clock::now() };
 					!this->impl_->isDroppingMessages || (now - this->impl_->lastDropLogTime > this->LOG_THROTTLE_INTERVAL))
 				{
-					LOG_WARN("MQTT 消息队列已满, 正在丢弃最旧的消息以保证数据新鲜度。此警告将在 {} 秒内抑制",
-							 this->LOG_THROTTLE_INTERVAL.count());
+					LOG_WARN(
+						"MQTT 消息队列已满, 正在丢弃最旧的消息以保证数据新鲜度。此警告将在 {} 秒内抑制",
+						this->LOG_THROTTLE_INTERVAL.count()
+					);
 					this->impl_->isDroppingMessages = true;
 					this->impl_->lastDropLogTime	= now;
 				}
@@ -315,11 +332,13 @@ namespace plane::manager
 
 			{
 				_STD unique_lock<_STD mutex> lock(this->impl_->dequeMutex);
-				this->impl_->dequeCv.wait(lock,
-										  [this]
-										  {
-											  return !this->impl_->messageDeque.empty() || !this->impl_->runSender;
-										  });
+				this->impl_->dequeCv.wait(
+					lock,
+					[this]
+					{
+						return !this->impl_->messageDeque.empty() || !this->impl_->runSender;
+					}
+				);
 
 				if (!this->impl_->runSender && this->impl_->messageDeque.empty())
 				{

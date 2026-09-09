@@ -5,6 +5,7 @@
 #include "application.hpp"
 
 #include "config/ConfigManager.h"
+#include "manager/catalog/CatalogManager.h"
 #include "manager/heartbeat/Heartbeat.h"
 #include "manager/mqtt/handler/LogicHandler.h"
 #include "manager/mqtt/service/MQTTv5Service.h"
@@ -85,6 +86,9 @@ namespace plane::my_dji
 			plane::utils::Logger::getInstance().setLocalLogFileLevel(_SPDLOG level::info);
 		}
 
+		// SwarmCatalog 目录客户端 (可选附属能力): 后台启动发现/注册, 与 PSDK 初始化并行, 不阻塞主链路
+		plane::manager::CatalogManager::getInstance().start();
+
 		// 如果启用标准 PSDK 作业流程，则初始化 PSDKManager 和 PSDKAdapter
 		if (config.isStandardProceduresEnabled())
 		{
@@ -135,6 +139,9 @@ namespace plane::my_dji
 			LOG_WARN("未启用标准 PSDK 作业流程");
 		}
 
+		// 到达此处说明 PSDK 流程已就绪 (或未启用), 向目录组件状态上报标记就绪
+		plane::manager::CatalogManager::getInstance().notifyPsdkRunning(true);
+
 		// 尝试启动 MQTT 服务
 		if (!plane::manager::MQTTv5Service::getInstance().start())
 		{
@@ -155,6 +162,7 @@ namespace plane::my_dji
 		else
 		{
 			LOG_DEBUG("心跳服务已成功启动");
+			plane::manager::CatalogManager::getInstance().notifyHeartbeatRunning(true);
 		}
 
 		// 尝试初始化业务逻辑处理器
@@ -177,6 +185,7 @@ namespace plane::my_dji
 		else
 		{
 			LOG_DEBUG("遥测上报服务已成功启动");
+			plane::manager::CatalogManager::getInstance().notifyTelemetryRunning(true);
 		}
 
 		// 等待一段时间让各服务稳定运行，随后报告应用已启动
@@ -217,6 +226,12 @@ namespace plane::my_dji
 				LOG_DEBUG("PSDK CORE 已成功关闭");
 			}
 		}
+
+		// 停止 SwarmCatalog 目录客户端 (最后停止, 让退出前状态尽量上报)
+		plane::manager::CatalogManager::getInstance().notifyPsdkRunning(false);
+		plane::manager::CatalogManager::getInstance().notifyHeartbeatRunning(false);
+		plane::manager::CatalogManager::getInstance().notifyTelemetryRunning(false);
+		plane::manager::CatalogManager::getInstance().stop();
 
 		// 等待一段时间确保所有服务已正确关闭
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(1));
