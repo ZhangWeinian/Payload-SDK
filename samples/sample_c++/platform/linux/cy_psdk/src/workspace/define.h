@@ -75,12 +75,12 @@
 	#define _GSL ::gsl::
 #endif
 
-#if __has_include(<ThreadPool/ThreadPool.h>) && !defined(_THREADPOOL)
-	#define _THREADPOOL ::
-#endif
-
 #if __has_include(<eventpp/eventdispatcher.h>) && !defined(_EVENTPP)
 	#define _EVENTPP ::eventpp::
+#endif
+
+#if __has_include(<BS_thread_pool.hpp>) && !defined(_BS)
+	#define _BS ::BS::
 #endif
 
 #if __has_include(<CLI/CLI.hpp>) && !defined(_CLI)

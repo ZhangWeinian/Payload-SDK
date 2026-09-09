@@ -28,6 +28,6 @@ TEST(ExeHomePath, ResolvesRelativeArgv0AgainstCurrentDirectory)
 	getEXEHomePath.init("cy_psdk");
 
 	// 相对路径 -> current_path/cy_psdk 的父目录
-	const auto expected { std::filesystem::weakly_canonical(std::filesystem::current_path() / "cy_psdk").parent_path() };
+	const auto expected { _STD filesystem::weakly_canonical(_STD filesystem::current_path() / "cy_psdk").parent_path() };
 	EXPECT_EQ(getEXEHomePath("").parent_path().string(), expected.string());
 }

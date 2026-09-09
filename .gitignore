@@ -17,8 +17,8 @@ vcpkg_installed/
 *.so
 *.la
 
-# system_libs/ 下的运行库需要随版本入库分发, 排除在 *.so 忽略之外
-!system_libs/**/*.so
+# system_lib/ 下的运行库需要随版本入库分发, 排除在 *.so 忽略之外
+!system_lib/**/*.so
 
 # 日志文件
 *.log

@@ -5,9 +5,9 @@
 #include "manager/event_manager/EventManager.h"
 #include "protocol/HeartbeatDataClass.h"
 
+#include <BS_thread_pool.hpp>
 #include <eventpp/eventdispatcher.h>
 #include <eventpp/utilities/scopedremover.h>
-#include <ThreadPool/ThreadPool.h>
 
 #include <string_view>
 #include <atomic>
@@ -54,7 +54,7 @@ namespace plane::manager
 
 		_STD unique_ptr<_EVENTPP ScopedRemover<plane::manager::EventManager::StatusDispatcher>> psdk_event_remover_ {};
 		_STD unique_ptr<_EVENTPP ScopedRemover<plane::manager::EventManager::SystemDispatcher>> system_event_remover_ {};
-		_STD unique_ptr<_THREADPOOL ThreadPool> event_processing_pool_ {};
+		_STD unique_ptr<_BS thread_pool<>> event_processing_pool_ {};
 		_STD atomic<bool> run_watchdog_ { false };
 		_STD atomic<bool> running_ { false };
 		_STD atomic<_STD_CHRONO steady_clock::time_point> last_health_ping_time_ {};

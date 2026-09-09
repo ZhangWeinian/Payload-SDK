@@ -11,9 +11,9 @@
 #include "protocol/DroneDataClass.h"
 #include "protocol/HeartbeatDataClass.h"
 
+#include <BS_thread_pool.hpp>
 #include <eventpp/eventdispatcher.h>
 #include <eventpp/utilities/scopedremover.h>
-#include <ThreadPool/ThreadPool.h>
 
 #include <source_location>
 #include <string_view>
@@ -93,12 +93,14 @@ namespace plane::manager
 
 		// PSDK 命令执行器，可以安全地在线程池中异步执行一个 PSDK 命令，并返回一个 _STD future 用于获取执行结果
 		template<typename CommandLogic>
-		_STD future<_DJI T_DjiReturnCode> executePsdkCommandAsync(CommandLogic&&			  logic,
-																  const _STD source_location& location = _STD source_location::current());
+		_STD future<_DJI T_DjiReturnCode>
+			 executePsdkCommandAsync(CommandLogic&& logic, const _STD source_location& location = _STD source_location::current());
 
 		// 异步执行 PSDK 航线动作命令，封装 DjiWaypointV3_Action 为一个异步任务
-		_STD future<_DJI T_DjiReturnCode> executeWaypointActionAsync(_DJI E_DjiWaypointV3Action	 action,
-																	 const _STD source_location& location = _STD source_location::current());
+		_STD future<_DJI T_DjiReturnCode> executeWaypointActionAsync(
+			_DJI E_DjiWaypointV3Action	action,
+			const _STD source_location& location = _STD source_location::current()
+		);
 
 		// 异步执行起飞指令，使飞行器从地面垂直升空至安全高度
 		_NODISCARD _STD future<_DJI T_DjiReturnCode> takeoffAsync(const plane::protocol::TakeoffPayload& takeoffParams);
@@ -258,7 +260,7 @@ namespace plane::manager
 		_STD atomic<_THIS State> state_ { _THIS State::STOPPED };
 		_STD atomic<bool> run_acquisition_ { false };
 		_STD atomic<bool> run_command_processing_ { false };
-		_STD unique_ptr<_THREADPOOL ThreadPool> command_pool_ {};
+		_STD unique_ptr<_BS thread_pool<>> command_pool_ {};
 		_STD unique_ptr<_STD promise<_DJI T_DjiReturnCode>> mission_completion_promise_ {};
 		_STD unique_ptr<_EVENTPP ScopedRemover<plane::manager::EventManager::CommandQueue>> command_queue_remover_ {};
 

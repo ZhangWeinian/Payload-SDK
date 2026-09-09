@@ -23,7 +23,7 @@ namespace plane::manager
 	}
 
 	TelemetryReporter::TelemetryReporter(void) noexcept:
-		event_processing_pool_(_STD make_unique<_THREADPOOL ThreadPool>(6)),
+		event_processing_pool_(_STD make_unique<_BS thread_pool<>>(6)),
 		last_health_ping_time_(_STD_CHRONO steady_clock::now())
 	{}
 
@@ -118,7 +118,7 @@ namespace plane::manager
 			if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
 			{
 				this->run_watchdog_ = true;
-				this->event_processing_pool_->enqueue(
+				this->event_processing_pool_->detach_task(
 					[this]
 					{
 						this->runWatchdogCheck();
@@ -233,7 +233,7 @@ namespace plane::manager
 
 		++(this->queued_task_count_);
 
-		this->event_processing_pool_->enqueue(
+		this->event_processing_pool_->detach_task(
 			[this, eventData]
 			{
 				auto counter_guard = _GSL finally(
@@ -319,7 +319,7 @@ namespace plane::manager
 			return;
 		}
 
-		this->event_processing_pool_->enqueue(
+		this->event_processing_pool_->detach_task(
 			[this]
 			{
 				if (!plane::manager::MQTTv5Service::getInstance().isConnected())
@@ -367,7 +367,7 @@ namespace plane::manager
 			LOG_TRACE("看门狗检查通过，PSDK 数据源正常");
 		}
 
-		this->event_processing_pool_->enqueue(
+		this->event_processing_pool_->detach_task(
 			[this]
 			{
 				_STD this_thread::sleep_for(this->PSDK_WATCHDOG_CHECK_INTERVAL);

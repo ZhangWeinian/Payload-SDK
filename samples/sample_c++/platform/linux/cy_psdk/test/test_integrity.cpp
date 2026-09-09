@@ -5,6 +5,8 @@
 
 #include "utils/integrity/IntegrityCheck.h"
 
+#include "define.h"
+
 #include <gtest/gtest.h>
 
 #include <openssl/evp.h>
@@ -16,12 +18,12 @@
 
 namespace
 {
-	namespace fs = std::filesystem;
+	namespace fs = _STD filesystem;
 
-	std::string sha256HexOfFile(const fs::path& file)
+	_STD string			sha256HexOfFile(const fs::path& file)
 	{
-		std::ifstream											in(file, std::ios::binary);
-		std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> ctx { EVP_MD_CTX_new(), EVP_MD_CTX_free };
+		_STD ifstream in(file, _STD ios::binary);
+		_STD unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> ctx { EVP_MD_CTX_new(), EVP_MD_CTX_free };
 		if (!in || !ctx || EVP_DigestInit_ex(ctx.get(), EVP_sha256(), nullptr) != 1)
 		{
 			return {};
@@ -31,7 +33,7 @@ namespace
 		while (in.good())
 		{
 			in.read(buf, sizeof(buf));
-			if (auto n { in.gcount() }; n > 0 && EVP_DigestUpdate(ctx.get(), buf, static_cast<std::size_t>(n)) != 1)
+			if (auto n { in.gcount() }; n > 0 && EVP_DigestUpdate(ctx.get(), buf, static_cast<_STD size_t>(n)) != 1)
 			{
 				return {};
 			}
@@ -45,7 +47,7 @@ namespace
 		}
 
 		constexpr static char hex[] { "0123456789abcdef" };
-		std::string			  out;
+		_STD string			  out {};
 		out.reserve(digest_len * 2);
 		for (unsigned int i { 0 }; i < digest_len; ++i)
 		{
@@ -55,9 +57,9 @@ namespace
 		return out;
 	}
 
-	void writeFile(const fs::path& file, const std::string& content)
+	void writeFile(const fs::path& file, const _STD string& content)
 	{
-		std::ofstream out(file, std::ios::binary);
+		_STD ofstream out(file, _STD ios::binary);
 		out << content;
 	}
 
@@ -67,7 +69,7 @@ namespace
 	}
 
 	// 构造标准交付目录, 返回 base 路径 (argv0 = base/cy_psdk)
-	fs::path makeDeployment(const std::string& tag)
+	fs::path makeDeployment(const _STD string& tag)
 	{
 		auto base { fs::temp_directory_path() / ("cy_psdk_integrity_" + tag) };
 		fs::remove_all(base);

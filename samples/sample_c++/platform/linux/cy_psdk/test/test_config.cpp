@@ -14,10 +14,10 @@ namespace
 {
 	using plane::config::ConfigManager;
 
-	// 返回 std::string 拷贝, 规避 getter 返回 string_view 指向单例内部的限制
-	std::string sv(std::string_view view)
+	// 返回字符串拷贝(规避 getter 返回 string_view 指向单例内部)
+	_STD string sv(_STD string_view view)
 	{
-		return std::string { view };
+		return _STD string { view };
 	}
 } // namespace
 
@@ -37,7 +37,7 @@ TEST(ConfigManager, LoadsSharedConfigAndExposesValues)
 	EXPECT_EQ(sv(cfg.getPlaneCode()), "10074000");
 	EXPECT_EQ(sv(cfg.getMqttUrl()), "tcp://127.0.0.1:1883");
 	EXPECT_FALSE(cfg.getMqttClientId().empty());
-	EXPECT_NE(cfg.getMqttClientId().find("cv_"), std::string::npos);
+	EXPECT_NE(cfg.getMqttClientId().find("cv_"), _STD string::npos);
 
 	EXPECT_FALSE(cfg.isStandardProceduresEnabled());
 	EXPECT_FALSE(cfg.isTraceLogLevel());

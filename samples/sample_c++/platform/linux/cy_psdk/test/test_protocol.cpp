@@ -20,11 +20,11 @@ namespace
 TEST(ProtocolDataClass, MissionControlActionEnumRoundTrip)
 {
 	n_json j = MissionControlAction::RWJS;
-	EXPECT_EQ(j.get<std::string>(), "RWJS");
+	EXPECT_EQ(j.get<_STD string>(), "RWJS");
 	EXPECT_EQ(j.get<MissionControlAction>(), MissionControlAction::RWJS);
 
 	n_json j2 = MissionControlAction::RWKS;
-	EXPECT_EQ(j2.get<std::string>(), "RWKS");
+	EXPECT_EQ(j2.get<_STD string>(), "RWKS");
 	EXPECT_EQ(j2.get<MissionControlAction>(), MissionControlAction::RWKS);
 }
 
@@ -48,7 +48,7 @@ TEST(ProtocolDataClass, WaypointFullRoundTrip)
 	w.GD	= 120.0;
 	w.SD	= 6.5;
 	w.YTFYJ = -30.0;
-	w.DZJ	= std::vector<WaypointAction> {
+	w.DZJ	= _STD vector<WaypointAction> {
 		WaypointAction { .LX = 1, .CS = 42 }
 	};
 
@@ -87,7 +87,7 @@ TEST(ProtocolDataClass, NetworkMessageRoundTripWithPayload)
 
 	n_json j = msg;
 	EXPECT_TRUE(j.contains("XXXX"));
-	EXPECT_EQ(j.at("SBSJ").get<std::string>(), "2026-09-09 10:00:00");
+	EXPECT_EQ(j.at("SBSJ").get<_STD string>(), "2026-09-09 10:00:00");
 
 	const auto back = j.get<NetworkMessage<MissionProgressPayload>>();
 	ASSERT_TRUE(back.XXXX.has_value());

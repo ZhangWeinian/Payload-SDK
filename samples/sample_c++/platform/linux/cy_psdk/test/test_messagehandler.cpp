@@ -12,14 +12,14 @@
 
 namespace
 {
-	using nlohmann::json;
+	using _NLOHMANN_JSON json;
 	using plane::manager::MqttMessageHandler;
 
 	// 每个用例独立 topic, 避免单例路由表跨用例污染
-	const std::string kRouteTopic { "/unit/handler/route" };
-	const std::string kUnknownTypeTopic { "/unit/handler/unknown_type" };
-	const std::string kUnknownTopic { "/unit/handler/unknown_topic" };
-	const std::string kThrowTopic { "/unit/handler/throw" };
+	const _STD string kRouteTopic { "/unit/handler/route" };
+	const _STD string kUnknownTypeTopic { "/unit/handler/unknown_type" };
+	const _STD string kUnknownTopic { "/unit/handler/unknown_topic" };
+	const _STD string kThrowTopic { "/unit/handler/throw" };
 } // namespace
 
 TEST(MqttMessageHandler, DispatchesToRegisteredHandler)
@@ -106,7 +106,7 @@ TEST(MqttMessageHandler, HandlerExceptionIsSwallowed)
 		"SBZT",
 		[&](const json&)
 		{
-			throw std::runtime_error("boom");
+			throw _STD runtime_error("boom");
 		}
 	);
 

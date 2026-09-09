@@ -6,14 +6,16 @@
 
 #pragma once
 
+#include "define.h"
+
 #include <filesystem>
 #include <fstream>
 
 namespace plane::test
 {
-	inline std::filesystem::path sharedConfigPath()
+	inline _STD filesystem::path sharedConfigPath()
 	{
-		return std::filesystem::temp_directory_path() / "cy_psdk_unit_config.yml";
+		return _STD filesystem::temp_directory_path() / "cy_psdk_unit_config.yml";
 	}
 
 	// 与仓库 config/config.yml 关键字段一致 (plane.code=10074000, catalog.enabled=false)
@@ -46,21 +48,21 @@ catalog:
 )"
 		};
 
-		std::ofstream out { sharedConfigPath() };
+		_STD ofstream out { sharedConfigPath() };
 		out << kYaml;
 		return out.good();
 	}
 
-	inline std::filesystem::path invalidConfigPath()
+	inline _STD filesystem::path invalidConfigPath()
 	{
-		return std::filesystem::temp_directory_path() / "cy_psdk_unit_config_invalid.yml";
+		return _STD filesystem::temp_directory_path() / "cy_psdk_unit_config_invalid.yml";
 	}
 
 	// 写入一份"缺 mqtt.url / plane.code"的非法配置
 	inline bool writeInvalidConfig()
 	{
 		constexpr static const char* kYaml { "features:\n    enable_full_psdk: false\n" };
-		std::ofstream				 out { invalidConfigPath() };
+		_STD ofstream				 out { invalidConfigPath() };
 		out << kYaml;
 		return out.good();
 	}

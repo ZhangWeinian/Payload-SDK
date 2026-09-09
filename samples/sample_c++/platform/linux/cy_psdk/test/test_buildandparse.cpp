@@ -43,17 +43,17 @@ TEST(JsonConverter, BuildStatusReportEnvelope)
 	const auto json_string { JsonConverter::buildStatusReportJson(payload) };
 	const auto parsed = n_json::parse(json_string);
 
-	EXPECT_EQ(parsed.at("ZBID").get<std::string>(), "10074000");
-	EXPECT_EQ(parsed.at("XXLX").get<std::string>(), "SBZT");
+	EXPECT_EQ(parsed.at("ZBID").get<_STD string>(), "10074000");
+	EXPECT_EQ(parsed.at("XXLX").get<_STD string>(), "SBZT");
 	EXPECT_GT(parsed.at("SJC").get<int64_t>(), 0);
-	EXPECT_EQ(parsed.at("XXID").get<std::string>().substr(0, 4), "SBZT");
-	EXPECT_TRUE(std::regex_match(parsed.at("SBSJ").get<std::string>(), std::regex { R"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})" }));
+	EXPECT_EQ(parsed.at("XXID").get<_STD string>().substr(0, 4), "SBZT");
+	EXPECT_TRUE(_STD regex_match(parsed.at("SBSJ").get<_STD string>(), _STD regex { R"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})" }));
 
 	const auto& inner { parsed.at("XXXX") };
 	EXPECT_DOUBLE_EQ(inner.at("DQJD").get<double>(), 116.3912);
 	EXPECT_DOUBLE_EQ(inner.at("DQWD").get<double>(), 39.9075);
 	EXPECT_DOUBLE_EQ(inner.at("YTFY").get<double>(), -12.5);
-	EXPECT_EQ(inner.at("CJ").get<std::string>(), "DJI");
+	EXPECT_EQ(inner.at("CJ").get<_STD string>(), "DJI");
 }
 
 TEST(JsonConverter, BuildMissionInfoEnvelope)
@@ -67,9 +67,9 @@ TEST(JsonConverter, BuildMissionInfoEnvelope)
 
 	const auto parsed = n_json::parse(JsonConverter::buildMissionInfoJson(payload));
 
-	EXPECT_EQ(parsed.at("XXLX").get<std::string>(), "GDXX");
-	EXPECT_EQ(parsed.at("XXXX").at("FJSN").get<std::string>(), "10074000");
-	EXPECT_EQ(parsed.at("XXXX").at("YKQIP").get<std::string>(), "192.168.1.10");
+	EXPECT_EQ(parsed.at("XXLX").get<_STD string>(), "GDXX");
+	EXPECT_EQ(parsed.at("XXXX").at("FJSN").get<_STD string>(), "10074000");
+	EXPECT_EQ(parsed.at("XXXX").at("YKQIP").get<_STD string>(), "192.168.1.10");
 }
 
 TEST(JsonConverter, BuildHealthStatusEnvelopeWithEmptyAlerts)
@@ -84,10 +84,10 @@ TEST(JsonConverter, BuildHealthStatusEnvelopeWithEmptyAlerts)
 
 	const auto parsed = n_json::parse(JsonConverter::buildHealthStatusJson(payload));
 
-	EXPECT_EQ(parsed.at("XXLX").get<std::string>(), "JKGL");
+	EXPECT_EQ(parsed.at("XXLX").get<_STD string>(), "JKGL");
 	ASSERT_TRUE(parsed.at("XXXX").contains("GJLB"));
 	EXPECT_EQ(parsed.at("XXXX").at("GJLB").size(), 1);
-	EXPECT_EQ(parsed.at("XXXX").at("GJLB")[0].at("GJM").get<std::string>(), "123456");
+	EXPECT_EQ(parsed.at("XXXX").at("GJLB")[0].at("GJM").get<_STD string>(), "123456");
 }
 
 TEST(JsonConverter, ParseAndRouteDispatchesMatchingPlane)
@@ -107,7 +107,7 @@ TEST(JsonConverter, ParseAndRouteDispatchesMatchingPlane)
 		}
 	);
 
-	const std::string message { R"({"ZBID":"10074000","XXLX":"SBZT","XXXX":{"DQJD":116.39,"YTFY":-5.0}})" };
+	const _STD string message { R"({"ZBID":"10074000","XXLX":"SBZT","XXXX":{"DQJD":116.39,"YTFY":-5.0}})" };
 	JsonConverter::parseAndRouteMessage("/unit/jsonc/route", message);
 
 	EXPECT_EQ(call_count, 1);
@@ -128,7 +128,7 @@ TEST(JsonConverter, ParseAndRouteIgnoresOtherPlane)
 		}
 	);
 
-	const std::string message { R"({"ZBID":"99999999","XXLX":"SBZT","XXXX":{"DQJD":116.39}})" };
+	const _STD string message { R"({"ZBID":"99999999","XXLX":"SBZT","XXXX":{"DQJD":116.39}})" };
 	JsonConverter::parseAndRouteMessage("/unit/jsonc/other", message);
 
 	EXPECT_EQ(call_count, 0);
