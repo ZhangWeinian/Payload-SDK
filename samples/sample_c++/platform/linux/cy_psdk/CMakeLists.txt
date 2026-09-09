@@ -236,7 +236,6 @@ target_link_libraries (
 # 构建时文件复制
 set (CONFIG_SOURCE_FILE "${CMAKE_SOURCE_DIR}/config/config.yml")
 set (RUN_SCRIPT_SOURCE_FILE "${CMAKE_SOURCE_DIR}/bash/run.sh")
-# system_libs 按架构分子目录 (x86_64-linux / aarch64-linux), 只拷贝当前构建架构对应的运行库到 libs/ (平铺)
 set (SYSTEM_LIBS_SOURCE_DIR "${CMAKE_SOURCE_DIR}/system_libs/${SYSTEM_LIBS_ARCH_SUBDIR}")
 set (CONFIG_DEST_FILE "${MAIN_OUTPUT_PATH}/config.yml")
 set (RUN_SCRIPT_DEST_FILE "${MAIN_OUTPUT_PATH}/run.sh")
@@ -278,8 +277,9 @@ else()
 endif()
 
 # 构建后处理: 默认构建即生成交付目录的完整性校验 (SHA256)。
-# 输出目录结构 (每个构建预设独立, 无跨架构共享目录):
-#   build/<preset>/bin/  = 自包含交付目录: cy_psdk + config.yml + run.sh + libs/ + *.sha256
+# 输出目录结构 (按平台分组, 每个配置独立, 无跨架构/跨配置共享目录):
+#   build/<平台>/<配置>/bin/ = 自包含交付目录: cy_psdk + config.yml + run.sh + libs/ + *.sha256
+#   如 build/x86_64-linux/debug/bin, build/aarch64-linux/release/bin
 set (GEN_CHECKSUM_SCRIPT "${CMAKE_SOURCE_DIR}/bash/gen_checksum.sh")
 
 add_custom_target (

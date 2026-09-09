@@ -72,7 +72,7 @@ namespace
 		}
 
 		unsigned char digest[EVP_MAX_MD_SIZE] {};
-		unsigned int digest_len { 0 };
+		unsigned int  digest_len { 0 };
 		if (EVP_DigestFinal_ex(ctx.get(), digest, &digest_len) != 1)
 		{
 			return false;
@@ -105,7 +105,7 @@ namespace
 	{
 		_STD string expected;
 		_STD string actual;
-		const auto checksum_file { _STD string(file.string()) + ".sha256" };
+		const auto	checksum_file { _STD string(file.string()) + ".sha256" };
 
 		if (!readStoredHash(checksum_file, expected))
 		{
