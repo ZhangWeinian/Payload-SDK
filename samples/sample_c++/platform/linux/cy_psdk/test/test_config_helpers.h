@@ -18,33 +18,20 @@ namespace plane::test
 		return _STD filesystem::temp_directory_path() / "cy_psdk_unit_config.yml";
 	}
 
-	// 与仓库 config/config.yml 关键字段一致 (plane.code=10074000, catalog.enabled=false)
+	// 与仓库 config/config.yml 对齐: mqtt/plane.code/测试KMZ/discover_broker 均已从配置移除 (由代码内置)
 	inline bool writeSharedConfig()
 	{
 		constexpr static const char* kYaml {
-			R"(mqtt:
-    url: "tcp://127.0.0.1:1883"
-plane:
-    code: "10074000"
-features:
+			R"(features:
     enable_full_psdk: false
     enable_trace_log: false
     set_psdk_log_level: 2
     skip_rc: false
     save_kmz_file: false
-    use_test_kmz: false
-    test_kmz_file_path: "/tmp/kmz/1.kmz"
 catalog:
     enabled: false
-    service_id: ""
-    service_name: ""
-    version: "1.0.0"
     heartbeat_interval_ms: 3000
     status_report_interval_ms: 10000
-    discover_broker:
-        enabled: false
-        service_id: ""
-        port_protocol: "mqtt"
 )"
 		};
 
@@ -58,10 +45,10 @@ catalog:
 		return _STD filesystem::temp_directory_path() / "cy_psdk_unit_config_invalid.yml";
 	}
 
-	// 写入一份"缺 mqtt.url / plane.code"的非法配置
+	// 写入一份"非法 YAML"配置 (缩进错误), 用于"未加载任何合法配置前先拒绝"用例
 	inline bool writeInvalidConfig()
 	{
-		constexpr static const char* kYaml { "features:\n    enable_full_psdk: false\n" };
+		constexpr static const char* kYaml { "a: b\n  bad_indent: c\n" };
 		_STD ofstream				 out { invalidConfigPath() };
 		out << kYaml;
 		return out.good();

@@ -1,7 +1,7 @@
 // cy_psdk/tests/test_buildandparse.cpp
 //
 // 覆盖 JsonConverter: 上行 JSON 信封构建与 MQTT 消息解析路由。
-// 依赖已加载的 ConfigManager (plane.code=10074000, 见 test_config.cpp / test_config_helpers.h)。
+// 依赖已加载的 ConfigManager (内置占位 SN=0A1B2C3D4E5F6078, 见 test_config.cpp / test_config_helpers.h)。
 
 #include "config/ConfigManager.h"
 #include "manager/mqtt/handler/MessageHandler.h"
@@ -43,7 +43,7 @@ TEST(JsonConverter, BuildStatusReportEnvelope)
 	const auto json_string { JsonConverter::buildStatusReportJson(payload) };
 	const auto parsed = n_json::parse(json_string);
 
-	EXPECT_EQ(parsed.at("ZBID").get<_STD string>(), "10074000");
+	EXPECT_EQ(parsed.at("ZBID").get<_STD string>(), "0A1B2C3D4E5F6078");
 	EXPECT_EQ(parsed.at("XXLX").get<_STD string>(), "SBZT");
 	EXPECT_GT(parsed.at("SJC").get<int64_t>(), 0);
 	EXPECT_EQ(parsed.at("XXID").get<_STD string>().substr(0, 4), "SBZT");
@@ -61,14 +61,14 @@ TEST(JsonConverter, BuildMissionInfoEnvelope)
 	ensureConfigLoaded();
 
 	plane::protocol::MissionInfoPayload payload {};
-	payload.FJSN	  = "10074000";
+	payload.FJSN	  = "0A1B2C3D4E5F6078";
 	payload.YKQIP	  = "192.168.1.10";
 	payload.YSRTSP	  = "rtsp://192.168.1.10:8554/live/1";
 
 	const auto parsed = n_json::parse(JsonConverter::buildMissionInfoJson(payload));
 
 	EXPECT_EQ(parsed.at("XXLX").get<_STD string>(), "GDXX");
-	EXPECT_EQ(parsed.at("XXXX").at("FJSN").get<_STD string>(), "10074000");
+	EXPECT_EQ(parsed.at("XXXX").at("FJSN").get<_STD string>(), "0A1B2C3D4E5F6078");
 	EXPECT_EQ(parsed.at("XXXX").at("YKQIP").get<_STD string>(), "192.168.1.10");
 }
 
@@ -107,7 +107,7 @@ TEST(JsonConverter, ParseAndRouteDispatchesMatchingPlane)
 		}
 	);
 
-	const _STD string message { R"({"ZBID":"10074000","XXLX":"SBZT","XXXX":{"DQJD":116.39,"YTFY":-5.0}})" };
+	const _STD string message { R"({"ZBID":"0A1B2C3D4E5F6078","XXLX":"SBZT","XXXX":{"DQJD":116.39,"YTFY":-5.0}})" };
 	JsonConverter::parseAndRouteMessage("/unit/jsonc/route", message);
 
 	EXPECT_EQ(call_count, 1);

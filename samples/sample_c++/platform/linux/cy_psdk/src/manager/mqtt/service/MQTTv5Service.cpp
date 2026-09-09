@@ -135,6 +135,11 @@ namespace plane::manager
 				url = this->broker_url_override_;
 			}
 		}
+		if (url.empty())
+		{
+			LOG_WARN("MQTT broker 地址为空, 暂不连接; 等待 SwarmCatalog 服务发现提供动态 broker 后自动重连");
+			return true;
+		}
 		_STD string cid { plane::config::ConfigManager::getInstance().getMqttClientId() };
 		LOG_INFO("MQTT 服务配置: 服务器={}, 客户端ID={}", url, cid);
 

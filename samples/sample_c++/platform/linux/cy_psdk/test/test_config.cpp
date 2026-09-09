@@ -34,8 +34,9 @@ TEST(ConfigManager, LoadsSharedConfigAndExposesValues)
 
 	auto& cfg { ConfigManager::getInstance() };
 
-	EXPECT_EQ(sv(cfg.getPlaneCode()), "10074000");
-	EXPECT_EQ(sv(cfg.getMqttUrl()), "tcp://127.0.0.1:1883");
+	// mqtt.url / plane.code 均已从配置移除: broker 地址由 catalog 提供, 飞行器标识回退内置占位 SN
+	EXPECT_TRUE(cfg.getMqttUrl().empty());
+	EXPECT_EQ(sv(cfg.getPlaneCode()), "0A1B2C3D4E5F6078");
 	EXPECT_FALSE(cfg.getMqttClientId().empty());
 	EXPECT_NE(cfg.getMqttClientId().find("cv_"), _STD string::npos);
 
@@ -43,22 +44,21 @@ TEST(ConfigManager, LoadsSharedConfigAndExposesValues)
 	EXPECT_FALSE(cfg.isTraceLogLevel());
 	EXPECT_FALSE(cfg.isSkipRC());
 	EXPECT_FALSE(cfg.isSaveKmz());
-	EXPECT_FALSE(cfg.isTestKmzFile());
-	EXPECT_EQ(sv(cfg.getTestKmzFilePath()), "/tmp/kmz/1.kmz");
 }
 
-TEST(ConfigManager, CatalogSectionDefaultsAndPlaneCodeTemplate)
+TEST(ConfigManager, CatalogIdentityAndBrokerDiscoveryAreCodeFixed)
 {
 	auto& cfg { ConfigManager::getInstance() };
 
-	// catalog.enabled=false; service_id/service_name 留空 -> 按 plane.code 模板生成
+	// catalog.enabled=false (fixture); 身份/版本/broker 发现为代码内置常量, 不允许配置
 	EXPECT_FALSE(cfg.isCatalogEnabled());
-	EXPECT_EQ(cfg.getCatalogServiceId(), "payload-10074000");
-	EXPECT_EQ(cfg.getCatalogServiceName(), "DJI 载荷代理-10074000");
-	EXPECT_EQ(cfg.getCatalogVersion(), "1.0.0");
+	EXPECT_EQ(cfg.getCatalogServiceId(), "swarm.agent.0A1B2C3D4E5F6078");
+	EXPECT_EQ(cfg.getCatalogServiceName(), "DJI-PSDK-0A1B2C3D4E5F6078");
+	EXPECT_EQ(cfg.getCatalogVersion(), "3.1.0");
 	EXPECT_EQ(cfg.getCatalogHeartbeatIntervalMs(), 3000u);
 	EXPECT_EQ(cfg.getCatalogStatusReportIntervalMs(), 10'000u);
 
-	EXPECT_FALSE(cfg.isCatalogBrokerDiscoveryEnabled());
-	EXPECT_EQ(sv(cfg.getCatalogBrokerPortProtocol()), "mqtt");
+	EXPECT_TRUE(cfg.isCatalogBrokerDiscoveryEnabled());
+	EXPECT_EQ(sv(cfg.getCatalogBrokerServiceId()), "swarm.mqtt.base");
+	EXPECT_EQ(sv(cfg.getCatalogBrokerPortProtocol()), "tcp");
 }

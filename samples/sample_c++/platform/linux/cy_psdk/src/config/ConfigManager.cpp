@@ -14,6 +14,16 @@
 #include <random>
 #include <sstream>
 
+namespace
+{
+	// 占位假 SN (16 位 DJI 风格, 兼作"内部代码"), 代码内置不允许配置。
+	// TODO: 接入 PSDK 真序列号后替换。同一值用于:
+	//   - catalog service_id = "swarm.agent.<SN>" (对齐 msdk)
+	//   - catalog service_name = "DJI-PSDK-<内部代码>" (内部代码后续改接后台返回的 internalPlaneId)
+	//   - 遥测/指令消息中的飞行器标识 (getPlaneCode 消费点)
+	constexpr _STD string_view kPlaneSn { "0A1B2C3D4E5F6078" };
+} // namespace
+
 namespace plane::config
 {
 	ConfigManager& ConfigManager::getInstance(void) noexcept
@@ -89,36 +99,36 @@ namespace plane::config
 		using namespace _STD literals;
 		try
 		{
+			// mqtt.url 不再必填: broker 地址由 SwarmCatalog 服务发现 (swarm.mqtt.base) 提供; 若仍配置则作为静态回退
 			if (this->config_node_["mqtt"] && this->config_node_["mqtt"]["url"])
 			{
 				_STD string_view url { this->config_node_["mqtt"]["url"].as<_STD string_view>() };
 				if (url.empty())
 				{
-					LOG_ERROR("MQTT URL 不能为空");
-					return false;
+					LOG_WARN("配置中 'mqtt.url' 为空, 忽略 (MQTT 地址将仅由 SwarmCatalog 服务发现提供)");
 				}
-				this->app_config_.mqttUrl = url;
+				else
+				{
+					this->app_config_.mqttUrl = url;
+				}
 			}
 			else
 			{
-				LOG_ERROR("配置文件中缺少 'mqtt.url'");
-				return false;
+				LOG_INFO("未配置 'mqtt.url', MQTT 地址将由 SwarmCatalog 服务发现 (swarm.mqtt.base) 提供");
 			}
 
+			// plane.code 不再必填: 当前阶段使用内置占位 SN (后续改由 PSDK 真序列号填充); 若仍配置则覆盖占位值
 			if (this->config_node_["plane"] && this->config_node_["plane"]["code"])
 			{
 				_STD string_view plane_code { this->config_node_["plane"]["code"].as<_STD string_view>() };
-				if (plane_code.empty())
+				if (!plane_code.empty())
 				{
-					LOG_ERROR("Plane Code 不能为空");
-					return false;
+					this->app_config_.planeCode = plane_code;
 				}
-				this->app_config_.planeCode = plane_code;
 			}
 			else
 			{
-				LOG_ERROR("配置文件中缺少 'plane.code'");
-				return false;
+				LOG_INFO("未配置 'plane.code', 使用内置占位 SN ({})", kPlaneSn);
 			}
 
 			if (this->config_node_["features"])
@@ -130,23 +140,17 @@ namespace plane::config
 				this->app_config_.psdkLogLevel		  = features["set_psdk_log_level"].as<_STD uint8_t>(3);
 				this->app_config_.enableSkipRC		  = features["skip_rc"].as<bool>(false);
 				this->app_config_.enableSaveKmzFile	  = features["save_kmz_file"].as<bool>(false);
-				this->app_config_.enableUseTestKmz	  = features["use_test_kmz"].as<bool>(false);
-				this->app_config_.testKmzFilePath	  = features["test_kmz_file_path"].as<_STD string_view>(""sv);
 
 				LOG_TRACE(
 					"功能开关配置加载详情: \n"
 					"    FullPSDK={}\n"
 					"    TraceLog={}\n"
 					"    SkipRC={}\n"
-					"    SaveKMZ={}\n"
-					"    TestKMZ={}\n"
-					"    TestKMZPath={}",
+					"    SaveKMZ={}",
 					this->app_config_.enableFullPSDK,
 					this->app_config_.enableTraceLogLevel,
 					this->app_config_.enableSkipRC,
-					this->app_config_.enableSaveKmzFile,
-					this->app_config_.enableUseTestKmz,
-					this->app_config_.testKmzFilePath
+					this->app_config_.enableSaveKmzFile
 				);
 			}
 			else
@@ -155,32 +159,20 @@ namespace plane::config
 			}
 
 			// SwarmCatalog 接入配置 (可选; 目录不可用仅告警降级, 不影响主链路)
+			// 注: 注册身份(service_id/service_name/version)与 broker 发现目标已固定于代码, 不允许配置。
 			if (this->config_node_["catalog"])
 			{
 				const auto& catalog								 = this->config_node_["catalog"];
 
 				this->app_config_.catalog.enabled				 = catalog["enabled"].as<bool>(false);
-				this->app_config_.catalog.serviceId				 = catalog["service_id"].as<_STD string>(""s);
-				this->app_config_.catalog.serviceName			 = catalog["service_name"].as<_STD string>(""s);
-				this->app_config_.catalog.version				 = catalog["version"].as<_STD string>("1.0.0"s);
 				this->app_config_.catalog.heartbeatIntervalMs	 = catalog["heartbeat_interval_ms"].as<_STD uint32_t>(3000);
 				this->app_config_.catalog.statusReportIntervalMs = catalog["status_report_interval_ms"].as<_STD uint32_t>(10'000);
 
-				if (catalog["discover_broker"])
-				{
-					const auto& broker							 = catalog["discover_broker"];
-					this->app_config_.catalog.discoverBroker	 = broker["enabled"].as<bool>(false);
-					this->app_config_.catalog.brokerServiceId	 = broker["service_id"].as<_STD string>(""s);
-					this->app_config_.catalog.brokerPortProtocol = broker["port_protocol"].as<_STD string>("mqtt"s);
-				}
-
 				LOG_DEBUG(
-					"SwarmCatalog 配置: enabled={}, service_id='{}', service_name='{}', version='{}', discover_broker={}",
+					"SwarmCatalog 配置: enabled={}, heartbeat_interval_ms={}, status_report_interval_ms={}",
 					this->app_config_.catalog.enabled,
-					this->app_config_.catalog.serviceId,
-					this->app_config_.catalog.serviceName,
-					this->app_config_.catalog.version,
-					this->app_config_.catalog.discoverBroker
+					this->app_config_.catalog.heartbeatIntervalMs,
+					this->app_config_.catalog.statusReportIntervalMs
 				);
 			}
 			else
@@ -240,7 +232,9 @@ namespace plane::config
 
 	_STD string_view ConfigManager::getPlaneCode(void) const noexcept
 	{
-		return this->getConfigValue(this->app_config_.planeCode);
+		// 未配置 plane.code 时回退到内置占位 SN (后续改由 PSDK 真序列号填充)
+		const auto& code { this->getConfigValue(this->app_config_.planeCode) };
+		return code.empty() ? kPlaneSn : code;
 	}
 
 	bool ConfigManager::isStandardProceduresEnabled(void) const noexcept
@@ -290,19 +284,9 @@ namespace plane::config
 		return this->getConfigValue(this->app_config_.enableSkipRC);
 	}
 
-	bool ConfigManager::isTestKmzFile(void) const noexcept
-	{
-		return this->getConfigValue(this->app_config_.enableUseTestKmz);
-	}
-
 	bool ConfigManager::isSaveKmz(void) const noexcept
 	{
 		return this->getConfigValue(this->app_config_.enableSaveKmzFile);
-	}
-
-	_STD string_view ConfigManager::getTestKmzFilePath(void) const noexcept
-	{
-		return this->getConfigValue(this->app_config_.testKmzFilePath);
 	}
 
 	bool ConfigManager::isCatalogEnabled(void) const noexcept
@@ -312,29 +296,20 @@ namespace plane::config
 
 	_STD string ConfigManager::getCatalogServiceId(void) const noexcept
 	{
-		const auto& id { this->getConfigValue(this->app_config_.catalog.serviceId) };
-		if (!id.empty())
-		{
-			return id;
-		}
-		// 留空时按 "payload-<plane.code>" 自动生成
-		return _FMT format("payload-{}", this->getPlaneCode());
+		// 固定格式 (对齐 msdk): "swarm.agent.<SN>"; SN 当前为内置占位, 后续接 PSDK 真序列号
+		return _FMT format("swarm.agent.{}", this->getPlaneCode());
 	}
 
 	_STD string ConfigManager::getCatalogServiceName(void) const noexcept
 	{
-		const auto& name { this->getConfigValue(this->app_config_.catalog.serviceName) };
-		if (!name.empty())
-		{
-			return name;
-		}
-		// 留空时按 "DJI 载荷代理-<plane.code>" 自动生成
-		return _FMT format("DJI 载荷代理-{}", this->getPlaneCode());
+		// 固定格式: "DJI-PSDK-<内部代码>"; 内部代码当前与占位 SN 同源, 后续改接后台返回的 internalPlaneId
+		return _FMT format("DJI-PSDK-{}", this->getPlaneCode());
 	}
 
 	_STD string ConfigManager::getCatalogVersion(void) const noexcept
 	{
-		return this->getConfigValue(this->app_config_.catalog.version, _STD string { "1.0.0" });
+		// 版本固定于代码, 不允许配置
+		return "3.1.0";
 	}
 
 	_STD uint32_t ConfigManager::getCatalogHeartbeatIntervalMs(void) const noexcept
@@ -349,17 +324,20 @@ namespace plane::config
 
 	bool ConfigManager::isCatalogBrokerDiscoveryEnabled(void) const noexcept
 	{
-		return this->getConfigValue(this->app_config_.catalog.discoverBroker);
+		// 固定启用: MQTT broker 一律由目录服务发现 (catalog READY 后生效), 不允许配置
+		return true;
 	}
 
 	_STD string_view ConfigManager::getCatalogBrokerServiceId(void) const noexcept
 	{
-		return this->getConfigValue(this->app_config_.catalog.brokerServiceId);
+		// 固定为"中心"MQTT broker (对齐 msdk), 不允许配置
+		return "swarm.mqtt.base";
 	}
 
 	_STD string_view ConfigManager::getCatalogBrokerPortProtocol(void) const noexcept
 	{
-		return this->getConfigValue(this->app_config_.catalog.brokerPortProtocol, _STD string_view { "mqtt" });
+		// 固定按 tcp 解析 (对齐 msdk), 不允许配置
+		return "tcp";
 	}
 
 	template<typename ValueType, typename DefaultType>

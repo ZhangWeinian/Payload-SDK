@@ -31,7 +31,7 @@ namespace plane::config
 		// 获取配置项: 获取 MQTT 客户端 ID
 		_NODISCARD _STD string getMqttClientId(void) const noexcept;
 
-		// 获取配置项: 获取飞机序列号
+		// 获取飞行器标识(序列号): plane.code 可选; 缺省用内置占位 SN (后续改由 PSDK 真序列号填充)
 		_NODISCARD _STD string_view getPlaneCode(void) const noexcept;
 
 		// 检查配置项: 是否启用 PSDK 标准流程
@@ -46,25 +46,19 @@ namespace plane::config
 		// 检查配置项: 是否跳过遥控器检测
 		_NODISCARD bool isSkipRC(void) const noexcept;
 
-		// 检查配置项: 是否使用测试 KMZ 文件
-		_NODISCARD bool isTestKmzFile(void) const noexcept;
-
 		// 检查配置项: 是否同时保存 KMZ 文件
 		_NODISCARD bool isSaveKmz(void) const noexcept;
-
-		// 获取配置项: 获取测试 KMZ 文件路径
-		_NODISCARD _STD string_view getTestKmzFilePath(void) const noexcept;
 
 		// SwarmCatalog 接入配置访问
 		_NODISCARD bool isCatalogEnabled(void) const noexcept;
 
-		// 注册 service_id; 配置留空时按 "payload-<plane.code>" 自动生成
+		// 注册 service_id: 固定 "swarm.agent.<SN>" (代码内置, 不允许配置; 对齐 msdk)
 		_NODISCARD _STD string getCatalogServiceId(void) const noexcept;
 
-		// 注册 service_name; 配置留空时按 "DJI 载荷代理-<plane.code>" 自动生成
+		// 注册 service_name: 固定 "DJI-PSDK-<内部代码>" (代码内置, 不允许配置)
 		_NODISCARD _STD string getCatalogServiceName(void) const noexcept;
 
-		// 注册版本号
+		// 注册版本号 (代码内置, 不允许配置)
 		_NODISCARD _STD string getCatalogVersion(void) const noexcept;
 
 		// 目录心跳间隔 (毫秒)
@@ -73,13 +67,13 @@ namespace plane::config
 		// 状态快照上报间隔 (毫秒)
 		_NODISCARD _STD uint32_t getCatalogStatusReportIntervalMs(void) const noexcept;
 
-		// 是否启用目录解析动态 MQTT broker
+		// 是否启用目录解析动态 MQTT broker (固定启用, 不允许配置)
 		_NODISCARD bool isCatalogBrokerDiscoveryEnabled(void) const noexcept;
 
-		// 待解析的"中心"服务 service_id
+		// 待解析的"中心"MQTT broker 服务 service_id (固定 swarm.mqtt.base)
 		_NODISCARD _STD string_view getCatalogBrokerServiceId(void) const noexcept;
 
-		// 取"中心"服务的端点协议 (默认 mqtt)
+		// 取"中心"服务的端点协议 (固定 tcp)
 		_NODISCARD _STD string_view getCatalogBrokerPortProtocol(void) const noexcept;
 
 	private:
