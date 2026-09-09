@@ -1,7 +1,7 @@
 {
 	"$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
 	"name": "swarm-agent-psdk",
-	"version-string": "3.15.0",
+	"version-string": "3.16.0",
 	"description": "DJI Payload-SDK 定制应用 (cy_psdk) 的第三方依赖清单",
 	"dependencies": [
 		"cli11",

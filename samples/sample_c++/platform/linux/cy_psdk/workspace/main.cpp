@@ -18,11 +18,9 @@ int main(int argc, char* argv[])
 	if (run_dji_interactive_mode)
 	{
 		plane::dji_demo::runDjiApplication(argc, argv);
-	}
-	else
-	{
-		plane::my_dji::runMyApplication(argc, argv);
+		return 0;
 	}
 
-	return 0;
+	// 返回应用退出码: 0=正常, 1=启动失败, 2=部署完整性校验失败
+	return plane::my_dji::runMyApplication(argc, argv);
 }

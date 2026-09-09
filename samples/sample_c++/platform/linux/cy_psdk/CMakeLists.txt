@@ -57,6 +57,8 @@ set (PSDK_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/psdk_lib/include")
 set (PSDK_SAMPLES_DIR "${CMAKE_SOURCE_DIR}/samples")
 
 # 编译器与构建选项
+option (MEMORY_LEAK_CHECK_ON "启用内存泄漏检测 (LeakSanitizer, 需链接 asan)" OFF)
+
 if(MEMORY_LEAK_CHECK_ON)
 	add_compile_options (-fsanitize=leak)
 	set (LEAK_SANITIZER_LINK_LIBS asan)
@@ -70,19 +72,37 @@ add_executable (${MAIN_TARGET_NAME})
 
 set_target_properties (${MAIN_TARGET_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${MAIN_OUTPUT_PATH}")
 
-file (GLOB_RECURSE PSDK_CXX_SAMPLE_SOURCES "${PSDK_SAMPLES_DIR}/sample_c++/module_sample/*.cpp")
-file (GLOB_RECURSE PSDK_C_SAMPLE_SOURCES "${PSDK_SAMPLES_DIR}/sample_c/module_sample/*.c")
 file (
 	GLOB_RECURSE
-	PLATFORM_SOURCES
+	PSDK_CXX_SAMPLE_SOURCES
+	CONFIGURE_DEPENDS
+	"${PSDK_SAMPLES_DIR}/sample_c++/module_sample/*.cpp"
+)
+file (
+	GLOB_RECURSE
+	PSDK_C_SAMPLE_SOURCES
+	CONFIGURE_DEPENDS
+	"${PSDK_SAMPLES_DIR}/sample_c/module_sample/*.c"
+)
+# DJI 官方平台代码 (common/osal + hal) 与自有代码分开, 便于差异化告警策略
+file (
+	GLOB_RECURSE
+	DJI_PLATFORM_SOURCES
+	CONFIGURE_DEPENDS
 	"${CMAKE_CURRENT_SOURCE_DIR}/../common/*.c*"
 	"${CMAKE_CURRENT_SOURCE_DIR}/hal/*.c*"
+)
+file (
+	GLOB_RECURSE
+	APP_SOURCES
+	CONFIGURE_DEPENDS
 	"${CMAKE_CURRENT_SOURCE_DIR}/application/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/workspace/*.cpp"
 )
 file (
 	GLOB_RECURSE
 	CUSTOM_SOURCES
+	CONFIGURE_DEPENDS
 	"${CMAKE_CURRENT_SOURCE_DIR}/config/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/protocol/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/manager/**/*.cpp"
@@ -93,8 +113,15 @@ target_sources (
 	${MAIN_TARGET_NAME}
 	PRIVATE ${PSDK_CXX_SAMPLE_SOURCES}
 			${PSDK_C_SAMPLE_SOURCES}
-			${PLATFORM_SOURCES}
+			${DJI_PLATFORM_SOURCES}
+			${APP_SOURCES}
 			${CUSTOM_SOURCES}
+)
+
+# 告警策略分层: DJI 官方样例/平台代码属第三方(vendored), 静音告警;
+# 自有代码保留严格告警(由预设的 PSDK_COMMON_WARNINGS 注入), 但不设为致命错误。
+set_source_files_properties (
+	${PSDK_CXX_SAMPLE_SOURCES} ${PSDK_C_SAMPLE_SOURCES} ${DJI_PLATFORM_SOURCES} PROPERTIES COMPILE_OPTIONS "-w"
 )
 
 # 平台检测: 交叉编译时 CMAKE_SYSTEM_PROCESSOR 由工具链文件设为 aarch64; 本机构建时其默认与 uname -m 一致
@@ -149,6 +176,8 @@ if(NOT EXISTS "${THREADPOOL_HEADER}")
 		"${THREADPOOL_HEADER}"
 		STATUS threadpool_dl_status
 		TLS_VERIFY ON
+		EXPECTED_HASH
+			SHA512=f927489de9afe0217bb0552c45bea238693f9f183a062cb12a48e19576dc50a4d0ba449a12397012ae790cc5ebd741decc08128b66f795310dba4778122e9f3d
 	)
 	list (
 		GET
@@ -248,34 +277,23 @@ else()
 	message (WARNING "未找到 ${SYSTEM_LIBS_ARCH_SUBDIR} 对应的 system_libs 子目录, 将不复制运行库")
 endif()
 
-# 构建后处理 (MD5 生成、打包与同步)
-set (SYNC_LATEST_SCRIPT "${CMAKE_SOURCE_DIR}/bash/sync_latest.sh")
-set (GEN_MD5_SCRIPT "${CMAKE_SOURCE_DIR}/bash/gen_md5.sh")
-set (LATEST_BUILD_DIR "${CMAKE_SOURCE_DIR}/build/bin")
+# 构建后处理: 默认构建即生成交付目录的完整性校验 (SHA256)。
+# 输出目录结构 (每个构建预设独立, 无跨架构共享目录):
+#   build/<preset>/bin/  = 自包含交付目录: cy_psdk + config.yml + run.sh + libs/ + *.sha256
+set (GEN_CHECKSUM_SCRIPT "${CMAKE_SOURCE_DIR}/bash/gen_checksum.sh")
 
 add_custom_target (
-	generate_md5
-	COMMAND chmod +x ${GEN_MD5_SCRIPT}
-	COMMAND /bin/bash ${GEN_MD5_SCRIPT} "${MAIN_OUTPUT_PATH}"
-	COMMENT "正在为构建产物生成 MD5 校验和"
+	generate_checksums ALL
+	COMMAND /bin/bash ${GEN_CHECKSUM_SCRIPT} "${MAIN_OUTPUT_PATH}"
+	COMMENT "正在为构建产物生成 SHA256 校验和"
 	VERBATIM
 )
 
-add_dependencies (generate_md5 ${MAIN_TARGET_NAME} copy_runtime_files)
+add_dependencies (generate_checksums ${MAIN_TARGET_NAME} copy_runtime_files)
 
 if(TARGET copy_system_libs)
-	add_dependencies (generate_md5 copy_system_libs)
+	add_dependencies (generate_checksums copy_system_libs)
 endif()
-
-add_custom_target (
-	sync_latest ALL
-	COMMAND ${CMAKE_COMMAND} -E echo "--- [同步到 build/bin] ---"
-	COMMAND /bin/bash ${SYNC_LATEST_SCRIPT} "${MAIN_OUTPUT_PATH}" "${LATEST_BUILD_DIR}"
-	COMMENT "正在将最新构建同步到 build/bin 目录"
-	VERBATIM
-)
-
-add_dependencies (sync_latest generate_md5)
 
 # 显示最终构建信息
 pretty_message (
@@ -284,6 +302,5 @@ pretty_message (
 	构建类型: ${CMAKE_BUILD_TYPE}
 	平台架构: ${CMAKE_SYSTEM_PROCESSOR}
 	Git 提交哈希: ${GIT_COMMIT_HASH}
-	当前构建输出: ${MAIN_OUTPUT_PATH}
-	最新产物目录: ${LATEST_BUILD_DIR}"
+	交付目录: ${MAIN_OUTPUT_PATH}"
 )

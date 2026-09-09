@@ -11,6 +11,8 @@
 #include "manager/psdk/PSDKAdapter.h"
 #include "manager/psdk/PSDKManager.h"
 #include "manager/telemetry/TelemetryReporter.h"
+#include "utils/EXEHomePath.h"
+#include "utils/integrity/IntegrityCheck.h"
 #include "utils/log_util/Logger.h"
 
 #include <atomic>
@@ -42,8 +44,11 @@ namespace plane::my_dji
 		}
 	} // namespace
 
-	void runMyApplication(int argc, char* argv[])
+	int runMyApplication(int argc, char* argv[])
 	{
+		// 以 argv[0] 确定交付目录 (config.yml/日志/libs 均相对它; loader 显式启动时 /proc/self/exe 不可靠)
+		plane::utils::getEXEHomePath.init(argv[0]);
+
 		// 持有 DJI Application 实例，确保其生命周期贯穿整个应用程序运行期间
 		_STD unique_ptr<_DJI Application> PSDK_application_ptr_ { nullptr };
 
@@ -54,13 +59,20 @@ namespace plane::my_dji
 		LOG_INFO("                        应用程序启动中");
 		LOG_INFO("==========================================================");
 
+		// 部署完整性自检: 校验 cy_psdk 与 libs/ 的 SHA256 (纯程序内实现, 不依赖板端外部工具)
+		if (!plane::utils::verifyDeploymentIntegrity(argv[0]))
+		{
+			LOG_ERROR("部署完整性校验失败, 拒绝启动 (如需临时跳过请设置 CY_PSDK_SKIP_INTEGRITY=1)");
+			return 2;
+		}
+
 		auto& config { plane::config::ConfigManager::getInstance() };
 
 		// 尝试加载配置文件
 		if (!config.loadAndCheck())
 		{
 			LOG_ERROR("错误: 配置文件加载失败，程序退出");
-			return;
+			return 1;
 		}
 
 		// 根据配置设置日志级别
@@ -88,19 +100,19 @@ namespace plane::my_dji
 			catch (const _STD exception& e)
 			{
 				LOG_ERROR("PSDK CORE 初始化异常: {}", e.what());
-				return;
+				return 1;
 			}
 			catch (...)
 			{
 				LOG_ERROR("PSDK CORE 初始化发生未知异常: <non-std exception>");
-				return;
+				return 1;
 			}
 
 			// 尝试启动 PSDK 底层服务
 			if (!plane::manager::PSDKManager::getInstance().start(argc, argv))
 			{
 				LOG_ERROR("PSDK 底层服务初始化失败，程序退出");
-				return;
+				return 1;
 			}
 			else
 			{
@@ -111,7 +123,7 @@ namespace plane::my_dji
 			if (!plane::manager::PSDKAdapter::getInstance().start())
 			{
 				LOG_ERROR("PSDK 适配器运行时启动失败！");
-				return;
+				return 1;
 			}
 			else
 			{
@@ -127,7 +139,7 @@ namespace plane::my_dji
 		if (!plane::manager::MQTTv5Service::getInstance().start())
 		{
 			LOG_ERROR("错误: MQTT 服务启动失败，程序退出");
-			return;
+			return 1;
 		}
 		else
 		{
@@ -138,7 +150,7 @@ namespace plane::my_dji
 		if (!plane::manager::Heartbeat::getInstance().start())
 		{
 			LOG_ERROR("错误: 心跳服务启动失败，程序退出");
-			return;
+			return 1;
 		}
 		else
 		{
@@ -149,7 +161,7 @@ namespace plane::my_dji
 		if (!plane::manager::LogicHandler::getInstance().init())
 		{
 			LOG_ERROR("错误: 业务逻辑处理器初始化失败，程序退出");
-			return;
+			return 1;
 		}
 		else
 		{
@@ -160,7 +172,7 @@ namespace plane::my_dji
 		if (!plane::manager::TelemetryReporter::getInstance().start())
 		{
 			LOG_ERROR("错误: 遥测上报服务启动失败，程序退出");
-			return;
+			return 1;
 		}
 		else
 		{
@@ -209,5 +221,6 @@ namespace plane::my_dji
 		// 等待一段时间确保所有服务已正确关闭
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(1));
 		LOG_INFO("应用程序已关闭");
+		return 0;
 	}
 } // namespace plane::my_dji

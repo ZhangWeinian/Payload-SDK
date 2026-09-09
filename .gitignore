@@ -1,6 +1,9 @@
 # 构建产物目录
 build/
 
+# install 目标输出 (预设 installDir 指向 ${sourceDir}/install/<preset>)
+/install/
+
 # vcpkg manifest 模式: 源码根下 CLI 安装目录 / 各构建树内安装目录
 vcpkg_installed/
 
