@@ -5,6 +5,7 @@
 #include "application.hpp"
 
 #include "config/ConfigManager.h"
+#include "manager/binding/DeviceBinder.h"
 #include "manager/catalog/CatalogManager.h"
 #include "manager/heartbeat/Heartbeat.h"
 #include "manager/mqtt/handler/LogicHandler.h"
@@ -101,6 +102,9 @@ namespace plane::my_dji
 
 		// SwarmCatalog 目录客户端: 后台启动发现/注册, 与 PSDK 初始化并行, 不阻塞主链路
 		plane::manager::CatalogManager::getInstance().start();
+
+		// 设备绑定: 目录就绪 + 序列号就绪后自动绑定 (对齐 msdk), 后台执行
+		plane::manager::DeviceBinder::getInstance().start();
 
 		// 如果启用标准 PSDK 作业流程，则初始化 PSDKManager 和 PSDKAdapter
 		if (config.isStandardProceduresEnabled())
@@ -239,6 +243,9 @@ namespace plane::my_dji
 				LOG_DEBUG("PSDK CORE 已成功关闭");
 			}
 		}
+
+		// 停止设备绑定 (先于目录, 避免绑定流程访问已停的目录)
+		plane::manager::DeviceBinder::getInstance().stop();
 
 		// 停止 SwarmCatalog 目录客户端 (最后停止, 让退出前状态尽量上报)
 		plane::manager::CatalogManager::getInstance().notifyPsdkRunning(false);

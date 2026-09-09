@@ -15,6 +15,8 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
+#include <string>
 #include <thread>
 
 #include "define.h"
@@ -43,6 +45,12 @@ namespace plane::manager
 			return this->catalog_ready_.load(_STD memory_order_acquire);
 		}
 
+		// 解析已注册业务服务的基础地址 (如 "swarm.service.base"), 返回 "scheme://ip:port"; 失败返回空串
+		_NODISCARD _STD string resolveServiceBaseUrl(const _STD string& service_id, const _STD string& protocol) noexcept;
+
+		// 绑定/昵称联动: 更新目录注册的 service_name (触发运行时重注册); 空串恢复默认名
+		void updateServiceName(const _STD string& service_name) noexcept;
+
 	private:
 		CatalogManager(void) noexcept;
 		~CatalogManager(void) noexcept;
@@ -65,6 +73,9 @@ namespace plane::manager
 		_STD atomic<bool> started_ { false };
 		_STD atomic<bool> running_ { false };
 		_STD thread		  thread_ {};
+
+		// 保护 impl_/运行时 跨线程访问 (resolveServiceBaseUrl/updateServiceName 可被业务线程调用)
+		mutable _STD mutex rt_mutex_ {};
 
 		// 组件状态 (状态上报用; 由启动链在相应服务就绪/停止时更新)
 		_STD atomic<bool> psdk_running_ { false };

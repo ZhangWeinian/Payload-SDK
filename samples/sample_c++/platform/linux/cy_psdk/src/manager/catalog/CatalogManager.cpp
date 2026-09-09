@@ -38,6 +38,7 @@ namespace plane::manager
 		using ResolvedService		 = plane::catalog::ResolvedService;
 		using ServiceEndpoint		 = plane::catalog::ServiceEndpoint;
 		using ExposedPort			 = plane::catalog::ExposedPort;
+		using ServiceRegistration	 = plane::catalog::ServiceRegistration;
 
 		using Ms					 = _STD		   chrono::milliseconds;
 
@@ -63,6 +64,32 @@ namespace plane::manager
 					return "Stopping";
 			}
 			return "Unknown";
+		}
+
+		// 端点协议 -> URL scheme (mqtt/tcp 按 tcp://; ws/wss/http/https/rtsp 原样)
+		_NODISCARD _STD string schemeForProtocol(const _STD string& protocol) noexcept
+		{
+			if (protocol == "ws")
+			{
+				return "ws";
+			}
+			if (protocol == "wss")
+			{
+				return "wss";
+			}
+			if (protocol == "http")
+			{
+				return "http";
+			}
+			if (protocol == "https")
+			{
+				return "https";
+			}
+			if (protocol == "rtsp")
+			{
+				return "rtsp";
+			}
+			return "tcp";
 		}
 
 		// 固定周期: 目录心跳与状态上报均由 CatalogRuntime 内部以 3s 驱动;
@@ -243,7 +270,10 @@ namespace plane::manager
 		if (!started)
 		{
 			(void)rt->stop(Ms { 1000 });
-			impl.runtime.reset();
+			{
+				_STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+				impl.runtime.reset();
+			}
 			this->running_.store(false, _STD memory_order_release);
 			LOG_WARN("SwarmCatalog 接入未就绪, 已降级 (PSDK/MQTT 主链路不受影响)");
 			return;
@@ -278,7 +308,10 @@ namespace plane::manager
 		}
 
 		(void)rt->stop(Ms { 2000 });
-		impl.runtime.reset();
+		{
+			_STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+			impl.runtime.reset();
+		}
 		this->catalog_ready_.store(false, _STD memory_order_release);
 		LOG_INFO("SwarmCatalog 后台线程已退出");
 	}
@@ -393,25 +426,8 @@ namespace plane::manager
 			return false;
 		}
 
-		// 协议 -> URL scheme (mqtt/tcp 都按 tcp://; ws/wss/http/https 原样)
-		_STD string scheme { "tcp" };
-		if (impl.broker_protocol == "ws")
-		{
-			scheme = "ws";
-		}
-		else if (impl.broker_protocol == "wss")
-		{
-			scheme = "wss";
-		}
-		else if (impl.broker_protocol == "http")
-		{
-			scheme = "http";
-		}
-		else if (impl.broker_protocol == "https")
-		{
-			scheme = "https";
-		}
-
+		// 端点协议 -> URL scheme
+		const auto scheme { schemeForProtocol(impl.broker_protocol) };
 		const auto discovered_url { _FMT format("{}://{}:{}", scheme, host, matched->port) };
 
 		const auto static_url { _STD string { plane::config::ConfigManager::getInstance().getMqttUrl() } };
@@ -426,5 +442,101 @@ namespace plane::manager
 		plane::manager::MQTTv5Service::getInstance().setBrokerUrlOverride(discovered_url);
 		plane::manager::MQTTv5Service::getInstance().restart();
 		return true;
+	}
+
+	_STD string CatalogManager::resolveServiceBaseUrl(const _STD string& service_id, const _STD string& protocol) noexcept
+	{
+		if (service_id.empty())
+		{
+			return {};
+		}
+
+		_STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+		if (!this->impl_ || !this->impl_->runtime)
+		{
+			return {};
+		}
+
+		ServiceQuery query {};
+		query.service_id = service_id; // namespace/group 为空 -> 继承注册作用域 (public/DEFAULT_GROUP)
+		auto result { this->impl_->runtime->resolveService(query) };
+		if (!result.isOk())
+		{
+			LOG_WARN(
+				"目录解析服务失败: service_id='{}', code={}, message={}",
+				service_id,
+				static_cast<int>(result.error().code),
+				result.error().message
+			);
+			return {};
+		}
+
+		const auto&			   endpoints { result.value().endpoints };
+		const ServiceEndpoint* selected { nullptr };
+		for (const auto& endpoint : endpoints)
+		{
+			if (endpoint.primary)
+			{
+				selected = &endpoint;
+				break;
+			}
+		}
+		if (selected == nullptr && !endpoints.empty())
+		{
+			selected = &endpoints.front();
+		}
+		if (selected == nullptr)
+		{
+			LOG_WARN("目录解析服务无健康实例: service_id='{}'", service_id);
+			return {};
+		}
+
+		const ExposedPort* matched { nullptr };
+		for (const auto& port : selected->exposed_ports)
+		{
+			if (port.protocol == protocol)
+			{
+				matched = &port;
+				break;
+			}
+		}
+		if (matched == nullptr)
+		{
+			LOG_WARN("服务实例无 {} 端点: service_id='{}', instance='{}'", protocol, service_id, selected->instance_id);
+			return {};
+		}
+
+		const auto& host { matched->ip.empty() ? selected->address : matched->ip };
+		if (host.empty())
+		{
+			LOG_WARN("服务实例 IP 为空: service_id='{}'", service_id);
+			return {};
+		}
+		return _FMT format("{}://{}:{}", schemeForProtocol(protocol), host, matched->port);
+	}
+
+	void CatalogManager::updateServiceName(const _STD string& service_name) noexcept
+	{
+		_STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+		if (!this->impl_ || !this->impl_->runtime)
+		{
+			return;
+		}
+
+		auto&				config { plane::config::ConfigManager::getInstance() };
+		ServiceRegistration registration {};
+		registration.namespace_name = "public";
+		registration.group_name		= "DEFAULT_GROUP";
+		registration.service_id		= config.getCatalogServiceId();
+		registration.service_name	= service_name.empty() ? config.getCatalogServiceName() : service_name;
+		registration.version		= config.getCatalogVersion();
+
+		auto result { this->impl_->runtime->updateRegistration(registration) };
+		if (!result.isOk())
+		{
+			LOG_WARN("Catalog 注册信息更新失败: code={}, message={}", static_cast<int>(result.error().code), result.error().message);
+			return;
+		}
+		LOG_INFO("Catalog 注册信息已更新: service_name='{}'", registration.service_name);
 	}
 } // namespace plane::manager

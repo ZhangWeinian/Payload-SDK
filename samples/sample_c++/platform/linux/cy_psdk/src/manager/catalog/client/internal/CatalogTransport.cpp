@@ -41,7 +41,7 @@ namespace plane::catalog::internal
 			}
 			try
 			{
-				const _NLOHMANN_JSON json json { _NLOHMANN_JSON json::parse(body) };
+				const _NLOHMANN_JSON json json = _NLOHMANN_JSON json::parse(body);
 				if (!json.is_object() || !json.contains("code") || json["code"].is_null())
 				{
 					return {};
@@ -223,7 +223,7 @@ namespace plane::catalog::internal
 			{
 				return parsed;
 			}
-			const _NLOHMANN_JSON json json { parsed.value() };
+			const _NLOHMANN_JSON json json = parsed.value();
 			if (!json.is_object())
 			{
 				return Result<_NLOHMANN_JSON json>::

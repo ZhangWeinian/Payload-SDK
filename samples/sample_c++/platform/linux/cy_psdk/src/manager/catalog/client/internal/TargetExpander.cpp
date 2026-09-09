@@ -92,7 +92,8 @@ namespace plane::catalog::internal
 				{
 					throw _STD invalid_argument { "非法通配目标" };
 				}
-				const _STD uint64_t network { parseIpv4(spec.substr(0, wildcard)) & 0Xff'ff'ff'00ull };
+				const _STD string	prefix { _STD string { spec.substr(0, wildcard) } + "0" };
+				const _STD uint64_t network { parseIpv4(prefix) & 0Xff'ff'ff'00ull };
 				for (_STD uint64_t ip { network + 1 }; ip <= network + 254; ++ip)
 				{
 					if (!add(ip))

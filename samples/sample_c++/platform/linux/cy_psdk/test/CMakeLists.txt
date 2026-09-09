@@ -20,12 +20,15 @@ add_executable (
 	test_integrity.cpp
 	test_messagehandler.cpp
 	test_domain.cpp
+	test_catalog_client.cpp
 	../src/config/ConfigManager.cpp
 	../src/manager/mqtt/handler/MessageHandler.cpp
+	../src/manager/plane_state/PlaneStateStore.cpp
+	../src/manager/catalog/client/internal/TargetExpander.cpp
+	../src/manager/catalog/client/internal/ProbePacketCodec.cpp
 	../src/utils/json_converter/BuildAndParse.cpp
 	../src/utils/log_util/Logger.cpp
 	../src/utils/integrity/IntegrityCheck.cpp
-	../src/manager/plane_state/PlaneStateStore.cpp
 )
 
 target_include_directories (
