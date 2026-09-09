@@ -50,13 +50,17 @@ TEST(ConfigManager, CatalogIdentityAndBrokerDiscoveryAreCodeFixed)
 {
 	auto& cfg { ConfigManager::getInstance() };
 
-	// catalog.enabled=false (fixture); 身份/版本/broker 发现为代码内置常量, 不允许配置
-	EXPECT_FALSE(cfg.isCatalogEnabled());
+	// 发现参数来自 fixture (node_id/port/targets); 接入始终启用;
+	// 身份/版本/broker 发现为代码内置常量, 不允许配置
+	EXPECT_EQ(cfg.getCatalogNodeId(), "UNIT-TEST-NODE");
+	EXPECT_EQ(cfg.getCatalogDiscoveryPort(), 30'906u);
+	const auto& catalog_targets { cfg.getCatalogTargets() };
+	ASSERT_EQ(catalog_targets.size(), 1u);
+	EXPECT_EQ(catalog_targets[0], "127.0.0.1");
+
 	EXPECT_EQ(cfg.getCatalogServiceId(), "swarm.agent.0A1B2C3D4E5F6078");
 	EXPECT_EQ(cfg.getCatalogServiceName(), "DJI-PSDK-0A1B2C3D4E5F6078");
 	EXPECT_EQ(cfg.getCatalogVersion(), "3.1.0");
-	EXPECT_EQ(cfg.getCatalogHeartbeatIntervalMs(), 3000u);
-	EXPECT_EQ(cfg.getCatalogStatusReportIntervalMs(), 10'000u);
 
 	EXPECT_TRUE(cfg.isCatalogBrokerDiscoveryEnabled());
 	EXPECT_EQ(sv(cfg.getCatalogBrokerServiceId()), "swarm.mqtt.base");

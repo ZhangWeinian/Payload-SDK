@@ -87,6 +87,14 @@
 	#define _CLI ::CLI::
 #endif
 
+#if __has_include(<httplib.h>) && !defined(_HTTPLIB)
+	#define _HTTPLIB ::httplib::
+#endif
+
+#if __has_include(<asio.hpp>) && !defined(_ASIO)
+	#define _ASIO ::asio::
+#endif
+
 #ifndef _DEFINED
 	#define _DEFINED
 
@@ -105,8 +113,6 @@
 constexpr inline auto MATH_PI { 3.14159265358979323846 };
 constexpr inline auto EARTH_RADIUS_M { 6'371'000.0 };
 constexpr inline auto RAD_TO_DEG { 180.0 / _DEFINED MATH_PI };
-
-/*-----------------------------------------------------------------------------------------------------*/
 
 template<typename Predicate>
 struct _add_ref_for_function

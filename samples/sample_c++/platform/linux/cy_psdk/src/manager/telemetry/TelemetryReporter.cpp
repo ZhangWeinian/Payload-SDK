@@ -5,6 +5,7 @@
 #include "config/ConfigManager.h"
 #include "manager/mqtt/MQTTTopics.h"
 #include "manager/mqtt/service/MQTTv5Service.h"
+#include "manager/plane_state/PlaneStateStore.h"
 #include "utils/json_converter/BuildAndParse.h"
 #include "utils/log_util/Logger.h"
 #include "utils/network_util/GetLocalIPV4.h"
@@ -328,11 +329,21 @@ namespace plane::manager
 					return;
 				}
 
-				static const auto		 ip_address { plane::utils::getLocalIPV4().value_or("N/A") };
-				static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
+				// 未启用 PSDK 模式: 无采集事件, 由心跳周期推送状态 (SBZT, 字段即显式默认值)
+				if (!plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
+				{
+					plane::protocol::StatusPayload builtin_payload {};
+					(void)this->publishJson(plane::manager::TOPIC_STATUS, plane::utils::JsonConverter::buildStatusReportJson(builtin_payload));
+					LOG_TRACE("已通过心跳事件上报状态");
+				}
+
+				static const auto ip_address { plane::utils::getLocalIPV4().value_or("N/A") };
+
+				const auto		  snapshot { plane::domain::PlaneStateStore::getInstance().snapshot() };
+				const auto&		  plane_code { snapshot.serial_number };
 				if (plane_code.empty())
 				{
-					LOG_WARN("无法获取飞机 PlaneCode ，跳过本次固定信息心跳上报");
+					LOG_WARN("飞行器序列号为空, 本次固定信息上报跳过");
 					return;
 				}
 

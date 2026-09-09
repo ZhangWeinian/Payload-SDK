@@ -100,6 +100,7 @@ file (
 	CONFIGURE_DEPENDS
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/config/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/protocol/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/domain/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/manager/**/*.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/**/*.cpp"
 )
@@ -140,35 +141,8 @@ else()
 	message (FATAL_ERROR "错误！检测到不支持的平台: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
-# SwarmCatalogClient
-#   - 公开头:  system_lib/include/
-#   - 运行库:  system_lib/lib/<架构>/libswarm_catalog_client.so.2
-#             system_lib/lib/<架构>/libhv.so
-#   两者随 copy_system_libs 自动进入交付目录 libs/, 由 gen_checksum 覆盖完整性校验
-# 版本: SwarmCatalogClient 2.0.0 + libhv 1.3.2
-option (ENABLE_CATALOG_CLIENT "集成 SwarmCatalogClient 服务目录客户端" ON)
-set (CATALOG_CLIENT_ENABLED FALSE)
-if(ENABLE_CATALOG_CLIENT)
-	set (CATALOG_CLIENT_INCLUDE "${CMAKE_SOURCE_DIR}/system_lib/include")
-	set (CATALOG_CLIENT_LIB
-		 "${CMAKE_SOURCE_DIR}/system_lib/lib/${SYSTEM_LIBS_ARCH_SUBDIR}/libswarm_catalog_client.so.2"
-	)
-	set (CATALOG_LIBHV_LIB "${CMAKE_SOURCE_DIR}/system_lib/lib/${SYSTEM_LIBS_ARCH_SUBDIR}/libhv.so")
-	if(EXISTS "${CATALOG_CLIENT_INCLUDE}/catalog_runtime.h"
-	   AND EXISTS "${CATALOG_CLIENT_LIB}"
-	   AND EXISTS "${CATALOG_LIBHV_LIB}"
-	)
-		set (CATALOG_CLIENT_ENABLED TRUE)
-		message (STATUS "SwarmCatalogClient 已启用 (固化于 system_lib/lib/${SYSTEM_LIBS_ARCH_SUBDIR})")
-	else()
-		message (
-			WARNING
-				"缺少固化的 SwarmCatalogClient 头/库 (system_lib/include 或 system_lib/lib/${SYSTEM_LIBS_ARCH_SUBDIR}), 跳过目录客户端集成"
-		)
-	endif()
-else()
-	message (STATUS "SwarmCatalogClient 集成已禁用 (ENABLE_CATALOG_CLIENT=OFF)")
-endif()
+# SwarmCatalog 客户端为自研模块 (src/manager/catalog/client), 依赖由 vcpkg 管理
+# (cpp-httplib / asio / nlohmann-json), 不再链接 system_lib 固化目录库。
 
 # 依赖查找与配置
 find_package (Threads REQUIRED)
@@ -176,6 +150,8 @@ find_package (OpenSSL REQUIRED)
 find_package (fmt CONFIG REQUIRED)
 find_package (spdlog CONFIG REQUIRED) # vcpkg 中启用 spdlog[fmt], 复用外部 fmt
 find_package (nlohmann_json CONFIG REQUIRED)
+find_package (httplib CONFIG REQUIRED)
+find_package (asio CONFIG REQUIRED)
 find_package (yaml-cpp CONFIG REQUIRED)
 find_package (pugixml CONFIG REQUIRED)
 find_package (libzip CONFIG REQUIRED)
@@ -198,16 +174,12 @@ target_include_directories (
 			"${CMAKE_CURRENT_SOURCE_DIR}/src/application"
 			"${CMAKE_CURRENT_SOURCE_DIR}/src/workspace"
 			"${CMAKE_CURRENT_SOURCE_DIR}/../common"
-			"${CMAKE_SOURCE_DIR}/system_lib/include"
 			"${PSDK_INCLUDE_DIR}"
 			"${PSDK_SAMPLES_DIR}/sample_c++/module_sample"
 			"${PSDK_SAMPLES_DIR}/sample_c/module_sample"
 )
 
 target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE _GNU_SOURCE ${PLATFORM_ARCH_DEFINE})
-if(CATALOG_CLIENT_ENABLED)
-	target_compile_definitions (${MAIN_TARGET_NAME} PRIVATE CATALOG_ENABLED=1)
-endif()
 
 target_link_libraries (
 	${MAIN_TARGET_NAME}
@@ -215,6 +187,8 @@ target_link_libraries (
 			fmt::fmt
 			spdlog::spdlog
 			nlohmann_json::nlohmann_json
+			httplib::httplib
+			asio::asio
 			yaml-cpp::yaml-cpp
 			pugixml::pugixml
 			libzip::zip
@@ -230,11 +204,6 @@ target_link_libraries (
 			dl
 			${LEAK_SANITIZER_LINK_LIBS}
 )
-
-# SwarmCatalogClient 链接
-if(CATALOG_CLIENT_ENABLED)
-	target_link_libraries (${MAIN_TARGET_NAME} PRIVATE "${CATALOG_CLIENT_LIB}" "${CATALOG_LIBHV_LIB}")
-endif()
 
 # 构建时文件复制
 set (CONFIG_SOURCE_FILE "${CMAKE_SOURCE_DIR}/config/config.yml")

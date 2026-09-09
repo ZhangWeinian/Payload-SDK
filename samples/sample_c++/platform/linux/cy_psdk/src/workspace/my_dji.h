@@ -9,6 +9,7 @@
 #include "manager/heartbeat/Heartbeat.h"
 #include "manager/mqtt/handler/LogicHandler.h"
 #include "manager/mqtt/service/MQTTv5Service.h"
+#include "manager/plane_state/PlaneStateStore.h"
 #include "manager/psdk/PSDKAdapter.h"
 #include "manager/psdk/PSDKManager.h"
 #include "manager/telemetry/TelemetryReporter.h"
@@ -86,7 +87,19 @@ namespace plane::my_dji
 			plane::utils::Logger::getInstance().setLocalLogFileLevel(_SPDLOG level::info);
 		}
 
-		// SwarmCatalog 目录客户端 (可选附属能力): 后台启动发现/注册, 与 PSDK 初始化并行, 不阻塞主链路
+		plane::domain::PlaneStateStore::getInstance().update(
+			[&config](plane::domain::PlaneStateDataClass& st)
+			{
+				if (!config.isStandardProceduresEnabled())
+				{
+					st.serial_number = _STD string { config.getPlaneCode() };
+				}
+				st.swarm_agent_identifier = config.getCatalogServiceId();
+				st.app_version			  = config.getCatalogVersion();
+			}
+		);
+
+		// SwarmCatalog 目录客户端: 后台启动发现/注册, 与 PSDK 初始化并行, 不阻塞主链路
 		plane::manager::CatalogManager::getInstance().start();
 
 		// 如果启用标准 PSDK 作业流程，则初始化 PSDKManager 和 PSDKAdapter

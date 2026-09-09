@@ -1,102 +1,87 @@
 // cy_psdk/manager/catalog/CatalogManager.cpp
+//
+// SwarmCatalog 客户端接入 (自研 plane::catalog 运行时)。
+// 后台线程: 发现 -> 注册 -> (运行时内部心跳/状态) -> Ready 后解析中心 mqtt 服务切换 broker。
+// 发现参数 (node_id/port/targets) 来自 config.yml catalog 小节; 缺失则目录接入降级不启动。
 
 #include "manager/catalog/CatalogManager.h"
 
+#include <fmt/format.h>
+#include <chrono>
+#include <string>
+
 #include "config/ConfigManager.h"
+#include "manager/catalog/client/CatalogModels.h"
+#include "manager/catalog/client/CatalogRuntime.h"
+#include "manager/catalog/client/CatalogRuntimeOptions.h"
+#include "manager/catalog/client/CatalogTypes.h"
+#include "manager/catalog/client/DiscoveryConfig.h"
+#include "manager/catalog/client/internal/DiscoveryClient.h"
+#include "manager/catalog/client/internal/HttpTransport.h"
+#include "manager/catalog/client/Result.h"
 #include "manager/mqtt/service/MQTTv5Service.h"
 #include "utils/log_util/Logger.h"
 
-#include <fmt/format.h>
-
-#include <algorithm>
-#include <atomic>
-#include <chrono>
-#include <cstdint>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <utility>
-
-#ifdef CATALOG_ENABLED
-	#include <catalog_runtime.h>
-#endif
-
 namespace plane::manager
 {
-	// 实现体: 后台线程独占 runtime; appliedBrokerUrl 由事件回调(目录失联)与后台线程共同访问, 用 brokerMutex 保护
-	struct CatalogManager::Impl
-	{
-		_STD_CHRONO milliseconds statusInterval { 10'000 };	 // 状态快照上报间隔
-		_STD_CHRONO milliseconds heartbeatInterval { 3000 }; // 目录心跳间隔
-		bool					 discoverBroker { false };	 // 是否用目录解析动态 broker
-		_STD string				 brokerServiceId {};		 // 待解析的"中心"服务
-		_STD string				 brokerProtocol { "mqtt" };	 // 取端点协议
-		_STD string				 appliedBrokerUrl {};		 // 已应用(或已确认无需切换)的 broker
-		_STD mutex				 brokerMutex {};
-#ifdef CATALOG_ENABLED
-		_STD unique_ptr<::swarm::catalog::CatalogRuntime> runtime {};
-#endif
-
-		Impl(void) noexcept			 = default;
-		~Impl(void) noexcept		 = default;
-		Impl(const Impl&)			 = delete;
-		Impl& operator=(const Impl&) = delete;
-	};
-#ifdef CATALOG_ENABLED
 	namespace
 	{
-		using CatalogRuntime		 = ::swarm::catalog::CatalogRuntime;
-		using CatalogRuntimeOptions	 = ::swarm::catalog::CatalogRuntimeOptions;
-		using CatalogEvent			 = ::swarm::catalog::CatalogEvent;
-		using CatalogEventType		 = ::swarm::catalog::CatalogEventType;
-		using CatalogState			 = ::swarm::catalog::CatalogState;
-		using CatalogError			 = ::swarm::catalog::CatalogError;
-		using ServiceQuery			 = ::swarm::catalog::ServiceQuery;
-		using ServiceStatus			 = ::swarm::catalog::ServiceStatus;
-		using ServiceComponentStatus = ::swarm::catalog::ServiceComponentStatus;
-		using ServiceEndpoint		 = ::swarm::catalog::ServiceEndpoint;
-		using ExposedPort			 = ::swarm::catalog::ExposedPort;
-		using Ms					 = _STD_CHRONO	  milliseconds;
-		using Clock					 = _STD_CHRONO steady_clock;
+		using CatalogRuntime		 = plane::catalog::CatalogRuntime;
+		using CatalogRuntimeOptions	 = plane::catalog::CatalogRuntimeOptions;
+		using CatalogEvent			 = plane::catalog::CatalogEvent;
+		using CatalogEventType		 = plane::catalog::CatalogEventType;
+		using CatalogState			 = plane::catalog::CatalogState;
+		using CatalogEndpoint		 = plane::catalog::CatalogEndpoint;
+		using ServiceStatus			 = plane::catalog::ServiceStatus;
+		using ServiceComponentStatus = plane::catalog::ServiceComponentStatus;
+		using ServiceQuery			 = plane::catalog::ServiceQuery;
+		using ResolvedService		 = plane::catalog::ResolvedService;
+		using ServiceEndpoint		 = plane::catalog::ServiceEndpoint;
+		using ExposedPort			 = plane::catalog::ExposedPort;
 
-		_STD string				  stateText(CatalogState state) noexcept
+		using Ms					 = _STD		   chrono::milliseconds;
+
+		_NODISCARD _STD string stateText(CatalogState state) noexcept
 		{
 			switch (state)
 			{
-				case CatalogState::Stopped:
+				case CatalogState::STOPPED:
 					return "Stopped";
-				case CatalogState::Discovering:
+				case CatalogState::DISCOVERING:
 					return "Discovering";
-				case CatalogState::Discovered:
+				case CatalogState::DISCOVERED:
 					return "Discovered";
-				case CatalogState::Unavailable:
+				case CatalogState::UNAVAILABLE:
 					return "Unavailable";
-				case CatalogState::Conflict:
+				case CatalogState::CONFLICT:
 					return "Conflict";
-				case CatalogState::Registering:
+				case CatalogState::REGISTERING:
 					return "Registering";
-				case CatalogState::Ready:
+				case CatalogState::READY:
 					return "Ready";
-				case CatalogState::Stopping:
+				case CatalogState::STOPPING:
 					return "Stopping";
-				default:
-					return "Unknown";
 			}
+			return "Unknown";
 		}
 
-		// 可被 stop() 打断的分段睡眠
-		void sleepInterruptible(_STD atomic<bool>& running, Ms total) noexcept
-		{
-			Ms remaining { total };
-			while (running.load() && remaining > Ms::zero())
-			{
-				const Ms step { _STD min(remaining, Ms { 100 }) };
-				_STD	 this_thread::sleep_for(step);
-				remaining -= step;
-			}
-		}
+		// 固定周期: 目录心跳与状态上报均由 CatalogRuntime 内部以 3s 驱动;
+		// 业务壳仅周期(3s)调用 updateStatus 保持快照最新。
+		constexpr Ms kStatusReportInterval { 3000 };
 	} // namespace
-#endif
+
+	struct CatalogManager::Impl
+	{
+		// 自研目录运行时 (仅后台线程访问)
+		_STD unique_ptr<CatalogRuntime> runtime {};
+
+		// Ready 后是否已应用动态 broker (防止重复切换; 事件回调线程与主循环共享)
+		_STD atomic<bool> broker_applied { false };
+
+		// 待解析的"中心"服务与端点协议 (来自 ConfigManager 固定值)
+		_STD string broker_service_id {};
+		_STD string broker_protocol {};
+	};
 
 	CatalogManager& CatalogManager::getInstance(void) noexcept
 	{
@@ -104,10 +89,7 @@ namespace plane::manager
 		return instance;
 	}
 
-	CatalogManager::CatalogManager(void) noexcept
-	{
-		this->impl_ = _STD make_unique<Impl>();
-	}
+	CatalogManager::CatalogManager(void) noexcept = default;
 
 	CatalogManager::~CatalogManager(void) noexcept
 	{
@@ -116,62 +98,58 @@ namespace plane::manager
 
 	void CatalogManager::notifyPsdkRunning(bool running) noexcept
 	{
-		this->psdk_running_.store(running);
+		this->psdk_running_.store(running, _STD memory_order_release);
 	}
 
 	void CatalogManager::notifyHeartbeatRunning(bool running) noexcept
 	{
-		this->heartbeat_running_.store(running);
+		this->heartbeat_running_.store(running, _STD memory_order_release);
 	}
 
 	void CatalogManager::notifyTelemetryRunning(bool running) noexcept
 	{
-		this->telemetry_running_.store(running);
+		this->telemetry_running_.store(running, _STD memory_order_release);
 	}
 
 	void CatalogManager::start(void) noexcept
 	{
-		if (this->started_.load(_STD memory_order_acquire))
+		if (this->started_.exchange(true, _STD memory_order_acq_rel))
 		{
 			return;
 		}
 
 		auto& config { plane::config::ConfigManager::getInstance() };
-		if (!config.isCatalogEnabled())
+
+		// 发现参数缺失: 无 node_id/targets 无法探测, 目录接入降级不启动 (不兜底)
+		const _STD string node_id { config.getCatalogNodeId() };
+		const auto&		  targets { config.getCatalogTargets() };
+		if (node_id.empty() || targets.empty())
 		{
-			LOG_DEBUG("SwarmCatalog 接入未启用 (config.yml catalog.enabled=false), 跳过");
+			LOG_WARN("SwarmCatalog 发现参数缺失 (node_id/targets 未配置), 本次不启动目录接入");
+			this->running_.store(false, _STD memory_order_release);
 			return;
 		}
 
-#ifdef CATALOG_ENABLED
-		// 快照运行参数 (后台线程不再依赖配置变更)
-		this->impl_->statusInterval	   = Ms { static_cast<long long>(config.getCatalogStatusReportIntervalMs()) };
-		this->impl_->heartbeatInterval = Ms { static_cast<long long>(config.getCatalogHeartbeatIntervalMs()) };
-		this->impl_->discoverBroker	   = config.isCatalogBrokerDiscoveryEnabled();
-		this->impl_->brokerServiceId   = _STD string { config.getCatalogBrokerServiceId() };
-		this->impl_->brokerProtocol	   = _STD  string { config.getCatalogBrokerPortProtocol() };
+		this->impl_					   = _STD					 make_unique<Impl>();
+		this->impl_->broker_service_id = _STD string { config.getCatalogBrokerServiceId() };
+		this->impl_->broker_protocol   = _STD	string { config.getCatalogBrokerPortProtocol() };
 
+		this->running_.store(true, _STD memory_order_release);
+		this->thread_ = _STD thread(&CatalogManager::runLoop, this);
 		LOG_INFO(
 			"SwarmCatalog 接入启动: service_id='{}', service_name='{}', version='{}', discover_broker={}",
 			config.getCatalogServiceId(),
 			config.getCatalogServiceName(),
 			config.getCatalogVersion(),
-			this->impl_->discoverBroker
+			config.isCatalogBrokerDiscoveryEnabled()
 		);
-
-		this->started_.store(true, _STD memory_order_release);
-		this->running_.store(true);
-		this->thread_ = _STD thread(&CatalogManager::runLoop, this);
-#else
-		LOG_ERROR("已配置启用 SwarmCatalog, 但本构建未编译目录客户端 (ENABLE_CATALOG_CLIENT=OFF)");
-#endif
 	}
 
 	void CatalogManager::stop(void) noexcept
 	{
 		if (!this->started_.exchange(false, _STD memory_order_acq_rel))
 		{
-			this->running_.store(false);
+			this->running_.store(false, _STD memory_order_release);
 			return;
 		}
 
@@ -181,28 +159,28 @@ namespace plane::manager
 			this->thread_.join();
 		}
 
-		this->catalog_ready_.store(false);
+		this->catalog_ready_.store(false, _STD memory_order_release);
 		LOG_INFO("SwarmCatalog 接入已停止");
 	}
 
-#ifdef CATALOG_ENABLED
 	void CatalogManager::runLoop(void) noexcept
 	{
 		auto& impl { *this->impl_ };
+		auto& config { plane::config::ConfigManager::getInstance() };
 
-		// ---- 构造运行时 (仅保存业务参数, 不启动线程) ----
+		// 组装运行时: 注册信息 + 发现配置 + 事件回调
 		CatalogRuntimeOptions options {};
 		options.registration.namespace_name = "public";
 		options.registration.group_name		= "DEFAULT_GROUP";
-		options.registration.service_id		= plane::config::ConfigManager::getInstance().getCatalogServiceId();
-		options.registration.service_name	= plane::config::ConfigManager::getInstance().getCatalogServiceName();
-		options.registration.version		= plane::config::ConfigManager::getInstance().getCatalogVersion();
-		options.heartbeat_interval			= impl.heartbeatInterval;
-		options.event_callback				= [this, &impl](const CatalogEvent& ev)
+		options.registration.service_id		= config.getCatalogServiceId();
+		options.registration.service_name	= config.getCatalogServiceName();
+		options.registration.version		= config.getCatalogVersion();
+
+		options.event_callback				= [this](const CatalogEvent& ev)
 		{
-			const bool ready { ev.type == CatalogEventType::RegistrationSucceeded || ev.type == CatalogEventType::RegistrationRestored ||
-							   (ev.type == CatalogEventType::StateChanged && ev.current_state == CatalogState::Ready) };
-			const bool lost { ev.type == CatalogEventType::CatalogLost || ev.current_state == CatalogState::Unavailable };
+			const bool ready { ev.type == CatalogEventType::REGISTRATION_SUCCEEDED || ev.type == CatalogEventType::REGISTRATION_RESTORED ||
+							   (ev.type == CatalogEventType::STATE_CHANGED && ev.current_state == CatalogState::READY) };
+			const bool lost { ev.type == CatalogEventType::CATALOG_LOST || ev.current_state == CatalogState::UNAVAILABLE };
 
 			LOG_INFO(
 				"Catalog 事件: type={}, state={} -> {}, message={}",
@@ -214,31 +192,35 @@ namespace plane::manager
 
 			if (ready)
 			{
-				this->catalog_ready_.store(true);
+				this->catalog_ready_.store(true, _STD memory_order_release);
 				LOG_INFO("SwarmCatalog 注册成功 (Ready), 实例对外可见");
 			}
 			else if (lost)
 			{
-				this->catalog_ready_.store(false);
+				this->catalog_ready_.store(false, _STD memory_order_release);
 				// 目录失联/恢复后允许重新解析动态 broker (端点可能已变化)
-				_STD lock_guard<_STD mutex> lock { impl.brokerMutex };
-				impl.appliedBrokerUrl.clear();
+				this->impl_->broker_applied.store(false, _STD memory_order_release);
 			}
 		};
 
-		impl.runtime = _STD make_unique<CatalogRuntime>(_STD move(options));
-		auto*				rt { impl.runtime.get() };
+		plane::catalog::DiscoveryConfig discovery {};
+		discovery.node_id = config.getCatalogNodeId();
+		discovery.port	  = static_cast<int>(config.getCatalogDiscoveryPort());
+		discovery.targets = config.getCatalogTargets();
 
-		// ---- start(): 读取 /etc/catalog.yml + 同步发现 (失败按可重试性退避) ----
+		impl.runtime	  = _STD make_unique<CatalogRuntime>(_STD move(options), _STD move(discovery));
+		CatalogRuntime*		rt { impl.runtime.get() };
+
+		// ---- 同步发现 (失败按可重试性退避; 参数非法不可重试则放弃) ----
 		bool started { false };
 		Ms	 backoff { 2000 };
 		while (this->running_.load() && !started)
 		{
 			auto result { rt->start() };
-			if (result.ok())
+			if (result.isOk())
 			{
 				started = true;
-				if (auto ep { rt->catalogEndpoint() }; ep)
+				if (auto ep { rt->catalogEndpoint() }; ep.has_value())
 				{
 					LOG_INFO("SwarmCatalog 已发现: catalog {}:{} (node={})", ep->ip, ep->http_port, ep->node_name);
 				}
@@ -248,14 +230,13 @@ namespace plane::manager
 			const auto& err { result.error() };
 			LOG_WARN("SwarmCatalog 启动失败: code={}, retryable={}, message={}", static_cast<int>(err.code), err.retryable, err.message);
 
-			if (err.code == CatalogError::InvalidArgument)
+			if (err.code == plane::catalog::CatalogError::INVALID_ARGUMENT)
 			{
-				// 配置缺失 /etc/catalog.yml 或注册参数非法 -> 不可重试, 降级退出
-				LOG_ERROR("SwarmCatalog 启动参数非法 (板端需部署 /etc/catalog.yml), 本次放弃目录接入");
+				LOG_ERROR("SwarmCatalog 启动参数非法, 本次放弃目录接入");
 				break;
 			}
 
-			sleepInterruptible(this->running_, backoff);
+			_STD		   this_thread::sleep_for(backoff);
 			backoff = _STD min(backoff * 2, Ms { 60'000 });
 		}
 
@@ -263,34 +244,31 @@ namespace plane::manager
 		{
 			(void)rt->stop(Ms { 1000 });
 			impl.runtime.reset();
-			this->running_.store(false);
+			this->running_.store(false, _STD memory_order_release);
 			LOG_WARN("SwarmCatalog 接入未就绪, 已降级 (PSDK/MQTT 主链路不受影响)");
 			return;
 		}
 
-		// ---- 请求注册 (实际注册与重试由库后台线程执行) ----
+		// ---- 请求注册 (注册与重试/心跳由运行时内部控制线程执行) ----
 		(void)rt->registerServiceInstance();
 
 		// ---- 主循环: 周期状态上报 + Ready 后单次动态 broker 解析 ----
-		auto lastReport { Clock::now() };
+		auto lastReport { _STD_CHRONO steady_clock::now() };
 		while (this->running_.load())
 		{
-			const bool ready { this->catalog_ready_.load() };
-			if (ready && impl.discoverBroker)
+			if (this->catalog_ready_.load(_STD memory_order_acquire) && config.isCatalogBrokerDiscoveryEnabled())
 			{
-				bool needResolve { false };
+				if (!impl.broker_applied.load(_STD memory_order_acquire))
 				{
-					_STD lock_guard<_STD mutex> lock { impl.brokerMutex };
-					needResolve = impl.appliedBrokerUrl.empty();
-				}
-				if (needResolve)
-				{
-					this->trySwitchMqttBroker();
+					if (this->trySwitchMqttBroker())
+					{
+						impl.broker_applied.store(true, _STD memory_order_release);
+					}
 				}
 			}
 
-			const auto now { Clock::now() };
-			if (now - lastReport >= impl.statusInterval)
+			const auto now { _STD_CHRONO steady_clock::now() };
+			if (now - lastReport >= kStatusReportInterval)
 			{
 				this->reportStatus();
 				lastReport = now;
@@ -301,7 +279,7 @@ namespace plane::manager
 
 		(void)rt->stop(Ms { 2000 });
 		impl.runtime.reset();
-		this->catalog_ready_.store(false);
+		this->catalog_ready_.store(false, _STD memory_order_release);
 		LOG_INFO("SwarmCatalog 后台线程已退出");
 	}
 
@@ -313,67 +291,60 @@ namespace plane::manager
 			return;
 		}
 
-		auto&	   rt { *impl.runtime };
-		const auto state { rt.state() };
-		if (state != CatalogState::Ready)
-		{
-			LOG_DEBUG("SwarmCatalog 状态未就绪 (当前 {}), 跳过状态上报", stateText(state));
-			return;
-		}
+		// 未 READY 时运行时内部不上报; 这里仅保持快照最新
+		ServiceStatus status {};
+		status.healthy	  = true;
+		status.message	  = "全部组件正常";
 
-		auto component = [](ServiceStatus& status, const _STD string& name, bool ok, const _STD string& message)
+		auto addComponent = [&status](const _STD string& name, bool ok, const _STD string& message)
 		{
-			ServiceComponentStatus comp {};
-			comp.name	 = name;
-			comp.status	 = ok ? "UP" : "DOWN";
-			comp.message = message;
+			ServiceComponentStatus component {};
+			component.name	  = name;
+			component.status  = ok ? "UP" : "DOWN";
+			component.message = message;
 			if (!ok)
 			{
 				status.healthy = false;
 			}
-			status.components.push_back(_STD move(comp));
+			status.components.push_back(_STD move(component));
 		};
 
-		ServiceStatus status {};
-		status.healthy = true;
-		status.message = "全部组件正常";
-
-		const bool mqttOk { plane::manager::MQTTv5Service::getInstance().isConnected() };
-		component(status, "catalog", true, "服务目录已连接");
-		component(status, "mqtt", mqttOk, mqttOk ? "MQTT 已连接" : "MQTT 未连接");
-		component(status, "psdk", this->psdk_running_.load(), this->psdk_running_.load() ? "PSDK 已就绪" : "PSDK 未就绪");
-		component(status, "heartbeat", this->heartbeat_running_.load(), this->heartbeat_running_.load() ? "心跳正常" : "心跳未运行");
-		component(status, "telemetry", this->telemetry_running_.load(), this->telemetry_running_.load() ? "遥测正常" : "遥测未运行");
+		const bool mqtt_ok { plane::manager::MQTTv5Service::getInstance().isConnected() };
+		addComponent("catalog", this->catalog_ready_.load(_STD memory_order_acquire), "服务目录已连接");
+		addComponent("mqtt", mqtt_ok, mqtt_ok ? "MQTT 已连接" : "MQTT 未连接");
+		addComponent("psdk", this->psdk_running_.load(_STD memory_order_acquire), this->psdk_running_.load() ? "PSDK 已就绪" : "PSDK 未就绪");
+		addComponent("heartbeat", this->heartbeat_running_.load(_STD memory_order_acquire), "心跳服务状态");
+		addComponent("telemetry", this->telemetry_running_.load(_STD memory_order_acquire), "遥测服务状态");
 
 		if (!status.healthy)
 		{
 			status.message = "部分组件异常, 详见 components";
 		}
 
-		auto result { rt.updateStatus(status) };
-		if (!result.ok())
+		auto result { impl.runtime->updateStatus(status) };
+		if (!result.isOk())
 		{
-			LOG_WARN("SwarmCatalog 状态上报失败: code={}, message={}", static_cast<int>(result.error().code), result.error().message);
+			LOG_DEBUG("SwarmCatalog 状态上报未生效: code={}, message={}", static_cast<int>(result.error().code), result.error().message);
 		}
 	}
 
 	bool CatalogManager::trySwitchMqttBroker(void) noexcept
 	{
 		auto& impl { *this->impl_ };
-		if (!impl.runtime || impl.brokerServiceId.empty())
+		if (!impl.runtime || impl.broker_service_id.empty())
 		{
 			return false;
 		}
 
 		ServiceQuery query {};
-		query.service_id = impl.brokerServiceId; // namespace/group 为空 -> 继承注册作用域 (public/DEFAULT_GROUP)
+		query.service_id = impl.broker_service_id; // namespace/group 为空 -> 继承注册作用域 (public/DEFAULT_GROUP)
 
 		auto result { impl.runtime->resolveService(query) };
-		if (!result.ok())
+		if (!result.isOk())
 		{
 			LOG_WARN(
 				"目录解析中心服务失败: service_id='{}', code={}, message={}",
-				impl.brokerServiceId,
+				impl.broker_service_id,
 				static_cast<int>(result.error().code),
 				result.error().message
 			);
@@ -396,14 +367,14 @@ namespace plane::manager
 		}
 		if (selected == nullptr)
 		{
-			LOG_WARN("目录解析中心服务无健康实例: service_id='{}'", impl.brokerServiceId);
+			LOG_WARN("目录解析中心服务无健康实例: service_id='{}'", impl.broker_service_id);
 			return false;
 		}
 
 		const ExposedPort* matched { nullptr };
 		for (const auto& port : selected->exposed_ports)
 		{
-			if (port.protocol == impl.brokerProtocol)
+			if (port.protocol == impl.broker_protocol)
 			{
 				matched = &port;
 				break;
@@ -411,11 +382,11 @@ namespace plane::manager
 		}
 		if (matched == nullptr)
 		{
-			LOG_WARN("中心实例无 {} 端点: service_id='{}', instance='{}'", impl.brokerProtocol, impl.brokerServiceId, selected->instance_id);
+			LOG_WARN("中心实例无 {} 端点: service_id='{}', instance='{}'", impl.broker_protocol, impl.broker_service_id, selected->instance_id);
 			return false;
 		}
 
-		const auto& host { matched->ip.empty() ? selected->instance_ip : matched->ip };
+		const auto& host { matched->ip.empty() ? selected->address : matched->ip };
 		if (host.empty())
 		{
 			LOG_WARN("目录解析中心服务实例 IP 为空, 跳过 broker 切换");
@@ -424,61 +395,36 @@ namespace plane::manager
 
 		// 协议 -> URL scheme (mqtt/tcp 都按 tcp://; ws/wss/http/https 原样)
 		_STD string scheme { "tcp" };
-		if (impl.brokerProtocol == "ws")
+		if (impl.broker_protocol == "ws")
 		{
 			scheme = "ws";
 		}
-		else if (impl.brokerProtocol == "wss")
+		else if (impl.broker_protocol == "wss")
 		{
 			scheme = "wss";
 		}
-		else if (impl.brokerProtocol == "http")
+		else if (impl.broker_protocol == "http")
 		{
 			scheme = "http";
 		}
-		else if (impl.brokerProtocol == "https")
+		else if (impl.broker_protocol == "https")
 		{
 			scheme = "https";
 		}
 
-		const auto discoveredUrl { _FMT format("{}://{}:{}", scheme, host, matched->port) };
+		const auto discovered_url { _FMT format("{}://{}:{}", scheme, host, matched->port) };
 
+		const auto static_url { _STD string { plane::config::ConfigManager::getInstance().getMqttUrl() } };
+		if (discovered_url == static_url)
 		{
-			_STD lock_guard<_STD mutex> lock { impl.brokerMutex };
-			if (!impl.appliedBrokerUrl.empty())
-			{
-				return true; // 已应用过, 不再重复切换
-			}
-		}
-
-		const auto staticUrl { _STD string { plane::config::ConfigManager::getInstance().getMqttUrl() } };
-		if (discoveredUrl == staticUrl)
-		{
-			_STD lock_guard<_STD mutex> lock { impl.brokerMutex };
-			impl.appliedBrokerUrl = discoveredUrl;
-			LOG_INFO("目录解析的中心 broker 与静态配置一致: {}", discoveredUrl);
+			LOG_INFO("目录解析的中心 broker 与静态配置一致: {}", discovered_url);
 			return true;
 		}
 
-		LOG_INFO("目录解析到中心 MQTT broker: {} (静态配置: {}), 正在切换 MQTT 连接", discoveredUrl, staticUrl);
+		LOG_INFO("目录解析到中心 MQTT broker: {} (静态配置: {}), 正在切换 MQTT 连接", discovered_url, static_url);
 
-		plane::manager::MQTTv5Service::getInstance().setBrokerUrlOverride(discoveredUrl);
+		plane::manager::MQTTv5Service::getInstance().setBrokerUrlOverride(discovered_url);
 		plane::manager::MQTTv5Service::getInstance().restart();
-
-		{
-			_STD lock_guard<_STD mutex> lock { impl.brokerMutex };
-			impl.appliedBrokerUrl = discoveredUrl;
-		}
 		return true;
 	}
-#else
-	void CatalogManager::runLoop(void) noexcept {}
-
-	void CatalogManager::reportStatus(void) noexcept {}
-
-	bool CatalogManager::trySwitchMqttBroker(void) noexcept
-	{
-		return false;
-	}
-#endif
 } // namespace plane::manager

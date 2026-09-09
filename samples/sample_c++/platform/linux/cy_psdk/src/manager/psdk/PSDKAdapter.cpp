@@ -12,6 +12,7 @@
 #include <dji_waypoint_v3.h>
 
 #include "config/ConfigManager.h"
+#include "manager/plane_state/PlaneStateStore.h"
 #include "utils/DjiErrorUtils.h"
 #include "utils/log_util/Logger.h"
 
@@ -28,6 +29,31 @@ namespace plane::manager
 
 	namespace
 	{
+		// STATUS_DISPLAYMODE 原始码 -> 域模型 FlightMode (对齐 msdk 语义; 未映射 -> UNKNOWN)
+		inline plane::domain::FlightMode displayModeToFlightMode(int display_mode_code) noexcept
+		{
+			switch (display_mode_code)
+			{
+				case 0:
+					return plane::domain::FlightMode::MANUAL;
+				case 1:
+					return plane::domain::FlightMode::ATTI;
+				case 6:
+					return plane::domain::FlightMode::GPS_NORMAL;
+				case 10:
+				case 11:
+					return plane::domain::FlightMode::AUTO_TAKE_OFF;
+				case 12:
+					return plane::domain::FlightMode::AUTO_LANDING;
+				case 15:
+					return plane::domain::FlightMode::GO_HOME;
+				case 33:
+					return plane::domain::FlightMode::FORCE_LANDING;
+				default:
+					return plane::domain::FlightMode::UNKNOWN;
+			}
+		}
+
 		// 将飞机型号枚举转换为字符串
 		inline _STD string_view aircraftTypeToString(_DJI E_DjiAircraftType type)
 		{
@@ -514,6 +540,12 @@ namespace plane::manager
 		this->sub_status_.velocity			  = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
 		this->sub_status_.batteryInfo		  = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
 		this->sub_status_.gimbalAngles		  = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
+		this->sub_status_.batterySingleInfo =
+			subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_SINGLE_INFO_INDEX1, "BATTERY_SINGLE_INFO_INDEX1"sv);
+		this->sub_status_.statusFlight		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_STATUS_FLIGHT, "STATUS_FLIGHT"sv);
+		this->sub_status_.statusDisplayMode	 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_STATUS_DISPLAYMODE, "STATUS_DISPLAYMODE"sv);
+		this->sub_status_.homePointInfo		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_HOME_POINT_INFO, "HOME_POINT_INFO"sv);
+		this->sub_status_.homePointSetStatus = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_HOME_POINT_SET_STATUS, "HOME_POINT_SET_STATUS"sv);
 
 		// 注册 HMS 信息回调
 		if (_DJI T_DjiReturnCode return_code { _DJI DjiHmsManager_RegHmsInfoCallback(hmsInfoCallbackEntry) };
@@ -528,7 +560,52 @@ namespace plane::manager
 
 		LOG_INFO("PSDK 适配器准备就绪");
 
+		// 读取固定设备信息 (飞控序列号等) 写入域模型 (一次即可, 失败仅告警)
+		this->refreshFixedAircraftInfo();
+
 		return true;
+	}
+
+	void PSDKAdapter::refreshFixedAircraftInfo(void) noexcept
+	{
+		// 从飞控读取 SN
+		_DJI T_DjiFlightControllerGeneralInfo gi {};
+		if (_DJI DjiFlightController_GetGeneralInfo(&gi) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			_STD string sn { gi.serialNum };
+			// serialNum 为定长数组, 去除首尾空白/\0
+			_STD size_t begin { 0 };
+			while (begin < sn.size() && (sn[begin] == ' ' || sn[begin] == '\0'))
+			{
+				++begin;
+			}
+			_STD size_t end { sn.size() };
+			while (end > begin && (sn[end - 1] == ' ' || sn[end - 1] == '\0'))
+			{
+				--end;
+			}
+			sn = sn.substr(begin, end - begin);
+
+			if (!sn.empty())
+			{
+				plane::domain::PlaneStateStore::getInstance().update(
+					[&sn](plane::domain::PlaneStateDataClass& st)
+					{
+						st.serial_number		  = sn;
+						st.swarm_agent_identifier = _FMT format("swarm.agent.{}", sn);
+					}
+				);
+				LOG_INFO("已从飞控读取序列号: {}", sn);
+			}
+			else
+			{
+				LOG_WARN("飞控序列号为空");
+			}
+		}
+		else
+		{
+			LOG_WARN("读取飞控通用信息(序列号)失败");
+		}
 	}
 
 	void PSDKAdapter::unsubscribeTelemetryData(void) noexcept
@@ -570,6 +647,15 @@ namespace plane::manager
 		unsubscribe(this->sub_status_.velocity, _DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
 		unsubscribe(this->sub_status_.batteryInfo, _DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
 		unsubscribe(this->sub_status_.gimbalAngles, _DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
+		unsubscribe(
+			this->sub_status_.batterySingleInfo,
+			_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_SINGLE_INFO_INDEX1,
+			"BATTERY_SINGLE_INFO_INDEX1"sv
+		);
+		unsubscribe(this->sub_status_.statusFlight, _DJI DJI_FC_SUBSCRIPTION_TOPIC_STATUS_FLIGHT, "STATUS_FLIGHT"sv);
+		unsubscribe(this->sub_status_.statusDisplayMode, _DJI DJI_FC_SUBSCRIPTION_TOPIC_STATUS_DISPLAYMODE, "STATUS_DISPLAYMODE"sv);
+		unsubscribe(this->sub_status_.homePointInfo, _DJI DJI_FC_SUBSCRIPTION_TOPIC_HOME_POINT_INFO, "HOME_POINT_INFO"sv);
+		unsubscribe(this->sub_status_.homePointSetStatus, _DJI DJI_FC_SUBSCRIPTION_TOPIC_HOME_POINT_SET_STATUS, "HOME_POINT_SET_STATUS"sv);
 	}
 
 	void PSDKAdapter::
@@ -605,6 +691,17 @@ namespace plane::manager
 			plane::protocol::StatusPayload current_payload {};
 			_DJI T_DjiDataTimestamp		   timestamp {};
 
+			// 真数据采集的附加量 (无对应上报负载字段, 仅写域模型)
+			double battery_temperature_c { 0.0 }; // 主电池温度 (℃)
+			int	   battery_current_ma { 0 };	  // 主电池电流 (mA)
+			int	   battery_cell_count { 0 };	  // 电芯个数
+			int	   flight_status_code { -1 };	  // STATUS_FLIGHT (0停桨/1地面转/2空中)
+			int	   display_mode_code { -1 };	  // STATUS_DISPLAYMODE
+			double home_latitude_deg { 0.0 };	  // 返航点纬度 (度)
+			double home_longitude_deg { 0.0 };	  // 返航点经度 (度)
+			double home_altitude_m { 0.0 };		  // 返航点海拔 (m)
+			bool   home_location_set { false };	  // 返航点是否已设置
+
 			if (_DJI T_DjiFcSubscriptionPositionFused pos {};
 				this->sub_status_.positionFused && (_DJI	  DjiFcSubscription_GetLatestValueOfTopic(
 														_DJI DJI_FC_SUBSCRIPTION_TOPIC_POSITION_FUSED,
@@ -637,6 +734,8 @@ namespace plane::manager
 															  ) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 				{
 					current_payload.XDQFGD = fused_alt - hp_alt; // 相对起飞点高度
+					current_payload.JHB	   = hp_alt;			 // Home 点海拔
+					home_altitude_m		   = hp_alt;			 // 域模型返航点海拔
 				}
 			}
 
@@ -664,7 +763,8 @@ namespace plane::manager
 				current_payload.CZSD = vel.data.z;													 // 垂直速度
 			}
 
-			if (_DJI T_DjiFcSubscriptionSingleBatteryInfo batt {};
+			// 整机电池信息 (PSDK 结构为 T_DjiFcSubscriptionWholeBatteryInfo)
+			if (_DJI T_DjiFcSubscriptionWholeBatteryInfo batt {};
 				this->sub_status_.batteryInfo && (_DJI		DjiFcSubscription_GetLatestValueOfTopic(
 													  _DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO,
 													  (_STD uint8_t*)&batt,
@@ -672,8 +772,22 @@ namespace plane::manager
 													  &timestamp
 												  ) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
-				current_payload.DCXX.SYDL = batt.batteryCapacityPercent;
-				current_payload.DCXX.ZDY  = batt.currentVoltage;
+				current_payload.DCXX.SYDL = batt.percentage;
+				current_payload.DCXX.ZDY  = batt.voltage;
+			}
+
+			// 主电池单电池详情 (INDEX1): 温度/电流/电芯数 (写域模型)
+			if (_DJI T_DjiFcSubscriptionSingleBatteryInfo single {};
+				this->sub_status_.batterySingleInfo && (_DJI	  DjiFcSubscription_GetLatestValueOfTopic(
+															_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_SINGLE_INFO_INDEX1,
+															(_STD uint8_t*)&single,
+															sizeof(single),
+															&timestamp
+														) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+			{
+				battery_temperature_c = single.batteryTemperature * 0.1; // 0.1℃ -> ℃
+				battery_current_ma	  = single.currentElectric;
+				battery_cell_count	  = single.cellCount;
 			}
 
 			if (_DJI T_DjiFcSubscriptionGimbalAngles gimbal_angle {};
@@ -689,6 +803,55 @@ namespace plane::manager
 				current_payload.YTPH = gimbal_angle.z;
 			}
 
+			// 飞行状态 / 显示模式 (真数据)
+			if (_DJI E_DjiFcSubscriptionFlightStatus flight_status {};
+				this->sub_status_.statusFlight && (_DJI		 DjiFcSubscription_GetLatestValueOfTopic(
+													   _DJI DJI_FC_SUBSCRIPTION_TOPIC_STATUS_FLIGHT,
+													   (_STD uint8_t*)&flight_status,
+													   sizeof(flight_status),
+													   &timestamp
+												   ) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+			{
+				flight_status_code = static_cast<int>(flight_status);
+			}
+
+			if (_DJI E_DjiFcSubscriptionDisplayMode display_mode {};
+				this->sub_status_.statusDisplayMode && (_DJI	  DjiFcSubscription_GetLatestValueOfTopic(
+															_DJI DJI_FC_SUBSCRIPTION_TOPIC_STATUS_DISPLAYMODE,
+															(_STD uint8_t*)&display_mode,
+															sizeof(display_mode),
+															&timestamp
+														) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+			{
+				display_mode_code = static_cast<int>(display_mode);
+			}
+
+			// 返航点
+			if (_DJI T_DjiFcSubscriptionHomePointInfo home {};
+				this->sub_status_.homePointInfo && (_DJI	  DjiFcSubscription_GetLatestValueOfTopic(
+														_DJI DJI_FC_SUBSCRIPTION_TOPIC_HOME_POINT_INFO,
+														(_STD uint8_t*)&home,
+														sizeof(home),
+														&timestamp
+													) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+			{
+				home_latitude_deg	= home.latitude * _DEFINED	 RAD_TO_DEG;
+				home_longitude_deg	= home.longitude * _DEFINED RAD_TO_DEG;
+				current_payload.JJD = home_latitude_deg;
+				current_payload.JWD = home_longitude_deg;
+			}
+
+			if (_DJI T_DjiFcSubscriptionHomePointSetStatus home_set {};
+				this->sub_status_.homePointSetStatus && (_DJI	   DjiFcSubscription_GetLatestValueOfTopic(
+															 _DJI DJI_FC_SUBSCRIPTION_TOPIC_HOME_POINT_SET_STATUS,
+															 (_STD uint8_t*)&home_set,
+															 sizeof(home_set),
+															 &timestamp
+														 ) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
+			{
+				home_location_set = (home_set == _DJI DJI_FC_SUBSCRIPTION_HOME_POINT_SET_STATUS_SUCCESS);
+			}
+
 			if (_DJI T_DjiAircraftInfoBaseInfo aircraft_info {};
 				_DJI DjiAircraftInfo_GetBaseInfo(&aircraft_info) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
@@ -701,9 +864,88 @@ namespace plane::manager
 
 			current_payload.CJ = "DJI";
 
+			// STATUS_DISPLAYMODE -> 上报 MODE (中文, 尽量对齐 msdk 语义; 未映射值回退原始码)
+			if (display_mode_code >= 0)
+			{
+				switch (display_mode_code)
+				{
+					case 0:
+						current_payload.MODE = "手动模式";
+						break;
+					case 1:
+						current_payload.MODE = "姿态模式";
+						break;
+					case 6:
+						current_payload.MODE = "GPS 普通模式";
+						break;
+					case 9:
+						current_payload.MODE = "兴趣点环绕";
+						break;
+					case 10:
+					case 11:
+						current_payload.MODE = "自主起飞";
+						break;
+					case 12:
+						current_payload.MODE = "自动降落";
+						break;
+					case 15:
+						current_payload.MODE = "返航";
+						break;
+					case 17:
+						current_payload.MODE = "程序控制";
+						break;
+					case 33:
+						current_payload.MODE = "强制降落";
+						break;
+					case 40:
+						current_payload.MODE = "搜索模式";
+						break;
+					case 41:
+						current_payload.MODE = "电机已起转";
+						break;
+					default:
+						current_payload.MODE = _FMT format("模式{}", display_mode_code);
+						break;
+				}
+			}
+
 			{
 				_STD lock_guard<_STD mutex> lock(this->payload_mutex_);
 				this->latest_payload_ = current_payload;
+			}
+
+			// 同步写入内部域模型 PlaneStateDataClass (单一真源; 后续 TelemetryReporter/目录状态上报等统一从 Store 读取)
+			{
+				plane::domain::PlaneStateDataClass ps {};
+				ps.plane_location_3d.latitude	  = current_payload.DQWD;	// 纬度 (度)
+				ps.plane_location_3d.longitude	  = current_payload.DQJD;	// 经度 (度)
+				ps.plane_location_3d.altitude	  = current_payload.XDQFGD; // 相对高度 (返航点基准后续补齐)
+				ps.abs_height					  = current_payload.JDGD;
+				ps.gps_satellite_count			  = current_payload.SXZT.GPSSXSL;
+				ps.aircraft_velocity_3d.x		  = current_payload.VY;	  // NED x 北向
+				ps.aircraft_velocity_3d.y		  = current_payload.VX;	  // NED y 东向
+				ps.aircraft_velocity_3d.z		  = current_payload.VZ;	  // NED z 地向 (下为正)
+				ps.aircraft_velocity_flight_speed = current_payload.SPSD; // 水平合速度
+				ps.aircraft_attitude.pitch		  = current_payload.FJFYJ;
+				ps.aircraft_attitude.roll		  = current_payload.FJHGJ;
+				ps.aircraft_attitude.yaw		  = current_payload.FJPHJ;
+				ps.aircraft_battery_power_percent = current_payload.DCXX.SYDL;
+				ps.aircraft_battery_voltage		  = current_payload.DCXX.ZDY;
+				ps.gimbal_attitude.pitch		  = current_payload.YTFY;
+				ps.gimbal_attitude.roll			  = current_payload.YTHG;
+				ps.gimbal_attitude.yaw			  = current_payload.YTPH;
+				ps.battery_temperature			  = battery_temperature_c;
+				ps.battery_current				  = battery_current_ma;
+				ps.battery_number_of_cells		  = battery_cell_count;
+				ps.flight_mode					  = displayModeToFlightMode(display_mode_code);			  // 显示模式 -> 域模型枚举
+				ps.airlink_flying				  = (flight_status_code == 2);							  // IN_AIR
+				ps.are_motors_on				  = (flight_status_code == 1 || flight_status_code == 2); // 地面转/空中
+				ps.home_location.latitude		  = home_latitude_deg;
+				ps.home_location.longitude		  = home_longitude_deg;
+				ps.home_location_altitude		  = home_altitude_m;
+				ps.home_location_set			  = home_location_set;
+				ps.is_home_location_set			  = home_location_set;
+				plane::domain::PlaneStateStore::getInstance().update(_STD move(ps));
 			}
 
 			// 发布更新的状态负载事件

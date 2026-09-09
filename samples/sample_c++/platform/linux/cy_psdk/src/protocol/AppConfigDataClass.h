@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "define.h"
 
@@ -15,12 +16,12 @@ namespace plane::protocol
 {
 	using n_json = _NLOHMANN_JSON json;
 
-	// SwarmCatalog 服务目录接入配置
+	// SwarmCatalog 服务目录发现配置 (node_id/port/targets, 由 config.yml catalog 小节提供)
 	struct CatalogConfig
 	{
-		bool		  enabled { false };				 // 是否启用 SwarmCatalog 接入
-		_STD uint32_t heartbeatIntervalMs { 3000 };		 // 目录心跳间隔
-		_STD uint32_t statusReportIntervalMs { 10'000 }; // 状态快照上报间隔
+		_STD string	  node_id { "" };		 // 探测身份 (需与服务端 local-node-id 匹配才会回复)
+		_STD uint16_t port { 30'906 };		 // UDP 探测端口 (服务端 swarm.udp.port)
+		_STD vector<_STD string> targets {}; // 探测目标 (单 IP / 末段通配 .* / CIDR / 起止范围)
 	};
 
 	struct AppConfigData

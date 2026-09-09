@@ -69,7 +69,8 @@ namespace plane::manager
 
 		// 从 PSDK 四元数到欧拉角的转换，将 PSDK 飞控订阅的四元数数据转换为以度为单位的 roll（横滚）、pitch（俯仰）、yaw（偏航）三个角度
 		void convertQuaternionToEulerAngle(const _DJI T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept;
-
+		// 读取固定设备信息 (飞控序列号等) 写入域模型; 适配器就绪后调用一次 (失败仅告警, 下次启动重试)
+		void refreshFixedAircraftInfo(void) noexcept;
 		// 周期性地从 PSDK 订阅的飞控数据主题中拉取最新状态，转换为统一的 StatusPayload ，并通过事件总线发布
 		void acquisitionLoop(void) noexcept;
 
@@ -249,6 +250,21 @@ namespace plane::manager
 			* 参见 \ref TOPIC_GIMBAL_STATUS, \ref TOPIC_GIMBAL_CONTROL_MODE
 			*/
 			bool gimbalAngles { false };
+
+			/*! @brief 主电池单电池详情 (INDEX1): 温度/电流/电芯数 */
+			bool batterySingleInfo { false };
+
+			/*! @brief 飞行器飞行状态 (0 停桨 / 1 地面转 / 2 空中) */
+			bool statusFlight { false };
+
+			/*! @brief 飞行器显示模式 (DJI Go 状态机) */
+			bool statusDisplayMode { false };
+
+			/*! @brief 返航点经纬度 */
+			bool homePointInfo { false };
+
+			/*! @brief 返航点是否已设置 */
+			bool homePointSetStatus { false };
 		} sub_status_;
 
 		mutable _STD mutex payload_mutex_ {};

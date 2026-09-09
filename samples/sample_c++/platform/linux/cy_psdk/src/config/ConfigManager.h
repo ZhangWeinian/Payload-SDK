@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <filesystem>
 #include <iterator>
+#include <vector>
 
 #include "define.h"
 
@@ -49,9 +50,7 @@ namespace plane::config
 		// 检查配置项: 是否同时保存 KMZ 文件
 		_NODISCARD bool isSaveKmz(void) const noexcept;
 
-		// SwarmCatalog 接入配置访问
-		_NODISCARD bool isCatalogEnabled(void) const noexcept;
-
+		// SwarmCatalog 接入配置访问 (发现参数由 config.yml catalog 小节提供; 接入始终启用)
 		// 注册 service_id: 固定 "swarm.agent.<SN>" (代码内置, 不允许配置; 对齐 msdk)
 		_NODISCARD _STD string getCatalogServiceId(void) const noexcept;
 
@@ -61,11 +60,14 @@ namespace plane::config
 		// 注册版本号 (代码内置, 不允许配置)
 		_NODISCARD _STD string getCatalogVersion(void) const noexcept;
 
-		// 目录心跳间隔 (毫秒)
-		_NODISCARD _STD uint32_t getCatalogHeartbeatIntervalMs(void) const noexcept;
+		// 目录发现: 本机节点 ID (探测身份, 需与服务端 local-node-id 匹配才会回复)
+		_NODISCARD _STD string getCatalogNodeId(void) const noexcept;
 
-		// 状态快照上报间隔 (毫秒)
-		_NODISCARD _STD uint32_t getCatalogStatusReportIntervalMs(void) const noexcept;
+		// 目录发现: UDP 探测端口
+		_NODISCARD _STD uint16_t getCatalogDiscoveryPort(void) const noexcept;
+
+		// 目录发现: 探测目标列表
+		_NODISCARD const _STD vector<_STD string>& getCatalogTargets(void) const noexcept;
 
 		// 是否启用目录解析动态 MQTT broker (固定启用, 不允许配置)
 		_NODISCARD bool isCatalogBrokerDiscoveryEnabled(void) const noexcept;

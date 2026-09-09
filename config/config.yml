@@ -1,11 +1,13 @@
 features:
-    enable_full_psdk: true # 是否启用完整 PSDK 作业流程
-    enable_trace_log: false # 是否设置最高日志级别为 TRACE
+    enable_full_psdk: false # 启用完整 PSDK 作业流程
+    enable_trace_log: true # 启用更详细日志
     set_psdk_log_level: 1 # 设置 PSDK 日志级别, 0=ERROR , 1=WARN , 2=INFO , 3=DEBUG
-    skip_rc: false # 是否尝试跳过遥控器检测
-    save_kmz_file: true # 是否保存 KMZ 文件到本地
+    skip_rc: false # 尝试跳过遥控器检测
+    save_kmz_file: true # 保存 KMZ 文件到本地
 
 catalog:
-    enabled: true # 是否启用目录注册与状态上报
-    heartbeat_interval_ms: 3000 # 目录心跳间隔
-    status_report_interval_ms: 10000 # 状态快照上报间隔
+    node_id: CATF4KHZBF8
+    port: 30906
+    targets:
+        - 192.168.1.131
+        - 192.168.1.*

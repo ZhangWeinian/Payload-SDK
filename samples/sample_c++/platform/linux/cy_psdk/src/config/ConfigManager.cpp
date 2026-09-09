@@ -158,26 +158,48 @@ namespace plane::config
 				LOG_WARN("配置文件中未找到 'features' 部分，所有功能开关将使用默认值");
 			}
 
-			// SwarmCatalog 接入配置 (可选; 目录不可用仅告警降级, 不影响主链路)
+			// SwarmCatalog 发现配置 (接入始终启用; 心跳与状态上报固定 3s, 不再配置)
 			// 注: 注册身份(service_id/service_name/version)与 broker 发现目标已固定于代码, 不允许配置。
 			if (this->config_node_["catalog"])
 			{
-				const auto& catalog								 = this->config_node_["catalog"];
+				const auto& catalog = this->config_node_["catalog"];
+				auto&		cfg		= this->app_config_.catalog;
 
-				this->app_config_.catalog.enabled				 = catalog["enabled"].as<bool>(false);
-				this->app_config_.catalog.heartbeatIntervalMs	 = catalog["heartbeat_interval_ms"].as<_STD uint32_t>(3000);
-				this->app_config_.catalog.statusReportIntervalMs = catalog["status_report_interval_ms"].as<_STD uint32_t>(10'000);
+				if (catalog["node_id"])
+				{
+					cfg.node_id = catalog["node_id"].as<_STD string>("");
+				}
+				if (catalog["port"])
+				{
+					cfg.port = catalog["port"].as<_STD uint16_t>(30'906);
+				}
+				if (catalog["targets"] && catalog["targets"].IsSequence())
+				{
+					cfg.targets.clear();
+					for (const auto& target : catalog["targets"])
+					{
+						const _STD string value { target.as<_STD string>("") };
+						if (!value.empty())
+						{
+							cfg.targets.push_back(value);
+						}
+					}
+				}
 
-				LOG_DEBUG(
-					"SwarmCatalog 配置: enabled={}, heartbeat_interval_ms={}, status_report_interval_ms={}",
-					this->app_config_.catalog.enabled,
-					this->app_config_.catalog.heartbeatIntervalMs,
-					this->app_config_.catalog.statusReportIntervalMs
-				);
+				_STD string targets_text {};
+				for (std::size_t index { 0 }; index < cfg.targets.size(); ++index)
+				{
+					if (index > 0)
+					{
+						targets_text += ",";
+					}
+					targets_text += cfg.targets[index];
+				}
+				LOG_DEBUG("SwarmCatalog 发现配置: node_id='{}', port={}, targets=[{}]", cfg.node_id, cfg.port, targets_text);
 			}
 			else
 			{
-				LOG_WARN("配置文件中未找到 'catalog' 部分，SwarmCatalog 接入默认关闭");
+				LOG_WARN("配置文件中未找到 'catalog' 部分, 目录发现将不启动");
 			}
 
 			return true;
@@ -289,9 +311,19 @@ namespace plane::config
 		return this->getConfigValue(this->app_config_.enableSaveKmzFile);
 	}
 
-	bool ConfigManager::isCatalogEnabled(void) const noexcept
+	_STD string ConfigManager::getCatalogNodeId(void) const noexcept
 	{
-		return this->getConfigValue(this->app_config_.catalog.enabled);
+		return this->app_config_.catalog.node_id;
+	}
+
+	_STD uint16_t ConfigManager::getCatalogDiscoveryPort(void) const noexcept
+	{
+		return this->app_config_.catalog.port;
+	}
+
+	const _STD vector<_STD string>& ConfigManager::getCatalogTargets(void) const noexcept
+	{
+		return this->app_config_.catalog.targets;
 	}
 
 	_STD string ConfigManager::getCatalogServiceId(void) const noexcept
@@ -310,16 +342,6 @@ namespace plane::config
 	{
 		// 版本固定于代码, 不允许配置
 		return "3.1.0";
-	}
-
-	_STD uint32_t ConfigManager::getCatalogHeartbeatIntervalMs(void) const noexcept
-	{
-		return this->getConfigValue(this->app_config_.catalog.heartbeatIntervalMs, _STD uint32_t { 3000 });
-	}
-
-	_STD uint32_t ConfigManager::getCatalogStatusReportIntervalMs(void) const noexcept
-	{
-		return this->getConfigValue(this->app_config_.catalog.statusReportIntervalMs, _STD uint32_t { 10'000 });
 	}
 
 	bool ConfigManager::isCatalogBrokerDiscoveryEnabled(void) const noexcept

@@ -29,9 +29,10 @@ namespace plane::test
     skip_rc: false
     save_kmz_file: false
 catalog:
-    enabled: false
-    heartbeat_interval_ms: 3000
-    status_report_interval_ms: 10000
+    node_id: UNIT-TEST-NODE
+    port: 30906
+    targets:
+        - 127.0.0.1
 )"
 		};
 

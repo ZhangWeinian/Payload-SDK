@@ -19,11 +19,13 @@ add_executable (
 	test_exehomepath.cpp
 	test_integrity.cpp
 	test_messagehandler.cpp
+	test_domain.cpp
 	../src/config/ConfigManager.cpp
 	../src/manager/mqtt/handler/MessageHandler.cpp
 	../src/utils/json_converter/BuildAndParse.cpp
 	../src/utils/log_util/Logger.cpp
 	../src/utils/integrity/IntegrityCheck.cpp
+	../src/manager/plane_state/PlaneStateStore.cpp
 )
 
 target_include_directories (
