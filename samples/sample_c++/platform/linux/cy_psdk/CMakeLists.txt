@@ -22,11 +22,6 @@ function(pretty_message TITLE CONTENT)
 endfunction()
 
 include (CTest)
-if(BUILD_TESTING)
-	message (STATUS "测试构建已启用")
-	# 在这里添加测试
-	# add_subdirectory(tests)
-endif()
 
 if(NOT CMAKE_BUILD_TYPE)
 	set (
@@ -90,23 +85,23 @@ file (
 	DJI_PLATFORM_SOURCES
 	CONFIGURE_DEPENDS
 	"${CMAKE_CURRENT_SOURCE_DIR}/../common/*.c*"
-	"${CMAKE_CURRENT_SOURCE_DIR}/hal/*.c*"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/hal/*.c*"
 )
 file (
 	GLOB_RECURSE
 	APP_SOURCES
 	CONFIGURE_DEPENDS
-	"${CMAKE_CURRENT_SOURCE_DIR}/application/*.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/workspace/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/application/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/workspace/*.cpp"
 )
 file (
 	GLOB_RECURSE
 	CUSTOM_SOURCES
 	CONFIGURE_DEPENDS
-	"${CMAKE_CURRENT_SOURCE_DIR}/config/*.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/protocol/*.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/manager/**/*.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/utils/**/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/config/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/protocol/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/manager/**/*.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/utils/**/*.cpp"
 )
 
 target_sources (
@@ -230,9 +225,9 @@ set_target_properties (ThreadPool::ThreadPool PROPERTIES INTERFACE_INCLUDE_DIREC
 # 目标属性配置 (Includes, Defines, Links)
 target_include_directories (
 	${MAIN_TARGET_NAME}
-	PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}"
-			"${CMAKE_CURRENT_SOURCE_DIR}/application"
-			"${CMAKE_CURRENT_SOURCE_DIR}/workspace"
+	PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+			"${CMAKE_CURRENT_SOURCE_DIR}/src/application"
+			"${CMAKE_CURRENT_SOURCE_DIR}/src/workspace"
 			"${CMAKE_CURRENT_SOURCE_DIR}/../common"
 			"${PSDK_INCLUDE_DIR}"
 			"${PSDK_SAMPLES_DIR}/sample_c++/module_sample"
@@ -383,3 +378,8 @@ pretty_message (
 	Git 提交哈希: ${GIT_COMMIT_HASH}
 	交付目录: ${MAIN_OUTPUT_PATH}"
 )
+
+# 单元测试 (须在依赖 find_package 之后加入, 使测试目标能引用 fmt/spdlog/yaml-cpp 等 target)
+if(BUILD_TESTING)
+	add_subdirectory (test)
+endif()

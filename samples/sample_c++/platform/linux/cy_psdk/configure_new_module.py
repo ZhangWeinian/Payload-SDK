@@ -9,11 +9,11 @@ import textwrap
 # --- 配置区域: 如果未来需求变化，只需修改此处 ---
 # ==============================================================================
 
-# 1. 待删除的文件路径
-FILE_TO_DELETE = os.path.join("application", "main.cpp")
+# 1. 待删除的文件路径 (源码已统一位于 src/ 下)
+FILE_TO_DELETE = os.path.join("src", "application", "main.cpp")
 
 # 2. 开发者信息 (application/dji_sdk_app_info.h)
-APP_INFO_PATH = os.path.join("application", "dji_sdk_app_info.h")
+APP_INFO_PATH = os.path.join("src", "application", "dji_sdk_app_info.h")
 APP_INFO_BEFORE = textwrap.dedent(
     """\
 #define USER_APP_NAME               "your_app_name"
@@ -41,7 +41,7 @@ APP_INFO_AFTER = textwrap.dedent(
 )
 
 # 3. 接口定义 (hal/hal_uart.h)
-UART_INFO_PATH = os.path.join("hal", "hal_uart.h")
+UART_INFO_PATH = os.path.join("src", "hal", "hal_uart.h")
 UART_INFO_BEFORE = textwrap.dedent(
     """\
 #define LINUX_UART_DEV1    "/dev/ttyUSB0"
@@ -56,7 +56,7 @@ UART_INFO_AFTER = textwrap.dedent(
 )
 
 # 4. 日志重定向 (application/application.cpp)
-APP_CPP_PATH = os.path.join("application", "application.cpp")
+APP_CPP_PATH = os.path.join("src", "application", "application.cpp")
 LOG_BLOCK_1_BEFORE = textwrap.dedent(
     """\
     if (DjiUser_LocalWriteFsInit(DJI_LOG_PATH) != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {

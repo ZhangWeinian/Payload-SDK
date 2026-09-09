@@ -14,8 +14,9 @@ namespace plane::manager
 
 	void MqttMessageHandler::registerHandler(_STD string_view topic, _STD string_view messageType, LogicHandler handler) noexcept
 	{
-		_STD lock_guard<_STD mutex>					  lock(this->handler_mutex_);
-		this->handler_map_[topic][messageType] = _STD move(handler);
+		// operator[] 不支持异构查找, 显式转为 std::string 键 (避免 string_view 悬垂)
+		_STD lock_guard<_STD mutex>													  lock(this->handler_mutex_);
+		this->handler_map_[_STD string { topic }][_STD string { messageType }] = _STD move(handler);
 		LOG_DEBUG("为主题 '{}', 消息类型 '{}' 注册了处理器", topic, messageType);
 	}
 

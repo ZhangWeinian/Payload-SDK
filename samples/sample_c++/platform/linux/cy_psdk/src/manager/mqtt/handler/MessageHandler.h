@@ -28,8 +28,8 @@ namespace plane::manager
 	private:
 		explicit MqttMessageHandler(void) noexcept = default;
 		~MqttMessageHandler(void) noexcept		   = default;
-
-		_STD map<_STD string_view, _STD map<_STD string_view, LogicHandler>> handler_map_ {};
-		_STD mutex															 handler_mutex_ {};
+		// key 存 std::string 避免 string_view 悬垂; 两层均用透明比较器(std::less<>), 允许以 string_view 无分配查找
+		_STD map<_STD string, _STD map<_STD string, LogicHandler, _STD less<>>, _STD less<>> handler_map_ {};
+		_STD mutex																			 handler_mutex_ {};
 	};
 } // namespace plane::manager

@@ -1,0 +1,5 @@
+node_id: SwarmServer
+port: 30906
+targets:
+    - 192.168.1.*
+    - 192.168.2.*

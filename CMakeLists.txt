@@ -26,6 +26,8 @@ message (STATUS "当前选择的目标平台：${TARGET_PLATFORM}")
 if(TARGET_PLATFORM STREQUAL "LINUX")
 	add_compile_definitions (SYSTEM_ARCH_LINUX)
 	add_subdirectory (samples/sample_c++/platform/linux/cy_psdk)
+	# 使顶层 ctest 能发现子工程注册的单元测试
+	enable_testing ()
 elseif(TARGET_PLATFORM STREQUAL "RTOS")
 	add_compile_definitions (SYSTEM_ARCH_RTOS)
 else()

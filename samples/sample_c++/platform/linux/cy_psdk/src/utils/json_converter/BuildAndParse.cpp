@@ -6,11 +6,10 @@
 #include "manager/mqtt/handler/MessageHandler.h"
 #include "utils/log_util/Logger.h"
 
+#include <fmt/chrono.h>
 #include <fmt/format.h>
 
 #include <chrono>
-#include <iomanip>
-#include <sstream>
 
 namespace plane::utils
 {
@@ -23,14 +22,11 @@ namespace plane::utils
 			return _STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(_STD_CHRONO system_clock::now().time_since_epoch()).count();
 		}
 
+		// 时间戳 -> 本地时间字符串 (与 Logger 一致, 统一走 fmt chrono; 截断到秒与旧 put_time 行为一致)
 		static _STD string formatTimestamp(int64_t ms) noexcept
 		{
-			auto			  time_t { static_cast<_STD time_t>(ms / 1000) };
-			_STD tm			  tm_buf {};
-			_CSTD			  localtime_r(&time_t, &tm_buf);
-			_STD stringstream ss {};
-			ss << _STD		  put_time(&tm_buf, "%Y-%m-%d %H:%M:%S");
-			return ss.str();
+			const auto	tp { _STD_CHRONO system_clock::time_point { _STD_CHRONO milliseconds { ms } } };
+			return _FMT format("{:%Y-%m-%d %H:%M:%S}", _STD_CHRONO time_point_cast<_STD_CHRONO seconds>(tp));
 		}
 	} // namespace
 

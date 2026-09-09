@@ -60,48 +60,60 @@ namespace plane::manager
 			auto&							 dispatcher { plane::manager::EventManager::getInstance().getStatusDispatcher() };
 			this->psdk_event_remover_ = _STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::StatusDispatcher>>(dispatcher);
 
-			this->psdk_event_remover_->appendListener(plane::manager::EventManager::PSDKEvent::TelemetryUpdated,
-													  [this](const plane::manager::EventManager::PSDKEventData& data)
-													  {
-														  this->onPSDKEvent(data);
-													  });
+			this->psdk_event_remover_->appendListener(
+				plane::manager::EventManager::PSDKEvent::TelemetryUpdated,
+				[this](const plane::manager::EventManager::PSDKEventData& data)
+				{
+					this->onPSDKEvent(data);
+				}
+			);
 
-			this->psdk_event_remover_->appendListener(plane::manager::EventManager::PSDKEvent::MissionStateChanged,
-													  [this](const plane::manager::EventManager::PSDKEventData& data)
-													  {
-														  this->onPSDKEvent(data);
-													  });
+			this->psdk_event_remover_->appendListener(
+				plane::manager::EventManager::PSDKEvent::MissionStateChanged,
+				[this](const plane::manager::EventManager::PSDKEventData& data)
+				{
+					this->onPSDKEvent(data);
+				}
+			);
 
-			this->psdk_event_remover_->appendListener(plane::manager::EventManager::PSDKEvent::ActionStateChanged,
-													  [this](const plane::manager::EventManager::PSDKEventData& data)
-													  {
-														  this->onPSDKEvent(data);
-													  });
+			this->psdk_event_remover_->appendListener(
+				plane::manager::EventManager::PSDKEvent::ActionStateChanged,
+				[this](const plane::manager::EventManager::PSDKEventData& data)
+				{
+					this->onPSDKEvent(data);
+				}
+			);
 
-			this->psdk_event_remover_->appendListener(plane::manager::EventManager::PSDKEvent::HealthPing,
-													  [this](const plane::manager::EventManager::PSDKEventData& data)
-													  {
-														  if (auto* p_time { _STD get_if<_STD_CHRONO steady_clock::time_point>(&data) })
-														  {
-															  this->last_health_ping_time_ = *p_time;
-														  }
-													  });
+			this->psdk_event_remover_->appendListener(
+				plane::manager::EventManager::PSDKEvent::HealthPing,
+				[this](const plane::manager::EventManager::PSDKEventData& data)
+				{
+					if (auto* p_time { _STD get_if<_STD_CHRONO steady_clock::time_point>(&data) })
+					{
+						this->last_health_ping_time_ = *p_time;
+					}
+				}
+			);
 
-			this->psdk_event_remover_->appendListener(plane::manager::EventManager::PSDKEvent::HealthStatusUpdated,
-													  [this](const plane::manager::EventManager::PSDKEventData& data)
-													  {
-														  this->onPSDKEvent(data);
-													  });
+			this->psdk_event_remover_->appendListener(
+				plane::manager::EventManager::PSDKEvent::HealthStatusUpdated,
+				[this](const plane::manager::EventManager::PSDKEventData& data)
+				{
+					this->onPSDKEvent(data);
+				}
+			);
 
 			auto& system_dispatcher { plane::manager::EventManager::getInstance().getSystemDispatcher() };
 			this->system_event_remover_ =
 				_STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::SystemDispatcher>>(system_dispatcher);
 
-			this->system_event_remover_->appendListener(plane::manager::EventManager::SystemEvent::HeartbeatTick,
-														[this](const plane::manager::EventManager::SystemEventData& data)
-														{
-															this->onHeartbeatTick(data);
-														});
+			this->system_event_remover_->appendListener(
+				plane::manager::EventManager::SystemEvent::HeartbeatTick,
+				[this](const plane::manager::EventManager::SystemEventData& data)
+				{
+					this->onHeartbeatTick(data);
+				}
+			);
 
 			if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
 			{
@@ -110,7 +122,8 @@ namespace plane::manager
 					[this]
 					{
 						this->runWatchdogCheck();
-					});
+					}
+				);
 				LOG_INFO("PSDK 看门狗已启动");
 			}
 			else
@@ -205,12 +218,15 @@ namespace plane::manager
 
 		if (this->queued_task_count_ >= this->MAX_EVENT_QUEUE_SIZE)
 		{
-			static _STD_CHRONO steady_clock::time_point last_log_time {};
-			auto										now { _STD_CHRONO steady_clock::now() };
-			if (now - last_log_time > _STD_CHRONO seconds(5))
+			// 日志节流: 仅日志使用, 多线程下以原子毫秒计数避免数据竞争
+			static _STD atomic<int64_t> last_log_ms { 0 };
+			const int64_t				now_ms {
+				_STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(_STD_CHRONO steady_clock::now().time_since_epoch()).count()
+			};
+			int64_t prev_ms { last_log_ms.load(_STD memory_order_relaxed) };
+			if (now_ms - prev_ms > 5000 && last_log_ms.compare_exchange_strong(prev_ms, now_ms, _STD memory_order_relaxed))
 			{
 				LOG_WARN("TelemetryReporter 事件处理队列已满 (超过 {} 个任务)，正在丢弃新事件", MAX_EVENT_QUEUE_SIZE);
-				last_log_time = now;
 			}
 			return;
 		}
@@ -224,7 +240,8 @@ namespace plane::manager
 					[this]
 					{
 						--(this->queued_task_count_);
-					});
+					}
+				);
 
 				_STD visit(
 					[this](const auto& event)
@@ -246,28 +263,29 @@ namespace plane::manager
 							auto			  payload { event };
 							static const auto ip { plane::utils::getLocalIPV4().value_or("[找不到有效的 IP ]") };
 
-							static int		  status_counter { 0 };
-							if (++status_counter >= 5)
+							// 多线程下共享计数, 用 atomic 避免数据竞争
+							static _STD atomic<int> status_counter { 0 };
+							if (status_counter.fetch_add(1, _STD memory_order_relaxed) >= 4)
 							{
-								status_counter = 0;
-								payload.WZT	   = {
-									   plane::protocol::VideoSource { .SPURL = _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ip),
+								status_counter.store(0, _STD memory_order_relaxed);
+								payload.WZT = {
+									plane::protocol::VideoSource { .SPURL = _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ip),
 																  .SPXY	 = "RTSP",
 																  .ZBZT	 = 1 }
 								};
 
 								LOG_DEBUG("准备上报飞行状态");
 
-								(void)this->publishJson(plane::manager::TOPIC_STATUS,
-														plane::utils::JsonConverter::buildStatusReportJson(payload));
+								(void)this
+									->publishJson(plane::manager::TOPIC_STATUS, plane::utils::JsonConverter::buildStatusReportJson(payload));
 							}
 						}
 						else if constexpr (_STD is_same_v<T, plane::protocol::HealthStatusPayload>)
 						{
 							LOG_DEBUG("准备上报健康状态");
 
-							(void)this->publishJson(plane::manager::TOPIC_HEALTH_MANAGE,
-													plane::utils::JsonConverter::buildHealthStatusJson(event));
+							(void)this
+								->publishJson(plane::manager::TOPIC_HEALTH_MANAGE, plane::utils::JsonConverter::buildHealthStatusJson(event));
 						}
 						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3MissionState>)
 						{
@@ -288,8 +306,10 @@ namespace plane::manager
 							LOG_WARN("收到未知类型的 PSDK 事件数据");
 						}
 					},
-					eventData);
-			});
+					eventData
+				);
+			}
+		);
 	}
 
 	void TelemetryReporter::onHeartbeatTick(const plane::manager::EventManager::SystemEventData& eventData)
@@ -324,7 +344,8 @@ namespace plane::manager
 				(void)this->publishJson(plane::manager::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
 
 				LOG_TRACE("已通过心跳事件上报固定信息 (MissionInfoPayload) ");
-			});
+			}
+		);
 	}
 
 	void TelemetryReporter::runWatchdogCheck(void) noexcept
@@ -351,6 +372,7 @@ namespace plane::manager
 			{
 				_STD this_thread::sleep_for(this->PSDK_WATCHDOG_CHECK_INTERVAL);
 				this->runWatchdogCheck();
-			});
+			}
+		);
 	}
 } // namespace plane::manager

@@ -4,9 +4,9 @@
 			"name": "Linux",
 			"includePath": [
 				"${workspaceFolder}/**",
-				"samples/sample_c++/platform/linux/cy_psdk",
-				"samples/sample_c++/platform/linux/cy_psdk/application",
-				"samples/sample_c++/platform/linux/cy_psdk/workspace",
+				"samples/sample_c++/platform/linux/cy_psdk/src",
+				"samples/sample_c++/platform/linux/cy_psdk/src/application",
+				"samples/sample_c++/platform/linux/cy_psdk/src/workspace",
 				"samples/sample_c++/platform/linux/cy_psdk/../common",
 				"psdk_lib/include",
 				"samples/sample_c++/module_sample",
@@ -15,9 +15,9 @@
 			],
 			"defines": [],
 			"compilerPath": "/usr/bin/g++",
-			"intelliSenseMode": "linux-gcc-arm64",
+			"intelliSenseMode": "linux-gcc-x64",
 			"cStandard": "c17",
-			"cppStandard": "c++20",
+			"cppStandard": "c++23",
 			"configurationProvider": "ms-vscode.cmake-tools"
 		}
 	],
