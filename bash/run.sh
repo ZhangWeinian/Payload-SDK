@@ -8,6 +8,18 @@
 
 DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
+# 强制 root 运行: I2C 硬件复位 / 串口权限 / sysfs GPIO 等硬件操作均需要 root 权限。
+# 非 root 时自动通过 sudo 提权 (用户直接输入密码); 提权不可用则报错退出。
+if [ "$(id -u)" -ne 0 ]; then
+	if command -v sudo >/dev/null 2>&1; then
+		echo "[提示] 需要 root 权限, 正在通过 sudo 提权 (请输入密码)..."
+		exec sudo sh "$DIR/$(basename "$0")" "$@"
+	fi
+	echo "[错误] 本程序必须以 root 运行, 且未找到 sudo 无法自动提权" >&2
+	echo "       请使用: sudo bash run.sh   或   su -c 'sh run.sh'" >&2
+	exit 1
+fi
+
 # 修正传输/解压流程可能丢失的可执行位 (zip 解压 / Windows 共享 / 打包工具)。
 # 动态链接器与主程序必须可执行, 否则会回退系统解释器, 可能因板端系统库过旧导致启动失败。
 chmod +x "$DIR/cy_psdk" 2>/dev/null || true

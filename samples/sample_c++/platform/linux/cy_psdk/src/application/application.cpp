@@ -212,6 +212,14 @@ void Application::DjiUser_SetupEnvironment()
 	{
 		throw _STD runtime_error("Register hal network handler error");
 	}
+
+	// Attention: if you want to use camera stream view function, please uncomment it.
+	returnCode = _DJI DjiPlatform_RegSocketHandler(&socketHandler);
+	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+	{
+		throw _STD runtime_error("register osal socket handler error");
+	}
+
 #elif (CONFIG_HARDWARE_CONNECTION == DJI_USE_ONLY_UART)
 	/*!< Attention: Only use uart hardware connection. */
 	returnCode = _DJI DjiPlatform_RegHalUartHandler(&uartHandler);
@@ -270,6 +278,18 @@ void Application::DjiUser_ApplicationStart()
 		throw _STD runtime_error("Fill user info error, please check user info config.");
 	}
 
+	returnCode = _DJI DjiCore_SetFirmwareVersion(firmwareVersion);
+	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+	{
+		throw _STD runtime_error("Set firmware version error.");
+	}
+
+	returnCode = _DJI DjiCore_SetSerialNumber("PSDK12345678XX");
+	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+	{
+		throw _STD runtime_error("Set serial number error");
+	}
+
 	returnCode = _DJI DjiCore_Init(&userInfo);
 	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
@@ -284,27 +304,16 @@ void Application::DjiUser_ApplicationStart()
 	}
 
 	if (aircraftInfoBaseInfo.mountPosition != _DJI DJI_MOUNT_POSITION_EXTENSION_PORT &&
-		_DJI DJI_MOUNT_POSITION_EXTENSION_LITE_PORT != aircraftInfoBaseInfo.mountPosition)
+		aircraftInfoBaseInfo.djiAdapterType != _DJI DJI_SDK_ADAPTER_TYPE_EPORT_V2_RIBBON_CABLE &&
+		aircraftInfoBaseInfo.djiAdapterType != _DJI DJI_SDK_ADAPTER_TYPE_SKYPORT_V3)
 	{
-		throw _STD runtime_error("Please run this sample on extension port.");
+		throw _STD runtime_error("Please run this sample on extension port or skyport v3.");
 	}
 
 	returnCode = _DJI DjiCore_SetAlias("PSDK_APPALIAS");
 	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
 		throw _STD runtime_error("Set alias error.");
-	}
-
-	returnCode = _DJI DjiCore_SetFirmwareVersion(firmwareVersion);
-	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-	{
-		throw _STD runtime_error("Set firmware version error.");
-	}
-
-	returnCode = _DJI DjiCore_SetSerialNumber("PSDK12345678XX");
-	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-	{
-		throw _STD runtime_error("Set serial number error");
 	}
 
 #ifdef CONFIG_MODULE_SAMPLE_CAMERA_EMU_ON

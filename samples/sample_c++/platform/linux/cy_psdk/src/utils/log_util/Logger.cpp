@@ -141,10 +141,9 @@ namespace plane::utils
 		// 创建或更新指向最新日志文件的符号链接
 		_STD_FS path	latest_link { plane::utils::getEXEHomePath("latest.log") };
 		_STD error_code ec {};
-		if (_STD_FS exists(latest_link, ec))
-		{
-			_STD_FS remove(latest_link, ec);
-		}
+		// 链接可能悬空 (指向已被清理的旧日志), 此时 exists() 返回 false, 需直接移除后重建
+		_STD_FS remove(latest_link, ec);
+		ec.clear();
 
 		// 创建指向最新日志文件的符号链接
 		_STD_FS create_symlink(_STD_FS absolute(newLogFile), latest_link, ec);

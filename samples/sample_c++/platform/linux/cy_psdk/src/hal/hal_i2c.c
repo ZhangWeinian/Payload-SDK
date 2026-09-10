@@ -140,6 +140,12 @@ T_DjiReturnCode HalI2c_ReadData(T_DjiI2cHandle i2cHandle, uint16_t devAddress, u
 /* Private functions definition-----------------------------------------------*/
 static void HalI2c_ResetDevice(void)
 {
+	// 非 root 权限无法操作 sysfs GPIO; 复位仅为建议性操作, 静默跳过 (与 hal_uart 的 chmod 静默适配一致)
+	if (geteuid() != 0)
+	{
+		return;
+	}
+
 	char	systemCmd[DJI_SYSTEM_CMD_STR_MAX_SIZE] = { 0 };
 	int32_t ret;
 
