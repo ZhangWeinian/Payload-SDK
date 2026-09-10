@@ -1,6 +1,6 @@
-// cy_psdk/manager/catalog/client/internal/ProbePacketCodec.cpp
+// cy_psdk/manager/catalog/client/internal/codec/ProbePacketCodec.cpp
 
-#include "manager/catalog/client/internal/ProbePacketCodec.h"
+#include "manager/catalog/client/internal/codec/ProbePacketCodec.h"
 
 #include <fmt/format.h>
 #include <stdexcept>

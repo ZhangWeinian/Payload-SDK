@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/CatalogTransport.h
+// cy_psdk/manager/catalog/client/internal/transport/CatalogTransport.h
 //
 // 目录 HTTP 传输封装: URL 基址 + 远程访问门控 (remoteAllowed/conflict/stopping)
 // + HTTP 状态到 CatalogError 的映射 (对齐 java CatalogTransport)。
@@ -14,7 +14,7 @@
 
 #include "define.h"
 #include "manager/catalog/client/CatalogFailure.h"
-#include "manager/catalog/client/internal/HttpTransport.h"
+#include "manager/catalog/client/internal/transport/HttpTransport.h"
 #include "manager/catalog/client/Result.h"
 
 namespace plane::catalog::internal

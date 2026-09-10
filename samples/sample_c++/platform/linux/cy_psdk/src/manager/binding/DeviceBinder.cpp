@@ -12,7 +12,7 @@
 #include <thread>
 
 #include "manager/catalog/CatalogManager.h"
-#include "manager/catalog/client/internal/CppHttpTransport.h"
+#include "manager/catalog/client/internal/transport/CppHttpTransport.h"
 #include "manager/plane_state/PlaneStateStore.h"
 #include "utils/log_util/Logger.h"
 #include "utils/network_util/GetLocalIPV4.h"

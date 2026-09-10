@@ -1,6 +1,6 @@
-// cy_psdk/manager/catalog/client/internal/CatalogIpCache.cpp
+// cy_psdk/manager/catalog/client/internal/discovery/CatalogIpCache.cpp
 
-#include "manager/catalog/client/internal/CatalogIpCache.h"
+#include "manager/catalog/client/internal/discovery/CatalogIpCache.h"
 
 #include <system_error>
 #include <cstdio>
@@ -8,8 +8,8 @@
 #include <fstream>
 #include <unistd.h>
 
-#include "manager/catalog/client/internal/TargetExpander.h"
-#include "manager/catalog/client/internal/TextUtil.h"
+#include "manager/catalog/client/internal/util/TargetExpander.h"
+#include "manager/catalog/client/internal/util/TextUtil.h"
 
 #include "define.h"
 

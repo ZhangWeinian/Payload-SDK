@@ -28,15 +28,15 @@ add_executable (
 	../src/manager/mqtt/handler/MessageHandler.cpp
 	../src/manager/plane_state/PlaneStateStore.cpp
 	../src/manager/catalog/client/CatalogRuntime.cpp
-	../src/manager/catalog/client/internal/CatalogIpCache.cpp
-	../src/manager/catalog/client/internal/CatalogTransport.cpp
-	../src/manager/catalog/client/internal/CppHttpTransport.cpp
-	../src/manager/catalog/client/internal/JsonCodec.cpp
-	../src/manager/catalog/client/internal/ProbePacketCodec.cpp
-	../src/manager/catalog/client/internal/ServiceGateway.cpp
-	../src/manager/catalog/client/internal/TargetExpander.cpp
-	../src/manager/catalog/client/internal/UdpAnnouncementListener.cpp
-	../src/manager/catalog/client/internal/UdpDiscoveryClient.cpp
+	../src/manager/catalog/client/internal/discovery/CatalogIpCache.cpp
+	../src/manager/catalog/client/internal/transport/CatalogTransport.cpp
+	../src/manager/catalog/client/internal/transport/CppHttpTransport.cpp
+	../src/manager/catalog/client/internal/codec/JsonCodec.cpp
+	../src/manager/catalog/client/internal/codec/ProbePacketCodec.cpp
+	../src/manager/catalog/client/internal/service/ServiceGateway.cpp
+	../src/manager/catalog/client/internal/util/TargetExpander.cpp
+	../src/manager/catalog/client/internal/discovery/UdpAnnouncementListener.cpp
+	../src/manager/catalog/client/internal/discovery/UdpDiscoveryClient.cpp
 	../src/utils/json_converter/BuildAndParse.cpp
 	../src/utils/log_util/Logger.cpp
 	../src/utils/integrity/IntegrityCheck.cpp

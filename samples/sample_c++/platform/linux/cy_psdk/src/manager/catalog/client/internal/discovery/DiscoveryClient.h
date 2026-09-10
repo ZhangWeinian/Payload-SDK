@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/DiscoveryClient.h
+// cy_psdk/manager/catalog/client/internal/discovery/DiscoveryClient.h
 //
 // UDP 发现客户端抽象 (对齐 java DiscoveryClient)。CatalogRuntime 通过它执行
 // 周期探测; 平台可实现或注入自定义发现实现。
@@ -9,7 +9,7 @@
 
 #include "define.h"
 #include "manager/catalog/client/DiscoveryConfig.h"
-#include "manager/catalog/client/internal/DiscoveryReport.h"
+#include "manager/catalog/client/internal/discovery/DiscoveryReport.h"
 
 namespace plane::catalog::internal
 {

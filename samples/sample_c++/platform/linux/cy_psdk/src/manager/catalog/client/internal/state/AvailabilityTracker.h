@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/AvailabilityTracker.h
+// cy_psdk/manager/catalog/client/internal/state/AvailabilityTracker.h
 //
 // 连续失败计数, 达到阈值判定"可重试失败已熔断" (对齐 java AvailabilityTracker)。
 

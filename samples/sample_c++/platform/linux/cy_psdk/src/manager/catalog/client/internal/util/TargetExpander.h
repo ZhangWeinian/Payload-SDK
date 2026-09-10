@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/TargetExpander.h
+// cy_psdk/manager/catalog/client/internal/util/TargetExpander.h
 //
 // 探测目标展开 (对齐 java TargetExpander)。支持单 IP / 末段通配 .* / CIDR / 起止范围。
 

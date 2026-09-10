@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/ConfigCache.h
+// cy_psdk/manager/catalog/client/internal/state/ConfigCache.h
 //
 // 单项配置的最后一次有效缓存 (对齐 java ConfigCache)。线程安全。
 

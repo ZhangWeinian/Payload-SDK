@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/ProbePacketCodec.h
+// cy_psdk/manager/catalog/client/internal/codec/ProbePacketCodec.h
 //
 // SWMP UDP 探测包编解码 (对齐 java ProbePacketCodec, 与服务端字节兼容)。
 //

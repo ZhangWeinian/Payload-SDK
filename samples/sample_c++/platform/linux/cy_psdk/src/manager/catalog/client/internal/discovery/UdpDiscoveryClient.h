@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/UdpDiscoveryClient.h
+// cy_psdk/manager/catalog/client/internal/discovery/UdpDiscoveryClient.h
 //
 // UDP 目录发现客户端 (对齐 java UdpDiscoveryClient, 传输层用 asio)。
 // 同步 discover: 向 targets 广播探测请求, 在 response_window 内收集响应并去重。
@@ -13,9 +13,9 @@
 #include "define.h"
 #include "manager/catalog/client/CatalogTypes.h"
 #include "manager/catalog/client/DiscoveryConfig.h"
-#include "manager/catalog/client/internal/CatalogIpCache.h"
-#include "manager/catalog/client/internal/DiscoveryClient.h"
-#include "manager/catalog/client/internal/DiscoveryReport.h"
+#include "manager/catalog/client/internal/discovery/CatalogIpCache.h"
+#include "manager/catalog/client/internal/discovery/DiscoveryClient.h"
+#include "manager/catalog/client/internal/discovery/DiscoveryReport.h"
 
 namespace plane::catalog::internal
 {

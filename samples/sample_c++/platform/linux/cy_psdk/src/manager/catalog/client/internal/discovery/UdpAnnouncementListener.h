@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/UdpAnnouncementListener.h
+// cy_psdk/manager/catalog/client/internal/discovery/UdpAnnouncementListener.h
 //
 // 被动监听 Catalog 服务端主动广播的公告包 (SWMP command=0x82, 默认每 ~5s 一次)。
 // 与 UdpDiscoveryClient (主动探测, 需先配置 node_id/targets) 不同,

@@ -1,12 +1,12 @@
-// cy_psdk/manager/catalog/client/internal/JsonCodec.cpp
+// cy_psdk/manager/catalog/client/internal/codec/JsonCodec.cpp
 
-#include "manager/catalog/client/internal/JsonCodec.h"
+#include "manager/catalog/client/internal/codec/JsonCodec.h"
 
 #include <set>
 
 #include "manager/catalog/client/CatalogError.h"
 #include "manager/catalog/client/CatalogFailure.h"
-#include "manager/catalog/client/internal/TextUtil.h"
+#include "manager/catalog/client/internal/util/TextUtil.h"
 
 #include "define.h"
 

@@ -1,6 +1,6 @@
-// cy_psdk/manager/catalog/client/internal/CatalogTransport.cpp
+// cy_psdk/manager/catalog/client/internal/transport/CatalogTransport.cpp
 
-#include "manager/catalog/client/internal/CatalogTransport.h"
+#include "manager/catalog/client/internal/transport/CatalogTransport.h"
 
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
@@ -8,7 +8,7 @@
 #include <set>
 
 #include "manager/catalog/client/CatalogError.h"
-#include "manager/catalog/client/internal/CppHttpTransport.h"
+#include "manager/catalog/client/internal/transport/CppHttpTransport.h"
 
 #include "define.h"
 

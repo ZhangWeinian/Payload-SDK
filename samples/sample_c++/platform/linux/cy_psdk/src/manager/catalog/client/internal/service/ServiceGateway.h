@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/ServiceGateway.h
+// cy_psdk/manager/catalog/client/internal/service/ServiceGateway.h
 //
 // 目录 HTTP API 网关 (对齐 java ServiceGateway): 注册/心跳/状态/服务解析/配置等。
 
@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "manager/catalog/client/CatalogModels.h"
-#include "manager/catalog/client/internal/CatalogTransport.h"
-#include "manager/catalog/client/internal/HttpTransport.h"
+#include "manager/catalog/client/internal/transport/CatalogTransport.h"
+#include "manager/catalog/client/internal/transport/HttpTransport.h"
 #include "manager/catalog/client/Result.h"
 
 #include "define.h"

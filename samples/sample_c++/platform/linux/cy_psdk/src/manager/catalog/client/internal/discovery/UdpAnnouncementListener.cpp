@@ -1,6 +1,6 @@
-// cy_psdk/manager/catalog/client/internal/UdpAnnouncementListener.cpp
+// cy_psdk/manager/catalog/client/internal/discovery/UdpAnnouncementListener.cpp
 
-#include "manager/catalog/client/internal/UdpAnnouncementListener.h"
+#include "manager/catalog/client/internal/discovery/UdpAnnouncementListener.h"
 
 #include <fmt/format.h>
 #include <asio.hpp>
@@ -12,7 +12,7 @@
 
 #include "manager/catalog/client/CatalogError.h"
 #include "manager/catalog/client/CatalogFailure.h"
-#include "manager/catalog/client/internal/ProbePacketCodec.h"
+#include "manager/catalog/client/internal/codec/ProbePacketCodec.h"
 
 #include "define.h"
 

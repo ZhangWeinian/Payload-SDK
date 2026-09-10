@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/CatalogIpCache.h
+// cy_psdk/manager/catalog/client/internal/discovery/CatalogIpCache.h
 //
 // 上次成功 Catalog IP 缓存 (对齐 java CatalogIpCache)。仅在使用时持久化到文件;
 // 为空路径时禁用 (psdk 默认不启用, 每次重新探测)。

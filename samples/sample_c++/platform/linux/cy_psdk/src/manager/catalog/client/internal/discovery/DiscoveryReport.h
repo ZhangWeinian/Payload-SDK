@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/DiscoveryReport.h
+// cy_psdk/manager/catalog/client/internal/discovery/DiscoveryReport.h
 //
 // 探测结果状态与一轮探测报告 (对齐 java DiscoveryStatus/DiscoveryReport)。
 

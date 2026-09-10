@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/TextUtil.h
+// cy_psdk/manager/catalog/client/internal/util/TextUtil.h
 //
 // 文本工具 (SDK 内部)。trim 语义对齐 java String.trim():
 // 去除两端码点 <= U+0020 的字符, 内部字符原样保留。

@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/JsonCodec.h
+// cy_psdk/manager/catalog/client/internal/codec/JsonCodec.h
 //
 // 注册/状态 JSON 序列化辅助 (对齐 java JsonCodec, 用 nlohmann-json)。
 

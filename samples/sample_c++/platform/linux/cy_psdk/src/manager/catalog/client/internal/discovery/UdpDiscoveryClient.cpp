@@ -1,6 +1,6 @@
-// cy_psdk/manager/catalog/client/internal/UdpDiscoveryClient.cpp
+// cy_psdk/manager/catalog/client/internal/discovery/UdpDiscoveryClient.cpp
 
-#include "manager/catalog/client/internal/UdpDiscoveryClient.h"
+#include "manager/catalog/client/internal/discovery/UdpDiscoveryClient.h"
 
 #include <fmt/format.h>
 #include <asio.hpp>
@@ -10,8 +10,8 @@
 #include <random>
 #include <thread>
 
-#include "manager/catalog/client/internal/ProbePacketCodec.h"
-#include "manager/catalog/client/internal/TargetExpander.h"
+#include "manager/catalog/client/internal/codec/ProbePacketCodec.h"
+#include "manager/catalog/client/internal/util/TargetExpander.h"
 
 #include "define.h"
 

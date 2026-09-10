@@ -1,6 +1,6 @@
-// cy_psdk/manager/catalog/client/internal/TargetExpander.cpp
+// cy_psdk/manager/catalog/client/internal/util/TargetExpander.cpp
 
-#include "manager/catalog/client/internal/TargetExpander.h"
+#include "manager/catalog/client/internal/util/TargetExpander.h"
 
 #include <fmt/format.h>
 #include <system_error>
@@ -9,7 +9,7 @@
 
 #include "manager/catalog/client/CatalogError.h"
 #include "manager/catalog/client/CatalogFailure.h"
-#include "manager/catalog/client/internal/TextUtil.h"
+#include "manager/catalog/client/internal/util/TextUtil.h"
 
 #include "define.h"
 

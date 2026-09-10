@@ -26,12 +26,12 @@
 #include "manager/catalog/client/CatalogRuntimeOptions.h"
 #include "manager/catalog/client/CatalogTypes.h"
 #include "manager/catalog/client/DiscoveryConfig.h"
-#include "manager/catalog/client/internal/CppHttpTransport.h"
-#include "manager/catalog/client/internal/DiscoveryClient.h"
-#include "manager/catalog/client/internal/HttpTransport.h"
-#include "manager/catalog/client/internal/ProbePacketCodec.h"
-#include "manager/catalog/client/internal/ServiceGateway.h"
-#include "manager/catalog/client/internal/UdpAnnouncementListener.h"
+#include "manager/catalog/client/internal/codec/ProbePacketCodec.h"
+#include "manager/catalog/client/internal/discovery/DiscoveryClient.h"
+#include "manager/catalog/client/internal/discovery/UdpAnnouncementListener.h"
+#include "manager/catalog/client/internal/service/ServiceGateway.h"
+#include "manager/catalog/client/internal/transport/CppHttpTransport.h"
+#include "manager/catalog/client/internal/transport/HttpTransport.h"
 
 namespace
 {

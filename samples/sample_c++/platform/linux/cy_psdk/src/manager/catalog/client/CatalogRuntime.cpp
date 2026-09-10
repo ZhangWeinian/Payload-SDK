@@ -18,13 +18,13 @@
 
 #include "manager/catalog/client/CatalogError.h"
 #include "manager/catalog/client/CatalogFailure.h"
-#include "manager/catalog/client/internal/AvailabilityTracker.h"
-#include "manager/catalog/client/internal/ConfigCache.h"
-#include "manager/catalog/client/internal/DiscoveryClient.h"
-#include "manager/catalog/client/internal/JsonCodec.h"
-#include "manager/catalog/client/internal/RuntimeStateMachine.h"
-#include "manager/catalog/client/internal/ServiceGateway.h"
-#include "manager/catalog/client/internal/UdpDiscoveryClient.h"
+#include "manager/catalog/client/internal/codec/JsonCodec.h"
+#include "manager/catalog/client/internal/discovery/DiscoveryClient.h"
+#include "manager/catalog/client/internal/discovery/UdpDiscoveryClient.h"
+#include "manager/catalog/client/internal/service/ServiceGateway.h"
+#include "manager/catalog/client/internal/state/AvailabilityTracker.h"
+#include "manager/catalog/client/internal/state/ConfigCache.h"
+#include "manager/catalog/client/internal/state/RuntimeStateMachine.h"
 
 #include "define.h"
 

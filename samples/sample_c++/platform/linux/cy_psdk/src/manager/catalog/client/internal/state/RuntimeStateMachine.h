@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/RuntimeStateMachine.h
+// cy_psdk/manager/catalog/client/internal/state/RuntimeStateMachine.h
 //
 // 生命周期状态机 (对齐 java RuntimeStateMachine)。线程安全。
 

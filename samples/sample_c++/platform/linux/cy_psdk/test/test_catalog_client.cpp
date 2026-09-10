@@ -2,10 +2,10 @@
 //
 // 自研 catalog 客户端纯逻辑单元测试: targets 展开 + SWMP 探测包编解码。
 
-#include "manager/catalog/client/internal/CatalogIpCache.h"
-#include "manager/catalog/client/internal/JsonCodec.h"
-#include "manager/catalog/client/internal/ProbePacketCodec.h"
-#include "manager/catalog/client/internal/TargetExpander.h"
+#include "manager/catalog/client/internal/codec/JsonCodec.h"
+#include "manager/catalog/client/internal/codec/ProbePacketCodec.h"
+#include "manager/catalog/client/internal/discovery/CatalogIpCache.h"
+#include "manager/catalog/client/internal/util/TargetExpander.h"
 
 #include <gtest/gtest.h>
 

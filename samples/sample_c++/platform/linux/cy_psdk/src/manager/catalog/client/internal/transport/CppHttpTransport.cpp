@@ -1,6 +1,6 @@
-// cy_psdk/manager/catalog/client/internal/CppHttpTransport.cpp
+// cy_psdk/manager/catalog/client/internal/transport/CppHttpTransport.cpp
 
-#include "manager/catalog/client/internal/CppHttpTransport.h"
+#include "manager/catalog/client/internal/transport/CppHttpTransport.h"
 
 #include <system_error>
 #include <charconv>

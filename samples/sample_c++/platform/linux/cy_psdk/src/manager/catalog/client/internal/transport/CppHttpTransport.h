@@ -1,4 +1,4 @@
-// cy_psdk/manager/catalog/client/internal/CppHttpTransport.h
+// cy_psdk/manager/catalog/client/internal/transport/CppHttpTransport.h
 //
 // 基于 cpp-httplib (vcpkg 托管) 的同步 HTTP 传输实现 (平台默认传输)。
 // 每个请求使用临时 client, 天然线程安全 (Catalog 控制线程与业务线程可并发调用)。
@@ -8,7 +8,7 @@
 #include <atomic>
 
 #include "define.h"
-#include "manager/catalog/client/internal/HttpTransport.h"
+#include "manager/catalog/client/internal/transport/HttpTransport.h"
 
 namespace plane::catalog::internal
 {
