@@ -23,6 +23,7 @@ add_executable (
 	test_catalog_client.cpp
 	test_catalog_runtime.cpp
 	test_event_manager.cpp
+	test_plane_state_store.cpp
 	test_boost_beast_smoke.cpp
 	test_ws_client.cpp
 	../src/config/ConfigManager.cpp

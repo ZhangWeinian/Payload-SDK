@@ -22,6 +22,7 @@
 #include "manager/catalog/client/Result.h"
 #include "manager/event_manager/EventManager.h"
 #include "manager/mqtt/service/MQTTv5Service.h"
+#include "manager/plane_state/PlaneStateStore.h"
 #include "utils/log_util/Logger.h"
 
 namespace plane::manager
@@ -223,6 +224,15 @@ namespace plane::manager
 				stateText(ev.previous_state),
 				stateText(ev.current_state),
 				ev.message
+			);
+
+			// 同步域模型: 目录状态 (经 mutator 只更新本模块字段; 供本地展示与上报)
+			plane::domain::PlaneStateStore::getInstance().update(
+				[&ev](plane::domain::PlaneStateDataClass& st)
+				{
+					st.catalog_state = stateText(ev.current_state);
+					st.catalog_ready = (ev.current_state == CatalogState::READY);
+				}
 			);
 
 			if (ready)

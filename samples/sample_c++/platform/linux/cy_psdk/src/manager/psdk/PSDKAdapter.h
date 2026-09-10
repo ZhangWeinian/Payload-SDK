@@ -3,6 +3,7 @@
 #pragma once
 
 #include <dji_fc_subscription.h>
+#include <dji_flight_controller.h>
 #include <dji_hms_manager.h>
 #include <dji_typedef.h>
 #include <dji_waypoint_v3.h>
@@ -92,6 +93,15 @@ namespace plane::manager
 		// 作为 PSDK 所要求的 C 兼容回调函数，将 C 接口调用桥接到 C++ 成员函数 hmsInfoCallback ，并返回 PSDK 期望的成功码
 		static _DJI T_DjiReturnCode hmsInfoCallbackEntry(_DJI T_DjiHmsInfoTable hmsInfoTable);
 
+		// 处理飞控"返航电量/剩余飞行时间"回调, 更新域模型低电量返航评估
+		void batteryCapacityGohomeCallback(_DJI T_DjiFlightControllerBatteryCapacityGohome info);
+
+		// 作为 PSDK 所要求的 C 兼容回调函数, 将 C 接口调用桥接到 C++ 成员函数 batteryCapacityGohomeCallback
+		static _DJI T_DjiReturnCode batteryCapacityGohomeCallbackEntry(_DJI T_DjiFlightControllerBatteryCapacityGohome info);
+
+		// 读取相机固定信息 (相机型号/固件版本) 写入域模型; 无相机/不支持时仅告警
+		void refreshFixedCameraInfo(void) noexcept;
+
 		// PSDK 命令执行器，可以安全地在线程池中异步执行一个 PSDK 命令，并返回一个 _STD future 用于获取执行结果
 		template<typename CommandLogic>
 		_STD future<_DJI T_DjiReturnCode>
@@ -167,88 +177,88 @@ namespace plane::manager
 		struct SubscriptionStatus
 		{
 			/*!
-			* 飞行器融合位置主题名称。请参考 ::T_DjiFcSubscriptionPositionFused 了解数据结构信息。
-			*
-			* @warning 请注意，如果 GPS 信号较弱（参见下方的 visibleSatelliteNumber），则纬度/经度值将不会更新，但高度仍可能更新。
-			*          目前无法判断纬度/经度的更新是否可靠。
-			*
-			* @details 此主题最重要的组成部分是 T_DjiFcSubscriptionPositionFused::visibleSatelliteNumber。
-			*          请使用该值来跟踪您的 GPS 卫星覆盖情况，并建立一些启发式方法，以便在可能失去 GPS 更新时提前做出预判。
-			*/
+			 * 飞行器融合位置主题名称。请参考 ::T_DjiFcSubscriptionPositionFused 了解数据结构信息。
+			 *
+			 * @warning 请注意，如果 GPS 信号较弱（参见下方的 visibleSatelliteNumber），则纬度/经度值将不会更新，但高度仍可能更新。
+			 *          目前无法判断纬度/经度的更新是否可靠。
+			 *
+			 * @details 此主题最重要的组成部分是 T_DjiFcSubscriptionPositionFused::visibleSatelliteNumber。
+			 *          请使用该值来跟踪您的 GPS 卫星覆盖情况，并建立一些启发式方法，以便在可能失去 GPS 更新时提前做出预判。
+			 */
 			bool positionFused { false };
 
 			/*!
-			* @brief 飞行器融合高度主题名称。融合高度主题提供飞行器相对于海平面的融合高度。
-			*        请参考 ::T_DjiFcSubscriptionAltitudeFused 了解数据结构信息。
-			*
-			* 单位 m
-			* 数据结构 \ref T_DjiFcSubscriptionAltitudeFused
-			*/
+			 * @brief 飞行器融合高度主题名称。融合高度主题提供飞行器相对于海平面的融合高度。
+			 *        请参考 ::T_DjiFcSubscriptionAltitudeFused 了解数据结构信息。
+			 *
+			 * 单位 m
+			 * 数据结构 \ref T_DjiFcSubscriptionAltitudeFused
+			 */
 			bool altitudeFused { false };
 
 			/*!
-			* @brief 提供飞行器上次起飞时相对于海平面的高度。
-			*
-			* @details 这是飞控系统融合输出的结果，同时也使用了国际标准大气（ICAO）模型。
-			*          ICAO 模型定义在 15°C 时海平面标准气压为 1013.25 mBar，温度递减率为每 1000 米下降 6.5°C。
-			*          在您的实际场景中，起飞点的气压可能高于 1013.25 mBar。例如，气象站显示旧金山国际机场（SFO）近期记录的气压为 1027.1 mBar。
-			*          SFO 实际海拔约为 4 米，但若使用 ICAO 模型计算气压高度，则对应约为 -114 米。您可以使用在线计算器来估算您所在区域的气压高度。
-			*
-			*          影响高度读数的另一个因素是气压计的制造差异——在同一物理位置，两架不同的飞行器之间出现 ±30 米的高度偏差并不罕见。
-			*          对于同一架飞行器，这些读数通常是稳定的，因此如果您的代码依赖于绝对高度值的准确性，您需要对系统进行偏移校准。
-			*
-			* @note 该值在每次无人机起飞时更新。
-			*
-			* 单位 m
-			* 数据结构 \ref T_DjiFcSubscriptionAltitudeOfHomePoint
-			*/
+			 * @brief 提供飞行器上次起飞时相对于海平面的高度。
+			 *
+			 * @details 这是飞控系统融合输出的结果，同时也使用了国际标准大气（ICAO）模型。
+			 *          ICAO 模型定义在 15°C 时海平面标准气压为 1013.25 mBar，温度递减率为每 1000 米下降 6.5°C。
+			 *          在您的实际场景中，起飞点的气压可能高于 1013.25 mBar。例如，气象站显示旧金山国际机场（SFO）近期记录的气压为 1027.1 mBar。
+			 *          SFO 实际海拔约为 4 米，但若使用 ICAO 模型计算气压高度，则对应约为 -114 米。您可以使用在线计算器来估算您所在区域的气压高度。
+			 *
+			 *          影响高度读数的另一个因素是气压计的制造差异——在同一物理位置，两架不同的飞行器之间出现 ±30 米的高度偏差并不罕见。
+			 *          对于同一架飞行器，这些读数通常是稳定的，因此如果您的代码依赖于绝对高度值的准确性，您需要对系统进行偏移校准。
+			 *
+			 * @note 该值在每次无人机起飞时更新。
+			 *
+			 * 单位 m
+			 * 数据结构 \ref T_DjiFcSubscriptionAltitudeOfHomePoint
+			 */
 			bool altitudeOfHomepoint { false };
 
 			/*!
-			* @brief 飞行器四元数主题名称。四元数主题提供从飞行器机体坐标系（FRD）到地面坐标系（NED）的旋转关系。
-			*        请参考 ::T_DjiFcSubscriptionQuaternion 了解数据结构信息。
-			*
-			* @details DJI 的四元数采用 Hamilton 约定（q0 = w, q1 = x, q2 = y, q3 = z）。
-			*
-			* 数据结构 \ref T_DjiFcSubscriptionQuaternion
-			*/
+			 * @brief 飞行器四元数主题名称。四元数主题提供从飞行器机体坐标系（FRD）到地面坐标系（NED）的旋转关系。
+			 *        请参考 ::T_DjiFcSubscriptionQuaternion 了解数据结构信息。
+			 *
+			 * @details DJI 的四元数采用 Hamilton 约定（q0 = w, q1 = x, q2 = y, q3 = z）。
+			 *
+			 * 数据结构 \ref T_DjiFcSubscriptionQuaternion
+			 */
 			bool quaternion { false };
 
 			/*!
-			* @brief 飞行器速度主题名称。速度主题提供飞行器在固定于地面的 NEU 坐标系中的速度。
-			*        请参考 ::T_DjiFcSubscriptionVelocity 了解数据结构信息。
-			*
-			* @warning 请注意，此数据并非采用常规的右手坐标系。
-			*
-			* @details 该速度数据是飞行器融合输出的结果。原始输出是在右手 NED 坐标系中，但在发布到此主题前，Z 轴速度的符号已被翻转。
-			*          因此，如果您希望获得 NED 坐标系下的速度，只需将 Z 轴速度值再次取反即可。
-			*          在此基础上，您可以通过旋转将其转换为任意右手坐标系。
-			*
-			* 数据结构 \ref T_DjiFcSubscriptionVelocity
-			*/
+			 * @brief 飞行器速度主题名称。速度主题提供飞行器在固定于地面的 NEU 坐标系中的速度。
+			 *        请参考 ::T_DjiFcSubscriptionVelocity 了解数据结构信息。
+			 *
+			 * @warning 请注意，此数据并非采用常规的右手坐标系。
+			 *
+			 * @details 该速度数据是飞行器融合输出的结果。原始输出是在右手 NED 坐标系中，但在发布到此主题前，Z 轴速度的符号已被翻转。
+			 *          因此，如果您希望获得 NED 坐标系下的速度，只需将 Z 轴速度值再次取反即可。
+			 *          在此基础上，您可以通过旋转将其转换为任意右手坐标系。
+			 *
+			 * 数据结构 \ref T_DjiFcSubscriptionVelocity
+			 */
 			bool velocity { false };
 
 			/*!
-			* @brief 电池信息主题名称。请参考 ::T_DjiFcSubscriptionWholeBatteryInfo 了解数据结构信息。
-			*
-			* 数据结构 \ref T_DjiFcSubscriptionWholeBatteryInfo
-			*/
+			 * @brief 电池信息主题名称。请参考 ::T_DjiFcSubscriptionWholeBatteryInfo 了解数据结构信息。
+			 *
+			 * 数据结构 \ref T_DjiFcSubscriptionWholeBatteryInfo
+			 */
 			bool batteryInfo { false };
 
 			/*!
-			* @brief 提供 1 号云台的俯仰（pitch）、横滚（roll）、偏航（yaw）角度，最高更新频率达 50Hz 。
-			*
-			* @details 云台角度的参考坐标系是附着于云台的 NED 坐标系。
-			*          该主题使用了一个过于通用的数据结构 Vector3f 。各分量含义如下:
-			*          |  数据结构元素  |      含义      |
-			*          |  Vector3f.x  |  俯仰角（pitch）|
-			*          |  Vector3f.y  |  横滚角（roll） |
-			*          |  Vector3f.z  |  偏航角（yaw）  |
-			*
-			* 单位 deg（度）
-			* 数据结构 \ref T_DjiFcSubscriptionGimbalAngles
-			* 参见 \ref TOPIC_GIMBAL_STATUS, \ref TOPIC_GIMBAL_CONTROL_MODE
-			*/
+			 * @brief 提供 1 号云台的俯仰（pitch）、横滚（roll）、偏航（yaw）角度，最高更新频率达 50Hz 。
+			 *
+			 * @details 云台角度的参考坐标系是附着于云台的 NED 坐标系。
+			 *          该主题使用了一个过于通用的数据结构 Vector3f 。各分量含义如下:
+			 *          |  数据结构元素  |      含义      |
+			 *          |  Vector3f.x  |  俯仰角（pitch）|
+			 *          |  Vector3f.y  |  横滚角（roll） |
+			 *          |  Vector3f.z  |  偏航角（yaw）  |
+			 *
+			 * 单位 deg（度）
+			 * 数据结构 \ref T_DjiFcSubscriptionGimbalAngles
+			 * 参见 \ref TOPIC_GIMBAL_STATUS, \ref TOPIC_GIMBAL_CONTROL_MODE
+			 */
 			bool gimbalAngles { false };
 
 			/*! @brief 主电池单电池详情 (INDEX1): 温度/电流/电芯数 */
@@ -265,6 +275,15 @@ namespace plane::manager
 
 			/*! @brief 返航点是否已设置 */
 			bool homePointSetStatus { false };
+
+			/*! @brief GPS 信号等级 (0-5, 越大越好) */
+			bool gpsSignalLevel { false };
+
+			/*! @brief GPS 控制等级 */
+			bool gpsControlLevel { false };
+
+			/*! @brief 控制设备/控制权归属 */
+			bool controlDevice { false };
 		} sub_status_;
 
 		mutable _STD mutex payload_mutex_ {};
@@ -284,5 +303,11 @@ namespace plane::manager
 
 		plane::protocol::StatusPayload														latest_payload_ {};
 		constexpr static auto ACQUISITION_INTERVAL { _STD_CHRONO milliseconds(20) };
+
+		// ---- 真数据采集运行态 (跳线程: 回调/命令线程写入, 采集线程读取) ----
+		_STD atomic<int> mission_current_waypoint_ { 0 };		  // 当前航点 (航线任务回调写入)
+		_STD atomic<int> virtual_stick_mode_ { 0 };				  // 虚拟摇杆模式: 0 关 / 1 启用 / 2 高级 (命令写入)
+		_STD atomic<int> laser_distance_01m_ { -1 };			  // 激光测距 (0.1m 单位; -1 = 未测到)
+		_STD_CHRONO steady_clock::time_point last_laser_poll_ {}; // 激光轮询节流 (仅采集线程使用)
 	};
 } // namespace plane::manager

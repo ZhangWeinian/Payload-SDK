@@ -3,6 +3,7 @@
 #include "manager/psdk/PSDKManager.h"
 
 #include "application.hpp"
+#include <dji_camera_manager.h>
 #include <dji_flight_controller.h>
 #include <dji_hms_manager.h>
 #include <dji_logger.h>
@@ -94,11 +95,24 @@ namespace plane::manager
 			LOG_INFO("DJI PSDK Application 初始化完成");
 
 			// 初始化 HMS 模块
-			if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_Init() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			if (_DJI T_DjiReturnCode returnCode {
+					_DJI DjiHmsManager_Init(),
+				};
+				returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
 				LOG_WARN("HMS 模块初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
 			}
 			LOG_INFO("HMS 模块初始化完成");
+
+			// 初始化相机模块 (读取相机固件/激光测距等; 无相机时失败仅告警)
+			if (_DJI T_DjiReturnCode returnCode { _DJI DjiCameraManager_Init() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			{
+				LOG_WARN("相机模块初始化失败 (无相机?), 错误: {}", plane::utils::convertDjiError(returnCode));
+			}
+			else
+			{
+				LOG_INFO("相机模块初始化完成");
+			}
 
 			// 启动 PSDK 适配器
 			if (!plane::manager::PSDKAdapter::getInstance().subscribeTelemetryData())
@@ -112,7 +126,8 @@ namespace plane::manager
 			if (config.isStandardProceduresEnabled() && config.isSkipRC())
 			{
 				if (_DJI T_DjiReturnCode returnCode {
-						_DJI DjiFlightController_SetRCLostActionEnableStatus(_DJI DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION) };
+						_DJI DjiFlightController_SetRCLostActionEnableStatus(_DJI DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION),
+					};
 					returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 				{
 					LOG_WARN("禁用 RC Lost Action 失败，错误: {}, 错误码: {:#08X}", plane::utils::convertDjiError(returnCode), returnCode);
@@ -158,6 +173,12 @@ namespace plane::manager
 		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 		{
 			LOG_WARN("HMS 模块反初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+		}
+
+		// 反初始化相机模块
+		if (_DJI T_DjiReturnCode returnCode { _DJI DjiCameraManager_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			LOG_WARN("相机模块反初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
 		}
 
 		LOG_INFO("DJI PSDK Application 已反初始化");

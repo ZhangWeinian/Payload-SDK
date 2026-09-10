@@ -77,7 +77,11 @@ namespace plane::domain
 	};
 	enum class FlightControlAuthority
 	{
-		UNKNOWN = 0 /*其余见 SDK*/
+		UNKNOWN = 0, // 未知
+		RC,			 // 遥控器
+		MSDK,		 // 移动端 App
+		PSDK,		 // 机载 PSDK 程序
+		DOCK		 // 机场/机库
 	};
 	enum class RemoteControllerFlightMode
 	{

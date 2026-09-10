@@ -26,6 +26,7 @@
 #include <thread>
 
 #include "manager/catalog/CatalogManager.h"
+#include "manager/plane_state/PlaneStateStore.h"
 #include "utils/log_util/Logger.h"
 
 namespace plane::manager
@@ -230,6 +231,12 @@ namespace plane::manager
 						this->connected.store(true, _STD memory_order_release);
 						this->failure_logged = false;
 						LOG_INFO("WebSocket 已连接: {}", WsClient::buildWsUrl(this->host, kServerPort));
+						plane::domain::PlaneStateStore::getInstance().update(
+							[](plane::domain::PlaneStateDataClass& st)
+							{
+								st.web_socket_connected = true;
+							}
+						);
 						this->doSubscribe();
 					}
 				);
@@ -402,7 +409,12 @@ namespace plane::manager
 		}
 
 		this->connected.store(false, _STD memory_order_release);
-		this->closeTransport();
+		plane::domain::PlaneStateStore::getInstance().update(
+			[](plane::domain::PlaneStateDataClass& st)
+			{
+				st.web_socket_connected = false;
+			}
+		);
 
 		if (!this->running.load(_STD memory_order_acquire))
 		{

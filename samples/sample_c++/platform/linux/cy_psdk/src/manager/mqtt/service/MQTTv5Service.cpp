@@ -5,6 +5,7 @@
 #include "config/ConfigManager.h"
 #include "manager/mqtt/handler/MessageHandler.h"
 #include "manager/mqtt/MQTTTopics.h"
+#include "manager/plane_state/PlaneStateStore.h"
 #include "utils/json_converter/BuildAndParse.h"
 #include "utils/log_util/Logger.h"
 
@@ -25,6 +26,7 @@ namespace plane::manager
 		void connected(const _STD string& cause) override
 		{
 			this->service_->setConnected(true);
+			this->service_->syncConnectionStateToStore(true);
 			LOG_INFO("MQTT 连接成功！");
 			this->service_->subscribe(plane::manager::TOPIC_MISSION_CONTROL);
 			this->service_->subscribe(plane::manager::TOPIC_COMMAND_CONTROL);
@@ -55,6 +57,7 @@ namespace plane::manager
 				impl.lastAttemptTime = _STD_CHRONO steady_clock::now();
 			}
 			this->service_->setConnected(false);
+			this->service_->syncConnectionStateToStore(false);
 		}
 
 		void message_arrived(_MQTT const_message_ptr msg) override
@@ -318,6 +321,26 @@ namespace plane::manager
 	void MQTTv5Service::setConnected(bool status) noexcept
 	{
 		this->connected_.store(status, _STD memory_order_release);
+	}
+
+	void MQTTv5Service::syncConnectionStateToStore(bool connected) noexcept
+	{
+		_STD string url {};
+		{
+			_STD lock_guard<_STD mutex> lock { this->impl_->clientMutex };
+			url = this->impl_->activeUrl;
+		}
+
+		plane::domain::PlaneStateStore::getInstance().update(
+			[connected, &url](plane::domain::PlaneStateDataClass& st)
+			{
+				st.mqtt_connected = connected;
+				if (!url.empty())
+				{
+					st.mqtt_connected_url = url;
+				}
+			}
+		);
 	}
 
 	bool MQTTv5Service::isConnected(void) const noexcept

@@ -122,7 +122,10 @@ namespace plane::manager
 		_NODISCARD _STD string effectiveBrokerUrl(void) noexcept;
 
 		// 设置连接状态
-		void		setConnected(bool status) noexcept;
+		void setConnected(bool status) noexcept;
+
+		// 将连接状态同步到域模型 (PlaneStateStore; 供本地展示与上报; url 取当前维护中的 activeUrl)
+		void		syncConnectionStateToStore(bool connected) noexcept;
 
 		_STD mutex	mutex_ {};
 		_STD string broker_url_override_ {}; // 动态 broker 覆盖 (Catalog 服务发现), 由 mutex_ 保护
