@@ -293,6 +293,7 @@ namespace plane::utils
 		const int	  measuredWidth { terminalWidth() };
 		const int	  width { measuredWidth > 0 ? measuredWidth : FALLBACK_WIDTH };
 		const bool	  colors { StatusBoard::colorSupported() };
+		constexpr int SEPARATOR_LINES { 2 }; // 状态块与日志区之间的空行数
 
 		// 各项的纯文本与最大宽度 (用于决定列数)
 		_STD vector<_STD string> plains;
@@ -320,6 +321,11 @@ namespace plane::utils
 		}
 
 		buffer_.append("\r");
+		// 与日志区之间留空行; 空行跟随状态块一起抹除/重绘, 计入 drawn_lines_
+		for (int i = 0; i < SEPARATOR_LINES; ++i)
+		{
+			buffer_.append("\r\n");
+		}
 		int lines { 0 };
 		for (size_t i = 0; i < items_.size(); i += static_cast<size_t>(columns))
 		{
@@ -371,7 +377,7 @@ namespace plane::utils
 			}
 		}
 		// 末行不加换行: 光标停在状态块最后一行, 供下次 eraseBlockLocked 定位
-		drawn_lines_ = lines;
+		drawn_lines_ = lines + SEPARATOR_LINES;
 	}
 
 	const char* StatusBoard::levelColor(StatusLevel level) noexcept

@@ -58,10 +58,21 @@ namespace plane::manager
 	}
 
 	// 从 PlaneStateStore 读取最新状态并同步到终端状态板
+	// 注: 状态板按"首次 update 的顺序"排列, 此处决定最终展示顺序 (Catalog 置首)
 	void StatusBoardManager::refreshStatus(void)
 	{
 		const auto state { plane::domain::PlaneStateStore::getInstance().snapshot() };
 		auto&	   board { plane::utils::StatusBoard::getInstance() };
+
+		// SwarmCatalog 目录状态 (置首展示)
+		if (state.catalog_ready)
+		{
+			board.update("Catalog", state.catalog_state + " (就绪)", plane::utils::StatusLevel::Ok);
+		}
+		else
+		{
+			board.update("Catalog", state.catalog_state.empty() ? "初始化中…" : state.catalog_state, plane::utils::StatusLevel::Warn);
+		}
 
 		// MQTT 连接状态 (已连接时附带地址; 地址未知则只显示连接状态)
 		if (state.mqtt_connected)
@@ -81,16 +92,6 @@ namespace plane::manager
 			state.web_socket_connected ? "✔ 已连接" : "未连接",
 			state.web_socket_connected ? plane::utils::StatusLevel::Ok : plane::utils::StatusLevel::Warn
 		);
-
-		// SwarmCatalog 目录状态
-		if (state.catalog_ready)
-		{
-			board.update("Catalog", state.catalog_state + " (就绪)", plane::utils::StatusLevel::Ok);
-		}
-		else
-		{
-			board.update("Catalog", state.catalog_state.empty() ? "初始化中…" : state.catalog_state, plane::utils::StatusLevel::Warn);
-		}
 
 		// 设备绑定状态
 		board.update(

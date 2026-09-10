@@ -52,7 +52,7 @@ extern "C"
 		~Application();
 
 	private:
-		static void					DjiUser_SetupEnvironment(int argc, char** argv);
+		static void					DjiUser_SetupEnvironment();
 		static void					DjiUser_ApplicationStart();
 		static _DJI T_DjiReturnCode DjiUser_PrintConsole(const uint8_t* data, uint16_t dataLen);
 		static _DJI T_DjiReturnCode DjiUser_LocalWrite(const uint8_t* data, uint16_t dataLen);

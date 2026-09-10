@@ -1,10 +1,10 @@
 /**
  ********************************************************************
- * @file    hal_network.h
- * @brief   This is the header file for "hal_network.c", defining the structure and
+ * @file    hal_i2c.h
+ * @brief   This is the header file for "hal_i2c.c", defining the structure and
  * (exported) function prototypes.
  *
- * @copyright (c) 2021 DJI. All rights reserved.
+ * @copyright (c) 2018 DJI. All rights reserved.
  *
  * All information contained herein is, and remains, the property of DJI.
  * The intellectual and technical concepts contained herein are proprietary
@@ -24,8 +24,8 @@
  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef HAL_NETWORK_H
-#define HAL_NETWORK_H
+#ifndef HAL_I2C_H
+#define HAL_I2C_H
 
 /* Includes ------------------------------------------------------------------*/
 #include "dji_platform.h"
@@ -36,39 +36,19 @@ extern "C"
 #endif
 
 /* Exported constants --------------------------------------------------------*/
-
-/** @attention  User can config network card name here, if your device is not MF2C/G, please comment below and add your
- * NIC name micro define as #define 'LINUX_NETWORK_DEV   "your NIC name"'.
- */
-#ifdef PLATFORM_ARCH_x86_64
-	#define LINUX_NETWORK_DEV "enp0s31f6"
-#else
-	#define LINUX_NETWORK_DEV "pi4br0"
-#endif
-	/**
-	 * @attention
-	 */
-
-#ifdef PLATFORM_ARCH_x86_64
-	#define USB_NET_ADAPTER_VID (0X0b95)
-	#define USB_NET_ADAPTER_PID (0X1790)
-#else
-	#define USB_NET_ADAPTER_VID (0X0955)
-	#define USB_NET_ADAPTER_PID (0X7020)
-#endif
-
-#define LINUX_CMD_STR_MAX_SIZE (128)
+#define LINUX_I2C_DEV1 "/dev/i2c-1"
 
 	/* Exported types ------------------------------------------------------------*/
 
 	/* Exported functions --------------------------------------------------------*/
-	T_DjiReturnCode HalNetWork_Init(const char* ipAddr, const char* netMask, T_DjiNetworkHandle* halObj);
-	T_DjiReturnCode HalNetWork_DeInit(T_DjiNetworkHandle halObj);
-	T_DjiReturnCode HalNetWork_GetDeviceInfo(T_DjiHalNetworkDeviceInfo* deviceInfo);
+	T_DjiReturnCode HalI2c_Init(T_DjiHalI2cConfig i2cConfig, T_DjiI2cHandle* i2cHandle);
+	T_DjiReturnCode HalI2c_DeInit(T_DjiI2cHandle i2cHandle);
+	T_DjiReturnCode HalI2c_WriteData(T_DjiI2cHandle i2cHandle, uint16_t devAddress, const uint8_t* buf, uint32_t len, uint32_t* realLen);
+	T_DjiReturnCode HalI2c_ReadData(T_DjiI2cHandle i2cHandle, uint16_t devAddress, uint8_t* buf, uint32_t len, uint32_t* realLen);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // HAL_NETWORK_H
+#endif // HAL_I2C_H
 /************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/

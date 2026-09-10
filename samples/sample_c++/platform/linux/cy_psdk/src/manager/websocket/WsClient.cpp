@@ -71,6 +71,7 @@ namespace plane::manager
 		_STD atomic<bool> conn_active { false };			  // 本轮连接仍在进行 (含关闭中)
 		_STD atomic<bool> connected { false };				  // 已完成握手且未断开
 		bool			  failure_logged { false };			  // 连接失败日志降噪 (恢复后重置)
+		bool			  wait_logged { false };			  // 等待目录/地址日志降噪 (拿到地址后重置)
 
 		void			  start();
 		void			  stop();
@@ -131,6 +132,15 @@ namespace plane::manager
 		{
 			this->thread.join();
 		}
+
+		// 同步域模型: 停止后明确置为"未连接" (手动停止时 teardown 回调可能不触发,
+		// 否则状态板会在退出阶段残留"已连接")
+		plane::domain::PlaneStateStore::getInstance().update(
+			[](plane::domain::PlaneStateDataClass& st)
+			{
+				st.web_socket_connected = false;
+			}
+		);
 	}
 
 	// ============================ 连接链 ============================
@@ -152,6 +162,15 @@ namespace plane::manager
 
 		if (ip.empty())
 		{
+			if (!this->wait_logged)
+			{
+				LOG_WARN(
+					"WebSocket 等待目录就绪/服务端地址 (catalog_ready={}), 每 {}s 重试",
+					catalog.isCatalogReady(),
+					kCatalogWaitInterval.count()
+				);
+				this->wait_logged = true;
+			}
 			this->retry_timer.expires_after(kCatalogWaitInterval);
 			this->retry_timer.async_wait(
 				[this](const WsError& ec)
@@ -165,6 +184,8 @@ namespace plane::manager
 			return;
 		}
 
+		this->wait_logged = false; // 已取到地址: 若再进入等待则重新提醒
+		LOG_DEBUG("WebSocket 连接目标: {}:{}", ip, kServerPort);
 		this->doConnect(ip);
 	}
 

@@ -30,7 +30,6 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
-#include "utils/dji_config_manager.h"
 
 /* Private constants ---------------------------------------------------------*/
 
@@ -43,10 +42,8 @@
 /* Exported functions definition ---------------------------------------------*/
 T_DjiReturnCode HalNetWork_Init(const char* ipAddr, const char* netMask, T_DjiNetworkHandle* halObj)
 {
-	int32_t				ret;
-	char				cmdStr[LINUX_CMD_STR_MAX_SIZE];
-	char				networkDeviceName[USER_DEVICE_NAME_STR_MAX_SIZE];
-	T_DjiUserLinkConfig linkConfig = { 0 };
+	int32_t ret;
+	char	cmdStr[LINUX_CMD_STR_MAX_SIZE];
 
 	if (ipAddr == NULL || netMask == NULL)
 	{
@@ -57,17 +54,7 @@ T_DjiReturnCode HalNetWork_Init(const char* ipAddr, const char* netMask, T_DjiNe
 	// Attention: need root permission to config ip addr and netmask.
 	memset(cmdStr, 0, sizeof(cmdStr));
 
-	if (DjiUserConfigManager_IsEnable())
-	{
-		DjiUserConfigManager_GetLinkConfig(&linkConfig);
-		strcpy(networkDeviceName, linkConfig.networkConfig.networkDeviceName);
-	}
-	else
-	{
-		strcpy(networkDeviceName, LINUX_NETWORK_DEV);
-	}
-
-	snprintf(cmdStr, sizeof(cmdStr), "ifconfig %s up", networkDeviceName);
+	snprintf(cmdStr, sizeof(cmdStr), "ifconfig %s up", LINUX_NETWORK_DEV);
 	ret = system(cmdStr);
 	if (ret != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
@@ -79,7 +66,7 @@ T_DjiReturnCode HalNetWork_Init(const char* ipAddr, const char* netMask, T_DjiNe
 		return DJI_ERROR_SYSTEM_MODULE_CODE_SYSTEM_ERROR;
 	}
 
-	snprintf(cmdStr, sizeof(cmdStr), "ifconfig %s %s netmask %s", networkDeviceName, ipAddr, netMask);
+	snprintf(cmdStr, sizeof(cmdStr), "ifconfig %s %s netmask %s", LINUX_NETWORK_DEV, ipAddr, netMask);
 	ret = system(cmdStr);
 	if (ret != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
@@ -101,19 +88,8 @@ T_DjiReturnCode HalNetWork_DeInit(T_DjiNetworkHandle halObj)
 
 T_DjiReturnCode HalNetWork_GetDeviceInfo(T_DjiHalNetworkDeviceInfo* deviceInfo)
 {
-	T_DjiUserLinkConfig linkConfig = { 0 };
-
-	if (DjiUserConfigManager_IsEnable())
-	{
-		DjiUserConfigManager_GetLinkConfig(&linkConfig);
-		deviceInfo->usbNetAdapter.vid = linkConfig.networkConfig.networkUsbAdapterVid;
-		deviceInfo->usbNetAdapter.pid = linkConfig.networkConfig.networkUsbAdapterPid;
-	}
-	else
-	{
-		deviceInfo->usbNetAdapter.vid = USB_NET_ADAPTER_VID;
-		deviceInfo->usbNetAdapter.pid = USB_NET_ADAPTER_PID;
-	}
+	deviceInfo->usbNetAdapter.vid = USB_NET_ADAPTER_VID;
+	deviceInfo->usbNetAdapter.pid = USB_NET_ADAPTER_PID;
 
 	return DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }

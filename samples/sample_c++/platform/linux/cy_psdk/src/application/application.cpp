@@ -36,12 +36,12 @@
 #include "../common/osal/osal.h"
 #include "../common/osal/osal_fs.h"
 #include "../common/osal/osal_socket.h"
-#include "../manifold2/hal/hal_network.h"
-#include "../manifold2/hal/hal_uart.h"
-#include "../manifold2/hal/hal_usb_bulk.h"
+#include "../hal/hal_i2c.h"
+#include "../hal/hal_network.h"
+#include "../hal/hal_uart.h"
+#include "../hal/hal_usb_bulk.h"
 
 #include "data_transmission/test_data_transmission.h"
-#include "utils/dji_config_manager.h"
 #include "widget/test_widget.h"
 #include "widget/test_widget_speaker.h"
 #include <camera_emu/test_payload_cam_emu_base.h>
@@ -62,8 +62,6 @@
 #define USER_UTIL_MIN(a, b)			 (((a) < (b)) ? (a) : (b))
 #define USER_UTIL_MAX(a, b)			 (((a) > (b)) ? (a) : (b))
 
-#define DJI_USE_SDK_CONFIG_BY_JSON	 (0)
-
 /* Private types -------------------------------------------------------------*/
 
 /* Private values -------------------------------------------------------------*/
@@ -76,9 +74,9 @@ static _DJI T_DjiReturnCode DjiTest_HighPowerApplyPinInit();
 static _DJI T_DjiReturnCode DjiTest_WriteHighPowerApplyPin(_DJI E_DjiPowerManagementPinState pinState);
 
 /* Exported functions definition ---------------------------------------------*/
-Application::Application(int argc, char** argv)
+Application::Application(int /*argc*/, char** /*argv*/)
 {
-	Application::DjiUser_SetupEnvironment(argc, argv);
+	Application::DjiUser_SetupEnvironment();
 	Application::DjiUser_ApplicationStart();
 
 	_DJI Osal_TaskSleepMs(3000);
@@ -87,7 +85,7 @@ Application::Application(int argc, char** argv)
 Application::~Application() = default;
 
 /* Private functions definition-----------------------------------------------*/
-void Application::DjiUser_SetupEnvironment(int argc, char** argv)
+void Application::DjiUser_SetupEnvironment()
 {
 	_DJI T_DjiReturnCode					   returnCode;
 	_DJI T_DjiOsalHandler					   osalHandler	  = { 0 };
@@ -98,60 +96,65 @@ void Application::DjiUser_SetupEnvironment(int argc, char** argv)
 	_DJI T_DjiFileSystemHandler				   fileSystemHandler = { 0 };
 	_DJI T_DjiSocketHandler					   socketHandler { 0 };
 	_DJI T_DjiHalNetworkHandler				   networkHandler = { 0 };
-	_DJI T_DjiUserLinkConfig				   linkConfig;
+	_DJI T_DjiHalI2cHandler					   i2CHandler	  = { 0 };
 
-	networkHandler.NetworkInit			= _DJI			HalNetWork_Init;
-	networkHandler.NetworkDeInit		= _DJI		  HalNetWork_DeInit;
-	networkHandler.NetworkGetDeviceInfo = _DJI HalNetWork_GetDeviceInfo;
+	networkHandler.NetworkInit								  = _DJI		  HalNetWork_Init;
+	networkHandler.NetworkDeInit							  = _DJI		HalNetWork_DeInit;
+	networkHandler.NetworkGetDeviceInfo						  = _DJI HalNetWork_GetDeviceInfo;
 
-	socketHandler.Socket				= _DJI				  Osal_Socket;
-	socketHandler.Bind					= _DJI					Osal_Bind;
-	socketHandler.Close					= _DJI				   Osal_Close;
-	socketHandler.UdpSendData			= _DJI			 Osal_UdpSendData;
-	socketHandler.UdpRecvData			= _DJI			 Osal_UdpRecvData;
-	socketHandler.TcpListen				= _DJI			   Osal_TcpListen;
-	socketHandler.TcpAccept				= _DJI			   Osal_TcpAccept;
-	socketHandler.TcpConnect			= _DJI			  Osal_TcpConnect;
-	socketHandler.TcpSendData			= _DJI			 Osal_TcpSendData;
-	socketHandler.TcpRecvData			= _DJI			 Osal_TcpRecvData;
+	socketHandler.Socket									  = _DJI				Osal_Socket;
+	socketHandler.Bind										  = _DJI				  Osal_Bind;
+	socketHandler.Close										  = _DJI				 Osal_Close;
+	socketHandler.UdpSendData								  = _DJI		   Osal_UdpSendData;
+	socketHandler.UdpRecvData								  = _DJI		   Osal_UdpRecvData;
+	socketHandler.TcpListen									  = _DJI			 Osal_TcpListen;
+	socketHandler.TcpAccept									  = _DJI			 Osal_TcpAccept;
+	socketHandler.TcpConnect								  = _DJI			Osal_TcpConnect;
+	socketHandler.TcpSendData								  = _DJI		   Osal_TcpSendData;
+	socketHandler.TcpRecvData								  = _DJI		   Osal_TcpRecvData;
 
-	osalHandler.TaskCreate				= _DJI				Osal_TaskCreate;
-	osalHandler.TaskDestroy				= _DJI			   Osal_TaskDestroy;
-	osalHandler.TaskSleepMs				= _DJI			   Osal_TaskSleepMs;
-	osalHandler.MutexCreate				= _DJI			   Osal_MutexCreate;
-	osalHandler.MutexDestroy			= _DJI			  Osal_MutexDestroy;
-	osalHandler.MutexLock				= _DJI				 Osal_MutexLock;
-	osalHandler.MutexUnlock				= _DJI			   Osal_MutexUnlock;
-	osalHandler.SemaphoreCreate			= _DJI		   Osal_SemaphoreCreate;
-	osalHandler.SemaphoreDestroy		= _DJI		  Osal_SemaphoreDestroy;
-	osalHandler.SemaphoreWait			= _DJI			 Osal_SemaphoreWait;
-	osalHandler.SemaphoreTimedWait		= _DJI		Osal_SemaphoreTimedWait;
-	osalHandler.SemaphorePost			= _DJI			 Osal_SemaphorePost;
-	osalHandler.Malloc					= _DJI					Osal_Malloc;
-	osalHandler.Free					= _DJI					  Osal_Free;
-	osalHandler.GetTimeMs				= _DJI				 Osal_GetTimeMs;
-	osalHandler.GetTimeUs				= _DJI				 Osal_GetTimeUs;
-	osalHandler.GetRandomNum			= _DJI			  Osal_GetRandomNum;
+	osalHandler.TaskCreate									  = _DJI			  Osal_TaskCreate;
+	osalHandler.TaskDestroy									  = _DJI			 Osal_TaskDestroy;
+	osalHandler.TaskSleepMs									  = _DJI			 Osal_TaskSleepMs;
+	osalHandler.MutexCreate									  = _DJI			 Osal_MutexCreate;
+	osalHandler.MutexDestroy								  = _DJI			Osal_MutexDestroy;
+	osalHandler.MutexLock									  = _DJI			   Osal_MutexLock;
+	osalHandler.MutexUnlock									  = _DJI			 Osal_MutexUnlock;
+	osalHandler.SemaphoreCreate								  = _DJI		 Osal_SemaphoreCreate;
+	osalHandler.SemaphoreDestroy							  = _DJI		Osal_SemaphoreDestroy;
+	osalHandler.SemaphoreWait								  = _DJI		   Osal_SemaphoreWait;
+	osalHandler.SemaphoreTimedWait							  = _DJI	  Osal_SemaphoreTimedWait;
+	osalHandler.SemaphorePost								  = _DJI		   Osal_SemaphorePost;
+	osalHandler.Malloc										  = _DJI				  Osal_Malloc;
+	osalHandler.Free										  = _DJI					Osal_Free;
+	osalHandler.GetTimeMs									  = _DJI			   Osal_GetTimeMs;
+	osalHandler.GetTimeUs									  = _DJI			   Osal_GetTimeUs;
+	osalHandler.GetRandomNum								  = _DJI			Osal_GetRandomNum;
 
-	printConsole.func					= DjiUser_PrintConsole;
-	printConsole.consoleLevel			= _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_INFO;
-	printConsole.isSupportColor			= true;
+	printConsole.func										  = DjiUser_PrintConsole;
+	printConsole.consoleLevel								  = _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_INFO;
+	printConsole.isSupportColor								  = true;
 
-	localRecordConsole.consoleLevel		= _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_DEBUG;
-	localRecordConsole.func				= DjiUser_LocalWrite;
-	localRecordConsole.isSupportColor	= false;
+	localRecordConsole.consoleLevel							  = _DJI DJI_LOGGER_CONSOLE_LOG_LEVEL_DEBUG;
+	localRecordConsole.func									  = DjiUser_LocalWrite;
+	localRecordConsole.isSupportColor						  = false;
 
-	uartHandler.UartInit				= _DJI				  HalUart_Init;
-	uartHandler.UartDeInit				= _DJI				HalUart_DeInit;
-	uartHandler.UartWriteData			= _DJI			 HalUart_WriteData;
-	uartHandler.UartReadData			= _DJI			  HalUart_ReadData;
-	uartHandler.UartGetStatus			= _DJI			 HalUart_GetStatus;
+	uartHandler.UartInit									  = _DJI				HalUart_Init;
+	uartHandler.UartDeInit									  = _DJI			  HalUart_DeInit;
+	uartHandler.UartWriteData								  = _DJI		   HalUart_WriteData;
+	uartHandler.UartReadData								  = _DJI			HalUart_ReadData;
+	uartHandler.UartGetStatus								  = _DJI		   HalUart_GetStatus;
+	uartHandler.UartGetDeviceInfo							  = _DJI	   HalUart_GetDeviceInfo;
+	i2CHandler.I2cInit										  = _DJI				  HalI2c_Init;
+	i2CHandler.I2cDeInit									  = _DJI				HalI2c_DeInit;
+	i2CHandler.I2cWriteData									  = _DJI			 HalI2c_WriteData;
+	i2CHandler.I2cReadData									  = _DJI			  HalI2c_ReadData;
 
-	usbBulkHandler.UsbBulkInit			= _DJI			HalUsbBulk_Init;
-	usbBulkHandler.UsbBulkDeInit		= _DJI		  HalUsbBulk_DeInit;
-	usbBulkHandler.UsbBulkWriteData		= _DJI	   HalUsbBulk_WriteData;
-	usbBulkHandler.UsbBulkReadData		= _DJI		HalUsbBulk_ReadData;
-	usbBulkHandler.UsbBulkGetDeviceInfo = _DJI HalUsbBulk_GetDeviceInfo;
+	usbBulkHandler.UsbBulkInit								  = _DJI		  HalUsbBulk_Init;
+	usbBulkHandler.UsbBulkDeInit							  = _DJI		HalUsbBulk_DeInit;
+	usbBulkHandler.UsbBulkWriteData							  = _DJI	 HalUsbBulk_WriteData;
+	usbBulkHandler.UsbBulkReadData							  = _DJI	  HalUsbBulk_ReadData;
+	usbBulkHandler.UsbBulkGetDeviceInfo						  = _DJI HalUsbBulk_GetDeviceInfo;
 
 	fileSystemHandler.FileOpen = _DJI Osal_FileOpen, fileSystemHandler.FileClose = _DJI Osal_FileClose,
 	fileSystemHandler.FileWrite = _DJI Osal_FileWrite, fileSystemHandler.FileRead = _DJI Osal_FileRead,
@@ -165,60 +168,57 @@ void Application::DjiUser_SetupEnvironment(int argc, char** argv)
 		throw _STD runtime_error("Register osal handler error.");
 	}
 
+	// 注册 I2C HAL (Raspberry Pi 平台支持)
+	returnCode = _DJI DjiPlatform_RegHalI2cHandler(&i2CHandler);
+	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+	{
+		throw _STD runtime_error("Register hal i2c handler error.");
+	}
+
+// 按硬件连接方式注册 HAL (与 raspberry_pi 官方样例对齐)
+#if (CONFIG_HARDWARE_CONNECTION == DJI_USE_UART_AND_USB_BULK_DEVICE)
 	returnCode = _DJI DjiPlatform_RegHalUartHandler(&uartHandler);
 	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
 		throw _STD runtime_error("Register hal uart handler error.");
 	}
 
-#if DJI_USE_SDK_CONFIG_BY_JSON
-	if (argc > 1)
-	{
-		_DJI DjiUserConfigManager_LoadConfiguration(argv[1]);
-	}
-	else
-	{
-		_DJI DjiUserConfigManager_LoadConfiguration(nullptr);
-	}
-
-	_DJI DjiUserConfigManager_GetLinkConfig(&linkConfig);
-	if (linkConfig.type == _DJI DJI_USER_LINK_CONFIG_USE_UART_AND_NETWORK_DEVICE)
-	{
-		returnCode = _DJI DjiPlatform_RegHalNetworkHandler(&networkHandler);
-		if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			throw _STD runtime_error("Register hal network handler error");
-		}
-	}
-	else if (linkConfig.type == _DJI DJI_USER_LINK_CONFIG_USE_UART_AND_USB_BULK_DEVICE)
-	{
-		returnCode = _DJI DjiPlatform_RegHalUsbBulkHandler(&usbBulkHandler);
-		if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-		{
-			throw _STD runtime_error("Register hal usb bulk handler error.");
-		}
-	}
-	else
-	{
-		/*!< Attention: Only use uart hardware connection. */
-	}
-#else
-	#if (CONFIG_HARDWARE_CONNECTION == DJI_USE_UART_AND_USB_BULK_DEVICE)
 	returnCode = _DJI DjiPlatform_RegHalUsbBulkHandler(&usbBulkHandler);
 	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
 		throw _STD runtime_error("Register hal usb bulk handler error.");
 	}
-	#elif (CONFIG_HARDWARE_CONNECTION == DJI_USE_UART_AND_NETWORK_DEVICE)
+#elif (CONFIG_HARDWARE_CONNECTION == DJI_USE_UART_AND_NETWORK_DEVICE)
+	returnCode = _DJI DjiPlatform_RegHalUartHandler(&uartHandler);
+	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+	{
+		throw _STD runtime_error("Register hal uart handler error.");
+	}
+
 	returnCode = _DJI DjiPlatform_RegHalNetworkHandler(&networkHandler);
 	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
 		throw _STD runtime_error("Register hal network handler error");
 	}
-	#elif (CONFIG_HARDWARE_CONNECTION == DJI_USE_ONLY_UART)
-		/*!< Attention: Only use uart hardware connection.
-		 */
-	#endif
+#elif (CONFIG_HARDWARE_CONNECTION == DJI_USE_ONLY_USB_BULK_DEVICE)
+	returnCode = _DJI DjiPlatform_RegHalUsbBulkHandler(&usbBulkHandler);
+	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+	{
+		throw _STD runtime_error("Register hal usb bulk handler error.");
+	}
+#elif (CONFIG_HARDWARE_CONNECTION == DJI_USE_ONLY_NETWORK_DEVICE)
+	returnCode = _DJI DjiPlatform_RegHalNetworkHandler(&networkHandler);
+	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+	{
+		throw _STD runtime_error("Register hal network handler error");
+	}
+#elif (CONFIG_HARDWARE_CONNECTION == DJI_USE_ONLY_UART)
+	/*!< Attention: Only use uart hardware connection. */
+	returnCode = _DJI DjiPlatform_RegHalUartHandler(&uartHandler);
+	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+	{
+		throw _STD runtime_error("Register hal uart handler error.");
+	}
 #endif
 
 	// Attention: if you want to use camera stream view function, please uncomment it.
@@ -264,15 +264,11 @@ void Application::DjiUser_ApplicationStart()
 	// attention: when the program is hand up ctrl-c will generate the coredump file
 	_CSTD signal(SIGTERM, DjiUser_NormalExitHandler);
 
-#if DJI_USE_SDK_CONFIG_BY_JSON
-	_DJI DjiUserConfigManager_GetAppInfo(&userInfo);
-#else
 	returnCode = DjiUser_FillInUserInfo(&userInfo);
 	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 	{
 		throw _STD runtime_error("Fill user info error, please check user info config.");
 	}
-#endif
 
 	returnCode = _DJI DjiCore_Init(&userInfo);
 	if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
@@ -437,7 +433,7 @@ _DJI T_DjiReturnCode Application::DjiUser_FillInUserInfo(_DJI T_DjiUserInfo* use
 		!_CSTD strcmp(USER_DEVELOPER_ACCOUNT, "your_developer_account") || !_CSTD strcmp(USER_BAUD_RATE, "your_baud_rate"))
 	{
 		USER_LOG_ERROR(
-			"Please fill in correct user information to 'samples/sample_c++/platform/linux/manifold2/application/dji_sdk_app_info.h' file."
+			"Please fill in correct user information to 'samples/sample_c++/platform/linux/cy_psdk/src/application/dji_sdk_app_info.h' file."
 		);
 		return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_INVALID_PARAMETER;
 	}

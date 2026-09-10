@@ -503,6 +503,7 @@ namespace plane::manager
 		auto result { runtime->getCatalogServerInfo() };
 		if (!result.isOk())
 		{
+			LOG_DEBUG("获取目录服务端信息失败: code={}, message={}", static_cast<int>(result.error().code), result.error().message);
 			return {};
 		}
 		return result.value().ip;

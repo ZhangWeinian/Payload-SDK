@@ -695,26 +695,34 @@ namespace plane::catalog::internal
 		{
 			return Result<CatalogServerInfo>::failure(node_name.error());
 		}
-		if (!json.contains("multicastIp") || json["multicastIp"].is_null())
+		// 组播字段为占位信息 (当前无消费者); 部分服务端版本不返回 (只有 multicastPort),
+		// 缺失时置空, 不阻断 ip/nodeId/nodeName 的获取 (WebSocket 直连等依赖 ip 字段)。
+		_STD string multicast_ip {};
+		if (json.contains("multicastIp") && !json["multicastIp"].is_null())
 		{
-			return Result<CatalogServerInfo>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "missing field: multicastIp"));
+			const _NLOHMANN_JSON json& multicast_node { json["multicastIp"] };
+			if (!multicast_node.is_string() && !multicast_node.is_number())
+			{
+				return Result<CatalogServerInfo>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: multicastIp"));
+			}
+			multicast_ip = multicast_node.is_string() ? multicast_node.get<_STD string>() : _STD to_string(multicast_node.get<long long>());
 		}
-		const _NLOHMANN_JSON json& multicast_node { json["multicastIp"] };
-		if (!multicast_node.is_string() && !multicast_node.is_number())
+		_STD string multicast_address {};
+		if (json.contains("multicastAddress") && !json["multicastAddress"].is_null())
 		{
-			return Result<CatalogServerInfo>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: multicastIp"));
-		}
-		Result<_STD string> multicast_address { requiredString(json, "multicastAddress") };
-		if (!multicast_address.isOk())
-		{
-			return Result<CatalogServerInfo>::failure(multicast_address.error());
+			Result<_STD string> address { requiredString(json, "multicastAddress") };
+			if (!address.isOk())
+			{
+				return Result<CatalogServerInfo>::failure(address.error());
+			}
+			multicast_address = address.value();
 		}
 		CatalogServerInfo info {};
-		info.ip			  = ip.value();
-		info.node_id	  = node_id.value();
-		info.node_name	  = node_name.value();
-		info.multicast_ip = multicast_node.is_string() ? multicast_node.get<_STD string>() : _STD to_string(multicast_node.get<long long>());
-		info.multicast_address = multicast_address.value();
+		info.ip				   = ip.value();
+		info.node_id		   = node_id.value();
+		info.node_name		   = node_name.value();
+		info.multicast_ip	   = _STD	   move(multicast_ip);
+		info.multicast_address = _STD move(multicast_address);
 		return Result<CatalogServerInfo>::success(_STD move(info));
 	}
 
