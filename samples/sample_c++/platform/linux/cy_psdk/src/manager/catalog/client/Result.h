@@ -1,134 +1,25 @@
 // cy_psdk/manager/catalog/client/Result.h
 //
-// 值或失败的结果封装 (对齐 java Result<T>)。用于预期的 SDK 失败路径。
+// 值或失败的结果封装 (对齐 java Result<T>): C++23 起直接采用标准库
+// std::expected<T, CatalogFailure>, 保留 Result 名称作为领域别名。
+//
+// 迁移映射 (相对旧自研 Result):
+//   Result<T>::success(v)   -> 直接返回 v (expected 隐式构造)
+//   Result<T>::failure(e)   -> std::unexpected(e)
+//   result.isOk()           -> result.has_value()
+//   result.value()          -> result.value()   (失败时抛 std::bad_expected_access)
+//   result.error()          -> result.error()   (前提: has_value() 为 false)
 
 #pragma once
 
-#include <type_traits>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <utility>
+#include <expected>
 
 #include "define.h"
 #include "manager/catalog/client/CatalogFailure.h"
 
 namespace plane::catalog
 {
-	// 通用结果: 成功携带 T, 失败携带 CatalogFailure。
-	// value() 仅在成功时可用; error() 仅在失败时可用; 误用抛 _STD logic_error。
+	// 通用结果: 成功携带 T, 失败携带 CatalogFailure (标准库 std::expected 别名)
 	template<typename T>
-	class Result
-	{
-	public:
-		using ValueType						   = T;
-
-		Result(const Result&)				   = default;
-		Result(Result&&)					   = default;
-		Result&		  operator=(const Result&) = default;
-		Result&		  operator=(Result&&)	   = default;
-
-		static Result success(T value)
-		{
-			Result result {};
-			result.ok_	  = true;
-			result.value_ = _STD move(value);
-			return result;
-		}
-
-		static Result failure(CatalogFailure error)
-		{
-			Result result {};
-			result.ok_	  = false;
-			result.error_ = _STD move(error);
-			return result;
-		}
-
-		_NODISCARD bool isOk(void) const noexcept
-		{
-			return ok_;
-		}
-
-		_NODISCARD T& value()
-		{
-			if (!ok_)
-			{
-				throw _STD logic_error { "Cannot read a failed result: " + error_->message };
-			}
-			return *value_;
-		}
-
-		_NODISCARD const T& value() const
-		{
-			if (!ok_)
-			{
-				throw _STD logic_error { "Cannot read a failed result: " + error_->message };
-			}
-			return *value_;
-		}
-
-		_NODISCARD const CatalogFailure& error() const
-		{
-			if (ok_)
-			{
-				throw _STD logic_error { "Cannot read error of a successful result" };
-			}
-			return *error_;
-		}
-
-	private:
-		Result(void) noexcept = default;
-
-		bool ok_ { false };
-		_STD optional<T> value_ {};
-		_STD optional<CatalogFailure> error_ {};
-	};
-
-	// void 特化 (对齐 java Result<Void>)
-	template<>
-	class Result<void>
-	{
-	public:
-		using ValueType						   = void;
-
-		Result(const Result&)				   = default;
-		Result(Result&&)					   = default;
-		Result&		  operator=(const Result&) = default;
-		Result&		  operator=(Result&&)	   = default;
-
-		static Result success(void)
-		{
-			Result result {};
-			result.ok_ = true;
-			return result;
-		}
-
-		static Result failure(CatalogFailure error)
-		{
-			Result result {};
-			result.ok_	  = false;
-			result.error_ = _STD move(error);
-			return result;
-		}
-
-		_NODISCARD bool isOk(void) const noexcept
-		{
-			return ok_;
-		}
-
-		_NODISCARD const CatalogFailure& error() const
-		{
-			if (ok_)
-			{
-				throw _STD logic_error { "Cannot read error of a successful result" };
-			}
-			return *error_;
-		}
-
-	private:
-		Result(void) noexcept = default;
-
-		bool ok_ { false };
-		_STD optional<CatalogFailure> error_ {};
-	};
+	using Result = _STD expected<T, CatalogFailure>;
 } // namespace plane::catalog

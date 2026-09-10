@@ -198,8 +198,8 @@ TEST(CatalogRuntimeInjection, UsesInjectedTransportAndReachesReady)
 
 	CatalogRuntime runtime { options, discovery_config, _STD move(deps.transport), _STD move(deps.discovery) };
 
-	ASSERT_TRUE(runtime.start().isOk());
-	ASSERT_TRUE(runtime.registerServiceInstance().isOk());
+	ASSERT_TRUE(runtime.start().has_value());
+	ASSERT_TRUE(runtime.registerServiceInstance().has_value());
 	ASSERT_TRUE(waitForState(runtime, CatalogState::READY, _STD_CHRONO seconds(3)));
 
 	// 注入的 transport 必须真实收到注册请求 (回归: 注入不被丢弃)
@@ -207,7 +207,7 @@ TEST(CatalogRuntimeInjection, UsesInjectedTransportAndReachesReady)
 	EXPECT_GT(deps.transport_raw->calls(), 0u);
 	EXPECT_EQ(runtime.instanceId(), "test-instance");
 
-	ASSERT_TRUE(runtime.stop(_STD_CHRONO seconds(1)).isOk());
+	ASSERT_TRUE(runtime.stop(_STD_CHRONO seconds(1)).has_value());
 }
 
 TEST(CatalogRuntimeInjection, IdempotentRegisterConflictIsAccepted)
@@ -241,12 +241,12 @@ TEST(CatalogRuntimeInjection, IdempotentRegisterConflictIsAccepted)
 
 	CatalogRuntime runtime { options, discovery_config, _STD move(deps.transport), _STD move(deps.discovery) };
 
-	ASSERT_TRUE(runtime.start().isOk());
-	ASSERT_TRUE(runtime.registerServiceInstance().isOk());
+	ASSERT_TRUE(runtime.start().has_value());
+	ASSERT_TRUE(runtime.registerServiceInstance().has_value());
 	ASSERT_TRUE(waitForState(runtime, CatalogState::READY, _STD_CHRONO seconds(3)));
 	EXPECT_EQ(runtime.instanceId(), "existing-instance");
 
-	ASSERT_TRUE(runtime.stop(_STD_CHRONO seconds(1)).isOk());
+	ASSERT_TRUE(runtime.stop(_STD_CHRONO seconds(1)).has_value());
 }
 
 // ---- ServiceGateway ----
@@ -279,7 +279,7 @@ TEST(CatalogServiceGateway, ResolveFiltersUnhealthyAndDisabled)
 	ServiceQuery   query {};
 	query.service_id = "svc-a";
 	const auto result { gateway.resolve(query) };
-	ASSERT_TRUE(result.isOk());
+	ASSERT_TRUE(result.has_value());
 	ASSERT_EQ(result.value().endpoints.size(), 1u);
 	EXPECT_EQ(result.value().endpoints[0].instance_id, "i1");
 }
@@ -299,7 +299,7 @@ TEST(CatalogServiceGateway, InstanceStatusHealthyIsCaseInsensitive)
 	ServiceGateway gateway { "http://127.0.0.1:18081", _STD move(transport), _STD_CHRONO milliseconds { 500 } };
 
 	const auto	   result { gateway.getInstanceStatus("public", "DEFAULT_GROUP", "svc-a", "i1") };
-	ASSERT_TRUE(result.isOk());
+	ASSERT_TRUE(result.has_value());
 	EXPECT_TRUE(result.value().healthy);
 }
 
@@ -332,7 +332,7 @@ TEST(CatalogAnnouncementListener, ReceivesLoopbackAnnouncement)
 										   got			= true;
 										   cv.notify_all();
 									   } };
-	ASSERT_TRUE(listener.start().isOk());
+	ASSERT_TRUE(listener.start().has_value());
 
 	// 发送一个 command=0x82 公告包
 	{
@@ -348,7 +348,7 @@ TEST(CatalogAnnouncementListener, ReceivesLoopbackAnnouncement)
 		packet.http_port   = 8081;
 
 		const auto encoded { plane::catalog::internal::encodeProbePacket(packet) };
-		ASSERT_TRUE(encoded.isOk());
+		ASSERT_TRUE(encoded.has_value());
 		const _ASIO ip::udp::endpoint target { _ASIO ip::make_address("127.0.0.1"), static_cast<unsigned short>(port) };
 		sender.send_to(_ASIO buffer(encoded.value()), target);
 	}

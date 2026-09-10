@@ -31,8 +31,8 @@ namespace
 	_STD vector<_STD string> expand(const _STD vector<_STD string>& specs, int max_count = 1024)
 	{
 		auto result { expandTargets(specs, max_count) };
-		EXPECT_TRUE(result.isOk()) << "expand 应成功: " << result.error().message;
-		return result.isOk() ? result.value() : _STD vector<_STD string> {};
+		EXPECT_TRUE(result.has_value()) << "expand 应成功: " << result.error().message;
+		return result.has_value() ? result.value() : _STD vector<_STD string> {};
 	}
 } // namespace
 
@@ -73,13 +73,13 @@ TEST(CatalogTargetExpander, Range)
 TEST(CatalogTargetExpander, EmptySpecsIsInvalid)
 {
 	const auto result { expandTargets({}, 1024) };
-	EXPECT_FALSE(result.isOk());
+	EXPECT_FALSE(result.has_value());
 }
 
 TEST(CatalogTargetExpander, MalformedSpecIsInvalid)
 {
 	const auto result { expandTargets({ "192.168.1.1.2" }, 1024) };
-	EXPECT_FALSE(result.isOk());
+	EXPECT_FALSE(result.has_value());
 }
 
 // ---- ProbePacketCodec ----
@@ -98,10 +98,10 @@ TEST(CatalogProbeCodec, EncodeDecodeRoundTrip)
 	packet.http_port	  = 8081;
 
 	const auto encoded { encodeProbePacket(packet) };
-	ASSERT_TRUE(encoded.isOk());
+	ASSERT_TRUE(encoded.has_value());
 
 	const auto decoded { decodeProbePacket(encoded.value()) };
-	ASSERT_TRUE(decoded.isOk());
+	ASSERT_TRUE(decoded.has_value());
 
 	EXPECT_EQ(decoded.value().command, packet.command);
 	EXPECT_EQ(decoded.value().ip, packet.ip);
@@ -124,10 +124,10 @@ TEST(CatalogProbeCodec, DecodeAnnouncement)
 	packet.http_port   = 8081;
 
 	const auto encoded { encodeProbePacket(packet) };
-	ASSERT_TRUE(encoded.isOk());
+	ASSERT_TRUE(encoded.has_value());
 
 	const auto decoded { decodeAnnouncement(encoded.value()) };
-	ASSERT_TRUE(decoded.isOk());
+	ASSERT_TRUE(decoded.has_value());
 
 	EXPECT_EQ(decoded.value().node_id, "SwarmServer");
 	EXPECT_EQ(decoded.value().node_name, "主目录");
@@ -139,7 +139,7 @@ TEST(CatalogProbeCodec, WrongMagicIsRejected)
 {
 	_STD vector<_STD uint8_t> garbage { 0X00, 0X01, 0X02, 0X03, 0X04, 0X05, 0X06, 0X07, 0X08 };
 	const auto				  decoded { decodeProbePacket(garbage) };
-	EXPECT_FALSE(decoded.isOk());
+	EXPECT_FALSE(decoded.has_value());
 }
 
 // ---- 严格解析与 trim 语义 (对齐 java) ----
@@ -151,25 +151,25 @@ TEST(CatalogTargetExpander, TrimsSpecsAndRejectsLooseOctet)
 	EXPECT_EQ(trimmed[0], "192.168.1.131");
 
 	// 严格解析: 非纯数字/超范围/非法前缀均为非法 (对齐 java Integer.parseInt)
-	EXPECT_FALSE(expandTargets({ "192.168.1.1x" }, 1024).isOk());
-	EXPECT_FALSE(expandTargets({ "192.168.1.+1" }, 1024).isOk());
-	EXPECT_FALSE(expandTargets({ "192.168.1.256" }, 1024).isOk());
-	EXPECT_FALSE(expandTargets({ "192.168.1.1/33" }, 1024).isOk());
-	EXPECT_FALSE(expandTargets({ "192.168.1.1/a" }, 1024).isOk());
+	EXPECT_FALSE(expandTargets({ "192.168.1.1x" }, 1024).has_value());
+	EXPECT_FALSE(expandTargets({ "192.168.1.+1" }, 1024).has_value());
+	EXPECT_FALSE(expandTargets({ "192.168.1.256" }, 1024).has_value());
+	EXPECT_FALSE(expandTargets({ "192.168.1.1/33" }, 1024).has_value());
+	EXPECT_FALSE(expandTargets({ "192.168.1.1/a" }, 1024).has_value());
 }
 
 TEST(CatalogJsonCodec, NormalizeVersionTrimsOnly)
 {
 	const auto trimmed { plane::catalog::internal::JsonCodec::normalizeVersion("  1.0.0  ") };
-	ASSERT_TRUE(trimmed.isOk());
+	ASSERT_TRUE(trimmed.has_value());
 	EXPECT_EQ(trimmed.value(), "1.0.0");
 
 	// 内部空白保留 (对齐 java trim 语义, 不再删除内部字符)
 	const auto inner { plane::catalog::internal::JsonCodec::normalizeVersion("1.0.0 beta") };
-	ASSERT_TRUE(inner.isOk());
+	ASSERT_TRUE(inner.has_value());
 	EXPECT_EQ(inner.value(), "1.0.0 beta");
 
-	EXPECT_FALSE(plane::catalog::internal::JsonCodec::normalizeVersion("   ").isOk());
+	EXPECT_FALSE(plane::catalog::internal::JsonCodec::normalizeVersion("   ").has_value());
 }
 
 TEST(CatalogIpCacheTest, SaveAndPrioritizeRoundTrip)

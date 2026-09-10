@@ -75,11 +75,11 @@ namespace plane::catalog::internal
 			appendBytes(out, packet.instance_id);
 			out.push_back(static_cast<_STD uint8_t>((packet.http_port >> 8) & 0Xff));
 			out.push_back(static_cast<_STD uint8_t>(packet.http_port & 0Xff));
-			return Result<_STD vector<_STD uint8_t>>::success(_STD move(out));
+			return out;
 		}
 		catch (const _STD exception& ex)
 		{
-			return Result<_STD vector<_STD uint8_t>>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what()));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what()));
 		}
 	}
 
@@ -87,7 +87,7 @@ namespace plane::catalog::internal
 	{
 		if (data.size() < 8)
 		{
-			return Result<ProbePacket>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "packet is too short"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "packet is too short"));
 		}
 		try
 		{
@@ -107,15 +107,15 @@ namespace plane::catalog::internal
 
 			if (readU32() != MAGIC)
 			{
-				return Result<ProbePacket>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "wrong packet magic"));
+				return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "wrong packet magic"));
 			}
 			if (offset >= data.size() || data[offset++] != VERSION)
 			{
-				return Result<ProbePacket>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "wrong packet version"));
+				return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "wrong packet version"));
 			}
 			if (offset >= data.size())
 			{
-				return Result<ProbePacket>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "missing packet command"));
+				return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing packet command"));
 			}
 			const int	command { data[offset++] };
 
@@ -125,14 +125,14 @@ namespace plane::catalog::internal
 			packet.node_id = readField(data, offset);
 			if (offset >= data.size())
 			{
-				return Result<ProbePacket>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "missing packet status"));
+				return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing packet status"));
 			}
 			packet.status = data[offset++];
 
 			// 旧服务端极短包: 无 nodeName/requestId/instanceId/port
 			if (offset >= data.size())
 			{
-				return Result<ProbePacket>::success(packet);
+				return packet;
 			}
 			packet.node_name = readField(data, offset);
 
@@ -150,26 +150,27 @@ namespace plane::catalog::internal
 			{
 				packet.http_port = (static_cast<int>(data[offset]) << 8) | static_cast<int>(data[offset + 1]);
 			}
-			return Result<ProbePacket>::success(_STD move(packet));
+			return packet;
 		}
 		catch (const _STD exception& ex)
 		{
-			return Result<ProbePacket>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what()));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what()));
 		}
 	}
 
 	Result<CatalogAnnouncement> decodeAnnouncement(const _STD vector<_STD uint8_t>& data)
 	{
 		Result<ProbePacket> decoded { decodeProbePacket(data) };
-		if (!decoded.isOk())
+		if (!decoded.has_value())
 		{
-			return Result<CatalogAnnouncement>::failure(decoded.error());
+			return _STD unexpected(decoded.error());
 		}
 		const ProbePacket& packet { decoded.value() };
 		if (packet.command != PROBE_ANNOUNCE_COMMAND)
 		{
-			return Result<CatalogAnnouncement>::
-				failure(makeFailure(CatalogError::PROTOCOL_ERROR, _FMT format("not an announcement packet (command=0x{:x})", packet.command)));
+			return _STD unexpected(
+				makeFailure(CatalogError::PROTOCOL_ERROR, _FMT format("not an announcement packet (command=0x{:x})", packet.command))
+			);
 		}
 		CatalogAnnouncement announcement {};
 		announcement.node_id	 = packet.node_id;
@@ -177,6 +178,6 @@ namespace plane::catalog::internal
 		announcement.node_name	 = packet.node_name;
 		announcement.instance_id = packet.instance_id;
 		announcement.http_port	 = packet.http_port;
-		return Result<CatalogAnnouncement>::success(_STD move(announcement));
+		return announcement;
 	}
 } // namespace plane::catalog::internal

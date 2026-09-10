@@ -3,6 +3,7 @@
 #include "manager/catalog/client/internal/service/ServiceGateway.h"
 
 #include <arpa/inet.h>
+#include <fmt/format.h>
 #include <nlohmann/json.hpp>
 #include <string_view>
 #include <set>
@@ -25,7 +26,7 @@ namespace plane::catalog::internal
 
 		_NODISCARD Result<_STD string> invalidString(const _STD string& message)
 		{
-			return Result<_STD string>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, message));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, message));
 		}
 
 		_NODISCARD bool isValidIpv4(const _STD string& value)
@@ -102,22 +103,22 @@ namespace plane::catalog::internal
 	_NODISCARD Result<_STD string> ServiceGateway::registerInstance(const ServiceRegistration& registration)
 	{
 		Result<_NLOHMANN_JSON json> body { JsonCodec::registrationToJson(registration, "") };
-		if (!body.isOk())
+		if (!body.has_value())
 		{
-			return Result<_STD string>::failure(body.error());
+			return _STD unexpected(body.error());
 		}
 		const _STD string			path { instanceCollection(registration.namespace_name, registration.group_name, registration.service_id) };
 		Result<_NLOHMANN_JSON json> response { this->transport_.postJson(path, body.value().dump(), true) };
-		if (!response.isOk())
+		if (!response.has_value())
 		{
-			return Result<_STD string>::failure(remapNotFound(response.error(), CatalogError::INSTANCE_NOT_FOUND));
+			return _STD unexpected(remapNotFound(response.error(), CatalogError::INSTANCE_NOT_FOUND));
 		}
 		const _NLOHMANN_JSON json& json { response.value() };
 		if (!json.contains("id") || !json["id"].is_string())
 		{
-			return Result<_STD string>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: id"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: id"));
 		}
-		return Result<_STD string>::success(json["id"].get<_STD string>());
+		return json["id"].get<_STD string>();
 	}
 
 	_NODISCARD Result<void> ServiceGateway::heartbeat(const ServiceRegistration& registration, const _STD string& instance_id)
@@ -125,38 +126,38 @@ namespace plane::catalog::internal
 		const _STD string path { instanceCollection(registration.namespace_name, registration.group_name, registration.service_id) + "/" +
 								 encodeComponent(instance_id) + "/heartbeat" };
 		Result<_NLOHMANN_JSON json> response { this->transport_.postJson(path, "{}") };
-		if (!response.isOk())
+		if (!response.has_value())
 		{
-			return Result<void>::failure(remapNotFound(response.error(), CatalogError::INSTANCE_NOT_FOUND));
+			return _STD unexpected(remapNotFound(response.error(), CatalogError::INSTANCE_NOT_FOUND));
 		}
 		const _NLOHMANN_JSON json& json { response.value() };
 		if (!json.is_object())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "heartbeat response must be an object"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "heartbeat response must be an object"));
 		}
 		if (json.contains("id") && !json["id"].is_null() && !json["id"].is_string())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: id"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: id"));
 		}
-		return Result<void>::success();
+		return {};
 	}
 
 	_NODISCARD Result<void>
 			   ServiceGateway::reportStatus(const ServiceRegistration& registration, const _STD string& instance_id, const ServiceStatus& status)
 	{
 		Result<_NLOHMANN_JSON json> body { JsonCodec::statusToJson(status) };
-		if (!body.isOk())
+		if (!body.has_value())
 		{
-			return Result<void>::failure(body.error());
+			return _STD unexpected(body.error());
 		}
 		const _STD string path { instanceCollection(registration.namespace_name, registration.group_name, registration.service_id) + "/" +
 								 encodeComponent(instance_id) + "/status" };
 		Result<void>	  result { this->transport_.putVoid(path, body.value().dump()) };
-		if (!result.isOk())
+		if (!result.has_value())
 		{
-			return Result<void>::failure(remapNotFound(result.error(), CatalogError::INSTANCE_NOT_FOUND));
+			return _STD unexpected(remapNotFound(result.error(), CatalogError::INSTANCE_NOT_FOUND));
 		}
-		return Result<void>::success();
+		return {};
 	}
 
 	_NODISCARD Result<void> ServiceGateway::deleteInstance(const ServiceRegistration& registration, const _STD string& instance_id)
@@ -171,35 +172,35 @@ namespace plane::catalog::internal
 		const _STD string service_id { query.service_id.empty() ? query.service_name : query.service_id };
 		if (service_id.empty())
 		{
-			return Result<ResolvedService>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "service_id is empty"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "service_id is empty"));
 		}
 		Result<_NLOHMANN_JSON json> response {
 			this->transport_.getJson(instanceCollection(query.namespace_name, query.group_name, service_id) + "?healthyOnly=true")
 		};
-		if (!response.isOk())
+		if (!response.has_value())
 		{
-			return Result<ResolvedService>::failure(remapNotFound(response.error(), CatalogError::SERVICE_NOT_FOUND));
+			return _STD unexpected(remapNotFound(response.error(), CatalogError::SERVICE_NOT_FOUND));
 		}
 		const _NLOHMANN_JSON json& json { response.value() };
 		if (!json.is_array())
 		{
-			return Result<ResolvedService>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "instances must be an array"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "instances must be an array"));
 		}
 		ResolvedService resolved {};
 		for (const auto& item : json)
 		{
 			bool					healthy { false };
 			Result<ServiceEndpoint> parsed { parseEndpoint(item, healthy) };
-			if (!parsed.isOk())
+			if (!parsed.has_value())
 			{
-				return Result<ResolvedService>::failure(parsed.error());
+				return _STD unexpected(parsed.error());
 			}
 			if (healthy && parsed.value().enabled)
 			{
 				resolved.endpoints.push_back(_STD move(parsed.value()));
 			}
 		}
-		return Result<ResolvedService>::success(_STD move(resolved));
+		return resolved;
 	}
 
 	_NODISCARD Result<ServicePage>
@@ -207,33 +208,38 @@ namespace plane::catalog::internal
 	{
 		const int					safe_page { page < 1 ? 1 : page };
 		const int					safe_page_size { page_size < 1 ? 20 : page_size };
-		const _STD string			path { _STD string { kRegistry } + "?namespace=" + encodeComponent(scopeValue(namespace_name, "public")) +
-										   "&serviceName=" + encodeComponent(service_name) + "&page=" + _STD to_string(safe_page) +
-										   "&pageSize=" + _STD												 to_string(safe_page_size) };
+		const _STD string			path { _FMT format(
+			"{}?namespace={}&serviceName={}&page={}&pageSize={}",
+			kRegistry,
+			encodeComponent(scopeValue(namespace_name, "public")),
+			encodeComponent(service_name),
+			safe_page,
+			safe_page_size
+		) };
 		Result<_NLOHMANN_JSON json> response { this->transport_.getJson(path) };
-		if (!response.isOk())
+		if (!response.has_value())
 		{
-			return Result<ServicePage>::failure(response.error());
+			return _STD unexpected(response.error());
 		}
 		const _NLOHMANN_JSON json& json { response.value() };
 		if (!json.is_object() || !json.contains("items") || !json["items"].is_array())
 		{
-			return Result<ServicePage>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "service page items must be an array"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "service page items must be an array"));
 		}
 		ServicePage result {};
 		for (const auto& item : json["items"])
 		{
 			Result<ServiceSummary> parsed { parseServiceSummary(item) };
-			if (!parsed.isOk())
+			if (!parsed.has_value())
 			{
-				return Result<ServicePage>::failure(parsed.error());
+				return _STD unexpected(parsed.error());
 			}
 			result.items.push_back(_STD move(parsed.value()));
 		}
 		result.total_elements = json.value("totalElements", static_cast<long long>(result.items.size()));
 		result.page			  = json.value("page", safe_page);
 		result.page_size	  = json.value("pageSize", safe_page_size);
-		return Result<ServicePage>::success(_STD move(result));
+		return result;
 	}
 
 	_NODISCARD Result<ServiceStatus> ServiceGateway::getInstanceStatus(
@@ -245,13 +251,13 @@ namespace plane::catalog::internal
 	{
 		if (instance_id.empty())
 		{
-			return Result<ServiceStatus>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "instance_id is empty"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "instance_id is empty"));
 		}
 		const _STD string path { instanceCollection(namespace_name, group_name, service_id) + "/" + encodeComponent(instance_id) + "/status" };
 		Result<_NLOHMANN_JSON json> response { this->transport_.getJson(path) };
-		if (!response.isOk())
+		if (!response.has_value())
 		{
-			return Result<ServiceStatus>::failure(remapNotFound(response.error(), CatalogError::INSTANCE_NOT_FOUND));
+			return _STD unexpected(remapNotFound(response.error(), CatalogError::INSTANCE_NOT_FOUND));
 		}
 		return parseServiceStatus(response.value());
 	}
@@ -260,28 +266,28 @@ namespace plane::catalog::internal
 		getLocalIp(const _STD string& namespace_name, const _STD string& group_name, const _STD string& service_id, bool allow_legacy_fallback)
 	{
 		Result<_NLOHMANN_JSON json> response { this->transport_.getJson(kLocalIp) };
-		if (!response.isOk() && response.error().http_status == 404 && allow_legacy_fallback)
+		if (!response.has_value() && response.error().http_status == 404 && allow_legacy_fallback)
 		{
 			const _STD string legacy_path { _STD string { kRegistry } + "/" + encodeComponent(scopeValue(namespace_name, "public")) + "/" +
 											encodeComponent(scopeValue(group_name, "DEFAULT_GROUP")) + "/" + encodeComponent(service_id) +
 											"/local-ip" };
 			response = this->transport_.getJson(legacy_path);
-			if (!response.isOk())
+			if (!response.has_value())
 			{
-				return Result<_STD string>::failure(remapNotFound(response.error(), CatalogError::INSTANCE_NOT_FOUND));
+				return _STD unexpected(remapNotFound(response.error(), CatalogError::INSTANCE_NOT_FOUND));
 			}
 		}
-		if (!response.isOk())
+		if (!response.has_value())
 		{
-			return Result<_STD string>::failure(response.error());
+			return _STD unexpected(response.error());
 		}
 		const _NLOHMANN_JSON json& json { response.value() };
 		if (!json.is_object())
 		{
-			return Result<_STD string>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "local ip response must be an object"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "local ip response must be an object"));
 		}
 		Result<_STD string> ip { requiredString(json, "ip") };
-		if (!ip.isOk())
+		if (!ip.has_value())
 		{
 			return ip;
 		}
@@ -295,9 +301,9 @@ namespace plane::catalog::internal
 	_NODISCARD Result<CatalogServerInfo> ServiceGateway::getCatalogServerInfo(void)
 	{
 		Result<_NLOHMANN_JSON json> response { this->transport_.getJson(kUdpConfig) };
-		if (!response.isOk())
+		if (!response.has_value())
 		{
-			return Result<CatalogServerInfo>::failure(response.error());
+			return _STD unexpected(response.error());
 		}
 		return parseCatalogServerInfo(response.value());
 	}
@@ -305,9 +311,9 @@ namespace plane::catalog::internal
 	_NODISCARD Result<_STD vector<ConfigDocument>> ServiceGateway::getConfigs(const ConfigQuery& query)
 	{
 		Result<void> validation { validateDataIds(query.data_ids) };
-		if (!validation.isOk())
+		if (!validation.has_value())
 		{
-			return Result<_STD vector<ConfigDocument>>::failure(validation.error());
+			return _STD unexpected(validation.error());
 		}
 		_NLOHMANN_JSON json body;
 		body["namespace"] = query.namespace_name;
@@ -318,19 +324,19 @@ namespace plane::catalog::internal
 			body["dataIds"].push_back(id);
 		}
 		Result<_NLOHMANN_JSON json> response { this->transport_.postJson(kConfigsBatch, body.dump()) };
-		if (!response.isOk())
+		if (!response.has_value())
 		{
 			CatalogFailure failure { remapNotFound(response.error(), CatalogError::CONFIG_NOT_FOUND) };
 			if (failure.http_status == 400)
 			{
 				failure = failureWithCode(failure, CatalogError::INVALID_ARGUMENT);
 			}
-			return Result<_STD vector<ConfigDocument>>::failure(failure);
+			return _STD unexpected(failure);
 		}
 		const _NLOHMANN_JSON json& json { response.value() };
 		if (!json.is_array())
 		{
-			return Result<_STD vector<ConfigDocument>>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "configs must be an array"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "configs must be an array"));
 		}
 
 		_STD set<_STD string> requested { query.data_ids.begin(), query.data_ids.end() };
@@ -338,25 +344,26 @@ namespace plane::catalog::internal
 		for (const auto& item : json)
 		{
 			Result<ConfigDocument> parsed { parseConfig(item) };
-			if (!parsed.isOk())
+			if (!parsed.has_value())
 			{
-				return Result<_STD vector<ConfigDocument>>::failure(parsed.error());
+				return _STD unexpected(parsed.error());
 			}
 			const ConfigDocument& document { parsed.value() };
 			if (document.key.namespace_name != query.namespace_name || document.key.group_name != query.group_name)
 			{
-				return Result<_STD vector<ConfigDocument>>::
-					failure(makeFailure(CatalogError::PROTOCOL_ERROR, "config scope does not match request: " + document.key.data_id));
+				return _STD unexpected(
+					makeFailure(CatalogError::PROTOCOL_ERROR, "config scope does not match request: " + document.key.data_id)
+				);
 			}
 			if (requested.find(document.key.data_id) == requested.end())
 			{
-				return Result<_STD vector<ConfigDocument>>::
-					failure(makeFailure(CatalogError::PROTOCOL_ERROR, "unexpected dataId in batch response: " + document.key.data_id));
+				return _STD unexpected(
+					makeFailure(CatalogError::PROTOCOL_ERROR, "unexpected dataId in batch response: " + document.key.data_id)
+				);
 			}
 			if (by_id.find(document.key.data_id) != by_id.end())
 			{
-				return Result<_STD vector<ConfigDocument>>::
-					failure(makeFailure(CatalogError::PROTOCOL_ERROR, "duplicate dataId in batch response: " + document.key.data_id));
+				return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "duplicate dataId in batch response: " + document.key.data_id));
 			}
 			by_id[document.key.data_id] = document;
 		}
@@ -366,26 +373,25 @@ namespace plane::catalog::internal
 			const auto it { by_id.find(id) };
 			if (it == by_id.end())
 			{
-				return Result<_STD vector<ConfigDocument>>::
-					failure(makeFailure(CatalogError::PROTOCOL_ERROR, "missing dataId in batch response: " + id));
+				return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing dataId in batch response: " + id));
 			}
 			ordered.push_back(it->second);
 		}
-		return Result<_STD vector<ConfigDocument>>::success(_STD move(ordered));
+		return ordered;
 	}
 
 	_NODISCARD Result<ConfigDocument> ServiceGateway::getConfig(const ConfigKey& key)
 	{
 		if (key.data_id.empty())
 		{
-			return Result<ConfigDocument>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "data_id is empty"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "data_id is empty"));
 		}
 		const _STD string path { _STD string { kConfigs } + "/" + encodeComponent(key.namespace_name) + "/" + encodeComponent(key.group_name) +
 								 "/" + encodeComponent(key.data_id) };
 		Result<_NLOHMANN_JSON json> response { this->transport_.getJson(path) };
-		if (!response.isOk())
+		if (!response.has_value())
 		{
-			return Result<ConfigDocument>::failure(remapNotFound(response.error(), CatalogError::CONFIG_NOT_FOUND));
+			return _STD unexpected(remapNotFound(response.error(), CatalogError::CONFIG_NOT_FOUND));
 		}
 		return parseConfig(response.value());
 	}
@@ -393,9 +399,9 @@ namespace plane::catalog::internal
 	_NODISCARD Result<ConfigDocument> ServiceGateway::putConfig(const ConfigUploadRequest& request)
 	{
 		Result<void> validation { validateConfigUploadRequest(request) };
-		if (!validation.isOk())
+		if (!validation.has_value())
 		{
-			return Result<ConfigDocument>::failure(validation.error());
+			return _STD unexpected(validation.error());
 		}
 		const _STD string	path { _STD string { kConfigs } + "/" + encodeComponent(request.key.namespace_name) + "/" +
 								   encodeComponent(request.key.group_name) + "/" + encodeComponent(request.key.data_id) };
@@ -403,7 +409,7 @@ namespace plane::catalog::internal
 		body["content"] = request.content;
 		body["format"]	= request.format;
 		Result<_NLOHMANN_JSON json> response { this->transport_.putJson(path, body.dump()) };
-		if (!response.isOk())
+		if (!response.has_value())
 		{
 			CatalogFailure failure { response.error() };
 			if (failure.http_status == 400)
@@ -414,10 +420,10 @@ namespace plane::catalog::internal
 			{
 				failure = failureWithCode(failureWithRetryable(failure, false), CatalogError::CATALOG_CONFLICT);
 			}
-			return Result<ConfigDocument>::failure(failure);
+			return _STD unexpected(failure);
 		}
 		Result<ConfigDocument> parsed { parseConfig(response.value()) };
-		if (!parsed.isOk())
+		if (!parsed.has_value())
 		{
 			return parsed;
 		}
@@ -425,16 +431,15 @@ namespace plane::catalog::internal
 		if (saved.key.namespace_name != request.key.namespace_name || saved.key.group_name != request.key.group_name ||
 			saved.key.data_id != request.key.data_id)
 		{
-			return Result<ConfigDocument>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "saved config key does not match upload request"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "saved config key does not match upload request"));
 		}
 		if (saved.content != request.content || saved.format != request.format)
 		{
-			return Result<ConfigDocument>::
-				failure(makeFailure(CatalogError::PROTOCOL_ERROR, "saved config content or format does not match upload request"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "saved config content or format does not match upload request"));
 		}
 		if (saved.version.empty() || saved.updated_at.empty())
 		{
-			return Result<ConfigDocument>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "saved config is missing version or updatedAt"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "saved config is missing version or updatedAt"));
 		}
 		return parsed;
 	}
@@ -444,24 +449,24 @@ namespace plane::catalog::internal
 		healthy = false;
 		if (!json.is_object())
 		{
-			return Result<ServiceEndpoint>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "instance must be an object"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "instance must be an object"));
 		}
 		Result<_STD string> id { requiredString(json, "id") };
-		if (!id.isOk())
+		if (!id.has_value())
 		{
-			return Result<ServiceEndpoint>::failure(id.error());
+			return _STD unexpected(id.error());
 		}
 		Result<_STD string> ip { requiredString(json, "ip") };
-		if (!ip.isOk())
+		if (!ip.has_value())
 		{
-			return Result<ServiceEndpoint>::failure(ip.error());
+			return _STD unexpected(ip.error());
 		}
 		_STD string version {};
 		if (json.contains("version") && !json["version"].is_null())
 		{
 			if (!json["version"].is_string())
 			{
-				return Result<ServiceEndpoint>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: version"));
+				return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: version"));
 			}
 			version = json["version"].get<_STD string>();
 		}
@@ -484,21 +489,21 @@ namespace plane::catalog::internal
 			{
 				if (!item.is_object())
 				{
-					return Result<ServiceEndpoint>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "endpoint must be an object"));
+					return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "endpoint must be an object"));
 				}
 				Result<_STD string> name { requiredString(item, "name") };
-				if (!name.isOk())
+				if (!name.has_value())
 				{
-					return Result<ServiceEndpoint>::failure(name.error());
+					return _STD unexpected(name.error());
 				}
 				Result<_STD string> protocol { requiredString(item, "protocol") };
-				if (!protocol.isOk())
+				if (!protocol.has_value())
 				{
-					return Result<ServiceEndpoint>::failure(protocol.error());
+					return _STD unexpected(protocol.error());
 				}
 				if (item.contains("port") && !item["port"].is_number())
 				{
-					return Result<ServiceEndpoint>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: port"));
+					return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: port"));
 				}
 				ExposedPort port {};
 				port.name	  = name.value();
@@ -528,40 +533,40 @@ namespace plane::catalog::internal
 			port.ip		  = ip.value();
 			endpoint.exposed_ports.push_back(_STD move(port));
 		}
-		return Result<ServiceEndpoint>::success(_STD move(endpoint));
+		return endpoint;
 	}
 
 	_NODISCARD Result<ConfigDocument> ServiceGateway::parseConfig(const _NLOHMANN_JSON json& json)
 	{
 		if (!json.is_object())
 		{
-			return Result<ConfigDocument>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "config must be an object"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "config must be an object"));
 		}
 		ConfigDocument		document {};
 		Result<_STD string> namespace_name { requiredString(json, "namespace") };
-		if (!namespace_name.isOk())
+		if (!namespace_name.has_value())
 		{
-			return Result<ConfigDocument>::failure(namespace_name.error());
+			return _STD unexpected(namespace_name.error());
 		}
 		Result<_STD string> group_name { requiredString(json, "group") };
-		if (!group_name.isOk())
+		if (!group_name.has_value())
 		{
-			return Result<ConfigDocument>::failure(group_name.error());
+			return _STD unexpected(group_name.error());
 		}
 		Result<_STD string> data_id { requiredString(json, "dataId") };
-		if (!data_id.isOk())
+		if (!data_id.has_value())
 		{
-			return Result<ConfigDocument>::failure(data_id.error());
+			return _STD unexpected(data_id.error());
 		}
 		Result<_STD string> content { optionalString(json, "content") };
-		if (!content.isOk())
+		if (!content.has_value())
 		{
-			return Result<ConfigDocument>::failure(content.error());
+			return _STD unexpected(content.error());
 		}
 		Result<_STD string> format { optionalString(json, "format") };
-		if (!format.isOk())
+		if (!format.has_value())
 		{
-			return Result<ConfigDocument>::failure(format.error());
+			return _STD unexpected(format.error());
 		}
 		_STD string version {};
 		if (json.contains("version") && !json["version"].is_null())
@@ -576,13 +581,13 @@ namespace plane::catalog::internal
 			}
 			else
 			{
-				return Result<ConfigDocument>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: version"));
+				return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: version"));
 			}
 		}
 		Result<_STD string> updated_at { optionalString(json, "updatedAt") };
-		if (!updated_at.isOk())
+		if (!updated_at.has_value())
 		{
-			return Result<ConfigDocument>::failure(updated_at.error());
+			return _STD unexpected(updated_at.error());
 		}
 		document.key.namespace_name = namespace_name.value();
 		document.key.group_name		= group_name.value();
@@ -591,14 +596,14 @@ namespace plane::catalog::internal
 		document.format				= format.value();
 		document.version			= version;
 		document.updated_at			= updated_at.value();
-		return Result<ConfigDocument>::success(_STD move(document));
+		return document;
 	}
 
 	_NODISCARD Result<ServiceStatus> ServiceGateway::parseServiceStatus(const _NLOHMANN_JSON json& json)
 	{
 		if (!json.is_object())
 		{
-			return Result<ServiceStatus>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "status must be an object"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "status must be an object"));
 		}
 		ServiceStatus status {};
 		status.overall_status = json.value("overallStatus", _STD string {});
@@ -610,7 +615,7 @@ namespace plane::catalog::internal
 				const _NLOHMANN_JSON json& component { it.value() };
 				if (!component.is_object())
 				{
-					return Result<ServiceStatus>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "component must be an object: " + it.key()));
+					return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "component must be an object: " + it.key()));
 				}
 				ServiceComponentStatus comp {};
 				comp.name	 = it.key();
@@ -622,45 +627,45 @@ namespace plane::catalog::internal
 		}
 		// 对齐 java "UP".equalsIgnoreCase(overall): 大小写不敏感
 		status.healthy = asciiUpperEquals(status.overall_status, "UP");
-		return Result<ServiceStatus>::success(_STD move(status));
+		return status;
 	}
 
 	_NODISCARD Result<ServiceSummary> ServiceGateway::parseServiceSummary(const _NLOHMANN_JSON json& json)
 	{
 		if (!json.is_object() || !json.contains("service") || !json["service"].is_object())
 		{
-			return Result<ServiceSummary>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "service must be an object"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "service must be an object"));
 		}
 		const _NLOHMANN_JSON json& service { json["service"] };
 		if (!service.contains("key") || !service["key"].is_object())
 		{
-			return Result<ServiceSummary>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "service.key must be an object"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "service.key must be an object"));
 		}
 		const _NLOHMANN_JSON json& key { service["key"] };
 		Result<_STD string>		   ns { optionalString(key, "namespace") };
-		if (!ns.isOk())
+		if (!ns.has_value())
 		{
-			return Result<ServiceSummary>::failure(ns.error());
+			return _STD unexpected(ns.error());
 		}
 		Result<_STD string> group { optionalString(key, "group") };
-		if (!group.isOk())
+		if (!group.has_value())
 		{
-			return Result<ServiceSummary>::failure(group.error());
+			return _STD unexpected(group.error());
 		}
 		Result<_STD string> service_id { requiredString(key, "serviceId") };
-		if (!service_id.isOk())
+		if (!service_id.has_value())
 		{
-			return Result<ServiceSummary>::failure(service_id.error());
+			return _STD unexpected(service_id.error());
 		}
 		Result<_STD string> service_name { optionalString(service, "serviceName") };
-		if (!service_name.isOk())
+		if (!service_name.has_value())
 		{
-			return Result<ServiceSummary>::failure(service_name.error());
+			return _STD unexpected(service_name.error());
 		}
 		Result<_STD string> source { optionalString(service, "source") };
-		if (!source.isOk())
+		if (!source.has_value())
 		{
-			return Result<ServiceSummary>::failure(source.error());
+			return _STD unexpected(source.error());
 		}
 		ServiceSummary summary {};
 		summary.service.key.namespace_name = ns.value();
@@ -671,29 +676,29 @@ namespace plane::catalog::internal
 		summary.total_instances			   = json.value("totalInstances", 0ll);
 		summary.healthy_instances		   = json.value("healthyInstances", 0ll);
 		summary.runtime_status			   = json.value("runtimeStatus", _STD string {});
-		return Result<ServiceSummary>::success(_STD move(summary));
+		return summary;
 	}
 
 	_NODISCARD Result<CatalogServerInfo> ServiceGateway::parseCatalogServerInfo(const _NLOHMANN_JSON json& json)
 	{
 		if (!json.is_object())
 		{
-			return Result<CatalogServerInfo>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "catalog server info must be an object"));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "catalog server info must be an object"));
 		}
 		Result<_STD string> ip { requiredString(json, "ip") };
-		if (!ip.isOk())
+		if (!ip.has_value())
 		{
-			return Result<CatalogServerInfo>::failure(ip.error());
+			return _STD unexpected(ip.error());
 		}
 		Result<_STD string> node_id { requiredString(json, "nodeId") };
-		if (!node_id.isOk())
+		if (!node_id.has_value())
 		{
-			return Result<CatalogServerInfo>::failure(node_id.error());
+			return _STD unexpected(node_id.error());
 		}
 		Result<_STD string> node_name { requiredString(json, "nodeName") };
-		if (!node_name.isOk())
+		if (!node_name.has_value())
 		{
-			return Result<CatalogServerInfo>::failure(node_name.error());
+			return _STD unexpected(node_name.error());
 		}
 		// 组播字段为占位信息 (当前无消费者); 部分服务端版本不返回 (只有 multicastPort),
 		// 缺失时置空, 不阻断 ip/nodeId/nodeName 的获取 (WebSocket 直连等依赖 ip 字段)。
@@ -703,7 +708,7 @@ namespace plane::catalog::internal
 			const _NLOHMANN_JSON json& multicast_node { json["multicastIp"] };
 			if (!multicast_node.is_string() && !multicast_node.is_number())
 			{
-				return Result<CatalogServerInfo>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: multicastIp"));
+				return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: multicastIp"));
 			}
 			multicast_ip = multicast_node.is_string() ? multicast_node.get<_STD string>() : _STD to_string(multicast_node.get<long long>());
 		}
@@ -711,9 +716,9 @@ namespace plane::catalog::internal
 		if (json.contains("multicastAddress") && !json["multicastAddress"].is_null())
 		{
 			Result<_STD string> address { requiredString(json, "multicastAddress") };
-			if (!address.isOk())
+			if (!address.has_value())
 			{
-				return Result<CatalogServerInfo>::failure(address.error());
+				return _STD unexpected(address.error());
 			}
 			multicast_address = address.value();
 		}
@@ -723,75 +728,75 @@ namespace plane::catalog::internal
 		info.node_name		   = node_name.value();
 		info.multicast_ip	   = _STD	   move(multicast_ip);
 		info.multicast_address = _STD move(multicast_address);
-		return Result<CatalogServerInfo>::success(_STD move(info));
+		return info;
 	}
 
 	_NODISCARD Result<_STD string> ServiceGateway::requiredString(const _NLOHMANN_JSON json& json, const _STD string& field)
 	{
 		if (!json.contains(field) || json[field].is_null() || !json[field].is_string())
 		{
-			return Result<_STD string>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: " + field));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: " + field));
 		}
-		return Result<_STD string>::success(json[field].get<_STD string>());
+		return json[field].get<_STD string>();
 	}
 
 	_NODISCARD Result<_STD string> ServiceGateway::optionalString(const _NLOHMANN_JSON json& json, const _STD string& field)
 	{
 		if (!json.contains(field) || json[field].is_null())
 		{
-			return Result<_STD string>::success("");
+			return _STD string {};
 		}
 		if (!json[field].is_string())
 		{
-			return Result<_STD string>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: " + field));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: " + field));
 		}
-		return Result<_STD string>::success(json[field].get<_STD string>());
+		return json[field].get<_STD string>();
 	}
 
 	_NODISCARD Result<void> ServiceGateway::validateDataIds(const _STD vector<_STD string>& ids)
 	{
 		if (ids.empty())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "data_ids is empty"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "data_ids is empty"));
 		}
 		_STD set<_STD string> distinct {};
 		for (const auto& id : ids)
 		{
 			if (id.empty())
 			{
-				return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "data_ids contains an empty value"));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "data_ids contains an empty value"));
 			}
 			if (!distinct.insert(id).second)
 			{
-				return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "data_ids contains a duplicate value: " + id));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "data_ids contains a duplicate value: " + id));
 			}
 		}
-		return Result<void>::success();
+		return {};
 	}
 
 	_NODISCARD Result<void> ServiceGateway::validateConfigUploadRequest(const ConfigUploadRequest& request)
 	{
 		if (request.key.data_id.empty())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "data_id is empty"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "data_id is empty"));
 		}
 		if (request.content.empty())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "content is empty"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "content is empty"));
 		}
 		if (request.format.empty())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "format is empty"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "format is empty"));
 		}
 		for (const char ch : request.format)
 		{
 			const unsigned char uch { static_cast<unsigned char>(ch) };
 			if (uch <= 0X20 || uch == 0X7f)
 			{
-				return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "format contains whitespace or control characters"));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "format contains whitespace or control characters"));
 			}
 		}
-		return Result<void>::success();
+		return {};
 	}
 
 	_NODISCARD CatalogFailure ServiceGateway::remapNotFound(CatalogFailure failure, CatalogError replacement)

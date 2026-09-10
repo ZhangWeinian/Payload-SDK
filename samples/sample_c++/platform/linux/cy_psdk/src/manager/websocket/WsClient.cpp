@@ -18,6 +18,8 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 
+#include <fmt/format.h>
+
 #include <string_view>
 #include <array>
 #include <chrono>
@@ -234,7 +236,7 @@ namespace plane::manager
 
 				// HTTP Upgrade 握手 (Host 头需含端口)
 				this->ws->async_handshake(
-					this->host + ":" + _STD to_string(kServerPort),
+					_FMT format("{}:{}", this->host, kServerPort),
 					"/",
 					[this](const WsError& hs_ec)
 					{

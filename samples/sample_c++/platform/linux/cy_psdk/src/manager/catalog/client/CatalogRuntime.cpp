@@ -16,6 +16,8 @@
 #include <mutex>
 #include <thread>
 
+#include <fmt/format.h>
+
 #include "manager/catalog/client/CatalogError.h"
 #include "manager/catalog/client/CatalogFailure.h"
 #include "manager/catalog/client/internal/codec/JsonCodec.h"
@@ -42,24 +44,19 @@ namespace plane::catalog
 	{
 		using Clock = _STD_CHRONO steady_clock;
 
-		_NODISCARD _STD string	  scopeValue(const _STD string& value, const _STD string& fallback)
+		constexpr _STD string	  scopeValue(const _STD string& value, const _STD string& fallback)
 		{
 			return value.empty() ? fallback : value;
 		}
 
-		_NODISCARD _STD_CHRONO milliseconds positiveInterval(_STD_CHRONO milliseconds value, _STD_CHRONO milliseconds fallback)
+		constexpr _STD_CHRONO milliseconds positiveInterval(_STD_CHRONO milliseconds value, _STD_CHRONO milliseconds fallback)
 		{
 			return value.count() > 0 ? value : fallback;
 		}
 
 		_NODISCARD _STD string catalogUrlOf(const CatalogEndpoint& endpoint)
 		{
-			return "http://" + endpoint.ip + ":" + _STD to_string(endpoint.http_port == 0 ? 8081 : endpoint.http_port);
-		}
-
-		_NODISCARD Result<CatalogFailure> invalidFailure(const _STD string& message)
-		{
-			return Result<CatalogFailure>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, message));
+			return _FMT format("http://{}:{}", endpoint.ip, endpoint.http_port == 0 ? 8081 : endpoint.http_port);
 		}
 	} // namespace
 
@@ -360,7 +357,7 @@ namespace plane::catalog
 			}
 			ServiceRegistration registration { this->registrationSnapshot() };
 			Result<_STD string> result { this->gateway_->registerInstance(registration) };
-			if (result.isOk() && !result.value().empty())
+			if (result.has_value() && !result.value().empty())
 			{
 				{
 					_STD lock_guard<_STD mutex> lock { this->mu_ };
@@ -411,7 +408,7 @@ namespace plane::catalog
 			const _STD string	id { this->instanceId() };
 			Result<void>		result { this->gateway_->heartbeat(registration, id) };
 			this->next_heartbeat_.store(Clock::now() + this->heartbeatInterval(), _STD memory_order_release);
-			if (result.isOk())
+			if (result.has_value())
 			{
 				this->availability_.success();
 				return;
@@ -454,7 +451,7 @@ namespace plane::catalog
 			}
 			ServiceRegistration registration { this->registrationSnapshot() };
 			Result<void>		result { this->gateway_->reportStatus(registration, id, *snapshot) };
-			if (result.isOk())
+			if (result.has_value())
 			{
 				this->availability_.success();
 				this->next_status_report_.store(Clock::time_point::min(), _STD memory_order_release);
@@ -509,7 +506,7 @@ namespace plane::catalog
 			for (auto& [key, watch] : snapshot)
 			{
 				Result<ConfigDocument> result { this->gateway_->getConfig(key) };
-				if (!result.isOk())
+				if (!result.has_value())
 				{
 					this->postEvent(
 						CatalogEventType::CONFIG_FETCH_FAILED,
@@ -764,7 +761,7 @@ namespace plane::catalog
 			impl_->registration_.namespace_name = scopeValue(impl_->registration_.namespace_name, "public");
 			impl_->registration_.group_name		= scopeValue(impl_->registration_.group_name, "DEFAULT_GROUP");
 			Result<_STD string> version { internal::JsonCodec::normalizeVersion(impl_->registration_.version) };
-			if (version.isOk())
+			if (version.has_value())
 			{
 				impl_->registration_.version = version.value();
 			}
@@ -777,7 +774,7 @@ namespace plane::catalog
 	{
 		try
 		{
-			this->stop(_STD_CHRONO seconds(2));
+			(void)this->stop(_STD_CHRONO seconds(2));
 		}
 		catch (...)
 		{}
@@ -788,23 +785,23 @@ namespace plane::catalog
 		_STD lock_guard<_STD mutex> lifecycle_lock { impl_->lifecycle_mu_ }; // start/stop 串行化 (对齐 java synchronized)
 		if (impl_->ever_started_.load(_STD memory_order_acquire))
 		{
-			return Result<void>::failure(makeFailure(CatalogError::ALREADY_STARTED));
+			return _STD unexpected(makeFailure(CatalogError::ALREADY_STARTED));
 		}
 
 		// 注册参数校验
 		ServiceRegistration registration { impl_->registrationSnapshot() };
 		if (registration.service_id.empty())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "service_id is empty"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "service_id is empty"));
 		}
 		if (registration.service_name.empty())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "service_name is empty"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "service_name is empty"));
 		}
 		Result<_STD string> version { internal::JsonCodec::normalizeVersion(registration.version) };
-		if (!version.isOk())
+		if (!version.has_value())
 		{
-			return Result<void>::failure(version.error());
+			return _STD unexpected(version.error());
 		}
 
 		impl_->discovery_cancelled_.store(false, _STD memory_order_release);
@@ -814,14 +811,14 @@ namespace plane::catalog
 		if (report.multiple_instances || report.endpoints.size() > 1)
 		{
 			impl_->state_machine_.set(CatalogState::STOPPED);
-			return Result<void>::failure(makeFailure(CatalogError::CATALOG_CONFLICT, "multiple catalog instances"));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_CONFLICT, "multiple catalog instances"));
 		}
 		if (report.endpoints.empty())
 		{
 			impl_->state_machine_.set(CatalogState::STOPPED);
 			const CatalogError code { report.status == DiscoveryStatus::INVALID_ARGUMENT ? CatalogError::INVALID_ARGUMENT
 																						 : CatalogError::DISCOVERY_TIMEOUT };
-			return Result<void>::failure(makeFailure(code, report.error));
+			return _STD		   unexpected(makeFailure(code, report.error));
 		}
 
 		const CatalogEndpoint discovered { report.endpoints.front() };
@@ -844,27 +841,27 @@ namespace plane::catalog
 		impl_->next_config_.store(now, _STD memory_order_release);
 		impl_->next_discovery_.store(now + impl_->discovery_config_.ready_probe_interval, _STD memory_order_release);
 		impl_->kick();
-		return Result<void>::success();
+		return {};
 	}
 
 	Result<void> CatalogRuntime::registerServiceInstance(void)
 	{
 		if (!impl_->running())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::NOT_STARTED));
+			return _STD unexpected(makeFailure(CatalogError::NOT_STARTED));
 		}
 		const CatalogState state { impl_->state_machine_.state() };
 		if (state == CatalogState::CONFLICT)
 		{
-			return Result<void>::failure(makeFailure(CatalogError::CATALOG_CONFLICT));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_CONFLICT));
 		}
 		if (state == CatalogState::UNAVAILABLE)
 		{
-			return Result<void>::failure(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
 		}
 		if (state == CatalogState::STOPPING || state == CatalogState::STOPPED)
 		{
-			return Result<void>::failure(makeFailure(CatalogError::STOPPED));
+			return _STD unexpected(makeFailure(CatalogError::STOPPED));
 		}
 		impl_->registration_requested_.store(true, _STD memory_order_release);
 		if (state == CatalogState::DISCOVERED)
@@ -873,7 +870,7 @@ namespace plane::catalog
 		}
 		impl_->next_registration_.store(Clock::time_point::min(), _STD memory_order_release);
 		impl_->kick();
-		return Result<void>::success();
+		return {};
 	}
 
 	Result<void> CatalogRuntime::stop(_STD_CHRONO milliseconds timeout)
@@ -883,7 +880,7 @@ namespace plane::catalog
 			_STD lock_guard<_STD mutex> lock { impl_->mu_ };
 			if (!impl_->ever_started_.load(_STD memory_order_acquire) || impl_->state_machine_.state() == CatalogState::STOPPED)
 			{
-				return Result<void>::failure(makeFailure(CatalogError::NOT_STARTED));
+				return _STD unexpected(makeFailure(CatalogError::NOT_STARTED));
 			}
 		}
 		impl_->state_machine_.set(CatalogState::STOPPING);
@@ -922,7 +919,7 @@ namespace plane::catalog
 			impl_->gateway_->setTimeout(positiveInterval(timeout, _STD_CHRONO seconds(2)));
 			(void)impl_->gateway_->deleteInstance(impl_->registrationSnapshot(), instance_id);
 		}
-		return Result<void>::success();
+		return {};
 	}
 
 	CatalogState CatalogRuntime::state(void) const
@@ -944,7 +941,7 @@ namespace plane::catalog
 	{
 		if (!impl_->running())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::NOT_STARTED));
+			return _STD unexpected(makeFailure(CatalogError::NOT_STARTED));
 		}
 		{
 			_STD lock_guard<_STD mutex> lock { impl_->mu_ };
@@ -953,14 +950,14 @@ namespace plane::catalog
 		impl_->status_dirty_.store(true, _STD memory_order_release);
 		impl_->next_status_report_.store(Clock::time_point::min(), _STD memory_order_release);
 		impl_->kick();
-		return Result<void>::success();
+		return {};
 	}
 
 	Result<ResolvedService> CatalogRuntime::resolveService(const ServiceQuery& query)
 	{
 		if (!impl_->state_machine_.allowQuery())
 		{
-			return Result<ResolvedService>::failure(impl_->gateFailure());
+			return _STD unexpected(impl_->gateFailure());
 		}
 		const ServiceRegistration registration { impl_->registrationSnapshot() };
 		ServiceQuery			  scoped {};
@@ -970,7 +967,7 @@ namespace plane::catalog
 		scoped.service_name	  = query.service_name;
 		if (!impl_->gateway_)
 		{
-			return Result<ResolvedService>::failure(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
 		}
 		return impl_->gateway_->resolve(scoped);
 	}
@@ -979,12 +976,12 @@ namespace plane::catalog
 	{
 		if (!impl_->state_machine_.allowQuery())
 		{
-			return Result<ServicePage>::failure(impl_->gateFailure());
+			return _STD unexpected(impl_->gateFailure());
 		}
 		const ServiceRegistration registration { impl_->registrationSnapshot() };
 		if (!impl_->gateway_)
 		{
-			return Result<ServicePage>::failure(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
 		}
 		return impl_->gateway_->listServices(scopeValue(namespace_name, registration.namespace_name), service_name, page, page_size);
 	}
@@ -998,12 +995,12 @@ namespace plane::catalog
 	{
 		if (!impl_->state_machine_.allowQuery())
 		{
-			return Result<ServiceStatus>::failure(impl_->gateFailure());
+			return _STD unexpected(impl_->gateFailure());
 		}
 		const ServiceRegistration registration { impl_->registrationSnapshot() };
 		if (!impl_->gateway_)
 		{
-			return Result<ServiceStatus>::failure(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
 		}
 		return impl_->gateway_->getInstanceStatus(
 			scopeValue(namespace_name, registration.namespace_name),
@@ -1017,12 +1014,12 @@ namespace plane::catalog
 	{
 		if (!impl_->state_machine_.allowQuery())
 		{
-			return Result<_STD string>::failure(impl_->gateFailure());
+			return _STD unexpected(impl_->gateFailure());
 		}
 		const ServiceRegistration registration { impl_->registrationSnapshot() };
 		if (!impl_->gateway_)
 		{
-			return Result<_STD string>::failure(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
 		}
 		return impl_->gateway_->getLocalIp(
 			registration.namespace_name,
@@ -1036,11 +1033,11 @@ namespace plane::catalog
 	{
 		if (!impl_->state_machine_.allowQuery())
 		{
-			return Result<CatalogServerInfo>::failure(impl_->gateFailure());
+			return _STD unexpected(impl_->gateFailure());
 		}
 		if (!impl_->gateway_)
 		{
-			return Result<CatalogServerInfo>::failure(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
 		}
 		return impl_->gateway_->getCatalogServerInfo();
 	}
@@ -1053,14 +1050,14 @@ namespace plane::catalog
 		scoped.key.group_name	  = scopeValue(request.key.group_name, registration.group_name);
 		if (!impl_->state_machine_.allowQuery())
 		{
-			return Result<ConfigDocument>::failure(impl_->gateFailure());
+			return _STD unexpected(impl_->gateFailure());
 		}
 		if (!impl_->gateway_)
 		{
-			return Result<ConfigDocument>::failure(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
 		}
 		Result<ConfigDocument> result { impl_->gateway_->putConfig(scoped) };
-		if (!result.isOk())
+		if (!result.has_value())
 		{
 			return result;
 		}
@@ -1073,14 +1070,13 @@ namespace plane::catalog
 	{
 		if (query.data_ids.empty())
 		{
-			return Result<_STD vector<ConfigDocument>>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "data_ids is empty"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "data_ids is empty"));
 		}
 		for (const auto& id : query.data_ids)
 		{
 			if (id.empty())
 			{
-				return Result<_STD vector<ConfigDocument>>::
-					failure(makeFailure(CatalogError::INVALID_ARGUMENT, "data_ids contains an empty value"));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "data_ids contains an empty value"));
 			}
 		}
 		const ServiceRegistration registration { impl_->registrationSnapshot() };
@@ -1090,22 +1086,22 @@ namespace plane::catalog
 
 		if (!impl_->running())
 		{
-			return Result<_STD vector<ConfigDocument>>::failure(impl_->gateFailure());
+			return _STD unexpected(impl_->gateFailure());
 		}
 		const CatalogState state { impl_->state_machine_.state() };
 		if (state == CatalogState::STOPPED || state == CatalogState::STOPPING)
 		{
-			return Result<_STD vector<ConfigDocument>>::failure(makeFailure(CatalogError::STOPPED));
+			return _STD unexpected(makeFailure(CatalogError::STOPPED));
 		}
 
 		if (impl_->state_machine_.allowQuery())
 		{
 			if (!impl_->gateway_)
 			{
-				return Result<_STD vector<ConfigDocument>>::failure(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+				return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
 			}
 			Result<_STD vector<ConfigDocument>> remote { impl_->gateway_->getConfigs(scoped) };
-			if (remote.isOk())
+			if (remote.has_value())
 			{
 				for (const auto& document : remote.value())
 				{
@@ -1116,27 +1112,27 @@ namespace plane::catalog
 			const _STD optional<_STD vector<ConfigDocument>> cached { impl_->allCached(scoped) };
 			if (cached.has_value())
 			{
-				return Result<_STD vector<ConfigDocument>>::success(*cached);
+				return *cached;
 			}
 			return remote;
 		}
 		const _STD optional<_STD vector<ConfigDocument>> cached { impl_->allCached(scoped) };
 		if (cached.has_value())
 		{
-			return Result<_STD vector<ConfigDocument>>::success(*cached);
+			return *cached;
 		}
-		return Result<_STD vector<ConfigDocument>>::failure(impl_->gateFailure());
+		return _STD unexpected(impl_->gateFailure());
 	}
 
 	Result<ConfigSubscription> CatalogRuntime::watchConfig(const ConfigKey& key, _STD function<void(const ConfigChangeEvent&)> callback)
 	{
 		if (key.data_id.empty())
 		{
-			return Result<ConfigSubscription>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "data_id is empty"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "data_id is empty"));
 		}
 		if (!impl_->state_machine_.allowQuery())
 		{
-			return Result<ConfigSubscription>::failure(impl_->gateFailure());
+			return _STD unexpected(impl_->gateFailure());
 		}
 		const ServiceRegistration registration { impl_->registrationSnapshot() };
 		ConfigKey				  scoped {};
@@ -1159,7 +1155,7 @@ namespace plane::catalog
 											  _STD lock_guard<_STD mutex> lock { impl->mu_ };
 											  impl->watches_.erase(scoped);
 										  } };
-		return Result<ConfigSubscription>::success(_STD move(subscription));
+		return subscription;
 	}
 
 	Result<void> CatalogRuntime::updateLogPaths(const _STD vector<LogPath>& paths)
@@ -1168,12 +1164,12 @@ namespace plane::catalog
 		{
 			if (path.path.empty() || path.path.front() != '/')
 			{
-				return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "log path must be absolute"));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "log path must be absolute"));
 			}
 		}
 		if (!impl_->running())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::NOT_STARTED));
+			return _STD unexpected(makeFailure(CatalogError::NOT_STARTED));
 		}
 		{
 			_STD lock_guard<_STD mutex> lock { impl_->mu_ };
@@ -1187,18 +1183,18 @@ namespace plane::catalog
 			impl_->transition(CatalogState::REGISTERING, CatalogEventType::STATE_CHANGED, "log paths changed");
 		}
 		impl_->kick();
-		return Result<void>::success();
+		return {};
 	}
 
 	Result<void> CatalogRuntime::updateRegistration(const ServiceRegistration& registration)
 	{
 		if (!impl_->running())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::NOT_STARTED));
+			return _STD unexpected(makeFailure(CatalogError::NOT_STARTED));
 		}
 		if (registration.service_id.empty() && registration.service_name.empty())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT));
 		}
 		{
 			_STD lock_guard<_STD mutex> lock { impl_->mu_ };
@@ -1215,6 +1211,6 @@ namespace plane::catalog
 			impl_->transition(CatalogState::REGISTERING, CatalogEventType::STATE_CHANGED, "registration updated");
 		}
 		impl_->kick();
-		return Result<void>::success();
+		return {};
 	}
 } // namespace plane::catalog

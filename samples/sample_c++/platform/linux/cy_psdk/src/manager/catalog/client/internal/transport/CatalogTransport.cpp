@@ -94,21 +94,21 @@ namespace plane::catalog::internal
 	{
 		if (this->stopping_.load(_STD memory_order_acquire))
 		{
-			return Result<void>::failure(makeFailure(CatalogError::STOPPED));
+			return _STD unexpected(makeFailure(CatalogError::STOPPED));
 		}
 		if (this->conflict_.load(_STD memory_order_acquire))
 		{
-			return Result<void>::failure(makeFailure(CatalogError::CATALOG_CONFLICT));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_CONFLICT));
 		}
 		if (!this->remote_allowed_.load(_STD memory_order_acquire))
 		{
-			return Result<void>::failure(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
 		}
 		if (this->catalogUrl().empty())
 		{
-			return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "empty URL"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "empty URL"));
 		}
-		return Result<void>::success();
+		return {};
 	}
 
 	_NODISCARD _STD optional<CatalogFailure> CatalogTransport::mapHttp(const HttpResponseData& response) const
@@ -168,11 +168,11 @@ namespace plane::catalog::internal
 	{
 		try
 		{
-			return Result<_NLOHMANN_JSON json>::success(_NLOHMANN_JSON json::parse(body));
+			return _NLOHMANN_JSON json::parse(body);
 		}
 		catch (const _STD exception& ex)
 		{
-			return Result<_NLOHMANN_JSON json>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what(), status, ""));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what(), status, ""));
 		}
 	}
 
@@ -181,15 +181,15 @@ namespace plane::catalog::internal
 		const _STD optional<CatalogFailure> failure { this->mapHttp(response) };
 		if (failure.has_value())
 		{
-			return Result<_NLOHMANN_JSON json>::failure(*failure);
+			return _STD unexpected(*failure);
 		}
 		if (response.body.empty())
 		{
 			if (empty_object_allowed)
 			{
-				return Result<_NLOHMANN_JSON json>::success(_NLOHMANN_JSON json::object());
+				return _NLOHMANN_JSON json::object();
 			}
-			return Result<_NLOHMANN_JSON json>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "empty JSON body", response.status, ""));
+			return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "empty JSON body", response.status, ""));
 		}
 		return this->parseRawJson(response.body, response.status);
 	}
@@ -197,9 +197,9 @@ namespace plane::catalog::internal
 	_NODISCARD Result<_NLOHMANN_JSON json> CatalogTransport::getJson(const _STD string& path)
 	{
 		Result<void> check { this->gate() };
-		if (!check.isOk())
+		if (!check.has_value())
 		{
-			return Result<_NLOHMANN_JSON json>::failure(check.error());
+			return _STD unexpected(check.error());
 		}
 		return this->parse(this->http_->get(this->fullUrl(path)), false);
 	}
@@ -208,9 +208,9 @@ namespace plane::catalog::internal
 			   CatalogTransport::postJson(const _STD string& path, const _STD string& body, bool accept_idempotent_register)
 	{
 		Result<void> check { this->gate() };
-		if (!check.isOk())
+		if (!check.has_value())
 		{
-			return Result<_NLOHMANN_JSON json>::failure(check.error());
+			return _STD unexpected(check.error());
 		}
 		const HttpResponseData response { this->http_->post(this->fullUrl(path), body) };
 
@@ -218,15 +218,16 @@ namespace plane::catalog::internal
 		{
 			// 注册冲突: 若服务端判定幂等 (已注册过, 携带 id) 则视为成功
 			Result<_NLOHMANN_JSON json> parsed { this->parseRawJson(response.body, response.status) };
-			if (!parsed.isOk())
+			if (!parsed.has_value())
 			{
 				return parsed;
 			}
 			const _NLOHMANN_JSON json json = parsed.value();
 			if (!json.is_object())
 			{
-				return Result<_NLOHMANN_JSON json>::
-					failure(makeFailure(CatalogError::PROTOCOL_ERROR, "registration conflict response must be an object", response.status, ""));
+				return _STD unexpected(
+					makeFailure(CatalogError::PROTOCOL_ERROR, "registration conflict response must be an object", response.status, "")
+				);
 			}
 			static const _STD set<_STD string> kIdempotent { "ALREADY_REGISTERED", "ALREADY_EXISTS", "IDEMPOTENT", "DUPLICATE" };
 			_STD string						   code {};
@@ -234,19 +235,18 @@ namespace plane::catalog::internal
 			{
 				if (!json["code"].is_string())
 				{
-					return Result<_NLOHMANN_JSON json>::
-						failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: code", response.status, ""));
+					return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: code", response.status, ""));
 				}
 				code = json["code"].get<_STD string>();
 			}
 			const bool has_id { json.contains("id") && json["id"].is_string() && !json["id"].get<_STD string>().empty() };
 			if (kIdempotent.find(code) != kIdempotent.end() || has_id)
 			{
-				return Result<_NLOHMANN_JSON json>::success(json);
+				return json;
 			}
 			CatalogFailure failure { failureWithCode(this->mapHttp(response).value_or(CatalogFailure {}), CatalogError::REGISTRATION_REJECTED) };
 			failure.retryable = false;
-			return Result<_NLOHMANN_JSON json>::failure(failure);
+			return _STD unexpected(failure);
 		}
 		return this->parse(response, false);
 	}
@@ -254,9 +254,9 @@ namespace plane::catalog::internal
 	_NODISCARD Result<_NLOHMANN_JSON json> CatalogTransport::putJson(const _STD string& path, const _STD string& body)
 	{
 		Result<void> check { this->gate() };
-		if (!check.isOk())
+		if (!check.has_value())
 		{
-			return Result<_NLOHMANN_JSON json>::failure(check.error());
+			return _STD unexpected(check.error());
 		}
 		return this->parse(this->http_->put(this->fullUrl(path), body), true);
 	}
@@ -264,45 +264,45 @@ namespace plane::catalog::internal
 	_NODISCARD Result<void> CatalogTransport::postVoid(const _STD string& path, const _STD string& body)
 	{
 		Result<void> check { this->gate() };
-		if (!check.isOk())
+		if (!check.has_value())
 		{
 			return check;
 		}
 		const _STD optional<CatalogFailure> failure { this->mapHttp(this->http_->post(this->fullUrl(path), body)) };
 		if (failure.has_value())
 		{
-			return Result<void>::failure(*failure);
+			return _STD unexpected(*failure);
 		}
-		return Result<void>::success();
+		return {};
 	}
 
 	_NODISCARD Result<void> CatalogTransport::putVoid(const _STD string& path, const _STD string& body)
 	{
 		Result<void> check { this->gate() };
-		if (!check.isOk())
+		if (!check.has_value())
 		{
 			return check;
 		}
 		const _STD optional<CatalogFailure> failure { this->mapHttp(this->http_->put(this->fullUrl(path), body)) };
 		if (failure.has_value())
 		{
-			return Result<void>::failure(*failure);
+			return _STD unexpected(*failure);
 		}
-		return Result<void>::success();
+		return {};
 	}
 
 	_NODISCARD Result<void> CatalogTransport::del(const _STD string& path)
 	{
 		Result<void> check { this->gate() };
-		if (!check.isOk())
+		if (!check.has_value())
 		{
 			return check;
 		}
 		const _STD optional<CatalogFailure> failure { this->mapHttp(this->http_->del(this->fullUrl(path))) };
 		if (failure.has_value())
 		{
-			return Result<void>::failure(*failure);
+			return _STD unexpected(*failure);
 		}
-		return Result<void>::success();
+		return {};
 	}
 } // namespace plane::catalog::internal

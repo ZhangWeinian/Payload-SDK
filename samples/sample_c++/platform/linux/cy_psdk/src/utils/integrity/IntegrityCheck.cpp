@@ -8,13 +8,13 @@
 
 #include <openssl/evp.h>
 
+#include <fmt/format.h>
+
 #include <array>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <iomanip>
-#include <sstream>
 #include <string>
 
 namespace
@@ -78,13 +78,12 @@ namespace
 			return false;
 		}
 
-		_STD ostringstream oss;
-		oss << _STD hex << _STD setfill('0');
+		hex_out.clear();
+		hex_out.reserve(static_cast<_STD size_t>(digest_len) * 2);
 		for (unsigned int i { 0 }; i < digest_len; ++i)
 		{
-			oss << _STD setw(2) << static_cast<unsigned int>(digest[i]);
+			_FMT format_to(_STD back_inserter(hex_out), "{:02x}", static_cast<unsigned int>(digest[i]));
 		}
-		hex_out = oss.str();
 		return true;
 	}
 

@@ -43,9 +43,9 @@ namespace plane::manager
 		using ExposedPort			 = plane::catalog::ExposedPort;
 		using ServiceRegistration	 = plane::catalog::ServiceRegistration;
 
-		using Ms					 = _STD		   chrono::milliseconds;
+		using Ms					 = _STD			   chrono::milliseconds;
 
-		_NODISCARD _STD string stateText(CatalogState state) noexcept
+		constexpr _STD string_view stateText(CatalogState state) noexcept
 		{
 			switch (state)
 			{
@@ -70,7 +70,7 @@ namespace plane::manager
 		}
 
 		// 端点协议 -> URL scheme (mqtt/tcp 按 tcp://; ws/wss/http/https/rtsp 原样)
-		_NODISCARD _STD string schemeForProtocol(const _STD string& protocol) noexcept
+		constexpr _STD string_view schemeForProtocol(const _STD string& protocol) noexcept
 		{
 			if (protocol == "ws")
 			{
@@ -271,7 +271,7 @@ namespace plane::manager
 		while (this->running_.load() && !started)
 		{
 			auto result { rt->start() };
-			if (result.isOk())
+			if (result.has_value())
 			{
 				started = true;
 				if (auto ep { rt->catalogEndpoint() }; ep.has_value())
@@ -388,7 +388,7 @@ namespace plane::manager
 		}
 
 		auto result { impl.runtime->updateStatus(status) };
-		if (!result.isOk())
+		if (!result.has_value())
 		{
 			LOG_DEBUG("SwarmCatalog 状态上报未生效: code={}, message={}", static_cast<int>(result.error().code), result.error().message);
 		}
@@ -406,7 +406,7 @@ namespace plane::manager
 		query.service_id = impl.broker_service_id; // namespace/group 为空 -> 继承注册作用域 (public/DEFAULT_GROUP)
 
 		auto result { impl.runtime->resolveService(query) };
-		if (!result.isOk())
+		if (!result.has_value())
 		{
 			LOG_WARN(
 				"目录解析中心服务失败: service_id='{}', code={}, message={}",
@@ -501,7 +501,7 @@ namespace plane::manager
 		}
 
 		auto result { runtime->getCatalogServerInfo() };
-		if (!result.isOk())
+		if (!result.has_value())
 		{
 			LOG_DEBUG("获取目录服务端信息失败: code={}, message={}", static_cast<int>(result.error().code), result.error().message);
 			return {};
@@ -529,7 +529,7 @@ namespace plane::manager
 		ServiceQuery query {};
 		query.service_id = service_id; // namespace/group 为空 -> 继承注册作用域 (public/DEFAULT_GROUP)
 		auto result { runtime->resolveService(query) };
-		if (!result.isOk())
+		if (!result.has_value())
 		{
 			LOG_WARN(
 				"目录解析服务失败: service_id='{}', code={}, message={}",
@@ -605,7 +605,7 @@ namespace plane::manager
 		registration.version		= config.getCatalogVersion();
 
 		auto result { runtime->updateRegistration(registration) };
-		if (!result.isOk())
+		if (!result.has_value())
 		{
 			LOG_WARN("Catalog 注册信息更新失败: code={}, message={}", static_cast<int>(result.error().code), result.error().message);
 			return;

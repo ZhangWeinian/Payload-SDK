@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+#include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
 #include "define.h"
@@ -47,7 +48,7 @@ namespace plane::manager
 			{
 				return {};
 			}
-			return "ws://" + ip + ":" + _STD to_string(port);
+			return _FMT format("ws://{}:{}", ip, port);
 		}
 
 		// 组装订阅报文: {"cmd":"subscribe","types":[...]} (对齐 msdk WebSocketRepository)

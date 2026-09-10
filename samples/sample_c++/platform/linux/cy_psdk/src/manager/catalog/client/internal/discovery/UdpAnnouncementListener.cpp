@@ -79,7 +79,7 @@ namespace plane::catalog::internal
 
 				const _STD vector<_STD uint8_t> packet { buffer.begin(), buffer.begin() + static_cast<_STD ptrdiff_t>(length) };
 				Result<CatalogAnnouncement>		decoded { decodeAnnouncement(packet) };
-				if (!decoded.isOk())
+				if (!decoded.has_value())
 				{
 					continue;
 				}
@@ -121,11 +121,11 @@ namespace plane::catalog::internal
 		auto& impl { *this->impl_ };
 		if (impl.running.load(_STD memory_order_acquire))
 		{
-			return Result<void>::success(); // 幂等
+			return {}; // 幂等
 		}
 		if (impl.port <= 0 || impl.port > 65'535)
 		{
-			return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, _FMT format("非法端口: {}", impl.port)));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, _FMT format("非法端口: {}", impl.port)));
 		}
 
 		_ASIO error_code ignored {};
@@ -134,7 +134,7 @@ namespace plane::catalog::internal
 		impl.socket.open(_ASIO ip::udp::v4(), ec);
 		if (ec)
 		{
-			return Result<void>::failure(makeFailure(CatalogError::CATALOG_UNAVAILABLE, _FMT format("open failed: {}", ec.message())));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE, _FMT format("open failed: {}", ec.message())));
 		}
 
 		_ASIO ip::udp::endpoint local {};
@@ -149,7 +149,7 @@ namespace plane::catalog::internal
 			if (addr_ec)
 			{
 				impl.socket.close(ignored);
-				return Result<void>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, _FMT format("非法绑定地址: {}", impl.bind_address)));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, _FMT format("非法绑定地址: {}", impl.bind_address)));
 			}
 		}
 
@@ -158,7 +158,7 @@ namespace plane::catalog::internal
 		if (ec)
 		{
 			impl.socket.close(ignored);
-			return Result<void>::failure(makeFailure(CatalogError::CATALOG_UNAVAILABLE, _FMT format("bind failed: {}", ec.message())));
+			return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE, _FMT format("bind failed: {}", ec.message())));
 		}
 
 		// 非阻塞接收 + poll 限时等待 (asio 同步接收在阻塞模式下无法限时)
@@ -171,7 +171,7 @@ namespace plane::catalog::internal
 				this->impl_->runLoop();
 			}
 		);
-		return Result<void>::success();
+		return {};
 	}
 
 	void UdpAnnouncementListener::stop(void) noexcept

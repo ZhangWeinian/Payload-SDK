@@ -43,30 +43,30 @@ namespace plane::catalog::internal
 			_STD string value { trimAsciiWhitespaceCopy(raw) };
 			if (value.empty())
 			{
-				return Result<_STD string>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "version is empty"));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "version is empty"));
 			}
 			if (exceeds128CodePoints(value))
 			{
-				return Result<_STD string>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "version exceeds 128 characters"));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "version exceeds 128 characters"));
 			}
-			return Result<_STD string>::success(_STD move(value));
+			return value;
 		}
 
 		Result<_NLOHMANN_JSON json> registrationToJson(const ServiceRegistration& registration, const _STD string& instance_address)
 		{
 			if (registration.service_id.empty())
 			{
-				return Result<_NLOHMANN_JSON json>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "service_id is empty"));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "service_id is empty"));
 			}
 			if (registration.service_name.empty())
 			{
-				return Result<_NLOHMANN_JSON json>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "service_name is empty"));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "service_name is empty"));
 			}
 			// 注: 允许空 exposed_ports (机载端当前无对外业务端口); 服务端以 HTTP 来源 IP 绑定实例。
 			Result<_STD string> version { normalizeVersion(registration.version) };
-			if (!version.isOk())
+			if (!version.has_value())
 			{
-				return Result<_NLOHMANN_JSON json>::failure(version.error());
+				return _STD unexpected(version.error());
 			}
 
 			_NLOHMANN_JSON json root;
@@ -109,24 +109,23 @@ namespace plane::catalog::internal
 					_NLOHMANN_JSON json metadata = _NLOHMANN_JSON json::parse(registration.metadata_json);
 					if (!metadata.is_object())
 					{
-						return Result<_NLOHMANN_JSON json>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "metadata must be an object"));
+						return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "metadata must be an object"));
 					}
 					for (auto it { metadata.begin() }; it != metadata.end(); ++it)
 					{
 						if (!it.value().is_string())
 						{
-							return Result<_NLOHMANN_JSON json>::
-								failure(makeFailure(CatalogError::INVALID_ARGUMENT, "metadata values must be strings"));
+							return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "metadata values must be strings"));
 						}
 					}
 					root["metadata"] = _STD move(metadata);
 				}
 				catch (const _STD exception& ex)
 				{
-					return Result<_NLOHMANN_JSON json>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, ex.what()));
+					return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, ex.what()));
 				}
 			}
-			return Result<_NLOHMANN_JSON json>::success(_STD move(root));
+			return root;
 		}
 
 		Result<_NLOHMANN_JSON json> statusToJson(const ServiceStatus& status)
@@ -134,7 +133,7 @@ namespace plane::catalog::internal
 			const _STD string overall { status.overall_status.empty() ? (status.healthy ? "UP" : "DOWN") : status.overall_status };
 			if (validStatuses().find(overall) == validStatuses().end())
 			{
-				return Result<_NLOHMANN_JSON json>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid overall status"));
+				return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid overall status"));
 			}
 
 			_NLOHMANN_JSON json root;
@@ -173,21 +172,21 @@ namespace plane::catalog::internal
 				{
 					if (component.name.empty())
 					{
-						return Result<_NLOHMANN_JSON json>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "component name is empty"));
+						return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "component name is empty"));
 					}
 					if (validStatuses().find(component.status) == validStatuses().end())
 					{
-						return Result<_NLOHMANN_JSON json>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid component status"));
+						return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid component status"));
 					}
 					if (!names.insert(component.name).second)
 					{
-						return Result<_NLOHMANN_JSON json>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "duplicate component name"));
+						return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "duplicate component name"));
 					}
 					addComponent(components, component.name, component.status, component.code, component.message, component.details);
 				}
 			}
 			root["components"] = _STD move(components);
-			return Result<_NLOHMANN_JSON json>::success(_STD move(root));
+			return root;
 		}
 	} // namespace JsonCodec
 } // namespace plane::catalog::internal

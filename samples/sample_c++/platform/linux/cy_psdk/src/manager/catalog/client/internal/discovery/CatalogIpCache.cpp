@@ -49,7 +49,7 @@ namespace plane::catalog::internal
 		// 只保存规范单 IP
 		const _STD vector<_STD string>	 single { ip };
 		Result<_STD vector<_STD string>> checked { expandTargets(single, 1) };
-		if (!checked.isOk())
+		if (!checked.has_value())
 		{
 			return;
 		}

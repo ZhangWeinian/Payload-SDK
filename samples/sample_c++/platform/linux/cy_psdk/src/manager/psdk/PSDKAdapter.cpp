@@ -30,7 +30,7 @@ namespace plane::manager
 	namespace
 	{
 		// STATUS_DISPLAYMODE 原始码 -> 域模型 FlightMode (对齐 msdk 语义; 未映射 -> UNKNOWN)
-		inline plane::domain::FlightMode displayModeToFlightMode(int display_mode_code) noexcept
+		constexpr plane::domain::FlightMode displayModeToFlightMode(int display_mode_code) noexcept
 		{
 			switch (display_mode_code)
 			{
@@ -55,7 +55,7 @@ namespace plane::manager
 		}
 
 		// 将飞机型号枚举转换为字符串
-		inline _STD string_view aircraftTypeToString(_DJI E_DjiAircraftType type)
+		constexpr _STD string_view aircraftTypeToString(_DJI E_DjiAircraftType type) noexcept
 		{
 			switch (type)
 			{
@@ -117,7 +117,7 @@ namespace plane::manager
 		}
 
 		// 将 PSDK 航线任务状态枚举转换为字符串
-		inline _STD string_view djiMissionStateToString(_DJI E_DjiWaypointV3MissionState state)
+		constexpr _STD string_view djiMissionStateToString(_DJI E_DjiWaypointV3MissionState state) noexcept
 		{
 			switch (state)
 			{
@@ -141,7 +141,7 @@ namespace plane::manager
 		}
 
 		// 将 PSDK 航线任务动作状态枚举转换为字符串
-		inline _STD string_view djiActionStateToString(_DJI E_DjiWaypointV3ActionState state)
+		constexpr _STD string_view djiActionStateToString(_DJI E_DjiWaypointV3ActionState state) noexcept
 		{
 			switch (state)
 			{

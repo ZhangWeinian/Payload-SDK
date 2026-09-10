@@ -82,7 +82,7 @@ namespace plane::catalog::internal
 		}
 
 		Result<_STD vector<_STD string>> expanded { expandTargets(config.targets, kMaxScanTargets) };
-		if (!expanded.isOk())
+		if (!expanded.has_value())
 		{
 			return this->invalid(expanded.error().message);
 		}
@@ -120,7 +120,7 @@ namespace plane::catalog::internal
 			probe.node_id	 = config.node_id;
 			probe.request_id = randomRequestId();
 			Result<_STD vector<_STD uint8_t>> encoded { encodeProbePacket(probe) };
-			if (!encoded.isOk())
+			if (!encoded.has_value())
 			{
 				return this->invalid(encoded.error().message);
 			}
@@ -170,7 +170,7 @@ namespace plane::catalog::internal
 			auto						handlePacket = [&](const _STD vector<_STD uint8_t>& data, const _ASIO ip::udp::endpoint& remote)
 			{
 				Result<ProbePacket> decoded { decodeProbePacket(data) };
-				if (!decoded.isOk())
+				if (!decoded.has_value())
 				{
 					return;
 				}

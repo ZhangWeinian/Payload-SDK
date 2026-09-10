@@ -171,21 +171,19 @@ namespace plane::catalog::internal
 			}
 			catch (const TooManyTargets&)
 			{
-				return Result<_STD vector<_STD string>>::
-					failure(makeFailure(CatalogError::INVALID_ARGUMENT, _FMT format("展开后的目标数量超过上限 {}", max_count)));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, _FMT format("展开后的目标数量超过上限 {}", max_count)));
 			}
 			catch (const _STD exception& ex)
 			{
 				// 与 java 一致: 消息带目标原文后缀
-				return Result<_STD vector<_STD string>>::
-					failure(makeFailure(CatalogError::INVALID_ARGUMENT, _STD string { ex.what() } + ": " + clean));
+				return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, _STD string { ex.what() } + ": " + clean));
 			}
 		}
 
 		if (result.empty())
 		{
-			return Result<_STD vector<_STD string>>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "目标列表为空"));
+			return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "目标列表为空"));
 		}
-		return Result<_STD vector<_STD string>>::success(_STD move(result));
+		return result;
 	}
 } // namespace plane::catalog::internal
