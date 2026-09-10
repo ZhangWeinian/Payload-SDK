@@ -163,22 +163,20 @@ namespace plane::my_dji
 		// 到达此处说明 PSDK 流程已就绪 (或未启用), 向目录组件状态上报标记就绪
 		plane::manager::CatalogManager::getInstance().notifyPsdkRunning(true);
 
-		// 尝试启动 MQTT 服务
+		// 尝试启动 MQTT 服务 (自治运行: 启动失败不退出, 由自检线程持续重试)
 		if (!plane::manager::MQTTv5Service::getInstance().start())
 		{
-			LOG_ERROR("错误: MQTT 服务启动失败，程序退出");
-			return 1;
+			LOG_ERROR("错误: MQTT 服务启动失败 (程序继续运行, 自检线程将重试)");
 		}
 		else
 		{
 			LOG_DEBUG("MQTT 服务已成功启动");
 		}
 
-		// 尝试启动心跳服务
+		// 尝试启动心跳服务 (失败不退出)
 		if (!plane::manager::Heartbeat::getInstance().start())
 		{
-			LOG_ERROR("错误: 心跳服务启动失败，程序退出");
-			return 1;
+			LOG_ERROR("错误: 心跳服务启动失败 (程序继续运行)");
 		}
 		else
 		{
@@ -186,22 +184,20 @@ namespace plane::my_dji
 			plane::manager::CatalogManager::getInstance().notifyHeartbeatRunning(true);
 		}
 
-		// 尝试初始化业务逻辑处理器
+		// 尝试初始化业务逻辑处理器 (失败不退出)
 		if (!plane::manager::LogicHandler::getInstance().init())
 		{
-			LOG_ERROR("错误: 业务逻辑处理器初始化失败，程序退出");
-			return 1;
+			LOG_ERROR("错误: 业务逻辑处理器初始化失败 (程序继续运行)");
 		}
 		else
 		{
 			LOG_DEBUG("业务逻辑处理器已成功初始化");
 		}
 
-		// 尝试启动遥测上报服务
+		// 尝试启动遥测上报服务 (失败不退出)
 		if (!plane::manager::TelemetryReporter::getInstance().start())
 		{
-			LOG_ERROR("错误: 遥测上报服务启动失败，程序退出");
-			return 1;
+			LOG_ERROR("错误: 遥测上报服务启动失败 (程序继续运行)");
 		}
 		else
 		{

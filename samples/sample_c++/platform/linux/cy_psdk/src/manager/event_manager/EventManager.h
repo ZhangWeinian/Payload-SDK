@@ -91,10 +91,11 @@ namespace plane::manager
 
 		enum class SystemEvent
 		{
-			HeartbeatTick
+			HeartbeatTick,
+			MqttBrokerUpdated // 数据: _STD string (由 Catalog 服务发现解析得到的 broker URL)
 		};
 
-		using SystemEventData  = _STD	   variant<_STD monostate>;
+		using SystemEventData  = _STD	   variant<_STD monostate, _STD string>;
 		using SystemDispatcher = _EVENTPP EventDispatcher<_THIS SystemEvent, void(const SystemEventData&)>;
 
 		static EventManager&			  getInstance(void) noexcept;

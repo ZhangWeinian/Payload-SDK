@@ -48,6 +48,12 @@ namespace plane::manager
 				LOG_INFO("MQTT 连接已手动断开");
 				impl.manualDisconnect = false;
 			}
+
+			// 给 paho 内建自动重连留出窗口; 维护线程在窗口超时后兜底重建
+			{
+				_STD lock_guard<_STD mutex>		   lock { impl.clientMutex };
+				impl.lastAttemptTime = _STD_CHRONO steady_clock::now();
+			}
 			this->service_->setConnected(false);
 		}
 
@@ -137,31 +143,39 @@ namespace plane::manager
 		}
 		if (url.empty())
 		{
-			LOG_WARN("MQTT broker 地址为空, 暂不连接; 等待 SwarmCatalog 服务发现提供动态 broker 后自动重连");
-			return true;
+			LOG_WARN("MQTT broker 地址为空, 进入等待模式; 自检线程将周期复查, 地址就绪后自动连接");
 		}
 		_STD string cid { plane::config::ConfigManager::getInstance().getMqttClientId() };
 		LOG_INFO("MQTT 服务配置: 服务器={}, 客户端ID={}", url, cid);
 
 		try
 		{
-			this->impl_->client	  = _STD   make_unique<_MQTT async_client>(url, cid);
-			this->impl_->callback = _STD make_shared<MqttCallback>(this);
-			this->impl_->client->set_callback(*(this->impl_)->callback);
+			// 订阅系统事件: Catalog 服务发现解析到中心 broker 后广播地址, 作为快路径立即唤醒自检
+			auto&							   dispatcher { plane::manager::EventManager::getInstance().getSystemDispatcher() };
+			this->system_event_remover_ = _STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::SystemDispatcher>>(dispatcher);
+			this->system_event_remover_->appendListener(
+				plane::manager::EventManager::SystemEvent::MqttBrokerUpdated,
+				[this](const plane::manager::EventManager::SystemEventData& data)
+				{
+					if (const auto* new_url { _STD get_if<_STD string>(&data) })
+					{
+						this->setBrokerUrlOverride(*new_url); // 内部会唤醒维护线程
+					}
+				}
+			);
 
-			_MQTT connect_options conn_opts {};
-			conn_opts.set_keep_alive_interval(30);
-			conn_opts.set_clean_session(true);
-			conn_opts.set_automatic_reconnect(true);
-			conn_opts.set_mqtt_version(MQTTVERSION_5);
-
-			LOG_INFO("MQTT 服务启动成功, 等待连接建立");
-			this->impl_->client->connect(conn_opts);
-
+			// 发送线程: 消息队列出队发布
 			this->impl_->runSender	  = true;
 			this->impl_->senderThread = _STD thread(&MQTTv5Service::senderLoop, this);
-			LOG_INFO("MQTT 异步发送线程已启动");
 
+			// 维护线程: 周期自检 broker 连接 (地址等待/变化重连/断线兜底)
+			this->impl_->runMaintain	= true;
+			this->impl_->maintainThread = _STD thread(&MQTTv5Service::maintainLoop, this);
+
+			// 立即唤醒一次: 有地址时无需等待首个自检周期
+			this->impl_->maintainCv.notify_all();
+
+			LOG_INFO("MQTT 服务已启动 (自治运行: 发送线程 + {}s 自检维护线程)", kMaintainInterval.count());
 			return true;
 		}
 		catch (const _MQTT exception& ex)
@@ -174,7 +188,25 @@ namespace plane::manager
 		}
 		catch (...)
 		{
-			LOG_ERROR("MQTT 客户端初始化或连接发生未知异常: <non-std exception>");
+			LOG_ERROR("MQTT 服务启动出现未知异常: <non-std exception>");
+		}
+
+		// 启动失败回滚: 尽力停止已建部分 (未创建成功的线程 joinable 为 false, 安全)
+		this->impl_->runMaintain = false;
+		this->impl_->maintainCv.notify_all();
+		if (this->impl_->maintainThread.joinable())
+		{
+			this->impl_->maintainThread.join();
+		}
+		this->impl_->runSender = false;
+		this->impl_->dequeCv.notify_one();
+		if (this->impl_->senderThread.joinable())
+		{
+			this->impl_->senderThread.join();
+		}
+		if (this->system_event_remover_)
+		{
+			this->system_event_remover_.reset();
 		}
 
 		this->impl_.reset(new Impl());
@@ -190,6 +222,23 @@ namespace plane::manager
 			return;
 		}
 
+		// 1. 停止维护线程 (先于 client 销毁; join 等待可能正在进行的重连结束)
+		this->impl_->runMaintain = false;
+		this->impl_->maintainCv.notify_all();
+		if (this->impl_->maintainThread.joinable())
+		{
+			this->impl_->maintainThread.join();
+			LOG_DEBUG("MQTT 维护线程已停止");
+		}
+
+		// 2. 注销系统事件监听 (防止停止后仍收到 broker 更新事件)
+		if (this->system_event_remover_)
+		{
+			this->system_event_remover_.reset();
+			LOG_DEBUG("已注销 MQTT broker 更新事件监听");
+		}
+
+		// 3. 停止发送线程
 		if (this->impl_->runSender.exchange(false))
 		{
 			this->impl_->dequeCv.notify_one();
@@ -200,26 +249,36 @@ namespace plane::manager
 			}
 		}
 
-		try
+		// 4. 断开并销毁 client
+		_STD unique_ptr<_MQTT async_client> client {};
 		{
-			this->impl_->manualDisconnect = true;
-			if (this->impl_->client && this->impl_->client->is_connected())
+			_STD lock_guard<_STD mutex> lock { this->impl_->clientMutex };
+			client = _STD				move(this->impl_->client);
+		}
+		if (client)
+		{
+			try
 			{
-				LOG_INFO("正在断开 MQTT 连接");
-				this->impl_->client->disconnect()->wait();
+				this->impl_->manualDisconnect = true;
+				if (client->is_connected())
+				{
+					LOG_INFO("正在断开 MQTT 连接");
+					client->disconnect()->wait_for(_STD_CHRONO milliseconds(1000));
+				}
 			}
-		}
-		catch (const _MQTT exception& ex)
-		{
-			LOG_ERROR("MQTTv5Service 停止异常（来自 MQTT）: {}", ex.what());
-		}
-		catch (const _STD exception& ex)
-		{
-			LOG_ERROR("MQTTv5Service 停止发生未知异常: {}", ex.what());
-		}
-		catch (...)
-		{
-			LOG_ERROR("MQTTv5Service 停止发生未知异常: <non-std exception>");
+			catch (const _MQTT exception& ex)
+			{
+				LOG_ERROR("MQTTv5Service 停止异常（来自 MQTT）: {}", ex.what());
+			}
+			catch (const _STD exception& ex)
+			{
+				LOG_ERROR("MQTTv5Service 停止发生未知异常: {}", ex.what());
+			}
+			catch (...)
+			{
+				LOG_ERROR("MQTTv5Service 停止发生未知异常: <non-std exception>");
+			}
+			client.reset();
 		}
 
 		this->impl_.reset(new Impl());
@@ -237,9 +296,23 @@ namespace plane::manager
 
 	void MQTTv5Service::setBrokerUrlOverride(_STD string url) noexcept
 	{
-		_STD lock_guard<_STD mutex>		  lock { this->mutex_ };
-		this->broker_url_override_ = _STD move(url);
-		LOG_INFO("MQTT broker 地址已更新为: {}", this->broker_url_override_);
+		bool		changed { false };
+		_STD string effective {};
+		{
+			_STD lock_guard<_STD mutex> lock { this->mutex_ };
+			if (this->broker_url_override_ != url)
+			{
+				this->broker_url_override_ = _STD move(url);
+				effective				   = this->broker_url_override_;
+				changed					   = true;
+			}
+		}
+
+		if (changed)
+		{
+			LOG_INFO("MQTT broker 地址已更新为: {} (唤醒自检线程)", effective);
+			this->impl_->maintainCv.notify_all();
+		}
 	}
 
 	void MQTTv5Service::setConnected(bool status) noexcept
@@ -301,7 +374,7 @@ namespace plane::manager
 
 	void MQTTv5Service::subscribe(_STD string_view topic) noexcept
 	{
-		_STD lock_guard<_STD mutex> lock(this->mutex_);
+		_STD lock_guard<_STD mutex> lock { this->impl_->clientMutex };
 		if (!this->isConnected() || !this->impl_->client)
 		{
 			LOG_WARN("MQTT 未连接, 对主题 '{}' 的订阅请求被忽略", topic);
@@ -359,14 +432,15 @@ namespace plane::manager
 				this->impl_->messageDeque.pop_front();
 			}
 
-			if (!this->isConnected() || !this->impl_ || !this->impl_->client)
-			{
-				LOG_WARN("MQTT 未连接, 队列中的一条消息被丢弃");
-				continue;
-			}
-
 			try
 			{
+				_STD lock_guard<_STD mutex> lock { this->impl_->clientMutex };
+				if (!this->isConnected() || !this->impl_->client)
+				{
+					LOG_WARN("MQTT 未连接, 队列中的一条消息被丢弃");
+					continue;
+				}
+
 				auto msg { _MQTT make_message(message.first, message.second) };
 				msg->set_qos(1);
 				this->impl_->client->publish(msg);
@@ -382,5 +456,133 @@ namespace plane::manager
 		}
 
 		LOG_INFO("MQTT 发送者线程循环已结束");
+	}
+
+	// ============================ 维护线程 (自检 / 重连) ============================
+
+	void MQTTv5Service::maintainLoop(void) noexcept
+	{
+		LOG_DEBUG("MQTT 维护线程循环开始 (自检周期 {}s)", kMaintainInterval.count());
+
+		_STD unique_lock<_STD mutex> lock { this->impl_->maintainMutex };
+		while (this->impl_->runMaintain)
+		{
+			// 周期等待; setBrokerUrlOverride() 与 stop() 会提前唤醒
+			this->impl_->maintainCv.wait_for(lock, kMaintainInterval);
+			if (!this->impl_->runMaintain)
+			{
+				break;
+			}
+
+			lock.unlock();
+			this->ensureBrokerConnection();
+			lock.lock();
+		}
+
+		LOG_INFO("MQTT 维护线程循环已结束");
+	}
+
+	void MQTTv5Service::ensureBrokerConnection(void) noexcept
+	{
+		const auto url { this->effectiveBrokerUrl() };
+		if (url.empty())
+		{
+			// 地址未就绪 (静态配置为空且尚未收到目录广播): 保持等待, 下个周期复查
+			LOG_DEBUG("MQTT broker 地址未就绪, 等待配置或目录服务发现");
+			return;
+		}
+
+		{
+			_STD lock_guard<_STD mutex> lock { this->impl_->clientMutex };
+			if (this->isConnected() && this->impl_->activeUrl == url)
+			{
+				return; // 已连接且地址未变, 健康
+			}
+
+			// 同一地址的尝试仍在窗口内 (paho 异步连接尚未回调): 再等一个周期
+			if (this->impl_->activeUrl == url && this->impl_->client &&
+				(_STD_CHRONO steady_clock::now() - this->impl_->lastAttemptTime) < kConnectAttemptTimeout)
+			{
+				return;
+			}
+		}
+
+		this->reconnectToBroker(url);
+	}
+
+	void MQTTv5Service::reconnectToBroker(const _STD string& url) noexcept
+	{
+		_STD unique_ptr<_MQTT async_client> old_client {};
+		{
+			_STD lock_guard<_STD mutex> lock { this->impl_->clientMutex };
+			this->setConnected(false); // 先阻断订阅/发送使用旧 client, 再摘除
+			old_client					 = _STD move(this->impl_->client);
+			this->impl_->activeUrl		 = url;
+			this->impl_->lastAttemptTime = _STD_CHRONO steady_clock::now();
+		}
+
+		// 旧 client 的断开与销毁放在锁外 (可能阻塞, 不拖住订阅/发送取锁)
+		if (old_client)
+		{
+			try
+			{
+				if (old_client->is_connected())
+				{
+					old_client->disconnect()->wait_for(_STD_CHRONO milliseconds(1000));
+				}
+			}
+			catch (...)
+			{
+				LOG_DEBUG("旧 MQTT 客户端断开时出现异常 (忽略)");
+			}
+			old_client.reset();
+		}
+
+		try
+		{
+			const auto client_id { plane::config::ConfigManager::getInstance().getMqttClientId() };
+			auto	   client { _STD make_unique<_MQTT async_client>(url, client_id) };
+			auto	   callback { _STD make_shared<MqttCallback>(this) };
+			client->set_callback(*callback);
+
+			_MQTT connect_options conn_opts {};
+			conn_opts.set_keep_alive_interval(30);
+			conn_opts.set_clean_session(true);
+			conn_opts.set_automatic_reconnect(true);
+			conn_opts.set_mqtt_version(MQTTVERSION_5);
+
+			{
+				_STD lock_guard<_STD mutex>	 lock { this->impl_->clientMutex };
+				this->impl_->client	  = _STD   move(client);
+				this->impl_->callback = _STD move(callback);
+			}
+
+			this->impl_->client->connect(conn_opts);
+			LOG_INFO("MQTT 连接请求已发出: {}", url);
+		}
+		catch (const _MQTT exception& ex)
+		{
+			LOG_ERROR("MQTT broker '{}' 连接请求失败, 下个自检周期重试: {}", url, ex.what());
+		}
+		catch (const _STD exception& ex)
+		{
+			LOG_ERROR("MQTT broker '{}' 连接请求发生未知异常, 下个自检周期重试: {}", url, ex.what());
+		}
+		catch (...)
+		{
+			LOG_ERROR("MQTT broker '{}' 连接请求发生未知异常 <non-std>, 下个自检周期重试", url);
+		}
+	}
+
+	_STD string MQTTv5Service::effectiveBrokerUrl(void) noexcept
+	{
+		{
+			_STD lock_guard<_STD mutex> lock { this->mutex_ };
+			if (!this->broker_url_override_.empty())
+			{
+				return this->broker_url_override_;
+			}
+		}
+		return _STD string { plane::config::ConfigManager::getInstance().getMqttUrl() };
 	}
 } // namespace plane::manager

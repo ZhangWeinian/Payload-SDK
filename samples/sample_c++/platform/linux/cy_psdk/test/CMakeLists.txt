@@ -22,9 +22,11 @@ add_executable (
 	test_domain.cpp
 	test_catalog_client.cpp
 	test_catalog_runtime.cpp
+	test_event_manager.cpp
 	test_boost_beast_smoke.cpp
 	test_ws_client.cpp
 	../src/config/ConfigManager.cpp
+	../src/manager/event_manager/EventManager.cpp
 	../src/manager/mqtt/handler/MessageHandler.cpp
 	../src/manager/plane_state/PlaneStateStore.cpp
 	../src/manager/catalog/client/CatalogRuntime.cpp

@@ -20,6 +20,7 @@
 #include "manager/catalog/client/internal/discovery/DiscoveryClient.h"
 #include "manager/catalog/client/internal/transport/HttpTransport.h"
 #include "manager/catalog/client/Result.h"
+#include "manager/event_manager/EventManager.h"
 #include "manager/mqtt/service/MQTTv5Service.h"
 #include "utils/log_util/Logger.h"
 
@@ -96,6 +97,10 @@ namespace plane::manager
 		// 固定周期: 目录心跳与状态上报均由 CatalogRuntime 内部以 3s 驱动;
 		// 业务壳仅周期(3s)调用 updateStatus 保持快照最新。
 		constexpr Ms kStatusReportInterval { 3000 };
+
+		// 中心 broker 地址解析: 未成功前快速重试, 成功后周期校验 (检测迁移/变更)
+		constexpr auto kBrokerResolveRetryInterval { _STD_CHRONO seconds(5) };
+		constexpr auto kBrokerResolveCheckInterval { _STD_CHRONO seconds(30) };
 	} // namespace
 
 	struct CatalogManager::Impl
@@ -103,8 +108,10 @@ namespace plane::manager
 		// 自研目录运行时 (后台线程持有; 业务线程经 rt_mutex_ 取 shared_ptr 快照后锁外调用)
 		_STD shared_ptr<CatalogRuntime> runtime {};
 
-		// Ready 后是否已应用动态 broker (防止重复切换; 事件回调线程与主循环共享)
-		_STD atomic<bool> broker_applied { false };
+		// 最近一次 broker 解析尝试时刻与最近广播的地址 (仅业务壳线程访问;
+		// 广播走 EventManager 系统事件, 由 MQTT 模块订阅后自治重连)
+		_STD_CHRONO steady_clock::time_point last_broker_attempt {};
+		_STD string							 last_published_url {};
 
 		// 待解析的"中心"服务与端点协议 (来自 ConfigManager 固定值)
 		_STD string broker_service_id {};
@@ -227,7 +234,8 @@ namespace plane::manager
 			{
 				this->catalog_ready_.store(false, _STD memory_order_release);
 				// 目录失联/恢复后允许重新解析动态 broker (端点可能已变化)
-				this->impl_->broker_applied.store(false, _STD memory_order_release);
+				this->impl_->last_broker_attempt = {};
+				this->impl_->last_published_url.clear();
 			}
 		};
 
@@ -294,12 +302,13 @@ namespace plane::manager
 		{
 			if (this->catalog_ready_.load(_STD memory_order_acquire) && config.isCatalogBrokerDiscoveryEnabled())
 			{
-				if (!impl.broker_applied.load(_STD memory_order_acquire))
+				// 地址未广播前快速重试 (5s); 已广播后转为周期校验 (30s), 检测中心 broker 迁移
+				const auto interval { impl.last_published_url.empty() ? kBrokerResolveRetryInterval : kBrokerResolveCheckInterval };
+				const auto now { _STD_CHRONO steady_clock::now() };
+				if (now - impl.last_broker_attempt >= interval)
 				{
-					if (this->trySwitchMqttBroker())
-					{
-						impl.broker_applied.store(true, _STD memory_order_release);
-					}
+					impl.last_broker_attempt = now;
+					(void)this->trySwitchMqttBroker();
 				}
 			}
 
@@ -437,16 +446,26 @@ namespace plane::manager
 		const auto discovered_url { _FMT format("{}://{}:{}", scheme, host, matched->port) };
 
 		const auto static_url { _STD string { plane::config::ConfigManager::getInstance().getMqttUrl() } };
-		if (discovered_url == static_url)
+
+		if (discovered_url == impl.last_published_url)
 		{
-			LOG_INFO("目录解析的中心 broker 与静态配置一致: {}", discovered_url);
+			LOG_DEBUG("中心 broker 地址未变化, 跳过广播: {}", discovered_url);
 			return true;
 		}
 
-		LOG_INFO("目录解析到中心 MQTT broker: {} (静态配置: {}), 正在切换 MQTT 连接", discovered_url, static_url);
+		if (discovered_url == static_url)
+		{
+			LOG_INFO("目录解析的中心 broker 与静态配置一致: {}", discovered_url);
+		}
+		else
+		{
+			LOG_INFO("目录解析到中心 MQTT broker: {} (静态配置: {}), 已广播至模块总线", discovered_url, static_url);
+		}
 
-		plane::manager::MQTTv5Service::getInstance().setBrokerUrlOverride(discovered_url);
-		plane::manager::MQTTv5Service::getInstance().restart();
+		// 解耦: 仅广播服务发现结果, 由 MQTT 模块订阅后通过自检线程完成(重)连接
+		plane::manager::EventManager::getInstance()
+			.publishSystemEvent(plane::manager::EventManager::SystemEvent::MqttBrokerUpdated, discovered_url);
+		impl.last_published_url = discovered_url;
 		return true;
 	}
 
