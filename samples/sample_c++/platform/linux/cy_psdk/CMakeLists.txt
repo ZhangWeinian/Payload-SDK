@@ -237,12 +237,35 @@ if(EXISTS ${SYSTEM_LIBS_SOURCE_DIR})
 		LIST_DIRECTORIES false
 		"${SYSTEM_LIBS_SOURCE_DIR}/*"
 	)
+	# 动态链接器 (ld-linux-*) 必须保留可执行位: 部分拷贝/解压流程会丢失该权限,
+	# 缺失时 run.sh 将回退系统解释器, 在系统库较旧的目标板上会直接启动失败。
+	file (
+		GLOB LD_LOADER_FILES
+		LIST_DIRECTORIES false
+		"${SYSTEM_LIBS_SOURCE_DIR}/ld-linux-*"
+	)
+	set (LD_LOADER_CHMOD_CMD "")
+	if(LD_LOADER_FILES)
+		set (LD_LOADER_CHMOD_ARGS "")
+		foreach(LOADER_FILE IN LISTS LD_LOADER_FILES)
+			get_filename_component (LOADER_FILE_NAME "${LOADER_FILE}" NAME)
+			list (APPEND LD_LOADER_CHMOD_ARGS "${LIBS_DEST_DIR}/${LOADER_FILE_NAME}")
+		endforeach()
+		set (
+			LD_LOADER_CHMOD_CMD
+			COMMAND
+			chmod
+			+x
+			${LD_LOADER_CHMOD_ARGS}
+		)
+	endif()
 	# 先清空 libs/ 再拷贝, 避免残留其他架构/旧版本的运行库
 	add_custom_target (
 		copy_system_libs
 		COMMAND ${CMAKE_COMMAND} -E remove_directory "${LIBS_DEST_DIR}"
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBS_DEST_DIR}"
 		COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${SYSTEM_LIBS_SOURCE_DIR} "${LIBS_DEST_DIR}"
+				${LD_LOADER_CHMOD_CMD}
 		DEPENDS ${LIB_FILES}
 		COMMENT "正在复制系统运行库 (${SYSTEM_LIBS_ARCH_SUBDIR})"
 	)

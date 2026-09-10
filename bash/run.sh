@@ -8,6 +8,11 @@
 
 DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
+# 修正传输/解压流程可能丢失的可执行位 (zip 解压 / Windows 共享 / 打包工具)。
+# 动态链接器与主程序必须可执行, 否则会回退系统解释器, 可能因板端系统库过旧导致启动失败。
+chmod +x "$DIR/cy_psdk" 2>/dev/null || true
+chmod +x "$DIR"/libs/ld-linux-* 2>/dev/null || true
+
 # aarch64 / x86_64 打包解释器二选一
 for LOADER in \
 	"$DIR/libs/ld-linux-aarch64.so.1" \
