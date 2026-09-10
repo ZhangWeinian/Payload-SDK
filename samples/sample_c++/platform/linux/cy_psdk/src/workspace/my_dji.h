@@ -13,11 +13,13 @@
 #include "manager/plane_state/PlaneStateStore.h"
 #include "manager/psdk/PSDKAdapter.h"
 #include "manager/psdk/PSDKManager.h"
+#include "manager/status_board/StatusBoardManager.h"
 #include "manager/telemetry/TelemetryReporter.h"
 #include "manager/websocket/WsClient.h"
 #include "utils/EXEHomePath.h"
 #include "utils/integrity/IntegrityCheck.h"
 #include "utils/log_util/Logger.h"
+#include "utils/status_board/StatusBoard.h"
 
 #include <atomic>
 #include <chrono>
@@ -36,15 +38,12 @@ namespace plane::my_dji
 	{
 		_STD atomic<bool> g_should_exit(false);
 
-		void			  signalHandler(int signum)
+		// 信号处理器: 仅做 async-signal-safe 的原子置位。
+		// 注意: 不可在信号上下文调用日志 (spdlog 非异步信号安全, 且与工作线程共享
+		// 内部互斥量, 信号打断持锁代码时会造成死锁); 退出提示由主循环打印。
+		void signalHandler(int /*signum*/)
 		{
-			static bool is_stopping_ { false };
-			if (!is_stopping_)
-			{
-				LOG_WARN("\n>>> 捕获到信号 {}, 正在请求退出... <<<", signum);
-				g_should_exit = true;
-				is_stopping_  = true;
-			}
+			g_should_exit = true;
 		}
 	} // namespace
 
@@ -205,6 +204,24 @@ namespace plane::my_dji
 			plane::manager::CatalogManager::getInstance().notifyTelemetryRunning(true);
 		}
 
+		// 尝试启动终端状态板 (可通过 enable_status_board 关闭; 失败不退出)
+		if (config.isStatusBoardEnabled())
+		{
+			if (!plane::manager::StatusBoardManager::getInstance().start())
+			{
+				LOG_WARN("状态板服务启动失败 (程序继续运行)");
+			}
+			else
+			{
+				LOG_DEBUG("状态板服务已成功启动");
+			}
+		}
+		else
+		{
+			plane::utils::StatusBoard::getInstance().setEnabled(false);
+			LOG_INFO("终端状态板已按配置关闭");
+		}
+
 		// 等待一段时间让各服务稳定运行，随后报告应用已启动
 		LOG_DEBUG("等待各服务稳定运行");
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(2));
@@ -258,7 +275,10 @@ namespace plane::my_dji
 
 		// 等待一段时间确保所有服务已正确关闭
 		_STD this_thread::sleep_for(_STD_CHRONO seconds(1));
+		// 最后停止状态板同步: 退出过程中的状态变化 (连接断开等) 也真实反映到板面
+		plane::manager::StatusBoardManager::getInstance().stop();
 		LOG_INFO("应用程序已关闭");
+		plane::utils::StatusBoard::getInstance().finish();
 		return 0;
 	}
 } // namespace plane::my_dji

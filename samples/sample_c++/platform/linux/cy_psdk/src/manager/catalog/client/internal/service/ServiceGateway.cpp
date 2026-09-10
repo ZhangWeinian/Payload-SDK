@@ -30,8 +30,8 @@ namespace plane::catalog::internal
 
 		_NODISCARD bool isValidIpv4(const _STD string& value)
 		{
-			in_addr address {};
-			return ::inet_pton(AF_INET, value.c_str(), &address) == 1;
+			_CSTD in_addr address {};
+			return _CSTD  inet_pton(AF_INET, value.c_str(), &address) == 1;
 		}
 
 		// 大小写不敏感相等 (期望 upper 为大写形态; ASCII 协议字段)

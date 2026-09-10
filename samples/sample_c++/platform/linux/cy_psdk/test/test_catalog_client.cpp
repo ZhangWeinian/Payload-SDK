@@ -137,7 +137,7 @@ TEST(CatalogProbeCodec, DecodeAnnouncement)
 
 TEST(CatalogProbeCodec, WrongMagicIsRejected)
 {
-	_STD vector<std::uint8_t> garbage { 0X00, 0X01, 0X02, 0X03, 0X04, 0X05, 0X06, 0X07, 0X08 };
+	_STD vector<_STD uint8_t> garbage { 0X00, 0X01, 0X02, 0X03, 0X04, 0X05, 0X06, 0X07, 0X08 };
 	const auto				  decoded { decodeProbePacket(garbage) };
 	EXPECT_FALSE(decoded.isOk());
 }

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "application.hpp"
+#include "define.h"
 
 #include <atomic>
 #include <chrono>
@@ -35,14 +36,14 @@ namespace plane::dji_demo
 {
 	void runDjiApplication(int argc, char* argv[])
 	{
-		Application					   application(argc, argv);
-		char						   inputChar {};
-		T_DjiOsalHandler*			   osalHandler = DjiPlatform_GetOsalHandler();
-		T_DjiReturnCode				   returnCode {};
-		T_DjiTestApplyHighPowerHandler applyHighPowerHandler {};
+		Application			   application(argc, argv);
+		char				   inputChar {};
+		_DJI T_DjiOsalHandler* osalHandler = _DJI DjiPlatform_GetOsalHandler();
+		_DJI T_DjiReturnCode					  returnCode {};
+		_DJI T_DjiTestApplyHighPowerHandler		  applyHighPowerHandler {};
 
 start:
-		std::cout << "\n"
+		_STD cout << "\n"
 				  << "| 可用命令:\n"
 				  << "| [0] 飞控数据订阅示例 - 订阅四元数和 GPS 数据\n"
 				  << "| [1] 飞行控制器示例 - 通过 PSDK 控制飞行\n"
@@ -54,50 +55,50 @@ start:
 				  << "| [f] 启动 RTK 定位示例 - 当 RTK 信号正常时, 接收 RTK RTCM 数据\n"
 				  << "| [g] 请求激光雷达数据示例 - 请求激光雷达数据并将点云数据存储为 pcd 文件\n"
 				  << "| [h] 请求毫米波雷达数据示例 - 请求毫米波雷达数据\n"
-				  << std::endl;
+				  << _STD endl;
 
-		std::cin >> inputChar;
+		_STD			  cin >> inputChar;
 		switch (inputChar)
 		{
 			case '0':
 			{
-				DjiTest_FcSubscriptionRunSample();
+				_DJI DjiTest_FcSubscriptionRunSample();
 				break;
 			}
 			case '1':
 			{
-				DjiUser_RunFlightControllerSample();
+				_DJI DjiUser_RunFlightControllerSample();
 				break;
 			}
 			case '2':
 			{
-				DjiUser_RunHmsManagerSample();
+				_DJI DjiUser_RunHmsManagerSample();
 				break;
 			}
 			case 'a':
 			{
-				DjiUser_RunGimbalManagerSample();
+				_DJI DjiUser_RunGimbalManagerSample();
 				break;
 			}
 			case 'c':
 			{
-				DjiUser_RunCameraStreamViewSample();
+				_DJI DjiUser_RunCameraStreamViewSample();
 				break;
 			}
 			case 'd':
 			{
-				DjiUser_RunStereoVisionViewSample();
+				_DJI DjiUser_RunStereoVisionViewSample();
 				break;
 			}
 			case 'e':
 			{
-				DjiUser_RunCameraManagerSample();
+				_DJI DjiUser_RunCameraManagerSample();
 				break;
 			}
 			case 'f':
 			{
-				returnCode = DjiTest_PositioningStartService();
-				if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+				returnCode = _DJI DjiTest_PositioningStartService();
+				if (returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 				{
 					USER_LOG_ERROR("RTK 定位样本初始化错误");
 				}
@@ -109,12 +110,12 @@ start:
 			}
 			case 'g':
 			{
-				DjiUser_RunLidarDataSubscriptionSample();
+				_DJI DjiUser_RunLidarDataSubscriptionSample();
 				break;
 			}
 			case 'h':
 			{
-				DjiUser_RunRadarDataSubscriptionSample();
+				_DJI DjiUser_RunRadarDataSubscriptionSample();
 				break;
 			}
 			default:

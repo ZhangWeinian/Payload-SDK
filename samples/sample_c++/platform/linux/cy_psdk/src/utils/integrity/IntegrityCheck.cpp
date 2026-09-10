@@ -140,7 +140,7 @@ namespace plane::utils
 	bool verifyDeploymentIntegrity(const char* argv0)
 	{
 		// 开发调试用跳过开关
-		if (const char* skip { _STD getenv("CY_PSDK_SKIP_INTEGRITY") }; skip != nullptr && _STD strcmp(skip, "1") == 0)
+		if (const char* skip { _CSTD getenv("CY_PSDK_SKIP_INTEGRITY") }; skip != nullptr && _CSTD strcmp(skip, "1") == 0)
 		{
 			LOG_WARN("检测到 CY_PSDK_SKIP_INTEGRITY=1, 跳过部署完整性自检");
 			return true;

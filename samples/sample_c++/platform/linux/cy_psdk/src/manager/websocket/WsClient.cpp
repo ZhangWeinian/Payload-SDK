@@ -40,7 +40,7 @@ namespace plane::manager
 		using WsError	= beast::error_code;
 
 		// --- 协议与策略常量 (对齐 msdk WebSocketRepository / GlobalHttpClient / AppConfigEntity) ---
-		constexpr std::uint16_t kServerPort { 8888 };							 // msdk: "ws://${registryIp}:8888"
+		constexpr _STD uint16_t kServerPort { 8888 };							 // msdk: "ws://${registryIp}:8888"
 		constexpr auto			kConnectTimeout { _STD_CHRONO seconds(10) };	 // OkHttp connectTimeout=10s (含 WS 握手)
 		constexpr auto			kPingInterval { _STD_CHRONO seconds(15) };		 // OkHttp pingInterval=15s, 短于服务端空闲超时
 		constexpr auto			kPingTimeout { _STD_CHRONO seconds(10) };		 // 发出 ping 后等待 pong 的时限, 超时判定死链

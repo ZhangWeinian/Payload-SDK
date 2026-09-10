@@ -35,6 +35,7 @@ namespace plane::protocol
 		_STD uint8_t	 psdkLogLevel { 3 };			// 设置 PSDK 日志级别
 		bool			 enableSkipRC { false };		// 是否启用跳过遥控器
 		bool			 enableSaveKmzFile { false };	// 是否启用保存 KMZ 文件
+		bool			 enableStatusBoard { true };	// 是否启用终端状态板
 
 		CatalogConfig	 catalog {};					// SwarmCatalog 服务目录接入配置
 	};

@@ -28,26 +28,26 @@ namespace
 
 	TEST(WsClientTest, BuildSubscribePayloadMatchesMsdkCommand)
 	{
-		const std::vector<std::string> types { "stationSwarmState", "event", "stationTaskStatus" };
-		const std::string			   payload { plane::manager::WsClient::buildSubscribePayload(types) };
+		const _STD vector<_STD string> types { "stationSwarmState", "event", "stationTaskStatus" };
+		const _STD string			   payload { plane::manager::WsClient::buildSubscribePayload(types) };
 
-		const nlohmann::json		   parsed = nlohmann::json::parse(payload);
+		const _NLOHMANN_JSON json parsed = _NLOHMANN_JSON json::parse(payload);
 		ASSERT_TRUE(parsed.is_object());
-		EXPECT_EQ(parsed["cmd"].get<std::string>(), "subscribe");
+		EXPECT_EQ(parsed["cmd"].get<_STD string>(), "subscribe");
 		ASSERT_TRUE(parsed["types"].is_array());
 		EXPECT_EQ(parsed["types"].size(), 3u);
-		EXPECT_EQ(parsed["types"][0].get<std::string>(), "stationSwarmState");
-		EXPECT_EQ(parsed["types"][1].get<std::string>(), "event");
-		EXPECT_EQ(parsed["types"][2].get<std::string>(), "stationTaskStatus");
+		EXPECT_EQ(parsed["types"][0].get<_STD string>(), "stationSwarmState");
+		EXPECT_EQ(parsed["types"][1].get<_STD string>(), "event");
+		EXPECT_EQ(parsed["types"][2].get<_STD string>(), "stationTaskStatus");
 	}
 
 	TEST(WsClientTest, SubscribePayloadTypesIsArray)
 	{
 		// 防回归: types 必须是 JSON 数组 (避免 nlohmann 花括号初始化陷阱)
-		const std::vector<std::string> empty {};
-		const std::string			   payload { plane::manager::WsClient::buildSubscribePayload(empty) };
+		const _STD vector<_STD string> empty {};
+		const _STD string			   payload { plane::manager::WsClient::buildSubscribePayload(empty) };
 
-		const nlohmann::json		   parsed = nlohmann::json::parse(payload);
+		const _NLOHMANN_JSON json parsed = _NLOHMANN_JSON json::parse(payload);
 		ASSERT_TRUE(parsed.is_object());
 		EXPECT_TRUE(parsed.contains("types"));
 		EXPECT_TRUE(parsed["types"].is_array());

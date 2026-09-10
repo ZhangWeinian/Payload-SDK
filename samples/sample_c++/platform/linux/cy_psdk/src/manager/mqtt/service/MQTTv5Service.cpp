@@ -286,6 +286,9 @@ namespace plane::manager
 
 		this->impl_.reset(new Impl());
 		this->connected_ = false;
+		// 同步域模型: 显式反映"已断开" (paho 主动断开时可能不触发 connection_lost 回调,
+		// 否则状态板/上报会残留"已连接"直到进程退出)
+		this->syncConnectionStateToStore(false);
 		LOG_INFO("MQTT 服务已停止");
 	}
 

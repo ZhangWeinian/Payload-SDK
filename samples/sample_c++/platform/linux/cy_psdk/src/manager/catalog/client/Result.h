@@ -16,7 +16,7 @@
 namespace plane::catalog
 {
 	// 通用结果: 成功携带 T, 失败携带 CatalogFailure。
-	// value() 仅在成功时可用; error() 仅在失败时可用; 误用抛 std::logic_error。
+	// value() 仅在成功时可用; error() 仅在失败时可用; 误用抛 _STD logic_error。
 	template<typename T>
 	class Result
 	{

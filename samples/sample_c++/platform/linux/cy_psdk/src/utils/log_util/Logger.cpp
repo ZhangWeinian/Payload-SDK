@@ -2,6 +2,8 @@
 
 #include "utils/log_util/Logger.h"
 
+#include "utils/log_util/StatusBoardSink.h"
+
 namespace plane::utils
 {
 	Logger& Logger::getInstance(void) noexcept
@@ -21,7 +23,9 @@ namespace plane::utils
 		{
 			// 创建控制台和文件日志接收器
 			_STD vector<_SPDLOG sink_ptr> sinks {};
-			auto						  console_sink { _STD make_shared<_SPDLOG sinks::stdout_color_sink_mt>() };
+			// 控制台输出经状态板接收器接入终端状态板: 日志与固定状态块协作,
+			// 非交互终端下自动退化为普通 stdout 输出
+			auto console_sink { _STD make_shared<plane::utils::StatusBoardSink>() };
 			console_sink->set_level(console_level);
 			console_sink->set_pattern("[%m-%d %H:%M:%S.%e] [%^%l%$] [th.%t] [%s:%#] %v");
 			sinks.push_back(console_sink);

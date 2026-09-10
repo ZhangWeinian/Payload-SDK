@@ -43,8 +43,8 @@ namespace plane::catalog::internal
 			{
 				// asio 同步接收为内部无限等待 (忽略 SO_RCVTIMEO), 这里用 poll 限时等待,
 				// 保证 stop() 时最多等待一个接收周期即可安全 join
-				pollfd	  descriptor { this->socket.native_handle(), POLLIN, 0 };
-				const int ready { ::poll(&descriptor, 1, kReceiveTimeoutMs) };
+				_CSTD pollfd descriptor { this->socket.native_handle(), POLLIN, 0 };
+				const int	 ready { _CSTD poll(&descriptor, 1, kReceiveTimeoutMs) };
 				if (ready < 0)
 				{
 					_STD this_thread::sleep_for(_STD_CHRONO milliseconds { 50 }); // 瞬时错误: 避免忙循环

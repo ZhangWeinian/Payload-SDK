@@ -72,18 +72,18 @@ namespace plane::catalog::internal
 		const _STD string			temp_name { temp_template.string() };
 		_STD vector<char> writable { temp_name.begin(), temp_name.end() };
 		writable.push_back('\0');
-		const int fd { ::mkstemp(writable.data()) };
+		const int fd { _CSTD mkstemp(writable.data()) };
 		if (fd < 0)
 		{
 			return;
 		}
-		const _STD string temp_path { writable.data() };
-		const _STD string payload { ip + "\n" };
-		const ssize_t	  written { ::write(fd, payload.data(), payload.size()) };
-		const bool		  write_ok { written == static_cast<ssize_t>(payload.size()) };
-		if (::close(fd) != 0 || !write_ok)
+		const _STD string	temp_path { writable.data() };
+		const _STD string	payload { ip + "\n" };
+		const _CSTD ssize_t written { _CSTD write(fd, payload.data(), payload.size()) };
+		const bool			write_ok { written == static_cast<_CSTD ssize_t>(payload.size()) };
+		if (_CSTD close(fd) != 0 || !write_ok)
 		{
-			::remove(temp_path.c_str());
+			_CSTD remove(temp_path.c_str());
 			return;
 		}
 

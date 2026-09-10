@@ -41,7 +41,7 @@ namespace plane::manager
 		_NODISCARD bool isConnected(void) const noexcept;
 
 		// 组装连接地址: "ws://<ip>:<port>"; ip 为空返回空串 (对齐 msdk webSocketUrl 派生规则)
-		_NODISCARD static _STD string buildWsUrl(const _STD string& ip, std::uint16_t port)
+		_NODISCARD static _STD string buildWsUrl(const _STD string& ip, _STD uint16_t port)
 		{
 			if (ip.empty())
 			{

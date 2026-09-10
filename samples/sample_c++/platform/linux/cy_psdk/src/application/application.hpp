@@ -33,6 +33,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "define.h" // cy_psdk 全局命名宏 (_STD / _CSTD / _DJI 等)
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -50,12 +52,12 @@ extern "C"
 		~Application();
 
 	private:
-		static void			   DjiUser_SetupEnvironment(int argc, char** argv);
-		static void			   DjiUser_ApplicationStart();
-		static T_DjiReturnCode DjiUser_PrintConsole(const uint8_t* data, uint16_t dataLen);
-		static T_DjiReturnCode DjiUser_LocalWrite(const uint8_t* data, uint16_t dataLen);
-		static T_DjiReturnCode DjiUser_FillInUserInfo(T_DjiUserInfo* userInfo);
-		static T_DjiReturnCode DjiUser_LocalWriteFsInit(const char* path);
+		static void					DjiUser_SetupEnvironment(int argc, char** argv);
+		static void					DjiUser_ApplicationStart();
+		static _DJI T_DjiReturnCode DjiUser_PrintConsole(const uint8_t* data, uint16_t dataLen);
+		static _DJI T_DjiReturnCode DjiUser_LocalWrite(const uint8_t* data, uint16_t dataLen);
+		static _DJI T_DjiReturnCode DjiUser_FillInUserInfo(_DJI T_DjiUserInfo* userInfo);
+		static _DJI T_DjiReturnCode DjiUser_LocalWriteFsInit(const char* path);
 	};
 
 	/* Exported functions --------------------------------------------------------*/

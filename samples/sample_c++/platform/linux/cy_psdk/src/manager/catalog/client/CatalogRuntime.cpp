@@ -833,7 +833,7 @@ namespace plane::catalog
 		impl_->gateway_->setRemoteAllowed(true);
 		impl_->state_machine_.set(CatalogState::DISCOVERED);
 
-		// 先标记已启动再创建线程: 若线程创建抛异常, 后续 start 返回 ALREADY_STARTED, 不会二次赋值 std::thread (terminate)
+		// 先标记已启动再创建线程: 若线程创建抛异常, 后续 start 返回 ALREADY_STARTED, 不会二次赋值 _STD thread (terminate)
 		impl_->ever_started_.store(true, _STD memory_order_release);
 		impl_->cb_quit_.store(false, _STD memory_order_release);
 		impl_->cb_thread_ = _STD thread(&Impl::runCallbacks, impl_.get());

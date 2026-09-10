@@ -163,6 +163,14 @@ namespace plane::manager
 		{
 			LOG_WARN("SwarmCatalog 发现参数缺失 (node_id/targets 未配置), 本次不启动目录接入");
 			this->running_.store(false, _STD memory_order_release);
+			// 同步域模型: 目录本次未启动 (供状态板显示真实状态, 避免长期显示“初始化中…”)
+			plane::domain::PlaneStateStore::getInstance().update(
+				[](plane::domain::PlaneStateDataClass& st)
+				{
+					st.catalog_state = "NotConfigured";
+					st.catalog_ready = false;
+				}
+			);
 			return;
 		}
 

@@ -177,7 +177,7 @@ namespace plane::manager
 		struct SubscriptionStatus
 		{
 			/*!
-			 * 飞行器融合位置主题名称。请参考 ::T_DjiFcSubscriptionPositionFused 了解数据结构信息。
+			 * 飞行器融合位置主题名称。请参考 _DJI T_DjiFcSubscriptionPositionFused 了解数据结构信息。
 			 *
 			 * @warning 请注意，如果 GPS 信号较弱（参见下方的 visibleSatelliteNumber），则纬度/经度值将不会更新，但高度仍可能更新。
 			 *          目前无法判断纬度/经度的更新是否可靠。
@@ -189,7 +189,7 @@ namespace plane::manager
 
 			/*!
 			 * @brief 飞行器融合高度主题名称。融合高度主题提供飞行器相对于海平面的融合高度。
-			 *        请参考 ::T_DjiFcSubscriptionAltitudeFused 了解数据结构信息。
+			 *        请参考 _DJI T_DjiFcSubscriptionAltitudeFused 了解数据结构信息。
 			 *
 			 * 单位 m
 			 * 数据结构 \ref T_DjiFcSubscriptionAltitudeFused
@@ -216,7 +216,7 @@ namespace plane::manager
 
 			/*!
 			 * @brief 飞行器四元数主题名称。四元数主题提供从飞行器机体坐标系（FRD）到地面坐标系（NED）的旋转关系。
-			 *        请参考 ::T_DjiFcSubscriptionQuaternion 了解数据结构信息。
+			 *        请参考 _DJI T_DjiFcSubscriptionQuaternion 了解数据结构信息。
 			 *
 			 * @details DJI 的四元数采用 Hamilton 约定（q0 = w, q1 = x, q2 = y, q3 = z）。
 			 *
@@ -226,7 +226,7 @@ namespace plane::manager
 
 			/*!
 			 * @brief 飞行器速度主题名称。速度主题提供飞行器在固定于地面的 NEU 坐标系中的速度。
-			 *        请参考 ::T_DjiFcSubscriptionVelocity 了解数据结构信息。
+			 *        请参考 _DJI T_DjiFcSubscriptionVelocity 了解数据结构信息。
 			 *
 			 * @warning 请注意，此数据并非采用常规的右手坐标系。
 			 *
@@ -239,7 +239,7 @@ namespace plane::manager
 			bool velocity { false };
 
 			/*!
-			 * @brief 电池信息主题名称。请参考 ::T_DjiFcSubscriptionWholeBatteryInfo 了解数据结构信息。
+			 * @brief 电池信息主题名称。请参考 _DJI T_DjiFcSubscriptionWholeBatteryInfo 了解数据结构信息。
 			 *
 			 * 数据结构 \ref T_DjiFcSubscriptionWholeBatteryInfo
 			 */

@@ -42,6 +42,7 @@ add_executable (
 	../src/manager/catalog/client/internal/discovery/UdpDiscoveryClient.cpp
 	../src/utils/json_converter/BuildAndParse.cpp
 	../src/utils/log_util/Logger.cpp
+	../src/utils/status_board/StatusBoard.cpp
 	../src/utils/integrity/IntegrityCheck.cpp
 )
 

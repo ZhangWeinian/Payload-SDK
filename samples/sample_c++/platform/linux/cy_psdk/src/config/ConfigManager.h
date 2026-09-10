@@ -38,6 +38,9 @@ namespace plane::config
 		// 检查配置项: 是否启用 PSDK 标准流程
 		_NODISCARD bool isStandardProceduresEnabled(void) const noexcept;
 
+		// 检查配置项: 是否启用终端状态板
+		_NODISCARD bool isStatusBoardEnabled(void) const noexcept;
+
 		// 检查配置项: 是否启用 TRACE 级别的调试日志
 		_NODISCARD bool isTraceLogLevel(void) const noexcept;
 

@@ -140,17 +140,20 @@ namespace plane::config
 				this->app_config_.psdkLogLevel		  = features["set_psdk_log_level"].as<_STD uint8_t>(3);
 				this->app_config_.enableSkipRC		  = features["skip_rc"].as<bool>(false);
 				this->app_config_.enableSaveKmzFile	  = features["save_kmz_file"].as<bool>(false);
+				this->app_config_.enableStatusBoard	  = features["enable_status_board"].as<bool>(true);
 
 				LOG_TRACE(
 					"功能开关配置加载详情: \n"
 					"    FullPSDK={}\n"
 					"    TraceLog={}\n"
 					"    SkipRC={}\n"
-					"    SaveKMZ={}",
+					"    SaveKMZ={}\n"
+					"    StatusBoard={}",
 					this->app_config_.enableFullPSDK,
 					this->app_config_.enableTraceLogLevel,
 					this->app_config_.enableSkipRC,
-					this->app_config_.enableSaveKmzFile
+					this->app_config_.enableSaveKmzFile,
+					this->app_config_.enableStatusBoard
 				);
 			}
 			else
@@ -187,7 +190,7 @@ namespace plane::config
 				}
 
 				_STD string targets_text {};
-				for (std::size_t index { 0 }; index < cfg.targets.size(); ++index)
+				for (_STD size_t index { 0 }; index < cfg.targets.size(); ++index)
 				{
 					if (index > 0)
 					{
@@ -262,6 +265,11 @@ namespace plane::config
 	bool ConfigManager::isStandardProceduresEnabled(void) const noexcept
 	{
 		return this->getConfigValue(this->app_config_.enableFullPSDK);
+	}
+
+	bool ConfigManager::isStatusBoardEnabled(void) const noexcept
+	{
+		return this->getConfigValue(this->app_config_.enableStatusBoard);
 	}
 
 	bool ConfigManager::isTraceLogLevel(void) const noexcept

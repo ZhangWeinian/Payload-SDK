@@ -1293,7 +1293,8 @@ namespace plane::manager
 		);
 	}
 
-	_STD future<T_DjiReturnCode> PSDKAdapter::executeWaypointActionAsync(_DJI E_DjiWaypointV3Action action, const _STD source_location& location)
+	_STD future<_DJI T_DjiReturnCode>
+		 PSDKAdapter::executeWaypointActionAsync(_DJI E_DjiWaypointV3Action action, const _STD source_location& location)
 	{
 		const char* command_name { location.function_name() };
 
@@ -1389,7 +1390,7 @@ namespace plane::manager
 		);
 	}
 
-	_STD future<T_DjiReturnCode> PSDKAdapter::waypointAsync(const _DEFINED _KMZ_DATA_TYPE& kmzData)
+	_STD future<_DJI T_DjiReturnCode> PSDKAdapter::waypointAsync(const _DEFINED _KMZ_DATA_TYPE& kmzData)
 	{
 		LOG_INFO("收到航线任务请求，KMZ 数据大小: {} 字节", kmzData.size());
 
