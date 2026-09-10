@@ -1,0 +1,27 @@
+{
+	"version": 3,
+	"configurePresets": [
+		{
+			"name": "aarch64",
+			"displayName": "Release (aarch64-linux / RK3588S)",
+			"description": "cy_raspberry_pi 板端交叉构建; 目录结构与顶层 CMakeUserPresets.json 统一 (build/<平台>/<配置>)。本工程独立于主工程的 vcpkg 依赖体系, 直接使用交叉工具链 + PSDK 静态库。",
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/build/aarch64-linux/release",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release",
+				"CMAKE_SYSTEM_NAME": "Linux",
+				"CMAKE_SYSTEM_PROCESSOR": "aarch64",
+				"CMAKE_C_COMPILER": "aarch64-linux-gnu-gcc",
+				"CMAKE_CXX_COMPILER": "aarch64-linux-gnu-g++"
+			}
+		}
+	],
+	"buildPresets": [
+		{
+			"name": "aarch64",
+			"displayName": "Build AArch64 (RK3588S)",
+			"configurePreset": "aarch64",
+			"jobs": 16
+		}
+	]
+}

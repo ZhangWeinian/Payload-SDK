@@ -1,6 +1,5 @@
 # 构建产物目录
 build/
-build-arm64/
 
 # install 目标输出 (预设 installDir 指向 ${sourceDir}/install/<preset>)
 /install/

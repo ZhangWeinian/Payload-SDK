@@ -114,7 +114,7 @@ T_DjiReturnCode HalUart_Init(E_DjiHalUartNum uartNum, uint32_t baudRate, T_DjiUa
 		goto close_fp;
 	}
 #else
-	sprintf(systemCmd, "chmod 777 %s", uartName);
+	sprintf(systemCmd, "chmod 777 %s 2>/dev/null", uartName);
 	fp = popen(systemCmd, "r");
 	if (fp == NULL)
 	{
