@@ -48,12 +48,6 @@ namespace plane::catalog::internal
 			return this->allowQuery();
 		}
 
-		_NODISCARD bool returnCachedConfig(void) const noexcept
-		{
-			const CatalogState value { this->state() };
-			return value == CatalogState::UNAVAILABLE || value == CatalogState::CONFLICT || value == CatalogState::REGISTERING;
-		}
-
 	private:
 		_STD atomic<CatalogState> state_ { CatalogState::STOPPED };
 	};

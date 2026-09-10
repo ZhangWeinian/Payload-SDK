@@ -6,6 +6,7 @@
 
 #include "manager/catalog/client/CatalogError.h"
 #include "manager/catalog/client/CatalogFailure.h"
+#include "manager/catalog/client/internal/TextUtil.h"
 
 #include "define.h"
 
@@ -19,11 +20,6 @@ namespace plane::catalog::internal
 			{
 				static const _STD set<_STD string> kValid { "UP", "DEGRADED", "DOWN", "UNKNOWN" };
 				return kValid;
-			}
-
-			_NODISCARD bool isWhitespace(char ch)
-			{
-				return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == '\f';
 			}
 
 			// 码点数近似按字节数 (ASCII 协议字段), 与服务端一致按 UTF-8 码点判断 <=128
@@ -43,15 +39,8 @@ namespace plane::catalog::internal
 
 		Result<_STD string> normalizeVersion(const _STD string& raw)
 		{
-			_STD string value {};
-			value.reserve(raw.size());
-			for (const char ch : raw)
-			{
-				if (!isWhitespace(ch))
-				{
-					value.push_back(ch);
-				}
-			}
+			// 对齐 java String.trim(): 仅去除首尾空白 (<= 0x20), 内部字符原样保留
+			_STD string value { trimAsciiWhitespaceCopy(raw) };
 			if (value.empty())
 			{
 				return Result<_STD string>::failure(makeFailure(CatalogError::INVALID_ARGUMENT, "version is empty"));
@@ -142,7 +131,7 @@ namespace plane::catalog::internal
 
 		Result<_NLOHMANN_JSON json> statusToJson(const ServiceStatus& status)
 		{
-			_NODISCARD const _STD string overall { status.overall_status.empty() ? (status.healthy ? "UP" : "DOWN") : status.overall_status };
+			const _STD string overall { status.overall_status.empty() ? (status.healthy ? "UP" : "DOWN") : status.overall_status };
 			if (validStatuses().find(overall) == validStatuses().end())
 			{
 				return Result<_NLOHMANN_JSON json>::failure(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid overall status"));

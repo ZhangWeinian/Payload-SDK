@@ -1,6 +1,6 @@
 // cy_psdk/manager/catalog/client/internal/HttpTransport.h
 //
-// HTTP 传输抽象 (SDK 内部)。由平台实现注入 (默认 LibhvHttpTransport)。
+// HTTP 传输抽象 (SDK 内部)。由平台实现注入 (默认 CppHttpTransport, 基于 cpp-httplib)。
 // 语义: transport_ok=true 表示 HTTP 层传输成功 (即使服务端返回 4xx/5xx);
 // transport_ok=false 表示连接/超时等传输级失败。
 

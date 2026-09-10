@@ -1,0 +1,9 @@
+{
+	// "cmake.configureOnEdit": false,
+	// "cmake.configureOnOpen": false
+
+	// 编译并行度: 本容器 nproc=32 / 15GiB 内存; 全并行(32)会把内存打爆并拖垮 WSL
+	// (表现为"编译时容器退出")。单文件编译峰值可达 ~1.4GB (beast/asio 重模板)。
+	// 实测 16 并行: 16 文件混合编译总内存峰值 ~6.6GB, 余量约 4GB, 全量增量构建 33s。
+	"cmake.parallelJobs": 16
+}

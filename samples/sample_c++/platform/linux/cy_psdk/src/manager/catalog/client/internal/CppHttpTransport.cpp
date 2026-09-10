@@ -2,6 +2,8 @@
 
 #include "manager/catalog/client/internal/CppHttpTransport.h"
 
+#include <system_error>
+#include <charconv>
 #include <httplib.h>
 
 #include "define.h"
@@ -10,7 +12,7 @@ namespace plane::catalog::internal
 {
 	namespace
 	{
-		// 从完整 URL 拆出 host/port/path (仅支持 http://host[:port]/path, 目录为 IPv4 HTTP 端点)
+		// URL 解析 (scheme/host/port/path 由 cpp-httplib 内部解析器得出)
 		struct ParsedUrl
 		{
 			bool		ok { false };
@@ -29,52 +31,37 @@ namespace plane::catalog::internal
 				return parsed;
 			}
 
-			_STD string rest { url };
-			if (rest.rfind("http://", 0) == 0)
+			// 解析交给 cpp-httplib 内部解析器 (detail::parse_url): scheme/host/port/path/query。
+			// 说明: Client 公共构造对无效输入会静默回退 localhost:80, 不足以判错, 故直接使用内部解析结果
+			_HTTPLIB detail::UrlComponents components {};
+			if (!_HTTPLIB detail::parse_url(url, components) || components.host.empty())
 			{
-				rest = rest.substr(7);
+				parsed.error = "invalid URL";
+				return parsed;
 			}
-			else if (rest.rfind("https://", 0) == 0)
+			if (!components.scheme.empty() && components.scheme != "http")
 			{
-				parsed.error = "https 目录端点暂不支持";
+				// 目录端点仅支持明文 HTTP (https 需 SSL 编译支持, 未启用)
+				parsed.error = "unsupported URL scheme: " + components.scheme;
 				return parsed;
 			}
 
-			// 取主机段: 到第一个 '/' 或结束
-			const _STD size_t slash { rest.find('/') };
-			_STD string		  authority { slash == _STD string::npos ? rest : rest.substr(0, slash) };
-			parsed.path = slash == _STD string::npos ? "/" : rest.substr(slash);
-			if (authority.empty())
+			int port { 80 };
+			if (!components.port.empty())
 			{
-				parsed.error = "invalid URL host";
-				return parsed;
-			}
-
-			// host[:port]
-			const _STD size_t colon { authority.rfind(':') };
-			if (colon != _STD string::npos)
-			{
-				parsed.host = authority.substr(0, colon);
-				try
-				{
-					parsed.port = _STD stoi(authority.substr(colon + 1));
-				}
-				catch (const _STD exception&)
-				{
-					parsed.error = "invalid URL port";
-					return parsed;
-				}
-				if (parsed.port <= 0 || parsed.port > 65'535)
+				const auto result { _STD from_chars(components.port.data(), components.port.data() + components.port.size(), port) };
+				if (result.ec != _STD errc {} || result.ptr != components.port.data() + components.port.size() || port <= 0 || port > 65'535)
 				{
 					parsed.error = "invalid URL port";
 					return parsed;
 				}
 			}
-			else
-			{
-				parsed.host = authority;
-			}
-			parsed.ok = true;
+
+			parsed.host	 = components.host;
+			parsed.port	 = port;
+			parsed.path	 = components.path.empty() ? "/" : components.path;
+			parsed.path += components.query; // query 已含前导 '?'
+			parsed.ok	 = true;
 			return parsed;
 		}
 	} // namespace

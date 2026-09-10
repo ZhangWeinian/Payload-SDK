@@ -9,25 +9,12 @@
 #include <unistd.h>
 
 #include "manager/catalog/client/internal/TargetExpander.h"
+#include "manager/catalog/client/internal/TextUtil.h"
 
 #include "define.h"
 
 namespace plane::catalog::internal
 {
-	namespace
-	{
-		_NODISCARD _STD string trimText(const _STD string& value)
-		{
-			const _STD size_t begin { value.find_first_not_of(" \t\r\n") };
-			if (begin == _STD string::npos)
-			{
-				return "";
-			}
-			const _STD size_t end { value.find_last_not_of(" \t\r\n") };
-			return value.substr(begin, end - begin + 1);
-		}
-	} // namespace
-
 	CatalogIpCache::CatalogIpCache(_STD string file): file_(_STD move(file)) {}
 
 	_STD vector<_STD string> CatalogIpCache::prioritize(const _STD vector<_STD string>& targets)
@@ -40,7 +27,7 @@ namespace plane::catalog::internal
 		}
 		_STD string		  line {};
 		_STD			  getline(input, line);
-		const _STD string cached { trimText(line) };
+		const _STD string cached { trimAsciiWhitespaceCopy(line) };
 		if (cached.empty())
 		{
 			return result;
@@ -79,8 +66,10 @@ namespace plane::catalog::internal
 			}
 		}
 
-		// 临时文件 + 原子 rename
-		const _STD string temp_name { path.filename().string() + ".tmp.XXXXXX" };
+		// 临时文件建在目标目录内 (对齐 java Files.createTempFile(parent, ...)):
+		// 与目标同文件系统, 保证 rename 原子生效; fd 直写, 避免二次 close 误关他人 fd
+		const _STD filesystem::path temp_template { path.parent_path() / (path.filename().string() + ".tmp.XXXXXX") };
+		const _STD string			temp_name { temp_template.string() };
 		_STD vector<char> writable { temp_name.begin(), temp_name.end() };
 		writable.push_back('\0');
 		const int fd { ::mkstemp(writable.data()) };
@@ -88,31 +77,23 @@ namespace plane::catalog::internal
 		{
 			return;
 		}
-		::close(fd);
 		const _STD string temp_path { writable.data() };
+		const _STD string payload { ip + "\n" };
+		const ssize_t	  written { ::write(fd, payload.data(), payload.size()) };
+		const bool		  write_ok { written == static_cast<ssize_t>(payload.size()) };
+		if (::close(fd) != 0 || !write_ok)
 		{
-			_STD ofstream out { temp_path, _STD ios::binary | _STD ios::trunc };
-			if (!out.is_open())
-			{
-				::close(fd);
-				::remove(temp_path.c_str());
-				return;
-			}
-			out << ip << '\n';
-			out.flush();
-			if (!out.good())
-			{
-				out.close();
-				::remove(temp_path.c_str());
-				return;
-			}
-			out.close();
+			::remove(temp_path.c_str());
+			return;
 		}
 
 		_STD filesystem::rename(temp_path, path, ec);
 		if (ec)
 		{
-			::remove(temp_path.c_str());
+			// 跨文件系统等场景: 回退复制后删除临时文件 (对齐 java REPLACE_EXISTING 回退)
+			_STD error_code fallback_ec {};
+			_STD			filesystem::copy_file(temp_path, path, _STD filesystem::copy_options::overwrite_existing, fallback_ec);
+			_STD			filesystem::remove(temp_path, fallback_ec);
 		}
 	}
 } // namespace plane::catalog::internal

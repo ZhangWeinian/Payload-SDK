@@ -166,7 +166,6 @@ namespace plane::catalog::internal
 
 	_NODISCARD Result<_NLOHMANN_JSON json> CatalogTransport::parseRawJson(const _STD string& body, int status) const
 	{
-		(void)status;
 		try
 		{
 			return Result<_NLOHMANN_JSON json>::success(_NLOHMANN_JSON json::parse(body));

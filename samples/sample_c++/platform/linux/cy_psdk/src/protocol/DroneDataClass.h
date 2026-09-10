@@ -34,13 +34,15 @@ namespace plane::protocol
 		RWJS  // 任务结束
 	};
 
-	NLOHMANN_JSON_SERIALIZE_ENUM(MissionControlAction,
-								 {
-									 { MissionControlAction::RWKS, "RWKS" },
-									 { MissionControlAction::RWZT, "RWZT" },
-									 { MissionControlAction::RWJX, "RWJX" },
-									 { MissionControlAction::RWJS, "RWJS" },
-	 })
+	NLOHMANN_JSON_SERIALIZE_ENUM(
+		MissionControlAction,
+		{
+			{ MissionControlAction::RWKS, "RWKS" },
+			{ MissionControlAction::RWZT, "RWZT" },
+			{ MissionControlAction::RWJX, "RWJX" },
+			{ MissionControlAction::RWJS, "RWJS" },
+	}
+	)
 
 	enum class RthMode : int
 	{
@@ -74,12 +76,14 @@ namespace plane::protocol
 		MBJX  // 目标矩形
 	};
 
-	NLOHMANN_JSON_SERIALIZE_ENUM(TargetType,
-								 {
-									 { TargetType::MBSY, "MBSY" },
-									 { TargetType::MBWZ, "MBWZ" },
-									 { TargetType::MBJX, "MBJX" },
-	 })
+	NLOHMANN_JSON_SERIALIZE_ENUM(
+		TargetType,
+		{
+			{ TargetType::MBSY, "MBSY" },
+			{ TargetType::MBWZ, "MBWZ" },
+			{ TargetType::MBJX, "MBJX" },
+	}
+	)
 
 	struct WaypointAction
 	{
@@ -260,7 +264,7 @@ namespace plane::protocol
 			{ "ZBID", msg.ZBID },
 			{ "XXID", msg.XXID },
 			{ "XXLX", msg.XXLX },
-			{ "SJC",	 msg.SJC	 },
+			{ "SJC",  msg.SJC  },
 		};
 
 		if (msg.SBSJ.has_value())

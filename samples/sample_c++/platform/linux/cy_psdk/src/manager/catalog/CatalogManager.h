@@ -48,6 +48,9 @@ namespace plane::manager
 		// 解析已注册业务服务的基础地址 (如 "swarm.service.base"), 返回 "scheme://ip:port"; 失败返回空串
 		_NODISCARD _STD string resolveServiceBaseUrl(const _STD string& service_id, const _STD string& protocol) noexcept;
 
+		// 目录服务端自身 IP (WebSocket 等直连场景使用); 未就绪/失败返回空串
+		_NODISCARD _STD string getCatalogServerIp(void) noexcept;
+
 		// 绑定/昵称联动: 更新目录注册的 service_name (触发运行时重注册); 空串恢复默认名
 		void updateServiceName(const _STD string& service_name) noexcept;
 

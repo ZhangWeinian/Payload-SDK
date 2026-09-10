@@ -79,11 +79,13 @@ namespace plane::manager
 			HealthPing,
 			HealthStatusUpdated
 		};
-		using PSDKEventData	   = _STD		 variant<plane::protocol::StatusPayload,
-													 _DJI		 T_DjiWaypointV3MissionState,
-													 _DJI		 T_DjiWaypointV3ActionState,
-													 _STD_CHRONO steady_clock::time_point,
-													 plane::protocol::HealthStatusPayload>;
+		using PSDKEventData = _STD variant<
+			plane::protocol::StatusPayload,
+			_DJI		T_DjiWaypointV3MissionState,
+			_DJI		T_DjiWaypointV3ActionState,
+			_STD_CHRONO steady_clock::time_point,
+			plane::protocol::HealthStatusPayload
+		>;
 
 		using StatusDispatcher = _EVENTPP EventDispatcher<_THIS PSDKEvent, void(const PSDKEventData&)>;
 

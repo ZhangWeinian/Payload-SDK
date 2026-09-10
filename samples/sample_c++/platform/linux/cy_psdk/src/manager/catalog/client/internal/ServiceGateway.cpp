@@ -4,6 +4,7 @@
 
 #include <arpa/inet.h>
 #include <nlohmann/json.hpp>
+#include <string_view>
 #include <set>
 
 #include "manager/catalog/client/CatalogError.h"
@@ -31,6 +32,28 @@ namespace plane::catalog::internal
 		{
 			in_addr address {};
 			return ::inet_pton(AF_INET, value.c_str(), &address) == 1;
+		}
+
+		// 大小写不敏感相等 (期望 upper 为大写形态; ASCII 协议字段)
+		_NODISCARD bool asciiUpperEquals(_STD string_view value, _STD string_view upper) noexcept
+		{
+			if (value.size() != upper.size())
+			{
+				return false;
+			}
+			for (_STD size_t index { 0 }; index < value.size(); ++index)
+			{
+				char ch { value[index] };
+				if (ch >= 'a' && ch <= 'z')
+				{
+					ch = static_cast<char>(ch - ('a' - 'A'));
+				}
+				if (ch != upper[index])
+				{
+					return false;
+				}
+			}
+			return true;
 		}
 
 		// 兼容旧服务端: 实例列表端点在 /api/registry/services 下统一
@@ -74,16 +97,6 @@ namespace plane::catalog::internal
 	{
 		return _STD string { kRegistry } + "/" + encodeComponent(scopeValue(namespace_name, "public")) + "/" +
 			   encodeComponent(scopeValue(group_name, "DEFAULT_GROUP")) + "/" + encodeComponent(service_id) + "/instances";
-	}
-
-	_NODISCARD _STD string ServiceGateway::urlEncode(const _STD string& value)
-	{
-		return encodeComponent(value);
-	}
-
-	_NODISCARD _STD string ServiceGateway::catalogUrlOf(const CatalogEndpoint& endpoint)
-	{
-		return "http://" + endpoint.ip + ":" + _STD to_string(endpoint.http_port == 0 ? 8081 : endpoint.http_port);
 	}
 
 	_NODISCARD Result<_STD string> ServiceGateway::registerInstance(const ServiceRegistration& registration)
@@ -607,7 +620,8 @@ namespace plane::catalog::internal
 				status.components.push_back(_STD move(comp));
 			}
 		}
-		status.healthy = status.overall_status == "UP";
+		// 对齐 java "UP".equalsIgnoreCase(overall): 大小写不敏感
+		status.healthy = asciiUpperEquals(status.overall_status, "UP");
 		return Result<ServiceStatus>::success(_STD move(status));
 	}
 

@@ -98,34 +98,40 @@
 			"name": "debug",
 			"displayName": "Build Debug",
 			"configurePreset": "debug",
+			"jobs": 16,
 			"targets": ["all"]
 		},
 		{
 			"name": "release",
 			"displayName": "Build Release",
 			"configurePreset": "release",
+			"jobs": 16,
 			"cleanFirst": true
 		},
 		{
 			"name": "redbi",
 			"displayName": "Build RelWithDebInfo",
-			"configurePreset": "redbi"
+			"configurePreset": "redbi",
+			"jobs": 16
 		},
 		{
 			"name": "aarch64",
 			"displayName": "Build AArch64 (RK3588S)",
-			"configurePreset": "aarch64"
+			"configurePreset": "aarch64",
+			"jobs": 16
 		},
 		{
 			"name": "install-debug",
 			"displayName": "Install Debug",
 			"configurePreset": "debug",
+			"jobs": 16,
 			"targets": ["install"]
 		},
 		{
 			"name": "install-release",
 			"displayName": "Install Release",
 			"configurePreset": "release",
+			"jobs": 16,
 			"targets": ["install"]
 		}
 	],

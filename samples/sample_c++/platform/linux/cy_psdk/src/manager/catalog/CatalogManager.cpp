@@ -8,6 +8,7 @@
 
 #include <fmt/format.h>
 #include <chrono>
+#include <memory>
 #include <string>
 
 #include "config/ConfigManager.h"
@@ -99,8 +100,8 @@ namespace plane::manager
 
 	struct CatalogManager::Impl
 	{
-		// 自研目录运行时 (仅后台线程访问)
-		_STD unique_ptr<CatalogRuntime> runtime {};
+		// 自研目录运行时 (后台线程持有; 业务线程经 rt_mutex_ 取 shared_ptr 快照后锁外调用)
+		_STD shared_ptr<CatalogRuntime> runtime {};
 
 		// Ready 后是否已应用动态 broker (防止重复切换; 事件回调线程与主循环共享)
 		_STD atomic<bool> broker_applied { false };
@@ -235,7 +236,7 @@ namespace plane::manager
 		discovery.port	  = static_cast<int>(config.getCatalogDiscoveryPort());
 		discovery.targets = config.getCatalogTargets();
 
-		impl.runtime	  = _STD make_unique<CatalogRuntime>(_STD move(options), _STD move(discovery));
+		impl.runtime	  = _STD make_shared<CatalogRuntime>(_STD move(options), _STD move(discovery));
 		CatalogRuntime*		rt { impl.runtime.get() };
 
 		// ---- 同步发现 (失败按可重试性退避; 参数非法不可重试则放弃) ----
@@ -263,7 +264,12 @@ namespace plane::manager
 				break;
 			}
 
-			_STD		   this_thread::sleep_for(backoff);
+			// 分片睡眠: stop() 时最多等待 200ms 而非整个退避周期
+			const auto deadline { _STD_CHRONO steady_clock::now() + backoff };
+			while (this->running_.load(_STD memory_order_acquire) && _STD_CHRONO steady_clock::now() < deadline)
+			{
+				_STD this_thread::sleep_for(Ms { 200 });
+			}
 			backoff = _STD min(backoff * 2, Ms { 60'000 });
 		}
 
@@ -444,6 +450,27 @@ namespace plane::manager
 		return true;
 	}
 
+	// 目录服务端自身 IP (WebSocket 等直连场景使用); 未就绪/失败返回空串
+	_STD string CatalogManager::getCatalogServerIp(void) noexcept
+	{
+		_STD shared_ptr<CatalogRuntime> runtime {};
+		{
+			_STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+			if (!this->impl_ || !this->impl_->runtime)
+			{
+				return {};
+			}
+			runtime = this->impl_->runtime; // 取快照后在锁外调用 (HTTP), 避免长时间持锁
+		}
+
+		auto result { runtime->getCatalogServerInfo() };
+		if (!result.isOk())
+		{
+			return {};
+		}
+		return result.value().ip;
+	}
+
 	_STD string CatalogManager::resolveServiceBaseUrl(const _STD string& service_id, const _STD string& protocol) noexcept
 	{
 		if (service_id.empty())
@@ -451,15 +478,19 @@ namespace plane::manager
 			return {};
 		}
 
-		_STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
-		if (!this->impl_ || !this->impl_->runtime)
+		_STD shared_ptr<CatalogRuntime> runtime {};
 		{
-			return {};
+			_STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+			if (!this->impl_ || !this->impl_->runtime)
+			{
+				return {};
+			}
+			runtime = this->impl_->runtime; // 取快照后在锁外调用 (HTTP), 避免长时间持锁
 		}
 
 		ServiceQuery query {};
 		query.service_id = service_id; // namespace/group 为空 -> 继承注册作用域 (public/DEFAULT_GROUP)
-		auto result { this->impl_->runtime->resolveService(query) };
+		auto result { runtime->resolveService(query) };
 		if (!result.isOk())
 		{
 			LOG_WARN(
@@ -517,10 +548,14 @@ namespace plane::manager
 
 	void CatalogManager::updateServiceName(const _STD string& service_name) noexcept
 	{
-		_STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
-		if (!this->impl_ || !this->impl_->runtime)
+		_STD shared_ptr<CatalogRuntime> runtime {};
 		{
-			return;
+			_STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+			if (!this->impl_ || !this->impl_->runtime)
+			{
+				return;
+			}
+			runtime = this->impl_->runtime; // 取快照后在锁外调用 (HTTP), 避免长时间持锁
 		}
 
 		auto&				config { plane::config::ConfigManager::getInstance() };
@@ -531,7 +566,7 @@ namespace plane::manager
 		registration.service_name	= service_name.empty() ? config.getCatalogServiceName() : service_name;
 		registration.version		= config.getCatalogVersion();
 
-		auto result { this->impl_->runtime->updateRegistration(registration) };
+		auto result { runtime->updateRegistration(registration) };
 		if (!result.isOk())
 		{
 			LOG_WARN("Catalog 注册信息更新失败: code={}, message={}", static_cast<int>(result.error().code), result.error().message);

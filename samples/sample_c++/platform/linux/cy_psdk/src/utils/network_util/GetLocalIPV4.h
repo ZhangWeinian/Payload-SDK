@@ -135,7 +135,8 @@ namespace plane::utils
 					{
 						_CSTD freeifaddrs(ifaddr);
 					}
-				});
+				}
+			);
 
 			_STD vector<_STD pair<_STD string, _STD string>> addresses {};
 			for (auto* ifa { ifaddr }; ifa != nullptr; ifa = ifa->ifa_next)
@@ -173,12 +174,14 @@ namespace plane::utils
 				return _STD nullopt;
 			}
 
-			auto high_priority_it = _STD find_if(addresses.begin(),
-												 addresses.end(),
-												 [&](const auto& pair)
-												 {
-													 return this->isHighPriorityInterface(pair.first);
-												 });
+			auto high_priority_it = _STD find_if(
+				addresses.begin(),
+				addresses.end(),
+				[&](const auto& pair)
+				{
+					return this->isHighPriorityInterface(pair.first);
+				}
+			);
 
 			if (high_priority_it != addresses.end())
 			{
@@ -186,12 +189,14 @@ namespace plane::utils
 				return high_priority_it->second;
 			}
 
-			auto site_local_it = _STD find_if(addresses.begin(),
-											  addresses.end(),
-											  [&](const auto& pair)
-											  {
-												  return this->isSiteLocalAddress(pair.second);
-											  });
+			auto site_local_it = _STD find_if(
+				addresses.begin(),
+				addresses.end(),
+				[&](const auto& pair)
+				{
+					return this->isSiteLocalAddress(pair.second);
+				}
+			);
 
 			if (site_local_it != addresses.end())
 			{

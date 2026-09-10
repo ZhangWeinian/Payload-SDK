@@ -120,7 +120,8 @@ namespace plane::utils
 							_LIBZIP zip_source_free(this->source_);
 							this->source_ = nullptr;
 						}
-					});
+					}
+				);
 
 				if (_LIBZIP zip_source_open(this->source_) < 0)
 				{
@@ -135,7 +136,8 @@ namespace plane::utils
 						{
 							_LIBZIP zip_source_close(this->source_);
 						}
-					});
+					}
+				);
 
 				_LIBZIP zip_stat_t st {};
 				_LIBZIP			   zip_stat_init(&st);
@@ -407,8 +409,10 @@ namespace plane::utils
 			return plane::utils::toXmlString(wpml_file);
 		}
 
-		static _STD string generateTemplateKml(const _STD vector<plane::protocol::Waypoint>& waypoints,
-											   const plane::protocol::WaypointPayload&		 missionInfo) noexcept
+		static _STD string generateTemplateKml(
+			const _STD vector<plane::protocol::Waypoint>& waypoints,
+			const plane::protocol::WaypointPayload&		  missionInfo
+		) noexcept
 		{
 			plane::protocol::kml::TemplateKmlFile kml_file {};
 
@@ -442,9 +446,10 @@ namespace plane::utils
 		}
 	} // namespace
 
-	_STD optional<_DEFINED _KMZ_DATA_TYPE>
-		 JsonToKmzConverter::convertWaypointsToKmz(const _STD vector<plane::protocol::Waypoint>& waypoints,
-												   const plane::protocol::WaypointPayload&		 missionInfo) noexcept
+	_STD optional<_DEFINED _KMZ_DATA_TYPE> JsonToKmzConverter::convertWaypointsToKmz(
+		const _STD vector<plane::protocol::Waypoint>& waypoints,
+		const plane::protocol::WaypointPayload&		  missionInfo
+	) noexcept
 	{
 		try
 		{

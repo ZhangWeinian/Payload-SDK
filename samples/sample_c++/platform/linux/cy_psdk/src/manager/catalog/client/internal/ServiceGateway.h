@@ -95,8 +95,6 @@ namespace plane::catalog::internal
 
 		static _STD string instanceCollection(const _STD string& namespace_name, const _STD string& group_name, const _STD string& service_id);
 		static _STD string scopeValue(const _STD string& value, const _STD string& fallback);
-		static _STD string urlEncode(const _STD string& value);
-		static _STD string catalogUrlOf(const CatalogEndpoint& endpoint);
 
 		static Result<ServiceEndpoint>	 parseEndpoint(const _NLOHMANN_JSON json& json, bool& healthy);
 		static Result<ConfigDocument>	 parseConfig(const _NLOHMANN_JSON json& json);

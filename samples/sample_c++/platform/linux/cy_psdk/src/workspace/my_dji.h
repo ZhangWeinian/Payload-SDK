@@ -14,6 +14,7 @@
 #include "manager/psdk/PSDKAdapter.h"
 #include "manager/psdk/PSDKManager.h"
 #include "manager/telemetry/TelemetryReporter.h"
+#include "manager/websocket/WsClient.h"
 #include "utils/EXEHomePath.h"
 #include "utils/integrity/IntegrityCheck.h"
 #include "utils/log_util/Logger.h"
@@ -105,6 +106,9 @@ namespace plane::my_dji
 
 		// 设备绑定: 目录就绪 + 序列号就绪后自动绑定 (对齐 msdk), 后台执行
 		plane::manager::DeviceBinder::getInstance().start();
+
+		// WebSocket 数据订阅: 目录就绪后连接并订阅 (对齐 msdk), 后台执行
+		plane::manager::WsClient::getInstance().start();
 
 		// 如果启用标准 PSDK 作业流程，则初始化 PSDKManager 和 PSDKAdapter
 		if (config.isStandardProceduresEnabled())
@@ -243,6 +247,9 @@ namespace plane::my_dji
 				LOG_DEBUG("PSDK CORE 已成功关闭");
 			}
 		}
+
+		// 停止 WebSocket 订阅 (先于目录/绑定, 避免访问已停的目录)
+		plane::manager::WsClient::getInstance().stop();
 
 		// 停止设备绑定 (先于目录, 避免绑定流程访问已停的目录)
 		plane::manager::DeviceBinder::getInstance().stop();

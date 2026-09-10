@@ -78,6 +78,12 @@ namespace plane::catalog
 
 		_STD unique_ptr<ServiceGateway> gateway_ {};
 
+		// 注入的 HTTP 传输 (为空时使用默认 CppHttpTransport; start 成功后移交给 ServiceGateway)
+		_STD unique_ptr<internal::HttpTransport> http_transport_ {};
+
+		// start/stop 串行化 (对齐 java synchronized)
+		_STD mutex lifecycle_mu_ {};
+
 		// 状态 (mu_ 保护共享可变字段)
 		mutable _STD mutex	mu_ {};
 		RuntimeStateMachine state_machine_ {};
@@ -87,22 +93,25 @@ namespace plane::catalog
 		_STD string					   instance_id_ {};
 		ServiceRegistration			   registration_ {};
 		_STD optional<ServiceStatus> latest_status_ {};
-		bool						 status_dirty_ { false };
-		bool						 registration_requested_ { false };
-		bool						 ever_started_ { false };
 		_STD map<ConfigKey, Watch> watches_ {};
 
-		// 调度 (仅控制线程写; 业务线程经 mu_ 读写)
-		Clock::time_point		 next_registration_ { Clock::time_point::min() };
-		Clock::time_point		 next_heartbeat_ { Clock::time_point::min() };
-		Clock::time_point		 next_status_report_ { Clock::time_point::min() };
-		Clock::time_point		 next_config_ { Clock::time_point::min() };
-		Clock::time_point		 next_discovery_ { Clock::time_point::min() };
-		_STD_CHRONO milliseconds retry_delay_ { 1000 };
+		// 跨线程标志 (原子; 业务线程与控制线程并发访问)
+		_STD atomic<bool> status_dirty_ { false };
+		_STD atomic<bool> registration_requested_ { false };
+		_STD atomic<bool> ever_started_ { false };
+
+		// 调度 (原子: 业务线程可请求"立即执行", 时间戳语义由控制线程维护)
+		_STD atomic<Clock::time_point> next_registration_ { Clock::time_point::min() };
+		_STD atomic<Clock::time_point> next_heartbeat_ { Clock::time_point::min() };
+		_STD atomic<Clock::time_point> next_status_report_ { Clock::time_point::min() };
+		_STD atomic<Clock::time_point> next_config_ { Clock::time_point::min() };
+		_STD atomic<Clock::time_point> next_discovery_ { Clock::time_point::min() };
+		_STD atomic<_STD_CHRONO milliseconds> retry_delay_ { _STD_CHRONO milliseconds { 1000 } };
 
 		// 控制线程
 		_STD atomic<bool> quit_ { false };
-		_STD atomic<bool>		discovery_cancelled_ { false };
+		_STD atomic<bool> discovery_cancelled_ { false };
+		_STD atomic<bool>		wake_requested_ { false };
 		_STD thread				control_thread_ {};
 		_STD mutex				wake_mu_ {};
 		_STD condition_variable wake_cv_ {};
@@ -122,7 +131,7 @@ namespace plane::catalog
 
 		_NODISCARD bool running(void) const
 		{
-			if (!this->ever_started_ || this->quit_.load(_STD memory_order_acquire))
+			if (!this->ever_started_.load(_STD memory_order_acquire) || this->quit_.load(_STD memory_order_acquire))
 			{
 				return false;
 			}
@@ -147,7 +156,7 @@ namespace plane::catalog
 
 		_NODISCARD CatalogFailure gateFailure(void) const
 		{
-			if (!this->ever_started_)
+			if (!this->ever_started_.load(_STD memory_order_acquire))
 			{
 				return makeFailure(CatalogError::NOT_STARTED);
 			}
@@ -224,6 +233,8 @@ namespace plane::catalog
 
 		void kick(void)
 		{
+			// 置位唤醒标志并通知: 控制线程 wait_for 谓词会消费该标志立即执行 tick
+			this->wake_requested_.store(true, _STD memory_order_release);
 			this->wake_cv_.notify_one();
 		}
 
@@ -239,7 +250,8 @@ namespace plane::catalog
 						_STD_CHRONO milliseconds { 10 },
 						[this]
 						{
-							return this->quit_.load(_STD memory_order_acquire);
+							return this->quit_.load(_STD memory_order_acquire) ||
+								   this->wake_requested_.exchange(false, _STD memory_order_acq_rel);
 						}
 					);
 				}
@@ -309,27 +321,31 @@ namespace plane::catalog
 			}
 			const Clock::time_point now { Clock::now() };
 
-			if (now >= this->next_discovery_)
+			if (now >= this->next_discovery_.load(_STD memory_order_acquire))
 			{
 				this->refreshDiscovery();
-				this->next_discovery_ =
+				this->next_discovery_.store(
 					Clock::now() + (this->state_machine_.state() == CatalogState::READY ? this->discovery_config_.ready_probe_interval
-																						: this->discovery_config_.response_window);
+																						: this->discovery_config_.response_window),
+					_STD memory_order_release
+				);
 			}
-			if (this->state_machine_.allowRegister() && this->registration_requested_ && this->instance_id_.empty() &&
-				now >= this->next_registration_)
+			if (this->state_machine_.allowRegister() && this->registration_requested_.load(_STD memory_order_acquire) &&
+				!this->hasInstanceId() && now >= this->next_registration_.load(_STD memory_order_acquire))
 			{
 				this->registerOnce();
 			}
-			if (this->state_machine_.allowStatusReport() && !this->instance_id_.empty() && now >= this->next_heartbeat_)
+			if (this->state_machine_.allowStatusReport() && this->hasInstanceId() &&
+				now >= this->next_heartbeat_.load(_STD memory_order_acquire))
 			{
 				this->heartbeatOnce();
 			}
-			if (this->state_machine_.allowStatusReport() && this->status_dirty_ && now >= this->next_status_report_)
+			if (this->state_machine_.allowStatusReport() && this->status_dirty_.load(_STD memory_order_acquire) &&
+				now >= this->next_status_report_.load(_STD memory_order_acquire))
 			{
 				this->reportLatestStatus();
 			}
-			if (!this->watches_.empty() && this->state_machine_.allowConfigRefresh() && now >= this->next_config_)
+			if (this->hasWatches() && this->state_machine_.allowConfigRefresh() && now >= this->next_config_.load(_STD memory_order_acquire))
 			{
 				this->pollConfigs();
 			}
@@ -355,9 +371,9 @@ namespace plane::catalog
 				{
 					this->discovery_->saveSuccessfulIp(ep->ip);
 				}
-				this->retry_delay_ = _STD_CHRONO milliseconds { 1000 };
+				this->retry_delay_.store(_STD_CHRONO milliseconds { 1000 }, _STD memory_order_release);
 				this->availability_.success();
-				this->next_heartbeat_ = Clock::now() + this->heartbeatInterval();
+				this->next_heartbeat_.store(Clock::now() + this->heartbeatInterval(), _STD memory_order_release);
 				this->transition(CatalogState::READY, CatalogEventType::REGISTRATION_SUCCEEDED, "registered");
 			}
 			else
@@ -373,12 +389,13 @@ namespace plane::catalog
 				);
 				if (error.retryable)
 				{
-					this->retry_delay_		 = _STD min(this->retry_delay_ * 2, _STD_CHRONO milliseconds { 2000 });
-					this->next_registration_ = Clock::now() + this->retry_delay_;
+					this->retry_delay_
+						.store(_STD min(this->retry_delay_.load() * 2, _STD_CHRONO milliseconds { 2000 }), _STD memory_order_release);
+					this->next_registration_.store(Clock::now() + this->retry_delay_.load(), _STD memory_order_release);
 				}
 				else
 				{
-					this->next_registration_ = Clock::now() + _STD_CHRONO seconds(2);
+					this->next_registration_.store(Clock::now() + _STD_CHRONO seconds(2), _STD memory_order_release);
 				}
 				this->noteCatalogFailure(error);
 			}
@@ -393,7 +410,7 @@ namespace plane::catalog
 			ServiceRegistration registration { this->registrationSnapshot() };
 			const _STD string	id { this->instanceId() };
 			Result<void>		result { this->gateway_->heartbeat(registration, id) };
-			this->next_heartbeat_ = Clock::now() + this->heartbeatInterval();
+			this->next_heartbeat_.store(Clock::now() + this->heartbeatInterval(), _STD memory_order_release);
 			if (result.isOk())
 			{
 				this->availability_.success();
@@ -423,15 +440,15 @@ namespace plane::catalog
 			_STD optional<ServiceStatus> snapshot {};
 			{
 				_STD lock_guard<_STD mutex> lock { this->mu_ };
-				snapshot			= this->latest_status_;
-				this->status_dirty_ = false;
+				snapshot = this->latest_status_;
+				this->status_dirty_.store(false, _STD memory_order_release);
 			}
 			const _STD string id { this->instanceId() };
 			if (!snapshot.has_value() || id.empty())
 			{
 				{
 					_STD lock_guard<_STD mutex> lock { this->mu_ };
-					this->status_dirty_ = true;
+					this->status_dirty_.store(true, _STD memory_order_release);
 				}
 				return;
 			}
@@ -440,15 +457,15 @@ namespace plane::catalog
 			if (result.isOk())
 			{
 				this->availability_.success();
-				this->next_status_report_ = Clock::time_point::min();
+				this->next_status_report_.store(Clock::time_point::min(), _STD memory_order_release);
 				return;
 			}
 			{
 				_STD lock_guard<_STD mutex> lock { this->mu_ };
-				this->status_dirty_ = true;
+				this->status_dirty_.store(true, _STD memory_order_release);
 			}
-			this->next_status_report_ = Clock::now() + _STD_CHRONO seconds(2);
-			const CatalogFailure&								   error { result.error() };
+			this->next_status_report_.store(Clock::now() + _STD_CHRONO seconds(2), _STD memory_order_release);
+			const CatalogFailure& error { result.error() };
 			this->postEvent(
 				CatalogEventType::STATUS_REPORT_FAILED,
 				this->state_machine_.state(),
@@ -460,7 +477,7 @@ namespace plane::catalog
 			if (error.code == CatalogError::INSTANCE_NOT_FOUND || error.code == CatalogError::SERVICE_NOT_FOUND)
 			{
 				this->resetInstanceForReregister("instance lost");
-				this->next_status_report_ = Clock::time_point::min(); // 重注册成功后立即补报
+				this->next_status_report_.store(Clock::time_point::min(), _STD memory_order_release); // 重注册成功后立即补报
 			}
 			else
 			{
@@ -474,8 +491,8 @@ namespace plane::catalog
 				_STD lock_guard<_STD mutex> lock { this->mu_ };
 				this->instance_id_.clear();
 			}
-			this->retry_delay_		 = _STD_CHRONO milliseconds { 1000 };
-			this->next_registration_ = Clock::time_point::min();
+			this->retry_delay_.store(_STD_CHRONO milliseconds { 1000 }, _STD memory_order_release);
+			this->next_registration_.store(Clock::time_point::min(), _STD memory_order_release);
 			this->transition(CatalogState::REGISTERING, CatalogEventType::STATE_CHANGED, message);
 		}
 
@@ -530,7 +547,7 @@ namespace plane::catalog
 					}
 				);
 			}
-			this->next_config_ = Clock::now() + this->configCheckInterval();
+			this->next_config_.store(Clock::now() + this->configCheckInterval(), _STD memory_order_release);
 		}
 
 		void publishConfig(const ConfigKey& key, const ConfigDocument& current)
@@ -644,7 +661,7 @@ namespace plane::catalog
 				bool requested { false };
 				{
 					_STD lock_guard<_STD mutex> lock { this->mu_ };
-					requested = this->registration_requested_;
+					requested = this->registration_requested_.load(_STD memory_order_acquire);
 					if (requested)
 					{
 						this->instance_id_.clear();
@@ -661,7 +678,7 @@ namespace plane::catalog
 					discovered,
 					{}
 				);
-				this->next_registration_ = Clock::time_point::min();
+				this->next_registration_.store(Clock::time_point::min(), _STD memory_order_release);
 			}
 		}
 
@@ -678,10 +695,22 @@ namespace plane::catalog
 				this->instance_id_.clear();
 			}
 			this->transition(CatalogState::UNAVAILABLE, CatalogEventType::CATALOG_LOST, error.message);
-			this->next_discovery_ = Clock::time_point::min();
+			this->next_discovery_.store(Clock::time_point::min(), _STD memory_order_release);
 		}
 
 		// ---- 快照访问 ----
+		_NODISCARD bool hasInstanceId(void) const
+		{
+			_STD lock_guard<_STD mutex> lock { this->mu_ };
+			return !this->instance_id_.empty();
+		}
+
+		_NODISCARD bool hasWatches(void) const
+		{
+			_STD lock_guard<_STD mutex> lock { this->mu_ };
+			return !this->watches_.empty();
+		}
+
 		_NODISCARD ServiceRegistration registrationSnapshot(void) const
 		{
 			_STD lock_guard<_STD mutex> lock { this->mu_ };
@@ -740,8 +769,8 @@ namespace plane::catalog
 				impl_->registration_.version = version.value();
 			}
 		}
-		impl_->discovery_ = discovery_client ? _STD move(discovery_client) : _STD make_unique<internal::UdpDiscoveryClient>();
-		(void)http_transport; // 传输经 ServiceGateway 注入; 为空时 ServiceGateway 使用默认实现
+		impl_->discovery_	   = discovery_client ? _STD move(discovery_client) : _STD make_unique<internal::UdpDiscoveryClient>();
+		impl_->http_transport_ = _STD move(http_transport); // start 成功后移交给 ServiceGateway; 为空时使用默认实现
 	}
 
 	CatalogRuntime::~CatalogRuntime(void)
@@ -756,12 +785,8 @@ namespace plane::catalog
 
 	Result<void> CatalogRuntime::start(void)
 	{
-		bool already_started { false };
-		{
-			_STD lock_guard<_STD mutex> lock { impl_->mu_ };
-			already_started = impl_->ever_started_;
-		}
-		if (already_started)
+		_STD lock_guard<_STD mutex> lifecycle_lock { impl_->lifecycle_mu_ }; // start/stop 串行化 (对齐 java synchronized)
+		if (impl_->ever_started_.load(_STD memory_order_acquire))
 		{
 			return Result<void>::failure(makeFailure(CatalogError::ALREADY_STARTED));
 		}
@@ -783,6 +808,7 @@ namespace plane::catalog
 		}
 
 		impl_->discovery_cancelled_.store(false, _STD memory_order_release);
+		impl_->state_machine_.set(CatalogState::DISCOVERING);
 		const DiscoveryReport report { impl_->discovery_->discover(impl_->discovery_config_, impl_->discovery_cancelled_) };
 
 		if (report.multiple_instances || report.endpoints.size() > 1)
@@ -803,22 +829,20 @@ namespace plane::catalog
 			_STD lock_guard<_STD mutex> lock { impl_->mu_ };
 			impl_->endpoint_ = discovered;
 		}
-		impl_->gateway_ = _STD make_unique<ServiceGateway>(catalogUrlOf(discovered), nullptr, impl_->httpTimeout());
+		impl_->gateway_ = _STD make_unique<ServiceGateway>(catalogUrlOf(discovered), _STD move(impl_->http_transport_), impl_->httpTimeout());
 		impl_->gateway_->setRemoteAllowed(true);
 		impl_->state_machine_.set(CatalogState::DISCOVERED);
 
+		// 先标记已启动再创建线程: 若线程创建抛异常, 后续 start 返回 ALREADY_STARTED, 不会二次赋值 std::thread (terminate)
+		impl_->ever_started_.store(true, _STD memory_order_release);
 		impl_->cb_quit_.store(false, _STD memory_order_release);
 		impl_->cb_thread_ = _STD thread(&Impl::runCallbacks, impl_.get());
 		impl_->quit_.store(false, _STD memory_order_release);
 		impl_->control_thread_ = _STD thread(&Impl::runControl, impl_.get());
 
 		const Clock::time_point		  now { Clock::now() };
-		{
-			_STD lock_guard<_STD mutex> lock { impl_->mu_ };
-			impl_->ever_started_   = true;
-			impl_->next_config_	   = now;
-			impl_->next_discovery_ = now + impl_->discovery_config_.ready_probe_interval;
-		}
+		impl_->next_config_.store(now, _STD memory_order_release);
+		impl_->next_discovery_.store(now + impl_->discovery_config_.ready_probe_interval, _STD memory_order_release);
 		impl_->kick();
 		return Result<void>::success();
 	}
@@ -842,24 +866,22 @@ namespace plane::catalog
 		{
 			return Result<void>::failure(makeFailure(CatalogError::STOPPED));
 		}
-		{
-			_STD lock_guard<_STD mutex> lock { impl_->mu_ };
-			impl_->registration_requested_ = true;
-		}
+		impl_->registration_requested_.store(true, _STD memory_order_release);
 		if (state == CatalogState::DISCOVERED)
 		{
 			impl_->transition(CatalogState::REGISTERING, CatalogEventType::STATE_CHANGED, "registration requested");
 		}
-		impl_->next_registration_ = Clock::time_point::min();
+		impl_->next_registration_.store(Clock::time_point::min(), _STD memory_order_release);
 		impl_->kick();
 		return Result<void>::success();
 	}
 
 	Result<void> CatalogRuntime::stop(_STD_CHRONO milliseconds timeout)
 	{
+		_STD lock_guard<_STD mutex> lifecycle_lock { impl_->lifecycle_mu_ }; // start/stop 串行化 (对齐 java synchronized)
 		{
 			_STD lock_guard<_STD mutex> lock { impl_->mu_ };
-			if (!impl_->ever_started_ || impl_->state_machine_.state() == CatalogState::STOPPED)
+			if (!impl_->ever_started_.load(_STD memory_order_acquire) || impl_->state_machine_.state() == CatalogState::STOPPED)
 			{
 				return Result<void>::failure(makeFailure(CatalogError::NOT_STARTED));
 			}
@@ -926,10 +948,10 @@ namespace plane::catalog
 		}
 		{
 			_STD lock_guard<_STD mutex> lock { impl_->mu_ };
-			impl_->latest_status_	   = status;
-			impl_->status_dirty_	   = true;
-			impl_->next_status_report_ = Clock::time_point::min();
+			impl_->latest_status_ = status;
 		}
+		impl_->status_dirty_.store(true, _STD memory_order_release);
+		impl_->next_status_report_.store(Clock::time_point::min(), _STD memory_order_release);
 		impl_->kick();
 		return Result<void>::success();
 	}
@@ -1129,7 +1151,7 @@ namespace plane::catalog
 			_STD lock_guard<_STD mutex> lock { impl_->mu_ };
 			impl_->watches_[scoped] = watch;
 		}
-		impl_->next_config_ = Clock::time_point::min();
+		impl_->next_config_.store(Clock::time_point::min(), _STD memory_order_release);
 		impl_->kick();
 
 		ConfigSubscription subscription { [impl = impl_.get(), scoped]()
@@ -1158,8 +1180,8 @@ namespace plane::catalog
 			impl_->registration_.log_paths = paths;
 			impl_->instance_id_.clear();
 		}
-		impl_->retry_delay_		  = _STD_CHRONO milliseconds { 1000 };
-		impl_->next_registration_ = Clock::time_point::min();
+		impl_->retry_delay_.store(_STD_CHRONO milliseconds { 1000 }, _STD memory_order_release);
+		impl_->next_registration_.store(Clock::time_point::min(), _STD memory_order_release);
 		if (impl_->state_machine_.state() == CatalogState::READY)
 		{
 			impl_->transition(CatalogState::REGISTERING, CatalogEventType::STATE_CHANGED, "log paths changed");
@@ -1183,11 +1205,11 @@ namespace plane::catalog
 			impl_->registration_				= registration;
 			impl_->registration_.namespace_name = scopeValue(registration.namespace_name, "public");
 			impl_->registration_.group_name		= scopeValue(registration.group_name, "DEFAULT_GROUP");
-			impl_->registration_requested_		= true;
+			impl_->registration_requested_.store(true, _STD memory_order_release);
 			impl_->instance_id_.clear();
 		}
-		impl_->retry_delay_		  = _STD_CHRONO milliseconds { 1000 };
-		impl_->next_registration_ = Clock::time_point::min();
+		impl_->retry_delay_.store(_STD_CHRONO milliseconds { 1000 }, _STD memory_order_release);
+		impl_->next_registration_.store(Clock::time_point::min(), _STD memory_order_release);
 		if (impl_->state_machine_.state() == CatalogState::READY)
 		{
 			impl_->transition(CatalogState::REGISTERING, CatalogEventType::STATE_CHANGED, "registration updated");

@@ -25,18 +25,18 @@
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef APPLICATION_H
-	#define APPLICATION_H
+#define APPLICATION_H
 
-	/* Includes ------------------------------------------------------------------*/
-	#include "dji_core.h"
-	#include "dji_typedef.h"
-	#include <fstream>
-	#include <iostream>
+/* Includes ------------------------------------------------------------------*/
+#include "dji_core.h"
+#include "dji_typedef.h"
+#include <fstream>
+#include <iostream>
 
-	#ifdef __cplusplus
+#ifdef __cplusplus
 extern "C"
 {
-	#endif
+#endif
 
 	/* Exported constants --------------------------------------------------------*/
 
@@ -60,9 +60,9 @@ extern "C"
 
 	/* Exported functions --------------------------------------------------------*/
 
-	#ifdef __cplusplus
+#ifdef __cplusplus
 }
-	#endif
+#endif
 
 #endif // APPLICATION_H
 /************************ (C) COPYRIGHT DJI Innovations *******END OF FILE******/

@@ -5,8 +5,10 @@
 #include <fmt/format.h>
 #include <asio.hpp>
 #include <chrono>
+#include <functional>
 #include <map>
 #include <random>
+#include <thread>
 
 #include "manager/catalog/client/internal/ProbePacketCodec.h"
 #include "manager/catalog/client/internal/TargetExpander.h"
@@ -124,14 +126,20 @@ namespace plane::catalog::internal
 			}
 			const _STD vector<_STD uint8_t> request { encoded.value() };
 
-			// 逐目标发送
-			bool sent { false };
+			// 逐目标发送 (对齐 java: 目标间 200µs 节流, 降低发送缓冲溢出丢包概率)
+			bool   sent { false };
+			size_t sent_count { 0 };
 			for (const auto& target : targets)
 			{
 				if (cancelled.load(_STD memory_order_acquire))
 				{
 					return this->notFound("探测已取消");
 				}
+				if (sent_count > 0)
+				{
+					_STD this_thread::sleep_for(_STD_CHRONO microseconds { 200 });
+				}
+				++sent_count;
 				_ASIO error_code ec {};
 				const _ASIO ip::udp::endpoint peer { _ASIO ip::make_address(target), static_cast<unsigned short>(config.port) };
 				socket.send_to(_ASIO buffer(request), peer, 0, ec);
@@ -201,45 +209,48 @@ namespace plane::catalog::internal
 					by_key[key] = endpoint;
 					order.push_back(key);
 				}
-				success_by_key[key] = packet.status == 1;
+				// 首个响应包决定成功状态 (对齐 java putIfAbsent)
+				success_by_key.try_emplace(key, packet.status == 1);
 			};
 
-			while (true)
+			// 单次挂起接收 + handler 内续接 (对齐 java 阻塞接收循环);
+			// 窗口结束后显式 cancel + run, 让被取消的 handler 在引用变量仍有效时完成, 不遗留悬垂引用
+			io.restart();
+			_STD vector<_STD uint8_t> buffer(1024);
+			_ASIO ip::udp::endpoint remote {};
+			_STD function<void()> arm {};
+			arm = [&]()
 			{
-				if (cancelled.load(_STD memory_order_acquire))
-				{
-					break;
-				}
-				const auto remain { _STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(deadline - Clock::now()) };
-				if (remain.count() <= 0)
-				{
-					break;
-				}
-
-				io.restart();
-				_STD vector<_STD uint8_t> buffer(1024);
-				_ASIO ip::udp::endpoint remote {};
-				bool					got { false };
 				socket.async_receive_from(
 					_ASIO buffer(buffer),
 					remote,
-					[&](const _ASIO error_code& ec, _STD size_t length)
+					[&](const _ASIO error_code& recv_ec, _STD size_t length)
 					{
-						if (ec)
+						if (recv_ec)
 						{
-							return;
+							return; // 取消或错误: 不再续接
 						}
-						got = true;
-						buffer.resize(length);
-						handlePacket(buffer, remote);
+						const _STD vector<_STD uint8_t> packet { buffer.begin(), buffer.begin() + static_cast<_STD ptrdiff_t>(length) };
+						handlePacket(packet, remote);
+						if (!cancelled.load(_STD memory_order_acquire))
+						{
+							arm();
+						}
 					}
 				);
-				io.run_one_for(remain);
-				if (!got)
-				{
-					break; // 窗口内无更多数据
-				}
+			};
+			arm();
+
+			const auto remain { _STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(deadline - Clock::now()) };
+			if (remain.count() > 0)
+			{
+				io.run_for(remain);
 			}
+
+			_ASIO error_code cancel_ec {};
+			socket.cancel(cancel_ec);
+			io.restart();
+			io.run();
 
 			DiscoveryReport report {};
 			for (const auto& key : order)

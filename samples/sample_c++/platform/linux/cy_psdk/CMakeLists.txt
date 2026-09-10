@@ -152,6 +152,7 @@ find_package (spdlog CONFIG REQUIRED) # vcpkg 中启用 spdlog[fmt], 复用外�
 find_package (nlohmann_json CONFIG REQUIRED)
 find_package (httplib CONFIG REQUIRED)
 find_package (asio CONFIG REQUIRED)
+find_package (boost_beast CONFIG REQUIRED)
 find_package (yaml-cpp CONFIG REQUIRED)
 find_package (pugixml CONFIG REQUIRED)
 find_package (libzip CONFIG REQUIRED)
@@ -189,6 +190,7 @@ target_link_libraries (
 			nlohmann_json::nlohmann_json
 			httplib::httplib
 			asio::asio
+			Boost::beast
 			yaml-cpp::yaml-cpp
 			pugixml::pugixml
 			libzip::zip

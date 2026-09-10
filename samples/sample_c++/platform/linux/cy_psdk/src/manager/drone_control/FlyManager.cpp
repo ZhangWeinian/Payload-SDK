@@ -72,8 +72,8 @@ namespace plane::manager
 	void FlyManager::hover(void)
 	{
 		LOG_INFO("FlyManager: 发送【悬停/中断】命令事件");
-		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::StopWaypointMission,
-																   _STD monostate {});
+		plane::manager::EventManager::getInstance()
+			.publishCommand(plane::manager::EventManager::CommandEvent::StopWaypointMission, _STD monostate {});
 	}
 
 	void FlyManager::land(void)
@@ -91,22 +91,22 @@ namespace plane::manager
 	void FlyManager::flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams)
 	{
 		LOG_INFO("FlyManager: 发送【环绕飞行】命令事件");
-		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::FlyCircleAroundPoint,
-																   circleParams);
+		plane::manager::EventManager::getInstance()
+			.publishCommand(plane::manager::EventManager::CommandEvent::FlyCircleAroundPoint, circleParams);
 	}
 
 	void FlyManager::pauseWaypointMission()
 	{
 		LOG_INFO("FlyManager: 发送【暂停航线】命令事件");
-		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::PauseWaypointMission,
-																   _STD monostate {});
+		plane::manager::EventManager::getInstance()
+			.publishCommand(plane::manager::EventManager::CommandEvent::PauseWaypointMission, _STD monostate {});
 	}
 
 	void FlyManager::resumeWaypointMission()
 	{
 		LOG_INFO("FlyManager: 发送【恢复航线】命令事件");
-		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::ResumeWaypointMission,
-																   _STD monostate {});
+		plane::manager::EventManager::getInstance()
+			.publishCommand(plane::manager::EventManager::CommandEvent::ResumeWaypointMission, _STD monostate {});
 	}
 
 	void FlyManager::rotateGimbal(const plane::protocol::GimbalControlPayload& gimbalParams) const noexcept
@@ -121,8 +121,8 @@ namespace plane::manager
 		LOG_INFO("FlyManager: 发送【云台速度控制】命令事件: 俯仰角={}, 偏航角={}", gimbalParams.FYJ, gimbalParams.PHJ);
 		// 使用 GimbalControlPayload，MS=1 表示速度控制 (根据你的定义调整)
 		// rollSpeed 暂时没有对应字段，如果需要可以扩展 GimbalControlPayload
-		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::RotateGimbalBySpeed,
-																   gimbalParams);
+		plane::manager::EventManager::getInstance()
+			.publishCommand(plane::manager::EventManager::CommandEvent::RotateGimbalBySpeed, gimbalParams);
 	}
 
 	void FlyManager::setCameraZoomFactor(const plane::protocol::ZoomControlPayload& zoomParams) const noexcept
@@ -134,8 +134,8 @@ namespace plane::manager
 	void FlyManager::setCameraStreamSource(const plane::protocol::ZoomControlPayload& zoomParams) const noexcept
 	{
 		LOG_INFO("FlyManager: 发送【切换视频源】命令事件");
-		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::SetCameraStreamSource,
-																   zoomParams);
+		plane::manager::EventManager::getInstance()
+			.publishCommand(plane::manager::EventManager::CommandEvent::SetCameraStreamSource, zoomParams);
 	}
 
 	void FlyManager::sendRawStickData(const plane::protocol::StickDataPayload& stickData) const noexcept
@@ -148,21 +148,23 @@ namespace plane::manager
 	{
 		// YGMS: 0=关闭, 1=启用, 2=启用高级
 		LOG_INFO("FlyManager: 发送【开启虚拟摇杆】命令事件, 高级模式: {}", advancedMode);
-		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::EnableVirtualStick,
-																   plane::protocol::StickModeSwitchPayload { (advancedMode ? 2 : 1) });
+		plane::manager::EventManager::getInstance().publishCommand(
+			plane::manager::EventManager::CommandEvent::EnableVirtualStick,
+			plane::protocol::StickModeSwitchPayload { (advancedMode ? 2 : 1) }
+		);
 	}
 
 	void FlyManager::disableVirtualStick(void) const noexcept
 	{
 		LOG_INFO("FlyManager: 发送【关闭虚拟摇杆】命令事件");
-		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::DisableVirtualStick,
-																   plane::protocol::StickModeSwitchPayload { 0 });
+		plane::manager::EventManager::getInstance()
+			.publishCommand(plane::manager::EventManager::CommandEvent::DisableVirtualStick, plane::protocol::StickModeSwitchPayload { 0 });
 	}
 
 	void FlyManager::sendNedVelocityCommand(const plane::protocol::NedVelocityPayload& velocityParams) const noexcept
 	{
 		LOG_INFO("FlyManager: 发送【NED 速度指令】命令事件");
-		plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::SendNedVelocityCommand,
-																   velocityParams);
+		plane::manager::EventManager::getInstance()
+			.publishCommand(plane::manager::EventManager::CommandEvent::SendNedVelocityCommand, velocityParams);
 	}
 } // namespace plane::manager

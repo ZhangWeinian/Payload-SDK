@@ -2,12 +2,16 @@
 //
 // 自研 catalog 客户端纯逻辑单元测试: targets 展开 + SWMP 探测包编解码。
 
+#include "manager/catalog/client/internal/CatalogIpCache.h"
+#include "manager/catalog/client/internal/JsonCodec.h"
 #include "manager/catalog/client/internal/ProbePacketCodec.h"
 #include "manager/catalog/client/internal/TargetExpander.h"
 
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -136,4 +140,69 @@ TEST(CatalogProbeCodec, WrongMagicIsRejected)
 	_STD vector<std::uint8_t> garbage { 0X00, 0X01, 0X02, 0X03, 0X04, 0X05, 0X06, 0X07, 0X08 };
 	const auto				  decoded { decodeProbePacket(garbage) };
 	EXPECT_FALSE(decoded.isOk());
+}
+
+// ---- 严格解析与 trim 语义 (对齐 java) ----
+
+TEST(CatalogTargetExpander, TrimsSpecsAndRejectsLooseOctet)
+{
+	const auto trimmed { expand({ " 192.168.1.131 " }) };
+	ASSERT_EQ(trimmed.size(), 1u);
+	EXPECT_EQ(trimmed[0], "192.168.1.131");
+
+	// 严格解析: 非纯数字/超范围/非法前缀均为非法 (对齐 java Integer.parseInt)
+	EXPECT_FALSE(expandTargets({ "192.168.1.1x" }, 1024).isOk());
+	EXPECT_FALSE(expandTargets({ "192.168.1.+1" }, 1024).isOk());
+	EXPECT_FALSE(expandTargets({ "192.168.1.256" }, 1024).isOk());
+	EXPECT_FALSE(expandTargets({ "192.168.1.1/33" }, 1024).isOk());
+	EXPECT_FALSE(expandTargets({ "192.168.1.1/a" }, 1024).isOk());
+}
+
+TEST(CatalogJsonCodec, NormalizeVersionTrimsOnly)
+{
+	const auto trimmed { plane::catalog::internal::JsonCodec::normalizeVersion("  1.0.0  ") };
+	ASSERT_TRUE(trimmed.isOk());
+	EXPECT_EQ(trimmed.value(), "1.0.0");
+
+	// 内部空白保留 (对齐 java trim 语义, 不再删除内部字符)
+	const auto inner { plane::catalog::internal::JsonCodec::normalizeVersion("1.0.0 beta") };
+	ASSERT_TRUE(inner.isOk());
+	EXPECT_EQ(inner.value(), "1.0.0 beta");
+
+	EXPECT_FALSE(plane::catalog::internal::JsonCodec::normalizeVersion("   ").isOk());
+}
+
+TEST(CatalogIpCacheTest, SaveAndPrioritizeRoundTrip)
+{
+	using plane::catalog::internal::CatalogIpCache;
+
+	const auto		dir { _STD filesystem::temp_directory_path() / "cy_psdk_catalog_ipcache_test" };
+	const auto		file { dir / "last_catalog_ip" };
+	_STD error_code ec {};
+	_STD			filesystem::remove_all(dir, ec);
+
+	CatalogIpCache	cache { file.string() };
+	cache.save("192.168.1.77");
+
+	ASSERT_TRUE(_STD filesystem::exists(file));
+	{
+		_STD ifstream in { file, _STD ios::binary };
+		_STD string	  line {};
+		_STD		  getline(in, line);
+		EXPECT_EQ(line, "192.168.1.77");
+	}
+
+	const auto reordered { cache.prioritize({ "10.0.0.1", "192.168.1.77", "10.0.0.2" }) };
+	ASSERT_EQ(reordered.size(), 3u);
+	EXPECT_EQ(reordered[0], "192.168.1.77");
+
+	// 非法 IP 不写入
+	cache.save("192.168.1.300");
+	{
+		_STD ifstream in { file, _STD ios::binary };
+		_STD string	  line {};
+		_STD		  getline(in, line);
+		EXPECT_EQ(line, "192.168.1.77");
+	}
+	_STD filesystem::remove_all(dir, ec);
 }

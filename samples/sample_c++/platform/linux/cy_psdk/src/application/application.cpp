@@ -252,10 +252,10 @@ void Application::DjiUser_ApplicationStart()
 	T_DjiReturnCode			  returnCode;
 	T_DjiAircraftInfoBaseInfo aircraftInfoBaseInfo;
 	T_DjiFirmwareVersion	  firmwareVersion = {
-			 .majorVersion	= 1,
-			 .minorVersion	= 0,
-			 .modifyVersion = 0,
-			 .debugVersion	= 0,
+		.majorVersion  = 1,
+		.minorVersion  = 0,
+		.modifyVersion = 0,
+		.debugVersion  = 0,
 	};
 
 	// attention: when the program is hand up ctrl-c will generate the coredump file
@@ -434,7 +434,8 @@ T_DjiReturnCode Application::DjiUser_FillInUserInfo(T_DjiUserInfo* userInfo)
 		!strcmp(USER_BAUD_RATE, "your_baud_rate"))
 	{
 		USER_LOG_ERROR(
-			"Please fill in correct user information to 'samples/sample_c++/platform/linux/manifold2/application/dji_sdk_app_info.h' file.");
+			"Please fill in correct user information to 'samples/sample_c++/platform/linux/manifold2/application/dji_sdk_app_info.h' file."
+		);
 		return DJI_ERROR_SYSTEM_MODULE_CODE_INVALID_PARAMETER;
 	}
 
@@ -522,16 +523,18 @@ T_DjiReturnCode Application::DjiUser_LocalWriteFsInit(const char* path)
 
 	fclose(s_djiLogFileCnt);
 
-	sprintf(filePath,
-			"%s_%04d_%04d%02d%02d_%02d-%02d-%02d.log",
-			path,
-			currentLogFileIndex,
-			localTime->tm_year + 1900,
-			localTime->tm_mon + 1,
-			localTime->tm_mday,
-			localTime->tm_hour,
-			localTime->tm_min,
-			localTime->tm_sec);
+	sprintf(
+		filePath,
+		"%s_%04d_%04d%02d%02d_%02d-%02d-%02d.log",
+		path,
+		currentLogFileIndex,
+		localTime->tm_year + 1900,
+		localTime->tm_mon + 1,
+		localTime->tm_mday,
+		localTime->tm_hour,
+		localTime->tm_min,
+		localTime->tm_sec
+	);
 
 	s_djiLogFile = fopen(filePath, "wb+");
 	if (s_djiLogFile == nullptr)
