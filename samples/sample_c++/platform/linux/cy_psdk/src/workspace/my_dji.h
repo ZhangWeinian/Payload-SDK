@@ -22,7 +22,6 @@
 #include "utils/log_util/Logger.h"
 #include "utils/status_board/StatusBoard.h"
 
-
 #include <atomic>
 #include <chrono>
 #include <csignal>
@@ -380,12 +379,15 @@ namespace plane::my_dji
 			plane::utils::Logger::getInstance().setLocalLogFileLevel(_SPDLOG level::info);
 		}
 
+		// 注意: resolveCatalogServiceId() 内部要读取 PlaneStateStore 快照, 必须在 update() 加锁之前解析;
+		// 在 update() 回调内调用会因 std::mutex 不可重入而自锁 (曾导致板端启动卡死, 无任何后续日志)
+		const _STD string resolved_agent_identifier { plane::utils::DeviceIdentity::resolveCatalogServiceId() };
 		plane::domain::PlaneStateStore::getInstance().update(
-			[&config](plane::domain::PlaneStateDataClass& st)
+			[&config, &resolved_agent_identifier](plane::domain::PlaneStateDataClass& st)
 			{
 				// 设备标识: 配置 plane.code 优先, 否则等待 PSDK 真实序列号 (由 PSDKAdapter 读取后写入);
 				// 序列号不做任何伪造 (仅 PSDK 来源)
-				st.swarm_agent_identifier = plane::utils::DeviceIdentity::resolveCatalogServiceId();
+				st.swarm_agent_identifier = resolved_agent_identifier;
 				st.app_version			  = config.getCatalogVersion();
 			}
 		);

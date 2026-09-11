@@ -11,6 +11,8 @@ namespace plane::utils
 {
 	_STD string DeviceIdentity::resolveDeviceCode(void) noexcept
 	{
+		// 警告: 本函数可能读取 PlaneStateStore 快照 (plane.code 为空时);
+		// 严禁在 PlaneStateStore::update() 的回调内调用 (std::mutex 不可重入, 会自锁)
 		// 1) 显式配置优先 (部署方填写的真实设备标识)
 		if (const auto& configured { plane::config::ConfigManager::getInstance().getPlaneCode() }; !configured.empty())
 		{
