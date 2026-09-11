@@ -7,8 +7,7 @@ build/
 # vcpkg manifest 模式: 源码根下 CLI 安装目录 / 各构建树内安装目录
 vcpkg_installed/
 
-# VS Code 配置
-# .vscode/
+# codegraph 相关
 .codegraph/
 
 # 其他编译产物
@@ -28,4 +27,5 @@ vcpkg_installed/
 *.swp
 .DS_Store
 
-artifacts/
+# 和平台/环境相关的，不具备移植性的文件/文件夹
+rsync.sh

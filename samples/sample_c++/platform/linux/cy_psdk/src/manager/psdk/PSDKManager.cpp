@@ -4,6 +4,7 @@
 
 #include "application.hpp"
 #include <dji_camera_manager.h>
+#include <dji_fc_subscription.h>
 #include <dji_flight_controller.h>
 #include <dji_hms_manager.h>
 #include <dji_logger.h>
@@ -104,6 +105,13 @@ namespace plane::manager
 		{
 			LOG_INFO("--- PSDK 底层服务初始化开始 ---");
 
+			// 重置各模块初始化标志, 防止上次未完整清理的残留状态影响本次启动
+			this->hms_initialized_			   = false;
+			this->camera_initialized_		   = false;
+			this->fc_initialized_			   = false;
+			this->fc_subscription_initialized_ = false;
+			this->adapter_subscribed_		   = false;
+
 			// 重定向 PSDK 日志到 spdlog (幂等; 入口通常已提前调用, 此处兜底)
 			this->redirectPsdkLogs();
 
@@ -117,7 +125,11 @@ namespace plane::manager
 			{
 				LOG_WARN("HMS 模块初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
 			}
-			LOG_INFO("HMS 模块初始化完成");
+			else
+			{
+				this->hms_initialized_ = true;
+				LOG_INFO("HMS 模块初始化完成");
+			}
 
 			// 初始化相机模块 (读取相机固件/激光测距等; 无相机时失败仅告警)
 			if (_DJI T_DjiReturnCode returnCode { _DJI DjiCameraManager_Init() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
@@ -126,7 +138,34 @@ namespace plane::manager
 			}
 			else
 			{
+				this->camera_initialized_ = true;
 				LOG_INFO("相机模块初始化完成");
+			}
+
+			// 初始化飞控模块 (必须先初始化再调用任何 DjiFlightController_* API, 否则模块未就绪会崩溃)
+			// ridInfo: 官方要求上报 RID 起降点信息; 当前使用与官方样例一致的占位值, TODO 后续接入实际起降点
+			_DJI T_DjiFlightControllerRidInfo ridInfo {};
+			ridInfo.latitude  = 22.542812;
+			ridInfo.longitude = 113.958902;
+			ridInfo.altitude  = 10;
+			if (_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_Init(ridInfo) };
+				returnCode != _DJI	 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			{
+				LOG_ERROR("飞控模块初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+				return false;
+			}
+			this->fc_initialized_ = true;
+			LOG_INFO("飞控模块初始化完成");
+
+			// 初始化数据订阅模块 (官方要求: 订阅任何主题之前先初始化)
+			if (_DJI T_DjiReturnCode returnCode { _DJI DjiFcSubscription_Init() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			{
+				LOG_WARN("数据订阅模块初始化失败 (订阅可能受限), 错误: {}", plane::utils::convertDjiError(returnCode));
+			}
+			else
+			{
+				this->fc_subscription_initialized_ = true;
+				LOG_INFO("数据订阅模块初始化完成");
 			}
 
 			// 启动 PSDK 适配器
@@ -135,6 +174,7 @@ namespace plane::manager
 				LOG_ERROR("PSDK 适配器订阅遥测数据失败！");
 				return false;
 			}
+			this->adapter_subscribed_ = true;
 			LOG_INFO("PSDK 适配器订阅遥测数据完成");
 
 			// 根据配置决定是否禁用遥控器检测
@@ -180,20 +220,49 @@ namespace plane::manager
 
 		LOG_INFO("--- PSDK 底层服务反初始化开始 ---");
 
-		// 停止 PSDK 适配器
-		plane::manager::PSDKAdapter::getInstance().unsubscribeTelemetryData();
-		LOG_INFO("PSDK 适配器清理完成");
-
-		// 反初始化 HMS 模块
-		if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		// 仅当遥测订阅已成功建立时才清理 PSDK 适配器 (对未初始化模块调用反注册会崩溃)
+		if (this->adapter_subscribed_)
 		{
-			LOG_WARN("HMS 模块反初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+			plane::manager::PSDKAdapter::getInstance().unsubscribeTelemetryData();
+			this->adapter_subscribed_ = false;
+			LOG_INFO("PSDK 适配器清理完成");
 		}
 
-		// 反初始化相机模块
-		if (_DJI T_DjiReturnCode returnCode { _DJI DjiCameraManager_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		// 仅反初始化已成功初始化的模块 (对未就绪模块调用 SDK 接口可能崩溃)
+		if (this->fc_subscription_initialized_)
 		{
-			LOG_WARN("相机模块反初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+			if (_DJI T_DjiReturnCode returnCode { _DJI DjiFcSubscription_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			{
+				LOG_WARN("数据订阅模块反初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+			}
+			this->fc_subscription_initialized_ = false;
+		}
+
+		if (this->fc_initialized_)
+		{
+			if (_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			{
+				LOG_WARN("飞控模块反初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+			}
+			this->fc_initialized_ = false;
+		}
+
+		if (this->hms_initialized_)
+		{
+			if (_DJI T_DjiReturnCode returnCode { _DJI DjiHmsManager_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			{
+				LOG_WARN("HMS 模块反初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+			}
+			this->hms_initialized_ = false;
+		}
+
+		if (this->camera_initialized_)
+		{
+			if (_DJI T_DjiReturnCode returnCode { _DJI DjiCameraManager_DeInit() }; returnCode != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			{
+				LOG_WARN("相机模块反初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+			}
+			this->camera_initialized_ = false;
 		}
 
 		LOG_INFO("DJI PSDK Application 已反初始化");

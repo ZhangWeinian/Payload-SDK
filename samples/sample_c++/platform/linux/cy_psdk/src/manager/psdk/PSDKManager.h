@@ -34,5 +34,12 @@ namespace plane::manager
 		PSDKManager& operator=(const PSDKManager&) = delete;
 
 		_STD atomic<bool> running_ { false };
+
+		// 各模块初始化状态: 仅当对应模块初始化成功时才允许反初始化, 避免对未就绪模块调用 SDK 接口导致崩溃
+		bool hms_initialized_ { false };
+		bool camera_initialized_ { false };
+		bool fc_initialized_ { false };
+		bool fc_subscription_initialized_ { false };
+		bool adapter_subscribed_ { false };
 	};
 } // namespace plane::manager

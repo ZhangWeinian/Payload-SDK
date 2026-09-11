@@ -25,6 +25,15 @@ fi
 chmod +x "$DIR/cy_psdk" 2>/dev/null || true
 chmod +x "$DIR"/libs/ld-linux-* 2>/dev/null || true
 
+# 崩溃转储: 放开 core 大小限制, 并尽力让内核把 core 直接落到交付目录 dumps/。
+#   - core_pattern 是系统级设置 (重启后恢复), 改动仅为方便收取本程序转储;
+#   - 无权限或写入失败时静默跳过; 程序内还会对 RLIMIT_CORE 兜底。
+ulimit -c unlimited 2>/dev/null || true
+mkdir -p "$DIR/dumps" 2>/dev/null || true
+if [ -w /proc/sys/kernel/core_pattern ]; then
+	echo "$DIR/dumps/core.%t.%p" > /proc/sys/kernel/core_pattern 2>/dev/null || true
+fi
+
 # aarch64 / x86_64 打包解释器二选一
 for LOADER in \
 	"$DIR/libs/ld-linux-aarch64.so.1" \
