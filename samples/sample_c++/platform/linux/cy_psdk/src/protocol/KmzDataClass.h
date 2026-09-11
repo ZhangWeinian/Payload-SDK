@@ -50,7 +50,7 @@ namespace plane::protocol
 		{
 			_STD string		flyToWaylineMode { "safely" };
 			_STD string		finishAction { "noAction" };
-			_STD string		exitOnRCLost { "goContinue" };
+			_STD string		exitOnRCLost { "executeLostAction" };
 			double			takeOffSecurityHeight { 20.0 };
 			double			globalTransitionalSpeed {};
 			WpmlPayloadInfo payloadInfo {};
@@ -284,6 +284,7 @@ namespace plane::protocol
 				node.append_child("wpml:flyToWaylineMode").text().set(flyToWaylineMode);
 				node.append_child("wpml:finishAction").text().set(finishAction);
 				node.append_child("wpml:exitOnRCLost").text().set(exitOnRCLost);
+				node.append_child("wpml:executeRCLostAction").text().set(executeRCLostAction);
 				node.append_child("wpml:takeOffSecurityHeight").text().set(takeOffSecurityHeight);
 				node.append_child("wpml:globalTransitionalSpeed").text().set(globalTransitionalSpeed);
 
@@ -372,6 +373,7 @@ namespace plane::protocol
 		struct WpmlPlacemark final: public kmz::PublicWpmlPlacemark
 		{
 			double height { 100.0 };
+			double gimbalPitchAngle { 0 };
 			double ellipsoidHeight { 100.0 };
 			int	   useGlobalHeight { 1 };
 			int	   useGlobalSpeed { 1 };
@@ -389,6 +391,7 @@ namespace plane::protocol
 				node.append_child("wpml:useGlobalSpeed").text().set(useGlobalSpeed);
 				node.append_child("wpml:useGlobalHeadingParam").text().set(useGlobalHeadingParam);
 				node.append_child("wpml:useGlobalTurnParam").text().set(useGlobalTurnParam);
+				node.append_child("wpml:gimbalPitchAngle").text().set(gimbalPitchAngle);
 				node.append_child("wpml:useStraightLine").text().set(useStraightLine);
 				node.append_child("wpml:isRisky").text().set(isRisky);
 			}
@@ -402,9 +405,9 @@ namespace plane::protocol
 			double						   autoFlightSpeed { 10.0 };
 			double						   globalHeight { 100.0 };
 			int							   caliFlightEnable { 0 };
-			_STD string					   gimbalPitchMode { "manual" };
+			_STD string					   gimbalPitchMode { "usePointSetting" };
 			WpmlGlobalWaypointHeadingParam globalWaypointHeadingParam {};
-			_STD string					   globalWaypointTurnMode { "toPointAndPassWithContinuityCurvature" };
+			_STD string					   globalWaypointTurnMode { "toPointAndStopWithDiscontinuityCurvature" };
 			int							   globalUseStraightLine { 1 };
 			WpmlPayloadParam			   payloadParam {};
 			_STD vector<WpmlPlacemark> placemarks {};
@@ -460,6 +463,7 @@ namespace plane::protocol
 
 		struct KmlMissionConfig final: public kmz::PublicKmlMissionConfig
 		{
+			_STD string	  executeRCLostAction { "goBack" };
 			WpmlDroneInfo droneInfo {};
 
 			void		  toXml(_PUGI xml_node& parent) const
@@ -468,6 +472,7 @@ namespace plane::protocol
 				node.append_child("wpml:flyToWaylineMode").text().set(flyToWaylineMode);
 				node.append_child("wpml:finishAction").text().set(finishAction);
 				node.append_child("wpml:exitOnRCLost").text().set(exitOnRCLost);
+				node.append_child("wpml:executeRCLostAction").text().set(executeRCLostAction);
 				node.append_child("wpml:takeOffSecurityHeight").text().set(takeOffSecurityHeight);
 				node.append_child("wpml:globalTransitionalSpeed").text().set(globalTransitionalSpeed);
 				droneInfo.toXml(node);

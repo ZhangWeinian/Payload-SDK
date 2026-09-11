@@ -15,7 +15,7 @@ catalog:
 
 # 设备标识与 RID 起降点 (可选):
 # plane:
-#     code: <设备标识>         # 未配置时使用 PSDK 飞控序列号 (未取得前目录注册等待, 不伪造)
+#     code: <设备标识>         # 未配置时使用 PSDK 飞控序列号
 #     takeoff_lat: 22.5428    # RID 起降点纬度 (度; 未配置时 RID 上报 0 并告警)
 #     takeoff_lon: 113.9589   # RID 起降点经度 (度)
 #     takeoff_alt: 10         # RID 起降点海拔 (米)

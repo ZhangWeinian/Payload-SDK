@@ -93,14 +93,12 @@ namespace plane::protocol
 
 	struct Waypoint
 	{
-		double JD {};									   // 经度
-		double WD {};									   // 维度
-		double GD {};									   // 高度
-		double SD {};									   // 速度
-		_STD optional<double> YTFYJ { -90 };			   // 云台俯仰角
-		_STD optional<double> PHJ {};					   // 偏航角
-		_STD optional<bool> SFTY {};					   // 是否飞越
-		_STD optional<_STD vector<WaypointAction>> DZJ {}; // 动作集
+		double JD {};			// 经度
+		double WD {};			// 维度
+		double GD {};			// 高度
+		double SD { 5.0 };		// 速度
+		double YTFYJ { -90.0 }; // 云台俯仰角
+		int	   PHJ {};			// 偏航角
 	};
 
 	struct WaypointPayload
@@ -295,7 +293,7 @@ namespace plane::protocol
 		}
 	}
 
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Waypoint, JD, WD, GD, SD, YTFYJ, PHJ, SFTY, DZJ);
+	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Waypoint, JD, WD, GD, SD, YTFYJ, PHJ);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(WaypointPayload, HDJ, RWID);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(TakeoffPayload, MBWD, MBJD, MBGD, FHMS, FHGD, ZDMSD, AQJC);
 	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ControlStrategyPayload, YTJSCL);

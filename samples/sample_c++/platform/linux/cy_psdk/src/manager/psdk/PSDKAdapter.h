@@ -299,6 +299,7 @@ namespace plane::manager
 
 		mutable _STD mutex payload_mutex_ {};
 		_STD mutex		   psdk_command_mutex_ {};
+		_STD mutex		   mission_state_mutex_ {};
 		_STD mutex		   hms_mutex_ {};
 		_STD thread		   acquisition_thread_ {};
 		_STD thread		   command_processing_thread_ {};

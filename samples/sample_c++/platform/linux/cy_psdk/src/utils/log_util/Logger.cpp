@@ -102,7 +102,23 @@ namespace plane::utils
 				_STD string psdk_time { matches[1].str() };
 				_STD string module { matches[2].str() };
 				_STD string level_str { matches[3].str() };
-				_STD string file_line { matches[4].str() };
+
+				// SDK 的 "文件:行号" (如 dji_command.c:910): 拆分为文件名与行号,
+				// 作为 spdlog 源位置输出, 与其他日志列对齐 (避免空源位置显示 "[:]")
+				_STD string file_name { matches[4].str() };
+				int			file_number { 0 };
+				if (const auto colon_pos { file_name.rfind(':') }; colon_pos != _STD string::npos)
+				{
+					try
+					{
+						file_number = _STD stoi(file_name.substr(colon_pos + 1));
+					}
+					catch (...)
+					{
+						file_number = 0;
+					}
+					file_name.resize(colon_pos);
+				}
 				_STD string content { matches[5].str() };
 
 				// 映射日志级别
@@ -120,7 +136,7 @@ namespace plane::utils
 					log_level = _SPDLOG level::debug;
 				}
 
-				this->logger_->log(log_level, "[PSDK:{}] {} ({})", module, content, file_line);
+				this->logger_->log(_SPDLOG source_loc { file_name.c_str(), file_number, "" }, log_level, "[PSDK:{}] {}", module, content);
 			}
 			else
 			{

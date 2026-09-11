@@ -411,7 +411,7 @@ namespace plane::domain
 		_STD string product_firmware_version { "" }; // 飞机固件版本
 		_STD string rc_firmware_version { "" };		 // 遥控器固件版本
 		_STD string camera_firmware_version { "" };	 // 相机固件版本
-		_STD string serial_number { "" };			 // 飞控序列号
+		_STD string serial_number { "" };			 // 飞机序列号 (飞控 SN 优先; 不可得时为 SDK CC SN 兜底)
 
 		// 高斯坐标转换设置
 		CentralMeridianMode coordinate_transformation_mode { CentralMeridianMode::TARGET_NORMALIZED };

@@ -1156,6 +1156,25 @@ namespace plane::manager
 		// 记录当前航点 (供采集循环填充 SBZT 的 DQHD)
 		this->mission_current_waypoint_.store(static_cast<int>(missionState.currentWaypointIndex), _STD memory_order_release);
 
+		// 任务结束判定: 由活动态回到 IDLE 视为本次航线结束, 通知 waypointAsync 解除等待
+		{
+			_STD lock_guard<_STD mutex> lock(this->mission_state_mutex_);
+			const bool					was_active { this->last_mission_state_.state != _DJI DJI_WAYPOINT_V3_MISSION_STATE_IDLE };
+			this->last_mission_state_ = missionState;
+
+			if (was_active && missionState.state == _DJI DJI_WAYPOINT_V3_MISSION_STATE_IDLE && this->mission_completion_promise_)
+			{
+				try
+				{
+					this->mission_completion_promise_->set_value(_DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS);
+				}
+				catch (const _STD future_error& e)
+				{
+					LOG_WARN("通知航线任务完成失败: {}", e.what());
+				}
+			}
+		}
+
 		plane::manager::EventManager::getInstance().publishStatus(plane::manager::EventManager::PSDKEvent::MissionStateChanged, missionState);
 	}
 
@@ -1169,9 +1188,10 @@ namespace plane::manager
 	{
 		// 处理航线任务动作状态回调
 		LOG_INFO(
-			"[航线动作状态] 状态: {}, 航点: {}, 动作组: {}, 动作ID: {}",
+			"[航线动作状态] 状态: {}, 航点: {}, 航线ID: {}, 动作组: {}, 动作ID: {}",
 			_UNNAMED djiActionStateToString(actionState.state),
 			actionState.currentWaypointIndex,
+			actionState.wayLineId,
 			actionState.actionGroupId,
 			actionState.actionId
 		);
@@ -1465,7 +1485,7 @@ namespace plane::manager
 
 				// 加锁初始化 Promise
 				{
-					_STD unique_lock<_STD mutex>			 lock(this->psdk_command_mutex_);
+					_STD unique_lock<_STD mutex>			 lock(this->mission_state_mutex_);
 					this->mission_completion_promise_ = _STD make_unique<_STD promise<_DJI T_DjiReturnCode>>();
 					this->last_mission_state_		  = {};
 				}
@@ -1499,36 +1519,61 @@ namespace plane::manager
 						throw return_code;
 					}
 
-					// 上传 KMZ 数据
+					// 上传 KMZ 数据 (失败最多重试 3 次, 与 msdk 行为对齐)
 					LOG_INFO("正在上传 KMZ 数据");
-					if (return_code = _DJI	DjiWaypointV3_UploadKmzFile(data.data(), data.size());
-						return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					for (int attempt { 1 }; attempt <= 3; ++attempt)
 					{
-						LOG_ERROR("上传 KMZ 数据失败: {}", plane::utils::convertDjiError(return_code));
+						return_code = _DJI DjiWaypointV3_UploadKmzFile(data.data(), static_cast<_DJI uint32_t>(data.size()));
+						if (return_code == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+						{
+							break;
+						}
+
+						LOG_WARN("KMZ 数据上传失败 (第 {} 次): {}", attempt, plane::utils::convertDjiError(return_code));
+						if (attempt < 3)
+						{
+							_STD this_thread::sleep_for(_STD_CHRONO milliseconds(500));
+						}
+					}
+					if (return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					{
+						LOG_ERROR("上传 KMZ 数据最终失败: {}", plane::utils::convertDjiError(return_code));
 						throw return_code;
 					}
 
-					// 启动航线任务
-					LOG_INFO("启动航线任务");
-					if (return_code = _DJI	DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_START);
-						return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+					// ================= 临时阻拦 (TODO: 飞机具备起飞条件后移除本开关) =================
+					// 当前飞机硬件尚不具备真正起飞条件: KMZ 上传成功即视为执行成功, 暂不启动航线、不等待执行。
+					// 恢复真机起飞: 将 kEnableMissionLaunch 改为 true 即可 (启动与等待逻辑原样保留在下方)。
+					constexpr bool kEnableMissionLaunch { false };
+					if constexpr (kEnableMissionLaunch)
 					{
-						LOG_ERROR("启动航线任务失败: {}", plane::utils::convertDjiError(return_code));
-						throw return_code;
-					}
+						// 启动航线任务
+						LOG_INFO("启动航线任务");
+						if (return_code = _DJI	DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_START);
+							return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+						{
+							LOG_ERROR("启动航线任务失败: {}", plane::utils::convertDjiError(return_code));
+							throw return_code;
+						}
 
-					// 阻塞等待任务完成, 等待回调函数通知 "IDLE" 或 "FINISHED" , 至多等待 60 分钟
-					LOG_INFO("航线任务已启动，等待完成");
-					if (_STD future_status status { mission_future.wait_for(_STD_CHRONO minutes(60)) }; status == _STD future_status::ready)
-					{
-						return_code = mission_future.get();
-						LOG_INFO("航线任务结束 (回调确认: {})", plane::utils::convertDjiError(return_code));
+						// 阻塞等待任务完成, 等待 missionStateCallback 通知任务结束 (回到 IDLE), 至多等待 60 分钟
+						LOG_INFO("航线任务已启动，等待完成");
+						if (_STD future_status status { mission_future.wait_for(_STD_CHRONO minutes(60)) }; status == _STD future_status::ready)
+						{
+							return_code = mission_future.get();
+							LOG_INFO("航线任务结束 (回调确认: {})", plane::utils::convertDjiError(return_code));
+						}
+						else
+						{
+							LOG_ERROR("航线任务超时或异常！尝试发送停止指令");
+							_DJI			   DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_STOP);
+							return_code = _DJI DJI_ERROR_SYSTEM_MODULE_CODE_TIMEOUT;
+						}
 					}
 					else
 					{
-						LOG_ERROR("航线任务超时或异常！尝试发送停止指令");
-						_DJI			   DjiWaypointV3_Action(_DJI DJI_WAYPOINT_V3_ACTION_STOP);
-						return_code = _DJI DJI_ERROR_SYSTEM_MODULE_CODE_TIMEOUT;
+						LOG_WARN("【临时阻拦】KMZ 上传成功, 已跳过启动与执行等待, 直接视为航线执行成功 (飞机硬件暂不具备起飞条件)");
+						return_code = _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 					}
 
 					// 注销回调函数
@@ -1557,7 +1602,7 @@ namespace plane::manager
 
 				// 清理 Promise
 				{
-					_STD lock_guard<_STD mutex> re_lock(this->psdk_command_mutex_);
+					_STD lock_guard<_STD mutex> re_lock(this->mission_state_mutex_);
 					this->mission_completion_promise_.reset();
 				}
 

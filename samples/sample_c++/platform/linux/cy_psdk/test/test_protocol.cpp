@@ -34,32 +34,29 @@ TEST(ProtocolDataClass, WaypointDefaultsForMissingFields)
 	EXPECT_DOUBLE_EQ(parsed.JD, 1.5);
 	EXPECT_DOUBLE_EQ(parsed.WD, 2.5);
 	EXPECT_DOUBLE_EQ(parsed.GD, 10.0);
-	EXPECT_DOUBLE_EQ(parsed.SD, 0.0);	   // 未提供 -> 默认 0
-	EXPECT_TRUE(parsed.YTFYJ.has_value()); // NSDMI 默认 {-90} -> 有值
-	EXPECT_DOUBLE_EQ(parsed.YTFYJ.value(), -90.0);
-	EXPECT_FALSE(parsed.PHJ.has_value());  // optional 无 NSDMI -> 缺字段为无值
+	EXPECT_DOUBLE_EQ(parsed.SD, 5.0);	   // 未提供 -> 默认 5.0
+	EXPECT_DOUBLE_EQ(parsed.YTFYJ, -90.0); // 未提供 -> 默认 -90.0
+	EXPECT_EQ(parsed.PHJ, 0);
+	// PHJ 为 int, 缺字段时取 NSDMI 默认值 0
 }
 
 TEST(ProtocolDataClass, WaypointFullRoundTrip)
 {
 	Waypoint w {};
-	w.JD	= 116.3912;
-	w.WD	= 39.9075;
-	w.GD	= 120.0;
-	w.SD	= 6.5;
-	w.YTFYJ = -30.0;
-	w.DZJ	= _STD vector<WaypointAction> {
-		WaypointAction { .LX = 1, .CS = 42 }
-	};
+	w.JD			= 116.3912;
+	w.WD			= 39.9075;
+	w.GD			= 120.0;
+	w.SD			= 6.5;
+	w.YTFYJ			= -30.0;
+	w.PHJ			= 45;
 
 	n_json	   j	= w;
 	const auto back = j.get<Waypoint>();
 
 	EXPECT_DOUBLE_EQ(back.JD, 116.3912);
-	EXPECT_DOUBLE_EQ(back.YTFYJ.value(), -30.0);
-	ASSERT_TRUE(back.DZJ.has_value());
-	ASSERT_EQ(back.DZJ->size(), 1u);
-	EXPECT_EQ(back.DZJ->front().CS, 42);
+	EXPECT_DOUBLE_EQ(back.YTFYJ, -30.0);
+	EXPECT_DOUBLE_EQ(back.SD, 6.5);
+	EXPECT_EQ(back.PHJ, 45);
 }
 
 TEST(ProtocolDataClass, NetworkMessageOmitsEmptyOptionalPayload)

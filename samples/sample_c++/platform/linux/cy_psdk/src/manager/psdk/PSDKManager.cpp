@@ -11,10 +11,14 @@
 #include <dji_platform.h>
 
 #include "config/ConfigManager.h"
+#include "manager/plane_state/PlaneStateStore.h"
 #include "manager/psdk/PSDKAdapter.h"
 #include "utils/DjiErrorUtils.h"
 #include "utils/log_util/Logger.h"
 
+#include <fmt/format.h>
+
+#include <string_view>
 #include <chrono>
 #include <string>
 
@@ -22,6 +26,62 @@ namespace plane::manager
 {
 	namespace
 	{
+		// 从 PSDK 日志行解析 SDK CC 序列号 ("Get DJI SDK CC serial num: <SN> (...)" 格式)。
+		// 该行由飞控在鉴权阶段主动上报, 基础权限下同样可得, 作为设备标识的兜底真实来源
+		_NODISCARD _STD string parseSdkCcSerial(_STD string_view message) noexcept
+		{
+			constexpr _STD string_view kMarker { "Get DJI SDK CC serial num:" };
+			const auto				   position { message.find(kMarker) };
+			if (position == _STD string_view::npos)
+			{
+				return {};
+			}
+
+			auto begin { position + kMarker.size() };
+			while (begin < message.size() && message[begin] == ' ')
+			{
+				++begin;
+			}
+			auto end { begin };
+			while (end < message.size() && message[end] != ' ' && message[end] != '(' && message[end] != '\r' && message[end] != '\n')
+			{
+				++end;
+			}
+			return _STD string { message.substr(begin, end - begin) };
+		}
+
+		// 截取 SDK CC 序列号写入域模型 (仅首次记录; 飞控真序列号读取成功时会覆盖为更高优先级来源)
+		void captureSdkCcSerialIfPresent(_STD string_view message) noexcept
+		{
+			static _STD atomic<bool> captured { false };
+			if (captured.load(_STD memory_order_acquire))
+			{
+				return;
+			}
+
+			const _STD string cc_serial { parseSdkCcSerial(message) };
+			if (cc_serial.empty())
+			{
+				return;
+			}
+
+			captured.store(true, _STD memory_order_release);
+			plane::domain::PlaneStateStore::getInstance().update(
+				[&cc_serial](plane::domain::PlaneStateDataClass& st)
+				{
+					if (st.serial_number.empty())
+					{
+						st.serial_number = cc_serial;
+					}
+					if (st.swarm_agent_identifier.empty())
+					{
+						st.swarm_agent_identifier = _FMT format("swarm.agent.{}", cc_serial);
+					}
+				}
+			);
+			LOG_INFO("已从 PSDK 鉴权日志获取 SDK CC 序列号: {} (设备标识兜底来源)", cc_serial);
+		}
+
 		// 将 PSDK 日志重定向到 spdlog
 		_DJI T_DjiReturnCode psdkLogRedirectCallback(const _STD uint8_t* data, _STD uint16_t dataLen)
 		{
@@ -30,6 +90,9 @@ namespace plane::manager
 			{
 				message.pop_back();
 			}
+
+			captureSdkCcSerialIfPresent(message); // SDK CC 序列号 (设备标识兜底)
+
 			plane::utils::Logger::getInstance().PSDKLogRedirection(message);
 			return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 		}
