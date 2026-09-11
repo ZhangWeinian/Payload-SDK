@@ -24,7 +24,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "application.hpp"
-#include "define.h" // cy_psdk 全局命名宏 (_STD / _CSTD / _DJI 等)
+#include "../manager/psdk/PSDKManager.h" // PSDK 日志重定向到 spdlog
+#include "define.h"						 // cy_psdk 全局命名宏 (_STD / _CSTD / _DJI 等)
 #include "dji_sdk_app_info.h"
 #include "dji_sdk_config.h"
 #include <dji_aircraft_info.h>
@@ -241,6 +242,9 @@ void Application::DjiUser_SetupEnvironment()
 	{
 		throw _STD runtime_error("Register osal filesystem handler error.");
 	}
+
+	// 将 PSDK 日志重定向到 spdlog (幂等; 平台注册完成之后, DjiCore_Init 之前, 与官方 AddConsole 位置一致)
+	plane::manager::PSDKManager::getInstance().redirectPsdkLogs();
 
 	// if (DjiUser_LocalWriteFsInit(DJI_LOG_PATH) != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
 	//   throw _STD runtime_error("File system init error.");

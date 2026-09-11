@@ -338,7 +338,7 @@ namespace plane::manager
 
 		const _STD size_t	   limit { text.size() < kPayloadLogLimit ? text.size() : kPayloadLogLimit };
 		const _STD string_view preview { text.data(), limit };
-		LOG_INFO("WebSocket 数据 [{}] ({} 字节): {}{}", type, text.size(), preview, text.size() > kPayloadLogLimit ? " ...(已截断)" : "");
+		LOG_DEBUG("WebSocket 数据 [{}] ({} 字节): {}{}", type, text.size(), preview, text.size() > kPayloadLogLimit ? " ...(已截断)" : "");
 	}
 
 	// ============================ 保活 ============================

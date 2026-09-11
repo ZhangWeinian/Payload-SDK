@@ -40,6 +40,31 @@ namespace plane::manager
 		return instance;
 	}
 
+	void PSDKManager::redirectPsdkLogs(void) noexcept
+	{
+		static _STD atomic<bool> redirected { false };
+		if (redirected.load())
+		{
+			return;
+		}
+
+		const auto& config { plane::config::ConfigManager::getInstance() };
+
+		if (_DJI T_DjiLoggerConsole console = { .func			= _UNNAMED psdkLogRedirectCallback,
+												.consoleLevel	= static_cast<uint8_t>(config.getPsdkLogLevel()),
+												.isSupportColor = true };
+			_DJI DjiLogger_AddConsole(&console) != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		{
+			// 失败不置位: 允许平台就绪后再次尝试
+			LOG_WARN("重定向 PSDK 日志失败。可能会看到重复或格式不一的日志");
+		}
+		else
+		{
+			redirected.store(true);
+			LOG_INFO("PSDK 日志已成功重定向到 spdlog");
+		}
+	}
+
 	PSDKManager::PSDKManager(void) noexcept = default;
 
 	PSDKManager::~PSDKManager(void) noexcept
@@ -79,18 +104,8 @@ namespace plane::manager
 		{
 			LOG_INFO("--- PSDK 底层服务初始化开始 ---");
 
-			// 重定向 PSDK 日志到 spdlog
-			if (_DJI T_DjiLoggerConsole console = { .func			= _UNNAMED psdkLogRedirectCallback,
-													.consoleLevel	= static_cast<uint8_t>(config.getPsdkLogLevel()),
-													.isSupportColor = true };
-				_DJI DjiLogger_AddConsole(&console) != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
-			{
-				LOG_WARN("重定向 PSDK 日志失败。可能会看到重复或格式不一的日志");
-			}
-			else
-			{
-				LOG_INFO("PSDK 日志已成功重定向到 spdlog ");
-			}
+			// 重定向 PSDK 日志到 spdlog (幂等; 入口通常已提前调用, 此处兜底)
+			this->redirectPsdkLogs();
 
 			LOG_INFO("DJI PSDK Application 初始化完成");
 

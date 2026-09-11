@@ -18,6 +18,9 @@ namespace plane::manager
 	public:
 		static PSDKManager& getInstance(void) noexcept;
 
+		// 将 PSDK 日志重定向到 spdlog (幂等); 建议在 DjiCore_Init 之前调用, 以便 CORE 初始化阶段的日志可见
+		void redirectPsdkLogs(void) noexcept;
+
 		// 启动 PSDK 底层服务，这是一个幂等的操作
 		_NODISCARD bool start(int argc, char* argv[]);
 

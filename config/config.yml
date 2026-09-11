@@ -1,8 +1,8 @@
 features:
-    enable_full_psdk: false # 启用完整 PSDK 作业流程
+    enable_full_psdk: true # 启用完整 PSDK 作业流程
     enable_status_board: true # 启用终端状态板 (连接状态等关键信息固定显示, 不被日志淹没)
     enable_trace_log: true # 启用更详细日志
-    set_psdk_log_level: 1 # 设置 PSDK 日志级别, 0=ERROR , 1=WARN , 2=INFO , 3=DEBUG
+    set_psdk_log_level: 2 # 设置 PSDK 日志级别, 0=ERROR , 1=WARN , 2=INFO , 3=DEBUG
     skip_rc: false # 尝试跳过遥控器检测
     save_kmz_file: true # 保存 KMZ 文件到本地
 

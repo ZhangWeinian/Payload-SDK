@@ -119,7 +119,8 @@ namespace plane::my_dji
 			{
 				LOG_INFO("初始化 PSDK CORE , 请等待");
 				PSDK_application_ptr_ = _STD make_unique<_DJI Application>(argc, argv);
-				_STD						 this_thread::sleep_for(_STD_CHRONO seconds(5));
+				LOG_INFO("PSDK CORE 初始化完成");
+				_STD this_thread::sleep_for(_STD_CHRONO seconds(5));
 			}
 			catch (const _STD exception& e)
 			{
