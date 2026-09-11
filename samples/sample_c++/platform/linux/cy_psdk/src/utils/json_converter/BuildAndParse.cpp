@@ -2,8 +2,8 @@
 
 #include "utils/json_converter/BuildAndParse.h"
 
-#include "config/ConfigManager.h"
 #include "manager/mqtt/handler/MessageHandler.h"
+#include "utils/device_identity/DeviceIdentity.h"
 #include "utils/log_util/Logger.h"
 
 #include <fmt/chrono.h>
@@ -32,8 +32,8 @@ namespace plane::utils
 
 	_STD string JsonConverter::buildStatusReportJson(const plane::protocol::StatusPayload& payload) noexcept
 	{
-		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
-		auto					 now { _UNNAMED getCurrentTimestampMs() };
+		const _STD string												plane_code { plane::utils::DeviceIdentity::resolveDeviceCode() };
+		auto															now { _UNNAMED getCurrentTimestampMs() };
 		plane::protocol::NetworkMessage<plane::protocol::StatusPayload> msg { .ZBID = plane_code,
 																			  .XXID = _FMT format("SBZT-{}-{}", plane_code, now),
 																			  .XXLX = "SBZT",
@@ -46,8 +46,8 @@ namespace plane::utils
 
 	_STD string JsonConverter::buildMissionInfoJson(const plane::protocol::MissionInfoPayload& payload) noexcept
 	{
-		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
-		auto					 now { _UNNAMED getCurrentTimestampMs() };
+		const _STD string													 plane_code { plane::utils::DeviceIdentity::resolveDeviceCode() };
+		auto																 now { _UNNAMED getCurrentTimestampMs() };
 		plane::protocol::NetworkMessage<plane::protocol::MissionInfoPayload> msg { .ZBID = plane_code,
 																				   .XXID = _FMT format("GDXX-{}-{}", plane_code, now),
 																				   .XXLX = "GDXX",
@@ -60,8 +60,8 @@ namespace plane::utils
 
 	_STD string JsonConverter::buildHealthStatusJson(const plane::protocol::HealthStatusPayload& payload) noexcept
 	{
-		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
-		auto					 now { _UNNAMED getCurrentTimestampMs() };
+		const _STD string													  plane_code { plane::utils::DeviceIdentity::resolveDeviceCode() };
+		auto																  now { _UNNAMED getCurrentTimestampMs() };
 		plane::protocol::NetworkMessage<plane::protocol::HealthStatusPayload> msg { .ZBID = plane_code,
 																					.XXID = _FMT format("JKGL-{}-{}", plane_code, now),
 																					.XXLX = "JKGL",
@@ -74,8 +74,8 @@ namespace plane::utils
 
 	_STD string JsonConverter::buildMissionProgressJson(const plane::protocol::MissionProgressPayload& payload) noexcept
 	{
-		static const _STD string plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
-		auto					 now { _UNNAMED getCurrentTimestampMs() };
+		const _STD string plane_code { plane::utils::DeviceIdentity::resolveDeviceCode() };
+		auto			  now { _UNNAMED getCurrentTimestampMs() };
 		plane::protocol::NetworkMessage<plane::protocol::MissionProgressPayload> msg { .ZBID = plane_code,
 																					   .XXID = _FMT format("RWJD-{}-{}", plane_code, now),
 																					   .XXLX = "RWJD",
@@ -94,7 +94,7 @@ namespace plane::utils
 			if (j.contains("ZBID"))
 			{
 				_STD string target_plane_code { j.at("ZBID").get<_STD string>() };
-				_STD string local_plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
+				_STD string local_plane_code { plane::utils::DeviceIdentity::resolveDeviceCode() };
 				if (target_plane_code != local_plane_code)
 				{
 					LOG_DEBUG("收到发往其他设备 ({}) 的消息, 本机 ({}) 已忽略", target_plane_code, local_plane_code);

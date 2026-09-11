@@ -15,7 +15,7 @@
 #include "manager/catalog/client/internal/transport/CppHttpTransport.h"
 #include "manager/plane_state/PlaneStateStore.h"
 #include "utils/log_util/Logger.h"
-#include "utils/network_util/GetLocalIPV4.h"
+#include "utils/rtsp_util/RtspUrl.h"
 
 #include "define.h"
 
@@ -38,24 +38,6 @@ namespace plane::manager
 		{
 			(void)snapshot;
 			return "DJIM4T";
-		}
-
-		// imageUrl: 完整 RTSP 推流地址 (rtsp://user:pass@ip:port/base)。
-		// 本机 IP 不可得时不伪造 (返回空)。
-		_NODISCARD _STD string buildRtspImageUrl(const plane::domain::PlaneStateDataClass& snapshot) noexcept
-		{
-			const auto local_ip { plane::utils::getLocalIPV4() };
-			if (!local_ip.has_value() || local_ip->empty())
-			{
-				LOG_DEBUG("本机 IP 未就绪, imageUrl 留空");
-				return {};
-			}
-
-			const _STD string user { snapshot.rtsp_push_video_user_name.empty() ? "admin" : snapshot.rtsp_push_video_user_name };
-			const _STD string pass { snapshot.rtsp_push_video_password.empty() ? "1" : snapshot.rtsp_push_video_password };
-			const int		  port { snapshot.rtsp_push_video_server_port > 0 ? snapshot.rtsp_push_video_server_port : 8554 };
-			const _STD string base { snapshot.rtsp_push_video_base_url.empty() ? "streaming/live/1" : snapshot.rtsp_push_video_base_url };
-			return _FMT		  format("rtsp://{}:{}@{}:{}/{}", user, pass, *local_ip, port, base);
 		}
 
 		// 后台明确否定当前绑定 (业务拒绝 / 响应缺 planeId) 时回退本机绑定态:
@@ -176,7 +158,7 @@ namespace plane::manager
 
 			// 构造绑定请求 (对齐 msdk: planeTypeCode/serialNumber/imageUrl)
 			const _STD string type_code { resolvePlaneTypeCode(snapshot) };
-			const _STD string image_url { buildRtspImageUrl(snapshot) };
+			const _STD string image_url { plane::utils::buildLocalRtspUrl(snapshot) };
 			LOG_INFO("开始设备绑定: SN={}, planeTypeCode={}, imageUrl={}", sn, type_code, image_url.empty() ? "(空)" : image_url);
 
 			_NLOHMANN_JSON json payload;

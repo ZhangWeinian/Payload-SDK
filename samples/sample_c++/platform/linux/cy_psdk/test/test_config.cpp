@@ -5,6 +5,8 @@
 
 #include "config/ConfigManager.h"
 #include "test_config_helpers.h"
+#include "utils/device_identity/DeviceIdentity.h"
+
 
 #include <gtest/gtest.h>
 
@@ -34,9 +36,11 @@ TEST(ConfigManager, LoadsSharedConfigAndExposesValues)
 
 	auto& cfg { ConfigManager::getInstance() };
 
-	// mqtt.url / plane.code 均已从配置移除: broker 地址由 catalog 提供, 飞行器标识回退内置占位 SN
-	EXPECT_TRUE(cfg.getMqttUrl().empty());
+	// plane.code 来自测试夹具 (生产代码无内置占位 SN); MQTT 地址仅由目录服务发现提供
 	EXPECT_EQ(sv(cfg.getPlaneCode()), "0A1B2C3D4E5F6078");
+	EXPECT_DOUBLE_EQ(cfg.getTakeoffLatitudeDeg(), 22.5);
+	EXPECT_DOUBLE_EQ(cfg.getTakeoffLongitudeDeg(), 114.0);
+	EXPECT_DOUBLE_EQ(cfg.getTakeoffAltitudeM(), 12.5);
 	EXPECT_FALSE(cfg.getMqttClientId().empty());
 	EXPECT_NE(cfg.getMqttClientId().find("cv_"), _STD string::npos);
 
@@ -51,15 +55,16 @@ TEST(ConfigManager, CatalogIdentityAndBrokerDiscoveryAreCodeFixed)
 	auto& cfg { ConfigManager::getInstance() };
 
 	// 发现参数来自 fixture (node_id/port/targets); 接入始终启用;
-	// 身份/版本/broker 发现为代码内置常量, 不允许配置
+	// 身份由 utils/device_identity 解析: 配置 plane.code → PSDK 序列号 (无内置占位)
 	EXPECT_EQ(cfg.getCatalogNodeId(), "UNIT-TEST-NODE");
 	EXPECT_EQ(cfg.getCatalogDiscoveryPort(), 30'906u);
 	const auto& catalog_targets { cfg.getCatalogTargets() };
 	ASSERT_EQ(catalog_targets.size(), 1u);
 	EXPECT_EQ(catalog_targets[0], "127.0.0.1");
 
-	EXPECT_EQ(cfg.getCatalogServiceId(), "swarm.agent.0A1B2C3D4E5F6078");
-	EXPECT_EQ(cfg.getCatalogServiceName(), "DJI-PSDK-0A1B2C3D4E5F6078");
+	EXPECT_EQ(plane::utils::DeviceIdentity::resolveDeviceCode(), "0A1B2C3D4E5F6078");
+	EXPECT_EQ(plane::utils::DeviceIdentity::resolveCatalogServiceId(), "swarm.agent.0A1B2C3D4E5F6078");
+	EXPECT_EQ(plane::utils::DeviceIdentity::resolveCatalogServiceName(), "DJI-PSDK-0A1B2C3D4E5F6078");
 	EXPECT_EQ(cfg.getCatalogVersion(), "3.1.0");
 
 	EXPECT_TRUE(cfg.isCatalogBrokerDiscoveryEnabled());

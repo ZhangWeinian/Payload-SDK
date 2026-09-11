@@ -339,6 +339,7 @@ namespace plane::domain
 		bool		mqtt_connected { false };										   // MQTT 是否连接
 		_STD string mqtt_connected_url { "" };										   // MQTT 地址
 		bool		web_socket_connected { false };									   // WebSocket 是否连接
+		_STD string web_socket_connected_url { "" };								   // WebSocket 地址
 		bool		rtsp_push_video { false };										   // RTSP 推流状态
 		int			rtsp_push_video_fps { 0 };										   // RTSP 帧率
 		_STD string rtsp_push_video_user_name { "admin" };							   // RTSP 用户名

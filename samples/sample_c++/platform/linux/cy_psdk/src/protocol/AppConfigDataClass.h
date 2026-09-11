@@ -27,8 +27,8 @@ namespace plane::protocol
 	struct AppConfigData
 	{
 		_STD string_view mqttUrl {};					// MQTT 服务器地址 (可选; 缺省由 SwarmCatalog 服务发现提供)
-		_STD string_view planeSn {};					// 飞机序列号 (TODO: 接入 PSDK 真序列号后填充)
-		_STD string_view planeCode {};					// 飞机识别码 (可选; 缺省用内置占位 SN)
+		_STD string_view planeSn {};					// 飞机序列号 (预留)
+		_STD string_view planeCode {};					// 设备标识 (可选; 未配置时使用 PSDK 飞控序列号)
 		_STD string		 mqttClientId {};				// MQTT 客户端 ID（自动生成）
 		bool			 enableFullPSDK { false };		// 是否启用完整 PSDK 功能
 		bool			 enableTraceLogLevel { false }; // 是否启用跟踪日志级别
@@ -37,6 +37,11 @@ namespace plane::protocol
 		bool			 enableSaveKmzFile { false };	// 是否启用保存 KMZ 文件
 		bool			 enableStatusBoard { true };	// 是否启用终端状态板
 
-		CatalogConfig	 catalog {};					// SwarmCatalog 服务目录接入配置
+		// RID 起降点 (真实位置; 由部署配置提供, 单位: 度 / 米; 0=未配置)
+		double		  takeoffLatitudeDeg { 0.0 };  // 纬度
+		double		  takeoffLongitudeDeg { 0.0 }; // 经度
+		double		  takeoffAltitudeM { 0.0 };	   // 海拔
+
+		CatalogConfig catalog {};				   // SwarmCatalog 服务目录接入配置
 	};
 } // namespace plane::protocol

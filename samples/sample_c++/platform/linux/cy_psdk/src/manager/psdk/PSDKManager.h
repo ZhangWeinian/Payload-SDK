@@ -27,6 +27,12 @@ namespace plane::manager
 		// 停止 PSDK 底层服务，这是一个幂等的操作
 		void stop(void);
 
+		// 相机模块是否初始化成功 (未成功时不得调用相机接口, 如激光测距轮询)
+		_NODISCARD bool isCameraInitialized(void) const noexcept;
+
+		// HMS 模块是否初始化成功 (未成功时跳过信息回调注册)
+		_NODISCARD bool isHmsInitialized(void) const noexcept;
+
 	private:
 		explicit PSDKManager(void) noexcept;
 		~PSDKManager(void) noexcept;

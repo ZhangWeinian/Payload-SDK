@@ -3,6 +3,7 @@
 #include "manager/mqtt/service/MQTTv5Service.h"
 
 #include "config/ConfigManager.h"
+#include "manager/catalog/CatalogManager.h"
 #include "manager/mqtt/handler/MessageHandler.h"
 #include "manager/mqtt/MQTTTopics.h"
 #include "manager/plane_state/PlaneStateStore.h"
@@ -135,14 +136,19 @@ namespace plane::manager
 			this->impl_.reset(new Impl());
 		}
 
-		_STD string url { plane::config::ConfigManager::getInstance().getMqttUrl() };
+		// broker 地址唯一来源: SwarmCatalog 服务发现 (不提供用户配置项)
+		_STD string url {};
 		{
-			// Catalog 服务发现结果优先于静态配置
 			_STD lock_guard<_STD mutex> lock { this->mutex_ };
 			if (!this->broker_url_override_.empty())
 			{
 				url = this->broker_url_override_;
 			}
+		}
+		if (url.empty())
+		{
+			// 目录广播是一次性事件: 若其早于本服务启动 (如 PSDK 初始化耗时较长), 主动拉取最近解析结果兜底
+			url = this->seedBrokerUrlFromCatalog();
 		}
 		if (url.empty())
 		{
@@ -510,10 +516,14 @@ namespace plane::manager
 
 	void MQTTv5Service::ensureBrokerConnection(void) noexcept
 	{
-		const auto url { this->effectiveBrokerUrl() };
+		auto url { this->effectiveBrokerUrl() };
 		if (url.empty())
 		{
-			// 地址未就绪 (静态配置为空且尚未收到目录广播): 保持等待, 下个周期复查
+			// 地址未就绪: 目录广播为一次性事件 (可能早于本服务启动), 主动拉取最近解析结果兜底
+			url = this->seedBrokerUrlFromCatalog();
+		}
+		if (url.empty())
+		{
 			LOG_DEBUG("MQTT broker 地址未就绪, 等待配置或目录服务发现");
 			return;
 		}
@@ -602,13 +612,19 @@ namespace plane::manager
 
 	_STD string MQTTv5Service::effectiveBrokerUrl(void) noexcept
 	{
+		// 地址唯一来源: SwarmCatalog 服务发现结果 (未就绪返回空串, 由自检线程继续等待)
+		_STD lock_guard<_STD mutex> lock { this->mutex_ };
+		return this->broker_url_override_;
+	}
+
+	_STD string MQTTv5Service::seedBrokerUrlFromCatalog(void) noexcept
+	{
+		const auto discovered { plane::manager::CatalogManager::getInstance().getMqttBrokerUrl() };
+		if (discovered.empty())
 		{
-			_STD lock_guard<_STD mutex> lock { this->mutex_ };
-			if (!this->broker_url_override_.empty())
-			{
-				return this->broker_url_override_;
-			}
+			return {};
 		}
-		return _STD string { plane::config::ConfigManager::getInstance().getMqttUrl() };
+		this->setBrokerUrlOverride(discovered); // 仅在地址变化时记录日志并唤醒自检线程
+		return discovered;
 	}
 } // namespace plane::manager

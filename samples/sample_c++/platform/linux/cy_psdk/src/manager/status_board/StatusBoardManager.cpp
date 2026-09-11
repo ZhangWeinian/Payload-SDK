@@ -77,8 +77,8 @@ namespace plane::manager
 		// MQTT 连接状态 (已连接时附带地址; 地址未知则只显示连接状态)
 		if (state.mqtt_connected)
 		{
-			const _STD string value { state.mqtt_connected_url.empty() ? _STD string { "✔ 已连接" }
-																	   : "✔ 已连接 (" + state.mqtt_connected_url + ")" };
+			const _STD string value { state.mqtt_connected_url.empty() ? _STD string { "已连接" }
+																	   : "已连接 (" + state.mqtt_connected_url + ")" };
 			board.update("MQTT", value, plane::utils::StatusLevel::Ok);
 		}
 		else
@@ -86,17 +86,22 @@ namespace plane::manager
 			board.update("MQTT", "未连接", plane::utils::StatusLevel::Warn);
 		}
 
-		// WebSocket 连接状态
-		board.update(
-			"WebSocket",
-			state.web_socket_connected ? "✔ 已连接" : "未连接",
-			state.web_socket_connected ? plane::utils::StatusLevel::Ok : plane::utils::StatusLevel::Warn
-		);
+		// WebSocket 连接状态 (已连接时附带地址; 地址未知则只显示连接状态)
+		if (state.web_socket_connected)
+		{
+			const _STD string value { state.web_socket_connected_url.empty() ? _STD string { "已连接" }
+																			 : "已连接 (" + state.web_socket_connected_url + ")" };
+			board.update("WebSocket", value, plane::utils::StatusLevel::Ok);
+		}
+		else
+		{
+			board.update("WebSocket", "未连接", plane::utils::StatusLevel::Warn);
+		}
 
 		// 设备绑定状态
 		board.update(
 			"Bind",
-			state.device_binding ? "✔ 已绑定" : "未绑定",
+			state.device_binding ? "已绑定" : "未绑定",
 			state.device_binding ? plane::utils::StatusLevel::Ok : plane::utils::StatusLevel::Warn
 		);
 

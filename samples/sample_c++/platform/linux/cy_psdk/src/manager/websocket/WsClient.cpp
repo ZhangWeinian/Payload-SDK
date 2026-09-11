@@ -141,6 +141,7 @@ namespace plane::manager
 			[](plane::domain::PlaneStateDataClass& st)
 			{
 				st.web_socket_connected = false;
+				st.web_socket_connected_url.clear();
 			}
 		);
 	}
@@ -253,11 +254,13 @@ namespace plane::manager
 						beast::get_lowest_layer(*this->ws).expires_never(); // 长连接不设读写超时 (OkHttp readTimeout=0)
 						this->connected.store(true, _STD memory_order_release);
 						this->failure_logged = false;
-						LOG_INFO("WebSocket 已连接: {}", WsClient::buildWsUrl(this->host, kServerPort));
+						const _STD string ws_url { WsClient::buildWsUrl(this->host, kServerPort) };
+						LOG_INFO("WebSocket 已连接: {}", ws_url);
 						plane::domain::PlaneStateStore::getInstance().update(
-							[](plane::domain::PlaneStateDataClass& st)
+							[&ws_url](plane::domain::PlaneStateDataClass& st)
 							{
-								st.web_socket_connected = true;
+								st.web_socket_connected		= true;
+								st.web_socket_connected_url = ws_url;
 							}
 						);
 						this->doSubscribe();
@@ -436,6 +439,7 @@ namespace plane::manager
 			[](plane::domain::PlaneStateDataClass& st)
 			{
 				st.web_socket_connected = false;
+				st.web_socket_connected_url.clear();
 			}
 		);
 

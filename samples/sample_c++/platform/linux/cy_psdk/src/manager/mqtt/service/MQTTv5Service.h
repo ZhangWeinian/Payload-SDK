@@ -118,8 +118,12 @@ namespace plane::manager
 		// 重建 client 并连接指定 broker 地址 (仅由维护线程调用)
 		void reconnectToBroker(const _STD string& url) noexcept;
 
-		// 当前有效 broker 地址: 动态覆盖优先, 回退静态配置; 均无时返回空串
+		// 当前有效 broker 地址 (仅目录服务发现结果); 未就绪返回空串
 		_NODISCARD _STD string effectiveBrokerUrl(void) noexcept;
+
+		// 兜底: 主动查询目录最近解析的 broker 地址 (广播事件为一次性, 目录可能早于本服务启动完成解析);
+		// 查到非空时同步为动态覆盖并返回该地址, 否则返回空串
+		_NODISCARD _STD string seedBrokerUrlFromCatalog(void) noexcept;
 
 		// 设置连接状态
 		void setConnected(bool status) noexcept;

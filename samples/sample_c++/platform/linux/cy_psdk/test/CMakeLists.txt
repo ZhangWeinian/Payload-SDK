@@ -40,6 +40,7 @@ add_executable (
 	../src/manager/catalog/client/internal/util/TargetExpander.cpp
 	../src/manager/catalog/client/internal/discovery/UdpAnnouncementListener.cpp
 	../src/manager/catalog/client/internal/discovery/UdpDiscoveryClient.cpp
+	../src/utils/device_identity/DeviceIdentity.cpp
 	../src/utils/json_converter/BuildAndParse.cpp
 	../src/utils/log_util/Logger.cpp
 	../src/utils/status_board/StatusBoard.cpp

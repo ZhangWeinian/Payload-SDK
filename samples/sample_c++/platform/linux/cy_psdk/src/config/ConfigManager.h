@@ -1,18 +1,19 @@
-// cy_psdk/cinfig/ConfigManager.h
+// cy_psdk/config/ConfigManager.h
+//
+// 本地配置访问: config.yml 为唯一配置来源 (不再有与 msdk 对齐的中间配置结构)。
+// 所有读取项均直接取自 config.yml; 未配置时返回内置缺省或由上层等待真实来源。
 
 #pragma once
 
 #include <dji_logger.h>
 
-#include "protocol/AppConfigDataClass.h"
-
 #include <yaml-cpp/yaml.h>
 
 #include <string_view>
-#include <type_traits>
 #include <filesystem>
-#include <iterator>
+#include <string>
 #include <vector>
+
 
 #include "define.h"
 
@@ -26,53 +27,38 @@ namespace plane::config
 		// 加载并检查配置文件
 		_NODISCARD bool loadAndCheck(_STD_FS path filepath = "") noexcept;
 
-		// 获取配置项: 获取 MQTT 服务器地址
-		_NODISCARD _STD string_view getMqttUrl(void) const noexcept;
+		// ---- config.yml 读取项 ----
 
-		// 获取配置项: 获取 MQTT 客户端 ID
+		// mqtt.client_id: 未配置时自动生成
 		_NODISCARD _STD string getMqttClientId(void) const noexcept;
 
-		// 获取飞行器标识(序列号): plane.code 可选; 缺省用内置占位 SN (后续改由 PSDK 真序列号填充)
+		// plane.code: 设备标识 (可选; 未配置时使用 PSDK 飞控序列号)
 		_NODISCARD _STD string_view getPlaneCode(void) const noexcept;
 
-		// 检查配置项: 是否启用 PSDK 标准流程
-		_NODISCARD bool isStandardProceduresEnabled(void) const noexcept;
-
-		// 检查配置项: 是否启用终端状态板
-		_NODISCARD bool isStatusBoardEnabled(void) const noexcept;
-
-		// 检查配置项: 是否启用 TRACE 级别的调试日志
-		_NODISCARD bool isTraceLogLevel(void) const noexcept;
-
-		// 获取配置项: 获取 PSDK 日志级别
+		// features.*: 功能开关
+		_NODISCARD bool							   isStandardProceduresEnabled(void) const noexcept;
+		_NODISCARD bool							   isStatusBoardEnabled(void) const noexcept;
+		_NODISCARD bool							   isTraceLogLevel(void) const noexcept;
 		_NODISCARD _DJI E_DjiLoggerConsoleLogLevel getPsdkLogLevel(void) const noexcept;
+		_NODISCARD bool							   isSkipRC(void) const noexcept;
+		_NODISCARD bool							   isSaveKmz(void) const noexcept;
 
-		// 检查配置项: 是否跳过遥控器检测
-		_NODISCARD bool isSkipRC(void) const noexcept;
+		// plane.takeoff_*: RID 起降点 (单位: 度 / 米; 未配置时为 0)
+		_NODISCARD double getTakeoffLatitudeDeg(void) const noexcept;
+		_NODISCARD double getTakeoffLongitudeDeg(void) const noexcept;
+		_NODISCARD double getTakeoffAltitudeM(void) const noexcept;
 
-		// 检查配置项: 是否同时保存 KMZ 文件
-		_NODISCARD bool isSaveKmz(void) const noexcept;
+		// catalog.*: 目录发现配置
+		_NODISCARD _STD string	 getCatalogNodeId(void) const noexcept;
+		_NODISCARD _STD uint16_t getCatalogDiscoveryPort(void) const noexcept;
+		_NODISCARD _STD vector<_STD string> getCatalogTargets(void) const noexcept;
 
-		// SwarmCatalog 接入配置访问 (发现参数由 config.yml catalog 小节提供; 接入始终启用)
-		// 注册 service_id: 固定 "swarm.agent.<SN>" (代码内置, 不允许配置; 对齐 msdk)
-		_NODISCARD _STD string getCatalogServiceId(void) const noexcept;
+		// ---- 代码固定契约 (非本地配置项) ----
 
-		// 注册 service_name: 固定 "DJI-PSDK-<内部代码>" (代码内置, 不允许配置)
-		_NODISCARD _STD string getCatalogServiceName(void) const noexcept;
-
-		// 注册版本号 (代码内置, 不允许配置)
+		// 注册版本号
 		_NODISCARD _STD string getCatalogVersion(void) const noexcept;
 
-		// 目录发现: 本机节点 ID (探测身份, 需与服务端 local-node-id 匹配才会回复)
-		_NODISCARD _STD string getCatalogNodeId(void) const noexcept;
-
-		// 目录发现: UDP 探测端口
-		_NODISCARD _STD uint16_t getCatalogDiscoveryPort(void) const noexcept;
-
-		// 目录发现: 探测目标列表
-		_NODISCARD const _STD vector<_STD string>& getCatalogTargets(void) const noexcept;
-
-		// 是否启用目录解析动态 MQTT broker (固定启用, 不允许配置)
+		// 是否启用目录解析动态 MQTT broker (固定启用)
 		_NODISCARD bool isCatalogBrokerDiscoveryEnabled(void) const noexcept;
 
 		// 待解析的"中心"MQTT broker 服务 service_id (固定 swarm.mqtt.base)
@@ -90,16 +76,27 @@ namespace plane::config
 		// 获取一个随机生成的唯一客户端 ID
 		_NODISCARD _STD string getNewGenerateUniqueClientId(void) noexcept;
 
-		// 验证配置文件的内容是否合法
-		_NODISCARD bool validateConfig(void) noexcept;
+		// config.yml 节点读取: 节/键缺失或类型不符时返回 fallback
+		template<typename T>
+		_NODISCARD T readValue(const char* section, const char* key, const T& fallback) const noexcept
+		{
+			try
+			{
+				const auto node { this->config_node_[section][key] };
+				if (!node || node.IsNull())
+				{
+					return fallback;
+				}
+				return node.as<T>(fallback);
+			}
+			catch (...)
+			{
+				return fallback;
+			}
+		}
 
-		// 根据是否加载配置文件，返回相应的成员变量或默认值
-		template<typename ValueType, typename DefaultType = ValueType>
-		_NODISCARD _STD				   common_type_t<ValueType, DefaultType>
-									   getConfigValue(const ValueType& value_if_loaded, const DefaultType& default_value = {}) const noexcept;
-
-		_YAML Node					   config_node_ {};
-		bool						   loaded_ { false };
-		plane::protocol::AppConfigData app_config_ {};
+		_YAML Node	config_node_ {};
+		bool		loaded_ { false };
+		_STD string mqtt_client_id_ {};
 	};
 } // namespace plane::config

@@ -1,7 +1,7 @@
 // cy_psdk/tests/test_buildandparse.cpp
 //
 // 覆盖 JsonConverter: 上行 JSON 信封构建与 MQTT 消息解析路由。
-// 依赖已加载的 ConfigManager (内置占位 SN=0A1B2C3D4E5F6078, 见 test_config.cpp / test_config_helpers.h)。
+// 依赖已加载的 ConfigManager (测试夹具 plane.code=0A1B2C3D4E5F6078, 见 test_config.cpp / test_config_helpers.h)。
 
 #include "config/ConfigManager.h"
 #include "manager/mqtt/handler/MessageHandler.h"

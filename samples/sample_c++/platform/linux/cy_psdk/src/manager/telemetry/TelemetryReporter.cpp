@@ -9,6 +9,7 @@
 #include "utils/json_converter/BuildAndParse.h"
 #include "utils/log_util/Logger.h"
 #include "utils/network_util/GetLocalIPV4.h"
+#include "utils/rtsp_util/RtspUrl.h"
 
 #include <fmt/format.h>
 #include <gsl/gsl>
@@ -261,19 +262,28 @@ namespace plane::manager
 								return;
 							}
 
-							auto			  payload { event };
-							static const auto ip { plane::utils::getLocalIPV4().value_or("[找不到有效的 IP ]") };
+							auto payload { event };
 
 							// 多线程下共享计数, 用 atomic 避免数据竞争
 							static _STD atomic<int> status_counter { 0 };
 							if (status_counter.fetch_add(1, _STD memory_order_relaxed) >= 4)
 							{
 								status_counter.store(0, _STD memory_order_relaxed);
-								payload.WZT = {
-									plane::protocol::VideoSource { .SPURL = _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ip),
-																  .SPXY	 = "RTSP",
-																  .ZBZT	 = 1 }
+
+								// 视频源: 本机 RTSP 推流地址 (由域模型拼装); 本机 IP 未就绪/配置不完整时不含视频源
+								const _STD string rtsp_url {
+									plane::utils::buildLocalRtspUrl(plane::domain::PlaneStateStore::getInstance().snapshot())
 								};
+								if (!rtsp_url.empty())
+								{
+									payload.WZT = {
+										plane::protocol::VideoSource { .SPURL = rtsp_url, .SPXY = "RTSP", .ZBZT = 1 }
+									};
+								}
+								else
+								{
+									LOG_DEBUG("本机 RTSP 地址不可得, 本次状态不含视频源");
+								}
 
 								LOG_DEBUG("准备上报飞行状态");
 
@@ -347,10 +357,9 @@ namespace plane::manager
 					return;
 				}
 
-				plane::protocol::MissionInfoPayload info_payload { .FJSN  = plane_code,
-																   .YKQIP = ip_address,
-																   .YSRTSP =
-																	   _FMT format("rtsp://admin:1@{}:8554/streaming/live/1", ip_address) };
+				plane::protocol::MissionInfoPayload info_payload { .FJSN   = plane_code,
+																   .YKQIP  = ip_address,
+																   .YSRTSP = plane::utils::buildLocalRtspUrl(snapshot) };
 
 				(void)this->publishJson(plane::manager::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
 

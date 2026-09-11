@@ -51,6 +51,10 @@ namespace plane::manager
 		// 目录服务端自身 IP (WebSocket 等直连场景使用); 未就绪/失败返回空串
 		_NODISCARD _STD string getCatalogServerIp(void) noexcept;
 
+		// 目录最近一次解析到的中心 MQTT broker 地址; 未解析/已失联返回空串。
+		// 广播事件为一次性 (服务可能晚于广播启动), 供 MQTT 服务启动/自检时兜底查询
+		_NODISCARD _STD string getMqttBrokerUrl(void) noexcept;
+
 		// 绑定/昵称联动: 更新目录注册的 service_name (触发运行时重注册); 空串恢复默认名
 		void updateServiceName(const _STD string& service_name) noexcept;
 

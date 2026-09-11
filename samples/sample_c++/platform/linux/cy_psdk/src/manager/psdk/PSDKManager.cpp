@@ -41,6 +41,16 @@ namespace plane::manager
 		return instance;
 	}
 
+	bool PSDKManager::isCameraInitialized(void) const noexcept
+	{
+		return this->camera_initialized_;
+	}
+
+	bool PSDKManager::isHmsInitialized(void) const noexcept
+	{
+		return this->hms_initialized_;
+	}
+
 	void PSDKManager::redirectPsdkLogs(void) noexcept
 	{
 		static _STD atomic<bool> redirected { false };
@@ -143,11 +153,19 @@ namespace plane::manager
 			}
 
 			// 初始化飞控模块 (必须先初始化再调用任何 DjiFlightController_* API, 否则模块未就绪会崩溃)
-			// ridInfo: 官方要求上报 RID 起降点信息; 当前使用与官方样例一致的占位值, TODO 后续接入实际起降点
+			// ridInfo: RID 合规要求上报"真实起降点"; 由部署配置提供 (plane.takeoff_lat/lon/alt, 单位: 度/米);
+			// 未配置时上报 0 并告警 (绝不使用任何样例坐标)
 			_DJI T_DjiFlightControllerRidInfo ridInfo {};
-			ridInfo.latitude  = 22.542812;
-			ridInfo.longitude = 113.958902;
-			ridInfo.altitude  = 10;
+			const double					  takeoff_lat_deg { config.getTakeoffLatitudeDeg() };
+			const double					  takeoff_lon_deg { config.getTakeoffLongitudeDeg() };
+			const double					  takeoff_alt_m { config.getTakeoffAltitudeM() };
+			if (takeoff_lat_deg == 0.0 && takeoff_lon_deg == 0.0)
+			{
+				LOG_WARN("未配置 'plane.takeoff_lat/lon/alt', RID 起降点将上报 0; 请按实际部署位置配置");
+			}
+			ridInfo.latitude  = takeoff_lat_deg * (1.0 / _DEFINED RAD_TO_DEG); // PSDK 要求弧度
+			ridInfo.longitude = takeoff_lon_deg * (1.0 / _DEFINED RAD_TO_DEG);
+			ridInfo.altitude  = static_cast<_STD uint16_t>(takeoff_alt_m);
 			if (_DJI T_DjiReturnCode returnCode { _DJI DjiFlightController_Init(ridInfo) };
 				returnCode != _DJI	 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{

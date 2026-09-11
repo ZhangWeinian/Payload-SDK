@@ -13,6 +13,7 @@
 
 #include "config/ConfigManager.h"
 #include "manager/plane_state/PlaneStateStore.h"
+#include "manager/psdk/PSDKManager.h"
 #include "utils/DjiErrorUtils.h"
 #include "utils/log_util/Logger.h"
 
@@ -509,19 +510,28 @@ namespace plane::manager
 		LOG_INFO("正在订阅遥测数据主题");
 
 		// 辅助函数：订阅指定主题并处理错误
-		auto subscribe = [&](_DJI E_DjiFcSubscriptionTopic topic, _STD string_view topicName)
+		auto subscribe = [&](_DJI E_DjiFcSubscriptionTopic		 topic,
+							 _STD string_view					 topicName,
+							 _DJI E_DjiDataSubscriptionTopicFreq frequency = _DJI DJI_DATA_SUBSCRIPTION_TOPIC_10_HZ)
 		{
 			// 订阅主题
-			if (_DJI T_DjiReturnCode return_code {
-					_DJI DjiFcSubscription_SubscribeTopic(topic, _DJI DJI_DATA_SUBSCRIPTION_TOPIC_10_HZ, nullptr) };
-				return_code != _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+			if (_DJI T_DjiReturnCode return_code { _DJI DjiFcSubscription_SubscribeTopic(topic, frequency, nullptr) };
+				return_code != _DJI	 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 			{
-				LOG_ERROR(
-					"订阅主题 '{}' 失败 (飞机不支持?), 错误: {}, 错误码: {:#08x}",
-					topicName,
-					plane::utils::convertDjiError(return_code),
-					return_code
-				);
+				if (return_code == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_NOT_FOUND)
+				{
+					// 机型不支持该主题 (如 M4E 的 BATTERY_INFO / GPS_CONTROL_LEVEL): 降级为告警, 继续运行
+					LOG_WARN("订阅主题 '{}' 失败 (机型不支持该主题, 已跳过)", topicName);
+				}
+				else
+				{
+					LOG_ERROR(
+						"订阅主题 '{}' 失败, 错误: {}, 错误码: {:#08x}",
+						topicName,
+						plane::utils::convertDjiError(return_code),
+						return_code
+					);
+				}
 
 				return false;
 			}
@@ -539,7 +549,8 @@ namespace plane::manager
 		this->sub_status_.quaternion		  = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_QUATERNION, "QUATERNION"sv);
 		this->sub_status_.velocity			  = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_VELOCITY, "VELOCITY"sv);
 		this->sub_status_.batteryInfo		  = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_INFO, "BATTERY_INFO"sv);
-		this->sub_status_.gimbalAngles		  = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv);
+		this->sub_status_.gimbalAngles =
+			subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GIMBAL_ANGLES, "GIMBAL_ANGLES"sv, _DJI DJI_DATA_SUBSCRIPTION_TOPIC_50_HZ);
 		this->sub_status_.batterySingleInfo =
 			subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_BATTERY_SINGLE_INFO_INDEX1, "BATTERY_SINGLE_INFO_INDEX1"sv);
 		this->sub_status_.statusFlight		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_STATUS_FLIGHT, "STATUS_FLIGHT"sv);
@@ -550,9 +561,15 @@ namespace plane::manager
 		this->sub_status_.gpsControlLevel	 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_GPS_CONTROL_LEVEL, "GPS_CONTROL_LEVEL"sv);
 		this->sub_status_.controlDevice		 = subscribe(_DJI DJI_FC_SUBSCRIPTION_TOPIC_CONTROL_DEVICE, "CONTROL_DEVICE"sv);
 
-		// 注册 HMS 信息回调
-		if (_DJI T_DjiReturnCode return_code { _DJI DjiHmsManager_RegHmsInfoCallback(hmsInfoCallbackEntry) };
-			return_code != _DJI	 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		// 注册 HMS 信息回调 (HMS 模块未就绪时跳过: 如 license 等级不足导致模块初始化失败)
+		if (!plane::manager::PSDKManager::getInstance().isHmsInitialized())
+		{
+			LOG_INFO("HMS 模块未就绪, 跳过信息回调注册");
+		}
+		else if (
+			_DJI T_DjiReturnCode return_code { _DJI DjiHmsManager_RegHmsInfoCallback(hmsInfoCallbackEntry) };
+			return_code != _DJI	 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS
+		)
 		{
 			LOG_ERROR("注册 HMS 信息回调失败, 错误: {}", plane::utils::convertDjiError(return_code));
 		}
@@ -592,7 +609,8 @@ namespace plane::manager
 	{
 		// 从飞控读取 SN
 		_DJI T_DjiFlightControllerGeneralInfo gi {};
-		if (_DJI DjiFlightController_GetGeneralInfo(&gi) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+		if (_DJI T_DjiReturnCode return_code { _DJI DjiFlightController_GetGeneralInfo(&gi) };
+			return_code == _DJI	 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 		{
 			_STD string sn { gi.serialNum };
 			// serialNum 为定长数组, 去除首尾空白/\0
@@ -626,7 +644,7 @@ namespace plane::manager
 		}
 		else
 		{
-			LOG_WARN("读取飞控通用信息(序列号)失败");
+			LOG_WARN("读取飞控通用信息(序列号)失败, 错误: {}", plane::utils::convertDjiError(return_code));
 		}
 	}
 
@@ -825,6 +843,20 @@ namespace plane::manager
 				battery_temperature_c = single.batteryTemperature * 0.1; // 0.1℃ -> ℃
 				battery_current_ma	  = single.currentElectric;
 				battery_cell_count	  = single.cellCount;
+
+				// 机型不支持整机聚合主题 (BATTERY_INFO 订阅返回 NOT_FOUND) 时, 用主电池数据兜底整机电量/电压
+				if (!this->sub_status_.batteryInfo)
+				{
+					current_payload.DCXX.SYDL = single.batteryCapacityPercent;
+					current_payload.DCXX.ZDY  = single.currentVoltage;
+				}
+
+				// 补全单电池详情列表 (整机仅一块主电池)
+				if (current_payload.DCXX.DCXXXX.empty())
+				{
+					current_payload.DCXX.DCXXXX
+						.push_back(plane::protocol::BatteryDetail { .DCSYSDL = single.batteryCapacityPercent, .DY = single.currentVoltage });
+				}
 			}
 
 			if (_DJI T_DjiFcSubscriptionGimbalAngles gimbal_angle {};
@@ -863,7 +895,7 @@ namespace plane::manager
 				display_mode_code = static_cast<int>(display_mode);
 			}
 
-			// 返航点
+			// 返航点 (PSDK 单位: 弧度; 未设置返航点时飞控返回 800000 rad 哨兵值, 需过滤后再上报)
 			if (_DJI T_DjiFcSubscriptionHomePointInfo home {};
 				this->sub_status_.homePointInfo && (_DJI	  DjiFcSubscription_GetLatestValueOfTopic(
 														_DJI DJI_FC_SUBSCRIPTION_TOPIC_HOME_POINT_INFO,
@@ -872,10 +904,14 @@ namespace plane::manager
 														&timestamp
 													) == _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS))
 			{
-				home_latitude_deg	= home.latitude * _DEFINED	 RAD_TO_DEG;
-				home_longitude_deg	= home.longitude * _DEFINED RAD_TO_DEG;
-				current_payload.JJD = home_latitude_deg;
-				current_payload.JWD = home_longitude_deg;
+				constexpr double kPi { 3.14159265358979323846 };
+				if (_STD abs(home.latitude) <= kPi && _STD abs(home.longitude) <= kPi)
+				{
+					home_latitude_deg	= home.latitude * _DEFINED	 RAD_TO_DEG;
+					home_longitude_deg	= home.longitude * _DEFINED RAD_TO_DEG;
+					current_payload.JJD = home_longitude_deg; // Home 点经度
+					current_payload.JWD = home_latitude_deg;  // Home 点纬度
+				}
 			}
 
 			if (_DJI T_DjiFcSubscriptionHomePointSetStatus home_set {};
@@ -926,8 +962,11 @@ namespace plane::manager
 				control_authority = static_cast<int>(control_device.controlAuthority);
 			}
 
-			// 激光测距 (1s 节流轮询; 相机不支持/无激光时静默保持上次值)
-			if (const auto now_laser { _STD_CHRONO steady_clock::now() }; now_laser - this->last_laser_poll_ >= _STD_CHRONO seconds(1))
+			// 激光测距 (1s 节流轮询; 相机模块未就绪/无激光时静默保持上次值)
+			// 注意: 相机模块未初始化成功时 (如 license 等级受限) 调用会触发 SDK 内部高频错误日志, 需前置判断
+			const bool camera_ready { plane::manager::PSDKManager::getInstance().isCameraInitialized() };
+			if (const auto														  now_laser { _STD_CHRONO steady_clock::now() };
+				camera_ready && now_laser - this->last_laser_poll_ >= _STD_CHRONO seconds(1))
 			{
 				this->last_laser_poll_ = now_laser;
 

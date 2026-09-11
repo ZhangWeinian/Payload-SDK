@@ -23,6 +23,7 @@
 #include "manager/event_manager/EventManager.h"
 #include "manager/mqtt/service/MQTTv5Service.h"
 #include "manager/plane_state/PlaneStateStore.h"
+#include "utils/device_identity/DeviceIdentity.h"
 #include "utils/log_util/Logger.h"
 
 namespace plane::manager
@@ -109,10 +110,12 @@ namespace plane::manager
 		// 自研目录运行时 (后台线程持有; 业务线程经 rt_mutex_ 取 shared_ptr 快照后锁外调用)
 		_STD shared_ptr<CatalogRuntime> runtime {};
 
-		// 最近一次 broker 解析尝试时刻与最近广播的地址 (仅业务壳线程访问;
-		// 广播走 EventManager 系统事件, 由 MQTT 模块订阅后自治重连)
+		// 最近一次 broker 解析尝试时刻与最近广播的地址 (写入仅在后台上报线程;
+		// 广播走 EventManager 系统事件, 由 MQTT 模块订阅后自治重连;
+		// last_published_url 另经 getMqttBrokerUrl() 被业务线程读取)
 		_STD_CHRONO steady_clock::time_point last_broker_attempt {};
 		_STD string							 last_published_url {};
+		mutable _STD mutex					 broker_url_mutex {}; // 保护 last_published_url 跨线程读写
 
 		// 待解析的"中心"服务与端点协议 (来自 ConfigManager 固定值)
 		_STD string broker_service_id {};
@@ -182,8 +185,8 @@ namespace plane::manager
 		this->thread_ = _STD thread(&CatalogManager::runLoop, this);
 		LOG_INFO(
 			"SwarmCatalog 接入启动: service_id='{}', service_name='{}', version='{}', discover_broker={}",
-			config.getCatalogServiceId(),
-			config.getCatalogServiceName(),
+			plane::utils::DeviceIdentity::resolveCatalogServiceId(),
+			plane::utils::DeviceIdentity::resolveCatalogServiceName(),
 			config.getCatalogVersion(),
 			config.isCatalogBrokerDiscoveryEnabled()
 		);
@@ -212,12 +215,41 @@ namespace plane::manager
 		auto& impl { *this->impl_ };
 		auto& config { plane::config::ConfigManager::getInstance() };
 
+		// 设备标识就绪等待: 来源为显式配置 (plane.code) 或 PSDK 真实序列号 (飞控就绪后写入);
+		// 两者均未就绪时不做任何伪造, 周期提示并等待 (stop() 可打断)
+		{
+			int wait_round { 0 };
+			while (this->running_.load(_STD memory_order_acquire) && plane::utils::DeviceIdentity::resolveDeviceCode().empty())
+			{
+				if (wait_round == 0)
+				{
+					LOG_WARN("等待设备标识: 未配置 'plane.code' 且尚未取得 PSDK 序列号; 就绪后自动继续目录注册");
+					plane::domain::PlaneStateStore::getInstance().update(
+						[](plane::domain::PlaneStateDataClass& st)
+						{
+							st.catalog_state = "等待设备标识";
+						}
+					);
+				}
+				else if (wait_round % 20 == 0)
+				{
+					LOG_WARN("仍在等待设备标识 (未配置 'plane.code' 且尚未取得 PSDK 序列号)");
+				}
+				++wait_round;
+				_STD this_thread::sleep_for(_STD_CHRONO milliseconds(500));
+			}
+			if (!this->running_.load(_STD memory_order_acquire))
+			{
+				return;
+			}
+		}
+
 		// 组装运行时: 注册信息 + 发现配置 + 事件回调
 		CatalogRuntimeOptions options {};
 		options.registration.namespace_name = "public";
 		options.registration.group_name		= "DEFAULT_GROUP";
-		options.registration.service_id		= config.getCatalogServiceId();
-		options.registration.service_name	= config.getCatalogServiceName();
+		options.registration.service_id		= plane::utils::DeviceIdentity::resolveCatalogServiceId();
+		options.registration.service_name	= plane::utils::DeviceIdentity::resolveCatalogServiceName();
 		options.registration.version		= config.getCatalogVersion();
 
 		options.event_callback				= [this](const CatalogEvent& ev)
@@ -253,7 +285,10 @@ namespace plane::manager
 				this->catalog_ready_.store(false, _STD memory_order_release);
 				// 目录失联/恢复后允许重新解析动态 broker (端点可能已变化)
 				this->impl_->last_broker_attempt = {};
-				this->impl_->last_published_url.clear();
+				{
+					_STD lock_guard<_STD mutex> lock { this->impl_->broker_url_mutex };
+					this->impl_->last_published_url.clear();
+				}
 			}
 		};
 
@@ -460,30 +495,29 @@ namespace plane::manager
 		}
 
 		// 端点协议 -> URL scheme
-		const auto scheme { schemeForProtocol(impl.broker_protocol) };
-		const auto discovered_url { _FMT format("{}://{}:{}", scheme, host, matched->port) };
+		const auto	scheme { schemeForProtocol(impl.broker_protocol) };
+		const auto	discovered_url { _FMT format("{}://{}:{}", scheme, host, matched->port) };
 
-		const auto static_url { _STD string { plane::config::ConfigManager::getInstance().getMqttUrl() } };
-
-		if (discovered_url == impl.last_published_url)
+		_STD string last_published {};
+		{
+			_STD lock_guard<_STD mutex> lock { impl.broker_url_mutex };
+			last_published = impl.last_published_url;
+		}
+		if (discovered_url == last_published)
 		{
 			LOG_DEBUG("中心 broker 地址未变化, 跳过广播: {}", discovered_url);
 			return true;
 		}
 
-		if (discovered_url == static_url)
-		{
-			LOG_INFO("目录解析的中心 broker 与静态配置一致: {}", discovered_url);
-		}
-		else
-		{
-			LOG_INFO("目录解析到中心 MQTT broker: {} (静态配置: {}), 已广播至模块总线", discovered_url, static_url);
-		}
+		LOG_INFO("目录解析到中心 MQTT broker: {}, 已广播至模块总线", discovered_url);
 
 		// 解耦: 仅广播服务发现结果, 由 MQTT 模块订阅后通过自检线程完成(重)连接
 		plane::manager::EventManager::getInstance()
 			.publishSystemEvent(plane::manager::EventManager::SystemEvent::MqttBrokerUpdated, discovered_url);
-		impl.last_published_url = discovered_url;
+		{
+			_STD lock_guard<_STD mutex> lock { impl.broker_url_mutex };
+			impl.last_published_url = discovered_url;
+		}
 		return true;
 	}
 
@@ -507,6 +541,19 @@ namespace plane::manager
 			return {};
 		}
 		return result.value().ip;
+	}
+
+	// 目录最近一次解析到的中心 MQTT broker 地址 (广播事件为一次性, 供 MQTT 服务晚启动/自检兜底查询);
+	// 未解析/已失联返回空串
+	_STD string CatalogManager::getMqttBrokerUrl(void) noexcept
+	{
+		_STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+		if (!this->impl_)
+		{
+			return {};
+		}
+		_STD lock_guard<_STD mutex> broker_lock { this->impl_->broker_url_mutex };
+		return this->impl_->last_published_url;
 	}
 
 	_STD string CatalogManager::resolveServiceBaseUrl(const _STD string& service_id, const _STD string& protocol) noexcept
@@ -600,8 +647,8 @@ namespace plane::manager
 		ServiceRegistration registration {};
 		registration.namespace_name = "public";
 		registration.group_name		= "DEFAULT_GROUP";
-		registration.service_id		= config.getCatalogServiceId();
-		registration.service_name	= service_name.empty() ? config.getCatalogServiceName() : service_name;
+		registration.service_id		= plane::utils::DeviceIdentity::resolveCatalogServiceId();
+		registration.service_name	= service_name.empty() ? plane::utils::DeviceIdentity::resolveCatalogServiceName() : service_name;
 		registration.version		= config.getCatalogVersion();
 
 		auto result { runtime->updateRegistration(registration) };

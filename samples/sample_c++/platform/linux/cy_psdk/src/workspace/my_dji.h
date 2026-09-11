@@ -16,10 +16,12 @@
 #include "manager/status_board/StatusBoardManager.h"
 #include "manager/telemetry/TelemetryReporter.h"
 #include "manager/websocket/WsClient.h"
+#include "utils/device_identity/DeviceIdentity.h"
 #include "utils/EXEHomePath.h"
 #include "utils/integrity/IntegrityCheck.h"
 #include "utils/log_util/Logger.h"
 #include "utils/status_board/StatusBoard.h"
+
 
 #include <atomic>
 #include <chrono>
@@ -381,11 +383,9 @@ namespace plane::my_dji
 		plane::domain::PlaneStateStore::getInstance().update(
 			[&config](plane::domain::PlaneStateDataClass& st)
 			{
-				if (!config.isStandardProceduresEnabled())
-				{
-					st.serial_number = _STD string { config.getPlaneCode() };
-				}
-				st.swarm_agent_identifier = config.getCatalogServiceId();
+				// 设备标识: 配置 plane.code 优先, 否则等待 PSDK 真实序列号 (由 PSDKAdapter 读取后写入);
+				// 序列号不做任何伪造 (仅 PSDK 来源)
+				st.swarm_agent_identifier = plane::utils::DeviceIdentity::resolveCatalogServiceId();
 				st.app_version			  = config.getCatalogVersion();
 			}
 		);

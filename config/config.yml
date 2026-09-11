@@ -1,6 +1,6 @@
 features:
     enable_full_psdk: true # 启用完整 PSDK 作业流程
-    enable_status_board: true # 启用终端状态板 (连接状态等关键信息固定显示, 不被日志淹没)
+    enable_status_board: true # 启用终端状态板
     enable_trace_log: true # 启用更详细日志
     set_psdk_log_level: 2 # 设置 PSDK 日志级别, 0=ERROR , 1=WARN , 2=INFO , 3=DEBUG
     skip_rc: false # 尝试跳过遥控器检测
@@ -12,3 +12,10 @@ catalog:
     targets:
         - 192.168.1.131
         - 192.168.1.*
+
+# 设备标识与 RID 起降点 (可选):
+# plane:
+#     code: <设备标识>         # 未配置时使用 PSDK 飞控序列号 (未取得前目录注册等待, 不伪造)
+#     takeoff_lat: 22.5428    # RID 起降点纬度 (度; 未配置时 RID 上报 0 并告警)
+#     takeoff_lon: 113.9589   # RID 起降点经度 (度)
+#     takeoff_alt: 10         # RID 起降点海拔 (米)
