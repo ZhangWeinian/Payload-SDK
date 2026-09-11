@@ -39,7 +39,6 @@ extern "C" {
 
 /* Exported functions --------------------------------------------------------*/
 void DjiUser_RunCameraStreamViewSample();
-void DjiTest_RunCameraStreamViewWithParam();
 
 #ifdef __cplusplus
 }

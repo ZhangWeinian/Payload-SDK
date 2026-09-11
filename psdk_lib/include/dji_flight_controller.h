@@ -117,15 +117,6 @@ typedef enum {
 } E_DjiFlightControllerJoystickCtrlAuthoritySwitchEvent;
 
 /**
- * @brief The aircraft's light status enum
- */
-typedef enum {
-    DJI_FLIGHT_CONTROLLER_LIGHT_OFF = 0,
-    DJI_FLIGHT_CONTROLLER_LIGHT_ON = 1,
-    DJI_FLIGHT_CONTROLLER_LIGHT_STATUS_MAX,
-} E_DjiFlightControllerLightStatus;
-
-/**
  * @brief The aircraft's joystick control permission switch event info enum
  */
 typedef struct {
@@ -246,12 +237,6 @@ typedef enum {
     DJI_FLIGHT_CONTROLLER_DISABLE_RC_LOST_ACTION = 1,
 } E_DjiFlightControllerRCLostActionEnableStatus;
 
-
-typedef enum {
-    DJI_FLIGHT_CONTROLLER_DISABLE_ALL_AVIOD = 0, /*disable all avoid*/
-    DJI_FLIGHT_CONTROLLER_ENABLE_ALL_AVIOD = 1,  /*enable all avoid*/
-} E_DjiFlightControllerCloseAllAvoidCommand;
-
 typedef enum {
     DJI_FLIGHT_CONTROLLER_NO_MOTOR_IN_SLOW_ROTATE_MODE = 0,
     DJI_FLIGHT_CONTROLLER_SOME_MOTOR_IN_SLOW_ROTATE_MODE = 1,
@@ -300,98 +285,68 @@ typedef struct {
 
 typedef struct
 {
-    double lat; /*!< Target point latitude, unit: rad */
-    double lon; /*!< Target point longitude, unit: rad */
-    float alt;  /*!< Target point altitude, ellipsoidal height unit: meters */
+    double lat;
+    double lon;
+    float alt;
 } T_DjiFlightControllerPointInfo;
 
 typedef struct
 {
-    uint8_t version; /*!< Function version */
-    int8_t operation; /*!< New upload of a target point or update of the current task's target point; 0: new order,  1: update goal */
-    float mea; /*!< Minimum enroute height, in meters, relative to the takeoff point.
-                If the aircraft has not started or is on the ground, it will first climb to this height before executing the task. This height is ignored if the aircraft is in the air. */
-    uint8_t fly_vel; /*!< Maximum horizontal flight speed to the target point, in meters per second */
-    uint8_t goal_num; /*!< Number of target points, currently only supports one point */
-    T_DjiFlightControllerPointInfo cmd_mode_point_info[1]; /*!< Information of the target point */
+    uint8_t version;
+    int8_t operation;
+    float mea;
+    uint8_t fly_vel;
+    uint8_t goal_num;
+    T_DjiFlightControllerPointInfo cmd_mode_point_info[1];
 } T_DjiFlightControllerStartMissionReq;
 
 typedef struct
 {
-    uint8_t ret_code; /*!< 0: Start task successfully, 1: Start task failed */
-    uint16_t error_code; /*!< Instruction flight route version reused route error code */
-    uint8_t code_name; /*!< Task code, unique, will be included in the trajectory push to ensure that external modules can correlate the task with its trajectory */
+    uint8_t ret_code;
+    uint16_t error_code;
+    uint8_t code_name;
 } T_DjiFlightControllerStartMissionRsp;
 
 typedef struct
 {
-    uint8_t mission_state_machine; /*!< Task state machine, 0 is idle, others are in progress.*/
-    uint8_t mission_planning_algo; /*!< Task planning algorithm mode */
-    uint8_t goal_index; /*!< Current target point index */
-    float distance_remaining; /*!< Remaining task distance */
-    float time_remaining; /*!< Remaining task time */
-    uint8_t soe_remaining; /*!< Required SOE (State of Energy) */
-    uint8_t progress; /*!< Progress, reserved unused */
-    uint8_t success_rate; /*!< Task success rate, reserved unused */
+    uint8_t mission_state_machine;
+    uint8_t mission_planning_algo;
+    uint8_t goal_index;
+    float distance_remaining;
+    float time_remaining;
+    uint8_t soe_remaining;
+    uint8_t progress;
+    uint8_t success_rate;
 } T_DjiFlightControllerOpenMis;
 
 typedef struct
 {
-    int32_t latitude; /*!< GPS latitude, unit: 1/2^32 * 180°, range: [-90°, 90°) */
-    int32_t longitude; /*!< GPS longitude, unit: 1/2^32 * 360°, range: [-180°, 180°) */
-    int32_t altitude; /*!< Altitude, unit: mm; Note: The type of altitude depends on the function definition.
-                       It could be: relative to the takeoff point, WGS84 absolute ellipsoidal height, EGM96 absolute altitude, barometric height, etc. */
+    int32_t latitude;
+    int32_t longitude;
+    int32_t altitude;
 } T_DjiFlightControllerSpotlightZoomGps;
 
 typedef struct
 {
-    uint8_t code_name; /*!< Unique task code for this trajectory push */
-    uint8_t point_num; /*!< Number of key points in the trajectory */
-    uint8_t byte_per_point; /*!< Number of bytes per point */
-    T_DjiFlightControllerSpotlightZoomGps points[1]; /*!< Array of key points in the trajectory */
-    uint8_t last_point_type; /*!< Whether the target point can be reached
-                              0: Yes, the last point in the trajectory is the user's target point
-                              1: No, the user's target point is in an invalid area (e.g., within an NFZ or building), the last point is the closest point to the target */
+    uint8_t code_name;
+    uint8_t point_num;
+    uint8_t byte_per_point;
+    T_DjiFlightControllerSpotlightZoomGps points[1];
+    uint8_t last_point_type;
 } T_DjiFlightControllerCoreTraj;
-
-typedef struct
-{
-    uint16_t remain_fly_time; /*!< Remaining flight time, unit: second , 0 indicates invalid. Return flight and forced landing are not considered*/
-    uint8_t gohome_capacity;  /*!< Returning to home and landing requires power capacity, unit: percent, 0 indicates invalid */
-} T_DjiFlightControllerBatteryCapacityGohome;
-
-typedef struct
-{
-    dji_f64_t longitude; /*!< radian, unit: rad [-180, 180]*/
-    dji_f64_t latitude; /*!< radian, unit: rad [-190, 90]*/
-    int16_t relative_height; /*!< Relative height to home point, unit: 0.1m */
-    int16_t speed_x; /*!< Ground-based X-axis velocity, unit: 0.1m/s */
-    int16_t speed_y; /*!< Ground-based Y-axis velocity, unit: 0.1m/s */
-    int16_t speed_z; /*!< Ground-based Z-axis velocity, unit: 0.1m/s */
-    int16_t pitch; /*!< Pitch axis angle, unit: 0.1 degree [-1800, 1800] */
-    int16_t roll; /*!< Roll axis angle, unit: 0.1 degree [-1800, 1800] */
-    int16_t yaw; /*!< Yaw axis angle, unit: 0.1 degree [-1800, 1800] */
-} T_DjiFlightControllerOsdInfo;
-
 #pragma pack()
 
+typedef struct {
+    E_DjiMountPosition fts_select;
+    E_DjiFlightControllerFtsStatus fts_status;
+    uint8_t fts_pwm_cnt; /* correct number of PWM signals received */
+} T_DjiFtsPwmTriggerStatus;
+
+typedef struct {
+    T_DjiFtsPwmTriggerStatus ESC[4]; /* trigger status of the two ESCs */
+} T_DjiFtsPwmEscTriggerStatus;
+
 /* Exported functions --------------------------------------------------------*/
-/**
- * @brief Set all radar avoid action.
- * @note  It only supports FC100.
- * @param rcLostAction: actions when radar action.It inherits from Pilot's param.
- * @return Execution result.
- */
-T_DjiReturnCode DjiFlightController_SetAllAvoidAction(E_DjiFlightControllerCloseAllAvoidCommand allAction);
-
-/**
- * @brief Get all radar avoid action.
- * @note It only supports FC100.
- * @param rcLostAction: see reference of E_DjiFlightControllerCloseAllAvoidCommand.It inherits from Pilot's param.
- * @return Execution result.
- */
-T_DjiReturnCode DjiFlightController_GetAllAvoidAction(E_DjiFlightControllerCloseAllAvoidCommand *allAction);
-
 /**
  * @brief Initialise flight controller module
  * @param ridInfo: Must report the correct RID information before using PSDK to control the aircraft.
@@ -407,24 +362,24 @@ T_DjiReturnCode DjiFlightController_DeInit(void);
 
 /**
  * @brief Set planning algorithm.
- * @param algo: 0:smart height, 1:Manual height.
+ * @param algo: 0:smart height, 1:Manual height".
  * @return Execution result.
  */
 T_DjiReturnCode DjiFlightController_SetPlanningAlgo(uint8_t algo);
 
 /**
  * @brief Set max velocity.
- * @param value: max velocity value, min:1, max:15.
+ * @param value: max velocity value, min:1, max:15".
  * @return Execution result.
 */
 T_DjiReturnCode DjiFlightController_SetMaxVelocity(uint8_t value);
 
 /**
- * @brief Set min flight height.
- * @param value: min flight height value, min:1.0, max:3000.0, only SetPlanningAlgo 1 effective.
+ * @brief Set retarded height.
+ * @param value: retarded height value, min:1.0, max:3000.0".
  * @return Execution result.
 */
-T_DjiReturnCode DjiFlightController_SetMinFlightHeight(float value);
+T_DjiReturnCode DjiFlightController_SetRetardedHeigh(float value);
 
 /**
  * @brief Get exit reason.
@@ -432,36 +387,6 @@ T_DjiReturnCode DjiFlightController_SetMinFlightHeight(float value);
  * @return Execution result.
 */
 T_DjiReturnCode DjiFlightController_GetExitReason(uint16_t *reason);
-
-/**
-* @brief Enable or disable PSDK control when the aircraft is in Attitude (ATTI) mode.
- * After this setting is applied, it controls whether the payload SDK (PSDK) is allowed to
- * send control commands while the aircraft is in Attitude (ATTI) mode.
- * @param      enabled  Enable flag.
- *                    - true:  Allow PSDK control in Attitude (ATTI) mode.
- *                    - false: Disallow PSDK control in Attitude (ATTI) mode.
- * @return Execution result.
-*/
-T_DjiReturnCode DjiFlightController_SetControlInAttitudeModeEnabled(bool enabled);
-
-/**
- * @brief brief:Get whether PSDK control is enabled when the aircraft is in Attitude (ATTI) mode.
- * @param value: 0 disable, 1 enable".
- * @return Execution result.
-*/
-T_DjiReturnCode DjiFlightController_GetControlInAttitudeModeEnabled(bool *enabled);
-
-/**
- * @brief Prototype of callback function used to get osd info.
- * @return Execution result.
-*/
-typedef T_DjiReturnCode (*FcCmderOsdInfoCbFunc)(T_DjiFlightControllerOsdInfo eventData);
-
-/**
- * @brief Prototype of callback function used to get gohome battery capacity.
- * @return Execution result.
-*/
-typedef T_DjiReturnCode (*FcCmderBatteryCapacityGohomeCbFunc)(T_DjiFlightControllerBatteryCapacityGohome eventData);
 
 /**
  * @brief Prototype of callback function used to get open mis info.
@@ -474,28 +399,6 @@ typedef T_DjiReturnCode (*FcCmderModeOpenMisEventCbFunc)(T_DjiFlightControllerOp
  * @return Execution result.
  */
 typedef T_DjiReturnCode (*FcCmderModeCoreTrajEventCbFunc)(T_DjiFlightControllerCoreTraj eventData);
-
-/**
- * @brief Register callback function for the osd info, see reference of T_DjiFlightControllerOsdInfo.
- * @note This API is restricted to specific controlled scenarios and is not enabled for general external use by default.
- *       For information regarding its actual availability, please contact our official support team.
- * @param callback: the callback for the osd info.
- * @return Execution result.
- */
-T_DjiReturnCode DjiFlightController_RegisterOsdInfoCallBack(FcCmderOsdInfoCbFunc callback);
-
-/**
- * @brief Register callback function for the gohome battery capacity.
- * @param callback: the callback for the gohome battery capacity.
- * @return Execution result.
- */
-T_DjiReturnCode DjiFlightController_RegisterBatteryCapacityGohomeCallBack(FcCmderBatteryCapacityGohomeCbFunc callback);
-
-/**
- * @brief antiregister callback function for the gohome battery capacity.
- * @return Execution result.
- */
-T_DjiReturnCode DjiFlightController_AntiRegisterBatteryCapacityGohomeCallBack();
 
 /**
  * @brief Register callback function for the open mis event.
@@ -512,24 +415,12 @@ T_DjiReturnCode DjiFlightController_RegisterOpenMisInfoCallBack(FcCmderModeOpenM
 T_DjiReturnCode DjiFlightController_RegisterCoreTrajCallBack(FcCmderModeCoreTrajEventCbFunc callback);
 
 /**
- * @brief antiregister callback function for the open mis event.
- * @return Execution result.
- */
-T_DjiReturnCode DjiFlightController_AntiRegisterOpenMisInfoCallBack(void);
-
-/**
- * @brief antiregister callback function for the core traj event.
- * @return Execution result.
- */
-T_DjiReturnCode DjiFlightController_AntiRegisterCoreTrajCallBack(void);
-
-/**
- * @brief set mode start mission.
+ * @brief set mode start mossion.
  * @param command: cmd for start mission.
  * @param rsp: response data for set start mission.
  * @return Execution result.
  */
-T_DjiReturnCode DjiFlightController_SetModeStartMission(T_DjiFlightControllerStartMissionReq command,
+T_DjiReturnCode DjiFlightController_SetModeStartMossion(T_DjiFlightControllerStartMissionReq command,
                                                        T_DjiFlightControllerStartMissionRsp *rsp);
 
 /**
@@ -912,91 +803,19 @@ T_DjiReturnCode DjiFlightController_StopSlowRotateMotor(void);
  */
 T_DjiReturnCode DjiFlightController_GetElectronicSpeedControllerStatus(E_DjiFlightControllerElectronicSpeedControllerStatus *status);
 
-/*!
- * @brief This API is used to get the status of the arm lights.
- * @note
- * 1. This interface is used to obtain the on/off status of the arm lights and is supported only on certain aircraft models.
- * @param lightStatus Pointer to the light status.
- *                    When the arm lights are on, the value of `lightStatus` will be `DJI_FLIGHT_CONTROLLER_LIGHT_ON`.
- *                    Otherwise, it will be `DJI_FLIGHT_CONTROLLER_LIGHT_OFF`.
- *                    The value of `lightStatus` will only be one of the `E_DjiFlightControllerLightStatus` enum values; otherwise, it indicates an abnormal state.
- * @return T_DjiReturnCode error code
- * 1. If the aircraft model does not support this function, the error code `DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT` will be returned.
+/**
+ * @brief Select Fts pwm trigger.
+ * @param position: Pwm trigger source position. M4/M4T/M4D/M4TD: support DJI_MOUNT_POSITION_EXTENSION_PORT or DJI_MOUNT_POSITION_EXTENSION_LITE_PORT,
+ *  M400: only support DJI_MOUNT_POSITION_EXTENSION_PORT_V2_NO4
+ * @return Execution result.
  */
-T_DjiReturnCode DjiFlightController_GetArmLightStatus(E_DjiFlightControllerLightStatus *lightStatus);
+T_DjiReturnCode DjiFlightController_SelectFtsPwmTrigger(E_DjiMountPosition position);
 
-/*! @brief This API is used to set the status of the arm lights.
- *  @note
- *  1. This interface is used to set the on/off status of the arm lights and is supported only on certain aircraft models.
- *  2. The status of the arm lights can be set to `DJI_FLIGHT_CONTROLLER_LIGHT_ON` or `DJI_FLIGHT_CONTROLLER_LIGHT_OFF`.
- *  3. After setting, you can call `DjiFlightController_GetArmLightStatus` to query the status.
- * @param lightStatus The light status you wish to set.
- *                     The value of `lightStatus` will only be one of the `E_DjiFlightControllerLightStatus` enum values; otherwise, it indicates an abnormal state.
- *  @return T_DjiReturnCode error code
- *  1. If the aircraft model does not support this function, the error code `DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT` will be returned.
- *  2. After the aircraft restarts, the arm light will retain the state they were in before the aircraft was powered off.
- *     This API is no longer maintained. Whether the status is retained after power loss varies by firmware version and aircraft model,
- *     the actual behavior should be verified through testing on the specific aircraft model.
+/**
+ * @brief Get Fts pwm trigger status.
+ * @return Execution result.
  */
-T_DjiReturnCode DjiFlightController_SetArmLightStatus(E_DjiFlightControllerLightStatus lightStatus);
-
-/*! @brief This API is used to get the status of the bottom lights.
- *  @note
- *  1. This interface is used to obtain the on/off status of the bottom lights and is supported only on certain aircraft models.
- *  @param lightStatus Pointer to the light status.
- *                     When the bottom lights are on, the value of `lightStatus` will be `DJI_FLIGHT_CONTROLLER_LIGHT_ON`.
- *                     Otherwise, it will be `DJI_FLIGHT_CONTROLLER_LIGHT_OFF`.
- *                     The value of `lightStatus` will only be one of the `E_DjiFlightControllerLightStatus` enum values; otherwise, it indicates an abnormal state.
- *  @return T_DjiReturnCode error code
- *  1. If the aircraft model does not support this function, the error code `DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT` will be returned.
- *  2. This API can only get the current on/off status of the light, it cannot get the current mode setting of the light.
- */
-T_DjiReturnCode DjiFlightController_GetBottomLightStatus(E_DjiFlightControllerLightStatus *lightStatus);
-
-/*! @brief This API is used to set the status of the bottom lights.
- *  @note
- *  1. This interface is used to set the on/off status of the bottom lights and is supported only on certain aircraft models.
- *  2. The status of the bottom lights can be set to `DJI_FLIGHT_CONTROLLER_LIGHT_ON` or `DJI_FLIGHT_CONTROLLER_LIGHT_OFF`.
- * @param lightStatus The light status you wish to set.
- *                     The value of `lightStatus` will only be one of the `E_DjiFlightControllerLightStatus` enum values; otherwise, it indicates an abnormal state.
- *  @return T_DjiReturnCode error code
- *  1. If the aircraft model does not support this function, the error code `DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT` will be returned.
- *  2. After the aircraft restarts, the bottom light will revert to its default state.
- *     This API is no longer maintained. Whether the status is retained after power loss varies by firmware version and aircraft model,
- *     the actual behavior should be verified through testing on the specific aircraft model.
- *  3. When the bottom light is turned on, this API will set the bottom light to automatic mode.
- *     Note: in automatic mode, the light's on/off status is influenced by ambient light conditions.
- *           The light will automatically turn on at night and turn off during the day.
- */
-T_DjiReturnCode DjiFlightController_SetBottomLightStatus(E_DjiFlightControllerLightStatus lightStatus);
-
-/*! @brief This API is used to get the status of the battery lights.
- *  @note
- *  1. This interface is used to obtain the on/off status of the battery lights and is supported only on certain aircraft models.
- *  @param lightStatus Pointer to the light status.
- *                     When the battery lights are on, the value of `lightStatus` will be `DJI_FLIGHT_CONTROLLER_LIGHT_ON`.
- *                     Otherwise, it will be `DJI_FLIGHT_CONTROLLER_LIGHT_OFF`.
- *                     The value of `lightStatus` will only be one of the `E_DjiFlightControllerLightStatus` enum values; otherwise, it indicates an abnormal state.
- *  @return T_DjiReturnCode error code
- *  1. If the aircraft model does not support this function, the error code `DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT` will be returned.
- */
-T_DjiReturnCode DjiFlightController_GetBatteryLightStatus(E_DjiFlightControllerLightStatus *lightStatus);
-
-/*! @brief This API is used to set the status of the battery lights.
- *  @note
- *  1. This interface is used to set the on/off status of the battery lights and is supported only on certain aircraft models.
- *  2. The status of the battery lights can be set to `DJI_FLIGHT_CONTROLLER_LIGHT_ON` or `DJI_FLIGHT_CONTROLLER_LIGHT_OFF`.
- *  3. Approximately 3 seconds after setting, you can call `DjiFlightController_GetBatteryLightStatus` to query the status.
- *     If you query the status immediately after setting, you may still get the old status.
- * @param lightStatus The light status you wish to set.
- *                     The value of `lightStatus` will only be one of the `E_DjiFlightControllerLightStatus` enum values; otherwise, it indicates an abnormal state.
- *  @return T_DjiReturnCode error code
- *  1. If the aircraft model does not support this function, the error code `DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT` will be returned.
- *  2. After the aircraft restarts, the battery light will retain the state they were in before the aircraft was powered off.
- *     This API is no longer maintained. Whether the status is retained after power loss varies by firmware version and aircraft model,
- *     the actual behavior should be verified through testing on the specific aircraft model.
- */
-T_DjiReturnCode DjiFlightController_SetBatteryLightStatus(E_DjiFlightControllerLightStatus lightStatus);
+T_DjiReturnCode DjiFlightController_GetFtsPwmTriggerStatus(T_DjiFtsPwmEscTriggerStatus* trigger_status);
 
 #ifdef __cplusplus
 }

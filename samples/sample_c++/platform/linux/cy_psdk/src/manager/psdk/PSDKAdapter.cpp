@@ -569,6 +569,7 @@ namespace plane::manager
 		// 读取相机固定信息 (型号/固件版本) 写入域模型 (一次即可, 失败仅告警)
 		this->refreshFixedCameraInfo();
 
+#if CY_PSDK_HAS_BATTERY_CAPACITY_GOHOME
 		// 注册返航电量/剩余飞行时间回调 (低电量返航评估; 失败仅告警, 飞机不支持时为预期情况)
 		if (_DJI T_DjiReturnCode rc { _DJI DjiFlightController_RegisterBatteryCapacityGohomeCallBack(batteryCapacityGohomeCallbackEntry) };
 			rc != _DJI			 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
@@ -579,6 +580,10 @@ namespace plane::manager
 		{
 			LOG_INFO("成功注册返航电量回调");
 		}
+#else
+		// PSDK < 3.16 无此 API: 低电量返航评估 (剩余飞行时间/返航电量阈值) 不更新
+		LOG_INFO("当前 PSDK 版本 (<3.16) 不支持返航电量回调, 已跳过注册");
+#endif
 
 		return true;
 	}
@@ -677,12 +682,14 @@ namespace plane::manager
 		unsubscribe(this->sub_status_.gpsControlLevel, _DJI DJI_FC_SUBSCRIPTION_TOPIC_GPS_CONTROL_LEVEL, "GPS_CONTROL_LEVEL"sv);
 		unsubscribe(this->sub_status_.controlDevice, _DJI DJI_FC_SUBSCRIPTION_TOPIC_CONTROL_DEVICE, "CONTROL_DEVICE"sv);
 
+#if CY_PSDK_HAS_BATTERY_CAPACITY_GOHOME
 		// 注销返航电量回调 (失败忽略)
 		if (_DJI T_DjiReturnCode rc { _DJI DjiFlightController_AntiRegisterBatteryCapacityGohomeCallBack() };
 			rc != _DJI			 DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
 		{
 			LOG_DEBUG("注销返航电量回调失败: {}", plane::utils::convertDjiError(rc));
 		}
+#endif
 	}
 
 	void PSDKAdapter::
@@ -1210,6 +1217,7 @@ namespace plane::manager
 		return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 	}
 
+#if CY_PSDK_HAS_BATTERY_CAPACITY_GOHOME
 	void PSDKAdapter::batteryCapacityGohomeCallback(_DJI T_DjiFlightControllerBatteryCapacityGohome info)
 	{
 		plane::domain::PlaneStateStore::getInstance().update(
@@ -1232,6 +1240,7 @@ namespace plane::manager
 		PSDKAdapter::getInstance().batteryCapacityGohomeCallback(info);
 		return _DJI DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 	}
+#endif
 
 	void PSDKAdapter::refreshFixedCameraInfo(void) noexcept
 	{

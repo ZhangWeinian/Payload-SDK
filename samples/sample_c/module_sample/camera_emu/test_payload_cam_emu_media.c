@@ -36,7 +36,6 @@
 #include "camera_emu/dji_media_file_manage/dji_media_file_core.h"
 #include "dji_high_speed_data_channel.h"
 #include "dji_aircraft_info.h"
-#include "test_raspberry_pi_camera.h"
 
 /* Private constants ---------------------------------------------------------*/
 #define FFMPEG_CMD_BUF_SIZE                 (256 + 256)
@@ -51,11 +50,6 @@ typedef enum {
     TEST_PAYLOAD_CAMERA_MEDIA_PLAY_COMMAND_PAUSE = 1,
     TEST_PAYLOAD_CAMERA_MEDIA_PLAY_COMMAND_START = 2,
 } E_TestPayloadCameraPlaybackCommand;
-
-typedef enum {
-    TEST_PAYLOAD_CAMERA_FRAME_TYPE_PREDICTED = 1,
-    TEST_PAYLOAD_CAMERA_FRAME_TYPE_INTRA = 5,
-} E_TestPayloadCameraFrameType;
 
 typedef struct {
     uint8_t isInPlayProcess;
@@ -76,8 +70,6 @@ typedef struct {
     float durationS;
     uint32_t positionInFile;
     uint32_t size;
-    E_TestPayloadCameraFrameType frameType;
-    uint32_t lastIntraFrameNumber;
 } T_TestPayloadCameraVideoFrameInfo;
 
 /* Private functions declaration ---------------------------------------------*/
@@ -217,13 +209,6 @@ T_DjiReturnCode DjiTest_CameraEmuMediaStartService(void)
         return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
     }
 
-#if USE_RASPBERRY_PI_CAMERA
-    returnCode = DjiTest_RaspberryPiCameraInit();
-    if (returnCode != DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS) {
-        USER_LOG_ERROR("start raspberry pi camera error.");
-        return DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
-    }
-#endif
     if (DjiPlatform_GetHalNetworkHandler() != NULL || DjiPlatform_GetHalUsbBulkHandler() != NULL) {
         returnCode = osalHandler->TaskCreate("user_camera_media_task", UserCameraMedia_SendVideoTask, 2048,
                                              NULL, &s_userSendVideoThread);
@@ -583,6 +568,7 @@ out:
 
     return returnCode;
 }
+
 static T_DjiReturnCode
 DjiPlayback_GetFrameInfoOfVideoFile(const char *path, T_TestPayloadCameraVideoFrameInfo *frameInfo,
                                     uint32_t frameInfoBufferCount, uint32_t *frameCount)
@@ -601,11 +587,6 @@ DjiPlayback_GetFrameInfoOfVideoFile(const char *path, T_TestPayloadCameraVideoFr
     uint32_t framePosition = 0;
     char *frameSizeLocation = NULL;
     uint32_t frameSize = 0;
-    char *frameFlagsLocation = NULL;
-    char frameFlagsStr[50] = {0};
-    int frameIsKeyFrame = 0;
-    char *frameCodecTypeLocation = NULL;
-    uint32_t lastIntraNumber = 0;
     T_DjiOsalHandler *osalHandler = DjiPlatform_GetOsalHandler();
 
     frameInfoString = osalHandler->Malloc(VIDEO_FRAME_MAX_COUNT * 1024);
@@ -662,7 +643,6 @@ DjiPlayback_GetFrameInfoOfVideoFile(const char *path, T_TestPayloadCameraVideoFr
             goto out1;
         }
         frameInfo[frameNumber].durationS = frameDurationTimeS;
-        frameInfo[frameNumber].lastIntraFrameNumber = lastIntraNumber;
 
         // find frame position
         framePositionLocation = strstr(frameLocation, s_framePositionKeyChar);
@@ -710,31 +690,6 @@ DjiPlayback_GetFrameInfoOfVideoFile(const char *path, T_TestPayloadCameraVideoFr
         }
         frameInfo[frameNumber].size = frameSize;
 
-        frameFlagsLocation = strstr(frameLocation, "flags=");
-        if (frameFlagsLocation != NULL) {
-            ret = snprintf(frameParameterFormat, sizeof(frameParameterFormat), "flags=%%s");
-            if (ret > 0) {
-                ret = sscanf(frameFlagsLocation, frameParameterFormat, frameFlagsStr);
-                if (ret > 0) {
-                    if (strchr(frameFlagsStr, 'K') != NULL) {
-                        frameIsKeyFrame = 1;
-                    }
-                }
-            }
-        }
-
-        frameCodecTypeLocation = strstr(frameLocation, "codec_type=video");
-
-        frameInfo[frameNumber].frameType = TEST_PAYLOAD_CAMERA_FRAME_TYPE_PREDICTED;
-
-        if (frameCodecTypeLocation != NULL && frameIsKeyFrame) {
-            frameInfo[frameNumber].frameType = TEST_PAYLOAD_CAMERA_FRAME_TYPE_INTRA;
-            lastIntraNumber = frameNumber;
-        }
-        else if (frameCodecTypeLocation != NULL) {
-            frameInfo[frameNumber].frameType = TEST_PAYLOAD_CAMERA_FRAME_TYPE_PREDICTED;
-        }
-
         frameLocation += strlen(s_frameKeyChar);
         frameNumber++;
         (*frameCount)++;
@@ -744,7 +699,6 @@ DjiPlayback_GetFrameInfoOfVideoFile(const char *path, T_TestPayloadCameraVideoFr
             returnCode = DJI_ERROR_SYSTEM_MODULE_CODE_OUT_OF_RANGE;
             goto out1;
         }
-        frameIsKeyFrame = 0;
     }
 
 out1:
@@ -1228,7 +1182,6 @@ static void *UserCameraMedia_SendVideoTask(void *arg)
     uint32_t startTimeMs = 0;
     bool sendVideoFlag = true;
     bool sendOneTimeFlag = false;
-    bool findIntraFrame = false;
     T_DjiDataChannelState videoStreamState = {0};
     E_DjiCameraMode mode = DJI_CAMERA_MODE_SHOOT_PHOTO;
     T_DjiOsalHandler *osalHandler = DjiPlatform_GetOsalHandler();
@@ -1236,7 +1189,6 @@ static void *UserCameraMedia_SendVideoTask(void *arg)
     E_DjiCameraVideoStreamType videoStreamType;
     char curFileDirPath[DJI_FILE_PATH_SIZE_MAX];
     char tempPath[DJI_FILE_PATH_SIZE_MAX];
-    bool raspCameraState = false;
 
     USER_UTIL_UNUSED(arg);
 
@@ -1307,38 +1259,25 @@ static void *UserCameraMedia_SendVideoTask(void *arg)
         switch (playbackCommand.command) {
             case TEST_PAYLOAD_CAMERA_MEDIA_PLAY_COMMAND_STOP:
                 snprintf(videoFilePath, DJI_FILE_PATH_SIZE_MAX, "%s", tempPath);
-#if USE_RASPBERRY_PI_CAMERA
-                DjiTest_RaspberryPiCameraLiveviewStatSet(true);
-#endif
                 startTimeMs = 0;
                 sendVideoFlag = true;
                 sendOneTimeFlag = false;
                 break;
             case TEST_PAYLOAD_CAMERA_MEDIA_PLAY_COMMAND_PAUSE:
-#if USE_RASPBERRY_PI_CAMERA
-                DjiTest_RaspberryPiCameraLiveviewStatSet(false);
-#endif
                 sendVideoFlag = false;
                 goto send;
             case TEST_PAYLOAD_CAMERA_MEDIA_PLAY_COMMAND_START:
-#if USE_RASPBERRY_PI_CAMERA
-                DjiTest_RaspberryPiCameraLiveviewStatSet(false);
-#endif
                 snprintf(videoFilePath, DJI_FILE_PATH_SIZE_MAX, "%s", playbackCommand.path);
                 startTimeMs = playbackCommand.timeMs;
                 sendVideoFlag = true;
                 sendOneTimeFlag = true;
-                findIntraFrame = true;
                 break;
             default:
                 USER_LOG_ERROR("playback command invalid: %d.", playbackCommand.command);
                 sendVideoFlag = false;
                 goto send;
         }
-#if USE_RASPBERRY_PI_CAMERA
-            DjiTest_RaspberryPiCameraLiveviewStatGet(&raspCameraState);
-            if(raspCameraState == true) continue;
-#endif
+
         // video send preprocess
         returnCode = DjiPlayback_VideoFileTranscode(videoFilePath, "h264", transcodedFilePath,
                                                     DJI_FILE_PATH_SIZE_MAX);
@@ -1367,11 +1306,6 @@ static void *UserCameraMedia_SendVideoTask(void *arg)
             continue;
         }
 
-        if(findIntraFrame == true) {
-            frameNumber = frameInfo[frameNumber].lastIntraFrameNumber;
-            findIntraFrame = false;
-        }
-
         if (fpFile != NULL)
             fclose(fpFile);
 
@@ -1382,11 +1316,6 @@ static void *UserCameraMedia_SendVideoTask(void *arg)
         }
 
         send:
-#if USE_RASPBERRY_PI_CAMERA
-            DjiTest_RaspberryPiCameraLiveviewStatGet(&raspCameraState);
-            if(raspCameraState == true) continue;
-#endif
-
             if (fpFile == NULL) {
                 USER_LOG_ERROR("open video file fail.");
                 continue;

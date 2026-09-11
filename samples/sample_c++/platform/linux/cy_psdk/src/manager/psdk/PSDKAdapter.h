@@ -6,6 +6,7 @@
 #include <dji_flight_controller.h>
 #include <dji_hms_manager.h>
 #include <dji_typedef.h>
+#include <dji_version.h>
 #include <dji_waypoint_v3.h>
 
 #include "manager/event_manager/EventManager.h"
@@ -30,6 +31,14 @@
 #include <vector>
 
 #include "define.h"
+
+// V3.16.0 起 PSDK 新增 "返航电量/剩余飞行时间" 回调 API;
+// 3.14/3.15 的库没有该接口, 编译期裁剪对应功能 (低电量返航评估数据为空)
+#if DJI_VERSION_MAJOR > 3 || (DJI_VERSION_MAJOR == 3 && DJI_VERSION_MINOR >= 16)
+	#define CY_PSDK_HAS_BATTERY_CAPACITY_GOHOME 1
+#else
+	#define CY_PSDK_HAS_BATTERY_CAPACITY_GOHOME 0
+#endif
 
 namespace plane::manager
 {
@@ -93,11 +102,13 @@ namespace plane::manager
 		// 作为 PSDK 所要求的 C 兼容回调函数，将 C 接口调用桥接到 C++ 成员函数 hmsInfoCallback ，并返回 PSDK 期望的成功码
 		static _DJI T_DjiReturnCode hmsInfoCallbackEntry(_DJI T_DjiHmsInfoTable hmsInfoTable);
 
+#if CY_PSDK_HAS_BATTERY_CAPACITY_GOHOME
 		// 处理飞控"返航电量/剩余飞行时间"回调, 更新域模型低电量返航评估
 		void batteryCapacityGohomeCallback(_DJI T_DjiFlightControllerBatteryCapacityGohome info);
 
 		// 作为 PSDK 所要求的 C 兼容回调函数, 将 C 接口调用桥接到 C++ 成员函数 batteryCapacityGohomeCallback
 		static _DJI T_DjiReturnCode batteryCapacityGohomeCallbackEntry(_DJI T_DjiFlightControllerBatteryCapacityGohome info);
+#endif
 
 		// 读取相机固定信息 (相机型号/固件版本) 写入域模型; 无相机/不支持时仅告警
 		void refreshFixedCameraInfo(void) noexcept;

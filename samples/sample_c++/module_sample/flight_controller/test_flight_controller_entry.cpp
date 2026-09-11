@@ -64,13 +64,10 @@ start:
         << "| [9] Interest point sample - run interest point mission by settings (only support on M3E/M3T)                   |\n"
         << "| [a] EU-C6 FTS trigger sample - receive fts callback to trigger parachute function (only support on M3D/M3DT)   |\n"
         << "| [b] Slow rotate blade sample, only support on M400                                                             |\n"
-        << "| [c] Select the FTS PWM trigger on E-Port or E-Port Lite (either one). Supported on M4/M4T/M4D/M4TD.            |\n"
-        << "| [d] Select the FTS PWM trigger on Port 4 (M400 only). Not supported on Manifold 3.                             |\n"
+        << "| [c] Select FTS pwm trigger position, support on M4/M4T/M4D/M4TD                                                |\n"
+        << "| [d] Select FTS pwm trigger position, support on M400                                                           |\n"
         << "| [e] Flight controller sample - set get perception parameters, support on M400                                  |\n"
         << "| [f] Flight controller sample - set cmd start mission, support on M400                                          |\n"
-        << "| [g] Flight controller sample - get battery capacity gohome                                                     |\n"
-        << "| [h] Flight controller sample - register osd info, get relative high                                            |\n"
-        << "| [i] Flight controller sample - stealth mode control                                                            |\n"
         << std::endl;
 
     std::cin >> inputSelectSample;
@@ -112,12 +109,12 @@ start:
             DjiTest_FlightControlRunSample(E_DJI_TEST_FLIGHT_CTRL_SAMPLE_SELECT_SLOW_ROTATE_BLADE);
             break;
         case 'c':
-            DjiTest_FtsPwmTriggerSample(DJI_MOUNT_POSITION_EXTENSION_PORT, "DJI_MOUNT_POSITION_EXTENSION_PORT");
+            DjiTest_FlightControlFtsPwmTriggerSample(DJI_MOUNT_POSITION_EXTENSION_PORT, "DJI_MOUNT_POSITION_EXTENSION_PORT");
             // or DJI_MOUNT_POSITION_EXTENSION_LITE_PORT
-            DjiTest_FtsPwmTriggerSample(DJI_MOUNT_POSITION_EXTENSION_LITE_PORT, "DJI_MOUNT_POSITION_EXTENSION_LITE_PORT");
+            DjiTest_FlightControlFtsPwmTriggerSample(DJI_MOUNT_POSITION_EXTENSION_LITE_PORT, "DJI_MOUNT_POSITION_EXTENSION_LITE_PORT");
             break;
         case 'd': // for m400
-            DjiTest_FtsPwmTriggerSample(DJI_MOUNT_POSITION_EXTENSION_PORT_V2_NO4, "DJI_MOUNT_POSITION_EXTENSION_PORT_V2_NO4");
+            DjiTest_FlightControlFtsPwmTriggerSample(DJI_MOUNT_POSITION_EXTENSION_PORT_V2_NO4, "DJI_MOUNT_POSITION_EXTENSION_PORT_V2_NO4");
             break;
         case 'e' : // for m400
             DjiTest_FlightControlRunSample(E_DJI_TEST_FLIGHT_CTRL_SAMPLE_SELECT_SET_GET_PERCEPTION_PARAM);
@@ -125,14 +122,6 @@ start:
         case 'f' : // for m400
             DjiTest_FlightControlRunSample(E_DJI_TEST_FLIGHT_CTRL_SAMPLE_SELECT_SET_CMD_START_MISSION);
             goto start;
-        case 'g':
-            DjiTest_FlightControlRunSample(E_DJI_TEST_FLIGHT_CTRL_SAMPLE_SELECT_GET_BATTERY_CAPACITY_GOHOME);
-            goto start;
-        case 'h':
-            DjiTest_FlightControlRunSample(E_DJI_TEST_FLIGHT_CTRL_SAMPLE_SELECT_REGISTER_OSD_INFO);
-            goto start;
-        case 'i':
-            DjiTest_FlightControlRunSample(E_DJI_TEST_FLIGHT_CTRL_SAMPLE_SELECT_STEALTH_MODE);
         case 'q':
             break;
         default:
