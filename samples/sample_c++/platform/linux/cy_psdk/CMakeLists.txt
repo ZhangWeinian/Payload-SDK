@@ -308,3 +308,9 @@ pretty_message (
 if(BUILD_TESTING)
 	add_subdirectory (test)
 endif()
+
+# 模糊测试 (libFuzzer, 仅 x86 Clang; 详见 fuzz/CMakeLists.txt 与 scripts/llvm/README.md §9)
+option (PSDK_BUILD_FUZZERS "构建 libFuzzer 模糊测试目标 (Clang)" OFF)
+if(PSDK_BUILD_FUZZERS)
+	add_subdirectory (fuzz)
+endif()

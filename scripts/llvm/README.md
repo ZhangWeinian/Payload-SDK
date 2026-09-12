@@ -34,6 +34,34 @@
 依赖隔离: x86 Clang 构建使用 `vcpkg_installed-clang/`, aarch64 交叉使用 `vcpkg_installed/arm64/`,
 两套依赖各自独立、互不污染。
 
+### LLVM 工具使用地图
+
+**已接入:**
+
+| 工具 | 位置 |
+| --- | --- |
+| clang / clang++ 23 | `debug` / `tsan` / `cov` / `release` / `redbi` 全部 x86 预设 |
+| ld.lld | 同上 (`CMAKE_LINKER_TYPE=LLD`, 含 LTO 链接) |
+| compiler-rt (ASan/UBSan/TSan/profile) | `debug` / `tsan` / `cov` 预设运行时 |
+| clang-tidy 23 | `scripts/llvm/clang-tidy.sh` + `.clang-tidy` (x86 / aarch64 架构感知双模式) |
+| llvm-profdata + llvm-cov | `scripts/llvm/clang-coverage.sh` 源码级覆盖率 |
+| llvm-mca (+ llvm-objdump / llvm-cxxfilt) | `scripts/llvm/llvm-mca.sh` aarch64 微架构建模 |
+| llvm-symbolizer | PATH 提供, Sanitizer 栈回溯自动调用 |
+| lldb-dap 23 (+ LLDB DAP 扩展) | `psdk/.vscode/launch.json`, F5 调试 debug 预设产物 (见 §8) |
+| libFuzzer (compiler-rt) | `fuzz` 预设 + `fuzz/`, 目标: ProbePacketCodec / JsonCodec 链路 (见 §9) |
+
+**已就绪、经评估未接入 (附原因):**
+
+| 组件 | 原因 |
+| --- | --- |
+| llvm-ar / ranlib / nm / strip / objcopy | 工程无静态库构建 (`add_library` 为零), 无收益 |
+| scan-build / scan-build-py | 与 clang-tidy 的 `clang-analyzer-*` 检查族重叠 |
+| clangd | IntelliSense 目前由 cpptools 承担 (configurationProvider: cmake-tools) |
+| MSan / libc++ | vcpkg 依赖为 libstdc++ ABI; 切换需重建全部依赖且偏离 aarch64 交付环境 |
+| llvm-bolt / llvm-profgen | 仅适用于 LLVM 构建链; x86 产物不交付, aarch64 交付链为 GCC |
+| llvm-exegesis | 需在目标机 (RK3588S) 上运行 |
+| lifetime-safety (cc1 实验特性) | LLVM 23 仅 cc1 层暴露, 无稳定驱动开关 |
+
 ---
 
 ## 2. 预设一览
@@ -41,8 +69,10 @@
 | 预设 | 编译器 | 用途 |
 | --- | --- | --- |
 | `debug` | Clang + ASan/UBSan | 日常开发与动态分析 (推荐默认) |
+| `tsan` | Clang + TSan | 线程/数据竞争检测 (多线程流水线; 见 §4 容器限制) |
+| `fuzz` | Clang + libFuzzer/ASan | 解析器模糊测试: ProbePacketCodec / JsonCodec (见 §9) |
 | `cov` | Clang + 覆盖率插桩 | llvm-cov 覆盖率采集专用 |
-| `release` | Clang (LTO / LLD) | x86 性能基准与对比 |
+| `release` | Clang (LTO / LLD) | 优化构建验证 + x86 性能基准 (含测试) |
 | `redbi` | Clang | 带符号优化构建 |
 | `aarch64` | GCC 16 交叉 | 交付产物 (静态 libstdc++/libgcc) |
 
@@ -51,6 +81,11 @@
 cmake --preset debug
 cmake --build --preset debug
 ctest --preset debug
+
+# x86 发布构建验证 (-O3 + LTO; 防止 debug 正常但 release 编译/运行失败)
+cmake --preset release
+cmake --build --preset release
+ctest --preset release
 
 # aarch64 交付 (GCC 16 交叉)
 cmake --preset aarch64
@@ -102,6 +137,28 @@ ctest --preset debug
 > `-fno-sanitize-link-runtime` + `CMAKE_EXE_LINKER_FLAGS_DEBUG="-Wl,--no-as-needed -lasan -lubsan"`
 > (复用 GCC 运行时, 注意保证 `libasan.so` 出现在 `DT_NEEDED` 首位)。
 
+**TSan (线程检测)** 位于 `tsan` 预设 (与 ASan 互斥, 独立构建目录), 面向采集/命令/MQTT/WS 多线程流水线:
+
+```bash
+cmake --preset tsan
+cmake --build --preset tsan
+ctest --preset tsan
+```
+
+> **容器限制**: 本开发容器的 seccomp 策略禁止 `personality(ADDR_NO_RANDOMIZE)`:
+> TSan 无法关闭 ASLR (报 `FATAL: ... unable to disable ASLR`), lldb 启动同样受限 (见 §8)。
+> 构建不受影响。根治需改**容器启动参数** (Dockerfile 层无法设置, 因 seccomp 属运行期配置;
+> 且改动后需重建容器才生效):
+>
+> - `docker run` 启动脚本: 追加 `--security-opt seccomp=unconfined`
+> - docker compose: 服务下加 `security_opt: ["seccomp=unconfined"]`
+> - VS Code 创建容器时 (`.devcontainer/devcontainer.json`): `"runArgs": ["--security-opt", "seccomp=unconfined"]`
+>
+> 最小权限做法 (仅放行必要调用, 其余过滤保持): 复制 Docker 默认 seccomp profile 后, 给
+> `personality` 的允许参数追加 `262144` (ADDR_NO_RANDOMIZE), 再以
+> `--security-opt seccomp=<custom.json>` 引用。
+> 无 seccomp 限制的普通 Linux 主机/目标板无此问题。
+
 **覆盖率** (LLVM 源码级):
 
 ```bash
@@ -128,8 +185,9 @@ bash scripts/llvm/llvm-mca.sh \
 bash scripts/llvm/llvm-mca.sh --asm /tmp/kernel.s --cpu cortex-a55 --timeline
 ```
 
-符号名可用 `llvm-objdump -t <object>` 查询。分析结果给出吞吐、延迟、端口压力,
-用于定位热点与验证优化效果。
+符号名可用 `llvm-objdump -t <object> | llvm-cxxfilt | grep <函数名>` 查找
+(demangle 名与符号对照), 或 `llvm-cxxfilt <符号>` 直接反解。分析结果给出吞吐、
+延迟、端口压力, 用于定位热点与验证优化效果。
 
 > **关于反汇编输入**: 目标文件反汇编产物中, 分支/调用目标只有地址而无标签,
 > 脚本会将这些不完整指令行 (裸 `b`/`bl`/`cbz` 等) 剔除 —— 它们不影响计算段
@@ -181,4 +239,60 @@ GCC 的 PGO 需要**在目标板上**采集真实运行剖面:
 注意事项:
 - 采集与使用必须使用**同一 GCC 版本与同一路径**;
 - 建议开启 `-fprofile-correction` 容忍多线程采集的计数器不精确;
-- 如需 AutoFDO (基于 perf 采样), 需额外的 LLVM BOLT/AutoFDO 工具链, 当前环境未预置。
+- 如需 AutoFDO (基于 perf 采样) 或 BOLT: 仅适用于 LLVM 构建链。容器已提供
+  `llvm-profgen` / `llvm-bolt` 全套工具, 但本交付链为 GCC 且 x86 产物不交付, 故未接入。
+
+---
+
+## 8. LLDB 原生调试 (lldb-dap)
+
+VS Code 直接用 LLVM 23 自带调试栈调试 `debug` 预设产物 (ASan/UBSan 插桩):
+
+```bash
+cmake --preset debug && cmake --build --preset debug
+# VS Code: F5 -> "LLDB: cy_psdk (debug 预设)"
+```
+
+配置见 `psdk/.vscode/launch.json`; 扩展为官方 `llvm-vs-code-extensions.lldb-dap`
+(使用 PATH 中的 `lldb-dap` 23.1.2)。两处**容器适配** (均已实测):
+
+- **seccomp**: 容器禁止 `personality(ADDR_NO_RANDOMIZE)`, 而 lldb 默认
+  "先关 ASLR 再启动", 会报 `personality set failed`; launch.json 已用
+  `initCommands: settings set target.disable-aslr false` 取消该行为。
+  根治方案 (容器运行参数): `--security-opt seccomp=unconfined` —— 同时修复
+  TSan 无法运行的问题 (见 §4)。
+- **LSan**: 被调试进程已处于 lldb 跟踪下, LeakSanitizer 无法再次 ptrace,
+  会以退出码 1 中止; 调试会话已设 `ASAN_OPTIONS=detect_leaks=0`
+  (常规运行与 ctest 不受影响, 泄漏检测仍开启)。
+
+命令行冒烟 (无需 VS Code, 已实测可停在 main 断点):
+
+```bash
+lldb --batch -o "settings set target.disable-aslr false" \
+     -o "target create build/x86_64-linux/debug/bin/cy_psdk" \
+     -o "breakpoint set --name main" -o run -o "frame info" -o quit
+```
+
+---
+
+## 9. 模糊测试 (libFuzzer)
+
+`fuzz` 预设构建两个覆盖率引导模糊器 (libFuzzer + ASan/UBSan, 仅 x86 Clang):
+
+| 目标 | 覆盖路径 |
+| --- | --- |
+| `fuzz_probe_packet` | `decodeProbePacket` / `decodeAnnouncement` (SWMP UDP 报文) + 解码→重编码一致性回环 |
+| `fuzz_json_codec` | `JsonCodec::registrationToJson` / `statusToJson` + 发送路径 `dump()` + `json::parse` 解析语义 |
+
+```bash
+cmake --preset fuzz
+cmake --build --preset fuzz
+
+# 种子语料在 fuzz/corpus/<目标>/; 变异结果建议写入独立工作目录 (避免污染种子语料):
+mkdir -p /tmp/fuzz-work && cp -r fuzz/corpus/* /tmp/fuzz-work/
+build/x86_64-linux/fuzz/bin/fuzz_probe_packet /tmp/fuzz-work/probe_packet -runs=100000
+build/x86_64-linux/fuzz/bin/fuzz_json_codec  /tmp/fuzz-work/json_codec  -runs=100000
+```
+
+> 崩溃样本以 `crash-*` 落盘当前目录 (可用 `-artifact_prefix=<dir>/` 指定位置);
+> ASan/UBSan 命中的内存/UB 问题会直接中止并输出栈回溯 (llvm-symbolizer 自动符号化)。

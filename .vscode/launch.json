@@ -1,0 +1,40 @@
+{
+    // LLVM 原生调试: lldb-dap 23.1.2 + 官方扩展 llvm-vs-code-extensions.lldb-dap
+    // 前置: cmake --preset debug && cmake --build --preset debug
+    //
+    // 两处容器适配 (均已实测, 无需改动代码):
+    //  1. seccomp 禁止 personality(ADDR_NO_RANDOMIZE): lldb 默认"先关 ASLR 再启动"会报
+    //     `personality set failed` -> initCommands 显式取消该行为 (源码级调试不受影响)。
+    //     根治方案 (容器运行参数): --security-opt seccomp=unconfined (同时修复 TSan 运行)。
+    //  2. LSan 在被调试进程内无法再次 ptrace (已处于 lldb 跟踪下), 会以退出码 1 中止
+    //     -> 调试会话设 ASAN_OPTIONS=detect_leaks=0 (常规运行/ctest 不受影响)。
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "LLDB: cy_psdk (debug 预设)",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/x86_64-linux/debug/bin/cy_psdk",
+            "args": [],
+            "cwd": "${workspaceFolder}/build/x86_64-linux/debug/bin",
+            "stopOnEntry": false,
+            "env": {
+                "ASAN_OPTIONS": "detect_leaks=0"
+            },
+            "initCommands": ["settings set target.disable-aslr false"]
+        },
+        {
+            "name": "LLDB: cy_psdk --help (冒烟)",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/x86_64-linux/debug/bin/cy_psdk",
+            "args": ["--help"],
+            "cwd": "${workspaceFolder}/build/x86_64-linux/debug/bin",
+            "stopOnEntry": false,
+            "env": {
+                "ASAN_OPTIONS": "detect_leaks=0"
+            },
+            "initCommands": ["settings set target.disable-aslr false"]
+        }
+    ]
+}

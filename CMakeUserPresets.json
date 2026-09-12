@@ -35,6 +35,7 @@
                 "CMAKE_CXX_COMPILER": "clang++",
                 "CMAKE_LINKER_TYPE": "LLD",
                 "VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed-clang",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
                 "CMAKE_C_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
             }
@@ -48,8 +49,6 @@
             "installDir": "${sourceDir}/install/x86_64-linux/debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/x86_64-linux/debug",
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
                 "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=address,undefined -fno-sanitize-recover=all",
                 "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=address,undefined -fno-sanitize-recover=all",
                 "BUILD_TESTING": "ON"
@@ -64,30 +63,55 @@
             "installDir": "${sourceDir}/install/x86_64-linux/cov",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/x86_64-linux/cov",
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
                 "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O0 -fprofile-instr-generate -fcoverage-mapping",
                 "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O0 -fprofile-instr-generate -fcoverage-mapping",
                 "BUILD_TESTING": "ON"
             }
         },
         {
+            "name": "tsan",
+            "displayName": "Debug (x86_64-linux, Clang + TSan)",
+            "description": "ThreadSanitizer 数据竞争检测 (与 ASan 互斥, 独立目录); 面向采集/命令/MQTT/WS 多线程流水线",
+            "inherits": "x86-clang",
+            "binaryDir": "${sourceDir}/build/x86_64-linux/tsan",
+            "installDir": "${sourceDir}/install/x86_64-linux/tsan",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=thread -fno-sanitize-recover=all",
+                "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=thread -fno-sanitize-recover=all",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "fuzz",
+            "displayName": "Fuzz (x86_64-linux, Clang libFuzzer)",
+            "description": "libFuzzer 覆盖率引导模糊测试 (ASan/UBSan 插桩); 目标: ProbePacketCodec / JsonCodec 链路; 见 scripts/llvm/README.md §9",
+            "inherits": "x86-clang",
+            "binaryDir": "${sourceDir}/build/x86_64-linux/fuzz",
+            "installDir": "${sourceDir}/install/x86_64-linux/fuzz",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all",
+                "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all",
+                "BUILD_TESTING": "OFF",
+                "PSDK_BUILD_FUZZERS": "ON"
+            }
+        },
+        {
             "name": "release",
             "displayName": "Release (x86_64-linux, Clang)",
-            "description": "Clang 优化的发布构建，注重性能",
+            "description": "Clang -O3 + LTO 发布构建; 同时构建并运行测试, 防止 debug 正常但 release 编译/运行失败",
             "inherits": "x86-clang",
             "binaryDir": "${sourceDir}/build/x86_64-linux/release",
             "installDir": "${sourceDir}/install/x86_64-linux/release",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/x86_64-linux/release",
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
                 "CMAKE_CXX_FLAGS_RELEASE": "$env{PSDK_COMMON_WARNINGS} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
                 "CMAKE_C_FLAGS_RELEASE": "$env{PSDK_COMMON_WARNINGS} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
                 "CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections -Wl,-z,relro,-z,now",
                 "CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections",
                 "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-                "BUILD_TESTING": "OFF"
+                "BUILD_TESTING": "ON"
             }
         },
         {
@@ -99,8 +123,6 @@
             "installDir": "${sourceDir}/install/x86_64-linux/relwithdebinfo",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/x86_64-linux/relwithdebinfo",
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
                 "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
                 "CMAKE_C_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
                 "BUILD_TESTING": "ON"
@@ -115,7 +137,6 @@
             "installDir": "${sourceDir}/install/aarch64-linux/release",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/aarch64-linux/release",
                 "VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed/arm64",
                 "VCPKG_TARGET_TRIPLET": "arm64-linux",
                 "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/aarch64-linux-gnu.cmake",
@@ -136,8 +157,7 @@
             "name": "release",
             "displayName": "Build Release",
             "configurePreset": "release",
-            "jobs": 16,
-            "cleanFirst": true
+            "jobs": 16
         },
         {
             "name": "redbi",
@@ -170,6 +190,19 @@
             "displayName": "Build Debug (Clang, 覆盖率插桩)",
             "configurePreset": "cov",
             "jobs": 16
+        },
+        {
+            "name": "tsan",
+            "displayName": "Build Debug (Clang, TSan)",
+            "configurePreset": "tsan",
+            "jobs": 16
+        },
+        {
+            "name": "fuzz",
+            "displayName": "Build Fuzzers (libFuzzer)",
+            "configurePreset": "fuzz",
+            "jobs": 16,
+            "targets": ["fuzz_probe_packet", "fuzz_json_codec"]
         }
     ],
     "testPresets": [
@@ -190,6 +223,13 @@
             "name": "cov",
             "displayName": "Test Debug (Clang, 覆盖率采集)",
             "configurePreset": "cov",
+            "output": { "outputOnFailure": true },
+            "execution": { "noTestsAction": "error", "stopOnFailure": false }
+        },
+        {
+            "name": "tsan",
+            "displayName": "Test Debug (Clang, TSan)",
+            "configurePreset": "tsan",
             "output": { "outputOnFailure": true },
             "execution": { "noTestsAction": "error", "stopOnFailure": false }
         }
