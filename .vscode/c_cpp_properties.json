@@ -1,25 +1,25 @@
 {
-	"configurations": [
-		{
-			"name": "Linux",
-			"includePath": [
-				"${workspaceFolder}/**",
-				"samples/sample_c++/platform/linux/cy_psdk/src",
-				"samples/sample_c++/platform/linux/cy_psdk/src/application",
-				"samples/sample_c++/platform/linux/cy_psdk/src/workspace",
-				"samples/sample_c++/platform/linux/cy_psdk/../common",
-				"psdk_lib/include",
-				"samples/sample_c++/module_sample",
-				"samples/sample_c/module_sample",
-				"${workspaceFolder}/vcpkg_installed/x64-linux/include"
-			],
-			"defines": [],
-			"compilerPath": "/usr/bin/g++",
-			"intelliSenseMode": "linux-gcc-x64",
-			"cStandard": "c17",
-			"cppStandard": "c++23",
-			"configurationProvider": "ms-vscode.cmake-tools"
-		}
-	],
-	"version": 4
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "samples/sample_c++/platform/linux/cy_psdk/src",
+                "samples/sample_c++/platform/linux/cy_psdk/src/application",
+                "samples/sample_c++/platform/linux/cy_psdk/src/workspace",
+                "samples/sample_c++/platform/linux/cy_psdk/../common",
+                "psdk_lib/include",
+                "samples/sample_c++/module_sample",
+                "samples/sample_c/module_sample",
+                "${workspaceFolder}/vcpkg_installed-clang/x64-linux/include"
+            ],
+            "defines": [],
+            "compilerPath": "clang",
+            "intelliSenseMode": "linux-clang-x64",
+            "cStandard": "c17",
+            "cppStandard": "c++23",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
 }

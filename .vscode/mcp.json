@@ -1,11 +1,11 @@
 {
-  "servers": {
-    "codegraph": {
-      "type": "stdio",
-      "command": "codegraph",
-      "args": ["serve", "--mcp"],
-      "cwd": "/home/vscode/workspace/swarm/device",
-      "autoStart": true
+    "servers": {
+        "codegraph": {
+            "type": "stdio",
+            "command": "codegraph",
+            "args": ["serve", "--mcp"],
+            "cwd": "/home/vscode/workspace/swarm/device",
+            "autoStart": true
+        }
     }
-  }
 }

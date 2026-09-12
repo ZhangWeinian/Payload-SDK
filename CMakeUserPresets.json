@@ -1,153 +1,197 @@
 {
-	"version": 3,
-	"configurePresets": [
-		{
-			"name": "base",
-			"hidden": true,
-			"generator": "Ninja",
-			"environment": {
-				"PSDK_COMMON_WARNINGS": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wformat=2 -Wunused"
-			},
-			"cacheVariables": {
-				"CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-				"VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed",
-				"CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-				"CMAKE_COLOR_DIAGNOSTICS": "ON",
-				"CMAKE_CXX_STANDARD": "23",
-				"CMAKE_CXX_STANDARD_REQUIRED": "ON",
-				"CMAKE_CXX_EXTENSIONS": "OFF",
-				"CMAKE_C_STANDARD": "23",
-				"CMAKE_C_STANDARD_REQUIRED": "ON",
-				"CMAKE_C_EXTENSIONS": "OFF",
-				"TREAT_WARNINGS_AS_ERRORS": {
-					"type": "BOOL",
-					"value": "FALSE"
-				}
-			}
-		},
-		{
-			"name": "debug",
-			"displayName": "Debug (x86_64-linux)",
-			"description": "带有调试符号和地址/未定义行为检测",
-			"inherits": "base",
-			"binaryDir": "${sourceDir}/build/x86_64-linux/debug",
-			"installDir": "${sourceDir}/install/x86_64-linux/debug",
-			"cacheVariables": {
-				"CMAKE_BUILD_TYPE": "Debug",
-				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/x86_64-linux/debug",
-				"VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
-				"CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O0 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=undefined",
-				"CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O0 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=undefined",
-				"BUILD_TESTING": "ON"
-			}
-		},
-		{
-			"name": "release",
-			"displayName": "Release (x86_64-linux)",
-			"description": "优化的发布构建，注重性能",
-			"inherits": "base",
-			"binaryDir": "${sourceDir}/build/x86_64-linux/release",
-			"installDir": "${sourceDir}/install/x86_64-linux/release",
-			"cacheVariables": {
-				"CMAKE_BUILD_TYPE": "Release",
-				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/x86_64-linux/release",
-				"VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
-				"CMAKE_CXX_FLAGS_RELEASE": "$env{PSDK_COMMON_WARNINGS} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
-				"CMAKE_C_FLAGS_RELEASE": "$env{PSDK_COMMON_WARNINGS} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
-				"CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections -Wl,-z,relro,-z,now",
-				"CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections",
-				"CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-				"BUILD_TESTING": "OFF"
-			}
-		},
-		{
-			"name": "redbi",
-			"displayName": "RelWithDebInfo (x86_64-linux)",
-			"description": "带有调试符号的优化构建",
-			"inherits": "base",
-			"binaryDir": "${sourceDir}/build/x86_64-linux/relwithdebinfo",
-			"installDir": "${sourceDir}/install/x86_64-linux/relwithdebinfo",
-			"cacheVariables": {
-				"CMAKE_BUILD_TYPE": "RelWithDebInfo",
-				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/x86_64-linux/relwithdebinfo",
-				"VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
-				"CMAKE_CXX_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
-				"CMAKE_C_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
-				"BUILD_TESTING": "ON"
-			}
-		},
-		{
-			"name": "aarch64",
-			"displayName": "Release (aarch64-linux / RK3588S)",
-			"description": "面向 ARM64 (RK3588S) 的构建; x86 开发机交叉编译, 3588 板上直接本机编译; 依赖经 vcpkg arm64-linux triplet 构建",
-			"inherits": "base",
-			"binaryDir": "${sourceDir}/build/aarch64-linux/release",
-			"installDir": "${sourceDir}/install/aarch64-linux/release",
-			"cacheVariables": {
-				"CMAKE_BUILD_TYPE": "Release",
-				"CMAKE_INSTALL_PREFIX": "${sourceDir}/install/aarch64-linux/release",
-				"VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed/arm64",
-				"VCPKG_TARGET_TRIPLET": "arm64-linux",
-				"VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/aarch64-linux-gnu.cmake",
-				"BUILD_TESTING": "OFF"
-			}
-		}
-	],
-	"buildPresets": [
-		{
-			"name": "debug",
-			"displayName": "Build Debug",
-			"configurePreset": "debug",
-			"jobs": 16,
-			"targets": ["all"]
-		},
-		{
-			"name": "release",
-			"displayName": "Build Release",
-			"configurePreset": "release",
-			"jobs": 16,
-			"cleanFirst": true
-		},
-		{
-			"name": "redbi",
-			"displayName": "Build RelWithDebInfo",
-			"configurePreset": "redbi",
-			"jobs": 16
-		},
-		{
-			"name": "aarch64",
-			"displayName": "Build AArch64 (RK3588S)",
-			"configurePreset": "aarch64",
-			"jobs": 16
-		},
-		{
-			"name": "install-debug",
-			"displayName": "Install Debug",
-			"configurePreset": "debug",
-			"jobs": 16,
-			"targets": ["install"]
-		},
-		{
-			"name": "install-release",
-			"displayName": "Install Release",
-			"configurePreset": "release",
-			"jobs": 16,
-			"targets": ["install"]
-		}
-	],
-	"testPresets": [
-		{
-			"name": "debug",
-			"displayName": "Test Debug",
-			"configurePreset": "debug",
-			"output": { "outputOnFailure": true, "verbosity": "verbose" },
-			"execution": { "noTestsAction": "error", "stopOnFailure": false }
-		},
-		{
-			"name": "release",
-			"displayName": "Test Release",
-			"configurePreset": "release",
-			"output": { "outputOnFailure": true }
-		}
-	]
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "environment": {
+                "PSDK_COMMON_WARNINGS": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wformat=2 -Wunused"
+            },
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_COLOR_DIAGNOSTICS": "ON",
+                "CMAKE_CXX_STANDARD": "23",
+                "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+                "CMAKE_CXX_EXTENSIONS": "OFF",
+                "CMAKE_C_STANDARD": "23",
+                "CMAKE_C_STANDARD_REQUIRED": "ON",
+                "CMAKE_C_EXTENSIONS": "OFF",
+                "TREAT_WARNINGS_AS_ERRORS": {
+                    "type": "BOOL",
+                    "value": "FALSE"
+                }
+            }
+        },
+        {
+            "name": "x86-clang",
+            "hidden": true,
+            "displayName": "x86_64 开发容器 (Clang/LLVM 23)",
+            "description": "x86_64 本机开发统一使用 LLVM/Clang: 编译 / 静态分析 / Sanitizers / 覆盖率 / 性能建模; 依赖独立存于 vcpkg_installed-clang, 与 aarch64 交叉依赖隔离",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_LINKER_TYPE": "LLD",
+                "VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed-clang",
+                "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "Debug (x86_64-linux, Clang + ASan/UBSan)",
+            "description": "Clang 调试构建, 带 AddressSanitizer + UndefinedBehaviorSanitizer 动态分析",
+            "inherits": "x86-clang",
+            "binaryDir": "${sourceDir}/build/x86_64-linux/debug",
+            "installDir": "${sourceDir}/install/x86_64-linux/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/x86_64-linux/debug",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
+                "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=address,undefined -fno-sanitize-recover=all",
+                "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=address,undefined -fno-sanitize-recover=all",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "cov",
+            "displayName": "Debug (x86_64-linux, Clang 覆盖率插桩)",
+            "description": "Clang 调试构建 + LLVM 源码级覆盖率插桩, 配合 scripts/llvm/clang-coverage.sh 生成报告",
+            "inherits": "x86-clang",
+            "binaryDir": "${sourceDir}/build/x86_64-linux/cov",
+            "installDir": "${sourceDir}/install/x86_64-linux/cov",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/x86_64-linux/cov",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
+                "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O0 -fprofile-instr-generate -fcoverage-mapping",
+                "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O0 -fprofile-instr-generate -fcoverage-mapping",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Release (x86_64-linux, Clang)",
+            "description": "Clang 优化的发布构建，注重性能",
+            "inherits": "x86-clang",
+            "binaryDir": "${sourceDir}/build/x86_64-linux/release",
+            "installDir": "${sourceDir}/install/x86_64-linux/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/x86_64-linux/release",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
+                "CMAKE_CXX_FLAGS_RELEASE": "$env{PSDK_COMMON_WARNINGS} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+                "CMAKE_C_FLAGS_RELEASE": "$env{PSDK_COMMON_WARNINGS} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+                "CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections -Wl,-z,relro,-z,now",
+                "CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections",
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+                "BUILD_TESTING": "OFF"
+            }
+        },
+        {
+            "name": "redbi",
+            "displayName": "RelWithDebInfo (x86_64-linux, Clang)",
+            "description": "Clang 带有调试符号的优化构建",
+            "inherits": "x86-clang",
+            "binaryDir": "${sourceDir}/build/x86_64-linux/relwithdebinfo",
+            "installDir": "${sourceDir}/install/x86_64-linux/relwithdebinfo",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/x86_64-linux/relwithdebinfo",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
+                "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
+                "CMAKE_C_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "aarch64",
+            "displayName": "Release (aarch64-linux / RK3588S)",
+            "description": "面向 ARM64 (RK3588S) 的构建; x86 开发机交叉编译, 3588 板上直接本机编译; 依赖经 vcpkg arm64-linux triplet 构建; 静态链接 libstdc++/libgcc 规避目标板运行库版本差异",
+            "inherits": "base",
+            "binaryDir": "${sourceDir}/build/aarch64-linux/release",
+            "installDir": "${sourceDir}/install/aarch64-linux/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/aarch64-linux/release",
+                "VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed/arm64",
+                "VCPKG_TARGET_TRIPLET": "arm64-linux",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/aarch64-linux-gnu.cmake",
+                "BUILD_TESTING": "OFF",
+                "CMAKE_EXE_LINKER_FLAGS": "-static-libstdc++ -static-libgcc"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "debug",
+            "displayName": "Build Debug",
+            "configurePreset": "debug",
+            "jobs": 16,
+            "targets": ["all"]
+        },
+        {
+            "name": "release",
+            "displayName": "Build Release",
+            "configurePreset": "release",
+            "jobs": 16,
+            "cleanFirst": true
+        },
+        {
+            "name": "redbi",
+            "displayName": "Build RelWithDebInfo",
+            "configurePreset": "redbi",
+            "jobs": 16
+        },
+        {
+            "name": "aarch64",
+            "displayName": "Build AArch64 (RK3588S)",
+            "configurePreset": "aarch64",
+            "jobs": 16
+        },
+        {
+            "name": "install-debug",
+            "displayName": "Install Debug",
+            "configurePreset": "debug",
+            "jobs": 16,
+            "targets": ["install"]
+        },
+        {
+            "name": "install-release",
+            "displayName": "Install Release",
+            "configurePreset": "release",
+            "jobs": 16,
+            "targets": ["install"]
+        },
+        {
+            "name": "cov",
+            "displayName": "Build Debug (Clang, 覆盖率插桩)",
+            "configurePreset": "cov",
+            "jobs": 16
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "debug",
+            "displayName": "Test Debug",
+            "configurePreset": "debug",
+            "output": { "outputOnFailure": true, "verbosity": "verbose" },
+            "execution": { "noTestsAction": "error", "stopOnFailure": false }
+        },
+        {
+            "name": "release",
+            "displayName": "Test Release",
+            "configurePreset": "release",
+            "output": { "outputOnFailure": true }
+        },
+        {
+            "name": "cov",
+            "displayName": "Test Debug (Clang, 覆盖率采集)",
+            "configurePreset": "cov",
+            "output": { "outputOnFailure": true },
+            "execution": { "noTestsAction": "error", "stopOnFailure": false }
+        }
+    ]
 }

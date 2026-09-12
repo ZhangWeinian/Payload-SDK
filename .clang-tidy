@@ -1,0 +1,68 @@
+---
+# ============================================================================
+# cy_psdk clang-tidy 配置 (C++23 / LLVM 23)
+#
+# 使用方式:
+#   bash/samples/sample_c++/platform/linux/cy_psdk/../../../../bash/clang-tidy.sh ...
+#   或直接: 见 samples/sample_c++/platform/linux/cy_psdk/../ 说明 / doc/build-dual-toolchain.md
+#
+# 设计原则:
+#   1. 只针对自有代码 (cy_psdk/src, cy_psdk/test) 检查; DJI 官方样例与 vcpkg 依赖
+#      由脚本在编译数据库层面过滤, 不进入分析范围。
+#   2. 关闭与项目既定风格冲突的检查 (宏命名风格 / 传统返回类型 / 魔法数字),
+#      保留真正能发现缺陷的检查族: bugprone-* / clang-analyzer-* / concurrency-*。
+#   3. 不以警告即错误运行, 便于渐进式治理。
+# ============================================================================
+Checks: >
+    -*,
+    bugprone-*,
+    clang-analyzer-*,
+    concurrency-*,
+    performance-*,
+    portability-*,
+    modernize-*,
+    misc-*,
+    -bugprone-easily-swappable-parameters,
+    -bugprone-exception-escape,
+    -bugprone-unchecked-optional-access,
+    -modernize-use-trailing-return-type,
+    -modernize-use-auto,
+    -modernize-avoid-c-arrays,
+    -misc-non-private-member-variables-in-classes,
+    -misc-include-cleaner,
+    -misc-no-recursion,
+    -misc-use-anonymous-namespace,
+    -portability-avoid-pragma-once
+
+WarningsAsErrors: ""
+
+# 仅对自有头文件报告 (避免第三方/DJI 头文件噪音)
+HeaderFilterRegex: '.*cy_psdk/(src|test)/.*\.h(pp)?$'
+
+FormatStyle: file
+
+CheckOptions:
+    # --- 并发: 与项目大量使用 std::mutex/atomic 的现实匹配 ---
+    - key: concurrency-mt-unsafe.FunctionSet
+      value: "posix"
+
+    # --- bugprone: 精调, 降低误报 ---
+    - key: bugprone-argument-comment.StrictMode
+      value: "0"
+    - key: bugprone-suspicious-stringview-data-usage.StringViewTypes
+      value: "::std::basic_string_view;::std::string_view"
+    - key: bugprone-narrowing-conversions.PedanticMode
+      value: "0"
+    - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
+      value: "1"
+
+    # --- performance: 保留有价值的项 ---
+    - key: performance-move-const-arg.CheckTriviallyCopyableMove
+      value: "1"
+
+    # --- modernize: 与 C++23 目标对齐 ---
+    - key: modernize-use-nullptr.NullMacros
+      value: "NULL"
+    - key: modernize-use-override.IgnoreDestructors
+      value: "0"
+...

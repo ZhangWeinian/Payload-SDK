@@ -27,6 +27,7 @@
 #include "manager/catalog/client/internal/state/AvailabilityTracker.h"
 #include "manager/catalog/client/internal/state/ConfigCache.h"
 #include "manager/catalog/client/internal/state/RuntimeStateMachine.h"
+#include "manager/catalog/client/internal/transport/HttpTransport.h"
 
 #include "define.h"
 
@@ -745,6 +746,11 @@ namespace plane::catalog
 	};
 
 	// ==================== CatalogRuntime 公开方法 ====================
+
+	// 默认实现: 不注入传输/发现实现 (委托给显式注入版本)
+	CatalogRuntime::CatalogRuntime(CatalogRuntimeOptions options, DiscoveryConfig discovery_config):
+		CatalogRuntime(_STD move(options), _STD move(discovery_config), nullptr, nullptr)
+	{}
 
 	CatalogRuntime::CatalogRuntime(
 		CatalogRuntimeOptions options,

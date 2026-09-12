@@ -47,12 +47,17 @@ namespace plane::catalog
 	class CatalogRuntime
 	{
 	public:
-		// http_transport/discovery_client 为空时使用默认实现 (cpp-httplib HTTP + UDP 探测)
+		// 使用默认实现 (cpp-httplib HTTP + UDP 探测)
+		CatalogRuntime(CatalogRuntimeOptions options, DiscoveryConfig discovery_config);
+
+		// 注入自定义传输/发现实现 (单元测试用)。HttpTransport/DiscoveryClient 在此仅前向声明,
+		// 按值传递 unique_ptr 时调用方需含其完整定义才能析构形参, 因此刻意不提供默认实参 ——
+		// 在不完整类型上生成 unique_ptr 默认实参是 GCC 容忍、Clang 报错的可移植性陷阱。
 		CatalogRuntime(
 			CatalogRuntimeOptions options,
 			DiscoveryConfig		  discovery_config,
-			_STD unique_ptr<internal::HttpTransport> http_transport		= {},
-			_STD unique_ptr<internal::DiscoveryClient> discovery_client = {}
+			_STD unique_ptr<internal::HttpTransport> http_transport,
+			_STD unique_ptr<internal::DiscoveryClient> discovery_client
 		);
 
 		// 析构 best-effort 停止 (等价 stop(2s))

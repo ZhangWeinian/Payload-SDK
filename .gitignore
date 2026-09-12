@@ -6,6 +6,7 @@ build/
 
 # vcpkg manifest 模式: 源码根下 CLI 安装目录 / 各构建树内安装目录
 vcpkg_installed/
+vcpkg_installed-clang/
 
 # codegraph 相关
 .codegraph/
@@ -26,6 +27,10 @@ vcpkg_installed/
 *~
 *.swp
 .DS_Store
+
+# core dump: IDE 后台分析进程 (如 cpptools 的 clang-tidy) 崩溃时会落到源文件所在目录
+core
+core.*
 
 # 和平台/环境相关的，不具备移植性的文件/文件夹
 rsync.sh
