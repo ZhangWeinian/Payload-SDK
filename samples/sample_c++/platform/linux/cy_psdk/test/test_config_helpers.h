@@ -13,17 +13,17 @@
 
 namespace plane::test
 {
-	inline _STD filesystem::path sharedConfigPath()
-	{
-		return _STD filesystem::temp_directory_path() / "cy_psdk_unit_config.yml";
-	}
+    inline _STD filesystem::path sharedConfigPath()
+    {
+        return _STD filesystem::temp_directory_path() / "cy_psdk_unit_config.yml";
+    }
 
-	// 与仓库 config/config.yml 对齐; plane.code/takeoff_* 为测试夹具值
-	// (生产代码无内置占位 SN: 设备标识 = 配置 plane.code → PSDK 序列号 → 空)
-	inline bool writeSharedConfig()
-	{
-		constexpr static const char* kYaml {
-			R"(features:
+    // 与仓库 config/config.yml 对齐; plane.code/takeoff_* 为测试夹具值
+    // (生产代码无内置占位 SN: 设备标识 = 配置 plane.code → PSDK 序列号 → 空)
+    inline bool writeSharedConfig()
+    {
+        constexpr static const char* kYaml {
+            R"(features:
     enable_full_psdk: false
     enable_trace_log: false
     set_psdk_log_level: 2
@@ -40,24 +40,24 @@ plane:
     takeoff_lon: 114.0
     takeoff_alt: 12.5
 )"
-		};
+        };
 
-		_STD ofstream out { sharedConfigPath() };
-		out << kYaml;
-		return out.good();
-	}
+        _STD ofstream out { sharedConfigPath() };
+        out << kYaml;
+        return out.good();
+    }
 
-	inline _STD filesystem::path invalidConfigPath()
-	{
-		return _STD filesystem::temp_directory_path() / "cy_psdk_unit_config_invalid.yml";
-	}
+    inline _STD filesystem::path invalidConfigPath()
+    {
+        return _STD filesystem::temp_directory_path() / "cy_psdk_unit_config_invalid.yml";
+    }
 
-	// 写入一份"非法 YAML"配置 (缩进错误), 用于"未加载任何合法配置前先拒绝"用例
-	inline bool writeInvalidConfig()
-	{
-		constexpr static const char* kYaml { "a: b\n  bad_indent: c\n" };
-		_STD ofstream				 out { invalidConfigPath() };
-		out << kYaml;
-		return out.good();
-	}
+    // 写入一份"非法 YAML"配置 (缩进错误), 用于"未加载任何合法配置前先拒绝"用例
+    inline bool writeInvalidConfig()
+    {
+        constexpr static const char* kYaml { "a: b\n  bad_indent: c\n" };
+        _STD ofstream                out { invalidConfigPath() };
+        out << kYaml;
+        return out.good();
+    }
 } // namespace plane::test

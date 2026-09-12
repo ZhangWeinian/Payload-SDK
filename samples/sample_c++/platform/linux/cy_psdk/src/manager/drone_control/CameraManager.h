@@ -6,13 +6,13 @@
 
 namespace plane::manager
 {
-	class CameraManager
-	{
-	public:
-		CameraManager(void)	 = default;
-		~CameraManager(void) = default;
+    class CameraManager
+    {
+    public:
+        CameraManager(void)  = default;
+        ~CameraManager(void) = default;
 
-	private:
-		// TODO
-	};
+    private:
+        // TODO
+    };
 } // namespace plane::manager

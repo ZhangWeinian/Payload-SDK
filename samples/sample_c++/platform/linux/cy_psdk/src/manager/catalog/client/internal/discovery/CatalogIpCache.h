@@ -13,19 +13,19 @@
 
 namespace plane::catalog::internal
 {
-	class CatalogIpCache
-	{
-	public:
-		explicit CatalogIpCache(_STD string file);
-		~CatalogIpCache(void) = default;
+    class CatalogIpCache
+    {
+    public:
+        explicit CatalogIpCache(_STD string file);
+        ~CatalogIpCache(void) = default;
 
-		// 若缓存 IP 在 targets 中, 移到首位优先探测
-		_NODISCARD _STD vector<_STD string> prioritize(const _STD vector<_STD string>& targets);
+        // 若缓存 IP 在 targets 中, 移到首位优先探测
+        _NODISCARD _STD vector<_STD string> prioritize(const _STD vector<_STD string>& targets);
 
-		// 原子写入缓存 IP (非规范 IPv4 时忽略)
-		void save(const _STD string& ip);
+        // 原子写入缓存 IP (非规范 IPv4 时忽略)
+        void save(const _STD string& ip);
 
-	private:
-		_STD string file_ {};
-	};
+    private:
+        _STD string file_ {};
+    };
 } // namespace plane::catalog::internal

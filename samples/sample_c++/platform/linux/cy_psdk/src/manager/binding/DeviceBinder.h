@@ -17,35 +17,35 @@
 
 namespace plane::manager
 {
-	class DeviceBinder
-	{
-	public:
-		static DeviceBinder& getInstance(void) noexcept;
+    class DeviceBinder
+    {
+    public:
+        static DeviceBinder& getInstance(void) noexcept;
 
-		// 后台启动绑定流程 (目录/SN 未就绪时自动等待, 不阻塞调用方)
-		void start(void) noexcept;
+        // 后台启动绑定流程 (目录/SN 未就绪时自动等待, 不阻塞调用方)
+        void start(void) noexcept;
 
-		// 停止并 join 后台线程
-		void stop(void) noexcept;
+        // 停止并 join 后台线程
+        void stop(void) noexcept;
 
-		// 是否已绑定成功 (只读标志)
-		_NODISCARD bool isBound(void) const noexcept
-		{
-			return this->bound_.load(_STD memory_order_acquire);
-		}
+        // 是否已绑定成功 (只读标志)
+        _NODISCARD bool isBound(void) const noexcept
+        {
+            return this->bound_.load(_STD memory_order_acquire);
+        }
 
-	private:
-		DeviceBinder(void) noexcept = default;
-		~DeviceBinder(void) noexcept;
-		DeviceBinder(const DeviceBinder&)			 = delete;
-		DeviceBinder& operator=(const DeviceBinder&) = delete;
+    private:
+        DeviceBinder(void) noexcept = default;
+        ~DeviceBinder(void) noexcept;
+        DeviceBinder(const DeviceBinder&)            = delete;
+        DeviceBinder& operator=(const DeviceBinder&) = delete;
 
-		void		  runLoop(void) noexcept;
+        void          runLoop(void) noexcept;
 
-		// 后台线程生命周期 (防止 start()/stop() 重入)
-		_STD atomic<bool> started_ { false };
-		_STD atomic<bool> running_ { false };
-		_STD atomic<bool> bound_ { false };
-		_STD thread		  thread_ {};
-	};
+        // 后台线程生命周期 (防止 start()/stop() 重入)
+        _STD atomic<bool> started_ { false };
+        _STD atomic<bool> running_ { false };
+        _STD atomic<bool> bound_ { false };
+        _STD thread       thread_ {};
+    };
 } // namespace plane::manager

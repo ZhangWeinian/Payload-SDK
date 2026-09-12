@@ -40,27 +40,27 @@ extern "C"
 {
 #endif
 
-	/* Exported constants --------------------------------------------------------*/
+    /* Exported constants --------------------------------------------------------*/
 
-	/* Exported types ------------------------------------------------------------*/
-	using namespace std;
+    /* Exported types ------------------------------------------------------------*/
+    using namespace std;
 
-	class Application
-	{
-	public:
-		Application(int argc, char** argv);
-		~Application();
+    class Application
+    {
+    public:
+        Application(int argc, char** argv);
+        ~Application();
 
-	private:
-		static void					DjiUser_SetupEnvironment();
-		static void					DjiUser_ApplicationStart();
-		static _DJI T_DjiReturnCode DjiUser_PrintConsole(const uint8_t* data, uint16_t dataLen);
-		static _DJI T_DjiReturnCode DjiUser_LocalWrite(const uint8_t* data, uint16_t dataLen);
-		static _DJI T_DjiReturnCode DjiUser_FillInUserInfo(_DJI T_DjiUserInfo* userInfo);
-		static _DJI T_DjiReturnCode DjiUser_LocalWriteFsInit(const char* path);
-	};
+    private:
+        static void                 DjiUser_SetupEnvironment();
+        static void                 DjiUser_ApplicationStart();
+        static _DJI T_DjiReturnCode DjiUser_PrintConsole(const uint8_t* data, uint16_t dataLen);
+        static _DJI T_DjiReturnCode DjiUser_LocalWrite(const uint8_t* data, uint16_t dataLen);
+        static _DJI T_DjiReturnCode DjiUser_FillInUserInfo(_DJI T_DjiUserInfo* userInfo);
+        static _DJI T_DjiReturnCode DjiUser_LocalWriteFsInit(const char* path);
+    };
 
-	/* Exported functions --------------------------------------------------------*/
+    /* Exported functions --------------------------------------------------------*/
 
 #ifdef __cplusplus
 }

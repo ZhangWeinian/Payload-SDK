@@ -13,55 +13,55 @@
 
 namespace
 {
-	using plane::domain::PlaneStateDataClass;
-	using plane::domain::PlaneStateStore;
+    using plane::domain::PlaneStateDataClass;
+    using plane::domain::PlaneStateStore;
 
-	TEST(PlaneStateStoreTest, MutatorUpdatePreservesOtherFields)
-	{
-		auto& store { PlaneStateStore::getInstance() };
+    TEST(PlaneStateStoreTest, MutatorUpdatePreservesOtherFields)
+    {
+        auto& store { PlaneStateStore::getInstance() };
 
-		// 模块 A (绑定): 写入绑定信息
-		store.update(
-			[](PlaneStateDataClass& st)
-			{
-				st.device_nickname	 = "DJIM4T-003";
-				st.internal_plane_id = "abc123";
-				st.device_binding	 = true;
-			}
-		);
+        // 模块 A (绑定): 写入绑定信息
+        store.update(
+            [](PlaneStateDataClass& st)
+            {
+                st.device_nickname   = "DJIM4T-003";
+                st.internal_plane_id = "abc123";
+                st.device_binding    = true;
+            }
+        );
 
-		// 模块 B (PSDK 采集): 只更新自己负责的字段
-		store.update(
-			[](PlaneStateDataClass& st)
-			{
-				st.aircraft_battery_power_percent = 87;
-				st.gps_satellite_count			  = 15;
-			}
-		);
+        // 模块 B (PSDK 采集): 只更新自己负责的字段
+        store.update(
+            [](PlaneStateDataClass& st)
+            {
+                st.aircraft_battery_power_percent = 87;
+                st.gps_satellite_count            = 15;
+            }
+        );
 
-		const auto snapshot { store.snapshot() };
-		EXPECT_EQ(snapshot.device_nickname, "DJIM4T-003");
-		EXPECT_TRUE(snapshot.device_binding);
-		EXPECT_EQ(snapshot.aircraft_battery_power_percent, 87);
-		EXPECT_EQ(snapshot.gps_satellite_count, 15);
-	}
+        const auto snapshot { store.snapshot() };
+        EXPECT_EQ(snapshot.device_nickname, "DJIM4T-003");
+        EXPECT_TRUE(snapshot.device_binding);
+        EXPECT_EQ(snapshot.aircraft_battery_power_percent, 87);
+        EXPECT_EQ(snapshot.gps_satellite_count, 15);
+    }
 
-	TEST(PlaneStateStoreTest, SnapshotIsIndependentCopy)
-	{
-		auto& store { PlaneStateStore::getInstance() };
-		store.update(
-			[](PlaneStateDataClass& st)
-			{
-				st.mqtt_connected	  = true;
-				st.mqtt_connected_url = "tcp://127.0.0.1:1883";
-			}
-		);
+    TEST(PlaneStateStoreTest, SnapshotIsIndependentCopy)
+    {
+        auto& store { PlaneStateStore::getInstance() };
+        store.update(
+            [](PlaneStateDataClass& st)
+            {
+                st.mqtt_connected     = true;
+                st.mqtt_connected_url = "tcp://127.0.0.1:1883";
+            }
+        );
 
-		auto copy { store.snapshot() };
-		copy.mqtt_connected = false; // 修改副本不得影响存储
+        auto copy { store.snapshot() };
+        copy.mqtt_connected = false; // 修改副本不得影响存储
 
-		const auto latest { store.snapshot() };
-		EXPECT_TRUE(latest.mqtt_connected);
-		EXPECT_EQ(latest.mqtt_connected_url, "tcp://127.0.0.1:1883");
-	}
+        const auto latest { store.snapshot() };
+        EXPECT_TRUE(latest.mqtt_connected);
+        EXPECT_EQ(latest.mqtt_connected_url, "tcp://127.0.0.1:1883");
+    }
 } // namespace

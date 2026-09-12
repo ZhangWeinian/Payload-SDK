@@ -19,16 +19,16 @@ using plane::catalog::internal::encodeProbePacket;
 
 extern "C" int LLVMFuzzerTestOneInput(const _STD uint8_t* data, _STD size_t size)
 {
-	_STD vector<_STD uint8_t> bytes { data, data + size };
+    _STD vector<_STD uint8_t> bytes { data, data + size };
 
-	(void)decodeAnnouncement(bytes);
+    (void)decodeAnnouncement(bytes);
 
-	if (const auto packet { decodeProbePacket(bytes) }; packet.has_value())
-	{
-		if (const auto reencoded { encodeProbePacket(packet.value()) }; reencoded.has_value())
-		{
-			(void)decodeProbePacket(reencoded.value());
-		}
-	}
-	return 0;
+    if (const auto packet { decodeProbePacket(bytes) }; packet.has_value())
+    {
+        if (const auto reencoded { encodeProbePacket(packet.value()) }; reencoded.has_value())
+        {
+            (void)decodeProbePacket(reencoded.value());
+        }
+    }
+    return 0;
 }

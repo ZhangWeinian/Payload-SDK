@@ -20,30 +20,30 @@
 
 namespace plane::catalog::internal
 {
-	class UdpAnnouncementListener
-	{
-	public:
-		// 公告回调; 参数为已解析节点信息 (ip 为空时回退为 UDP 源地址)
-		using Callback = _STD function<void(const CatalogAnnouncement&)>;
+    class UdpAnnouncementListener
+    {
+    public:
+        // 公告回调; 参数为已解析节点信息 (ip 为空时回退为 UDP 源地址)
+        using Callback = _STD function<void(const CatalogAnnouncement&)>;
 
-		// bind_address 为空则通配绑定
-		UdpAnnouncementListener(int port, _STD string bind_address, Callback callback);
-		UdpAnnouncementListener(int port, Callback callback);
-		~UdpAnnouncementListener(void);
+        // bind_address 为空则通配绑定
+        UdpAnnouncementListener(int port, _STD string bind_address, Callback callback);
+        UdpAnnouncementListener(int port, Callback callback);
+        ~UdpAnnouncementListener(void);
 
-		UdpAnnouncementListener(const UdpAnnouncementListener&)			   = delete;
-		UdpAnnouncementListener& operator=(const UdpAnnouncementListener&) = delete;
+        UdpAnnouncementListener(const UdpAnnouncementListener&)            = delete;
+        UdpAnnouncementListener& operator=(const UdpAnnouncementListener&) = delete;
 
-		// 启动监听 (bind 端口并启动收包线程); 可在 CatalogRuntime 未启动时调用
-		_NODISCARD Result<void> start(void);
+        // 启动监听 (bind 端口并启动收包线程); 可在 CatalogRuntime 未启动时调用
+        _NODISCARD Result<void> start(void);
 
-		// 停止监听并 join 收包线程 (最多等待一个接收超时周期)
-		void			stop(void) noexcept;
+        // 停止监听并 join 收包线程 (最多等待一个接收超时周期)
+        void            stop(void) noexcept;
 
-		_NODISCARD bool running(void) const noexcept;
+        _NODISCARD bool running(void) const noexcept;
 
-	private:
-		struct Impl;
-		_STD unique_ptr<Impl> impl_ {};
-	};
+    private:
+        struct Impl;
+        _STD unique_ptr<Impl> impl_ {};
+    };
 } // namespace plane::catalog::internal

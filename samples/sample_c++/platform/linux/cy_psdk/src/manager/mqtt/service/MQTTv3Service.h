@@ -6,13 +6,13 @@
 
 namespace plane::manager
 {
-	class MQTTv3Service
-	{
-	public:
-		MQTTv3Service(void) noexcept  = default;
-		~MQTTv3Service(void) noexcept = default;
+    class MQTTv3Service
+    {
+    public:
+        MQTTv3Service(void) noexcept  = default;
+        ~MQTTv3Service(void) noexcept = default;
 
-	private:
-		// TODO
-	};
+    private:
+        // TODO
+    };
 } // namespace plane::manager

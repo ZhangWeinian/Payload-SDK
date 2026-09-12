@@ -41,30 +41,30 @@ extern "C"
  * NIC name micro define as #define 'LINUX_NETWORK_DEV   "your NIC name"'.
  */
 #ifdef PLATFORM_ARCH_x86_64
-	#define LINUX_NETWORK_DEV "enp0s31f6"
+    #define LINUX_NETWORK_DEV "enp0s31f6"
 #else
-	#define LINUX_NETWORK_DEV "pi4br0"
+    #define LINUX_NETWORK_DEV "pi4br0"
 #endif
-	/**
-	 * @attention
-	 */
+    /**
+     * @attention
+     */
 
 #ifdef PLATFORM_ARCH_x86_64
-	#define USB_NET_ADAPTER_VID (0X0b95)
-	#define USB_NET_ADAPTER_PID (0X1790)
+    #define USB_NET_ADAPTER_VID (0X0b95)
+    #define USB_NET_ADAPTER_PID (0X1790)
 #else
-	#define USB_NET_ADAPTER_VID (0X0955)
-	#define USB_NET_ADAPTER_PID (0X7020)
+    #define USB_NET_ADAPTER_VID (0X0955)
+    #define USB_NET_ADAPTER_PID (0X7020)
 #endif
 
 #define LINUX_CMD_STR_MAX_SIZE (128)
 
-	/* Exported types ------------------------------------------------------------*/
+    /* Exported types ------------------------------------------------------------*/
 
-	/* Exported functions --------------------------------------------------------*/
-	T_DjiReturnCode HalNetWork_Init(const char* ipAddr, const char* netMask, T_DjiNetworkHandle* halObj);
-	T_DjiReturnCode HalNetWork_DeInit(T_DjiNetworkHandle halObj);
-	T_DjiReturnCode HalNetWork_GetDeviceInfo(T_DjiHalNetworkDeviceInfo* deviceInfo);
+    /* Exported functions --------------------------------------------------------*/
+    T_DjiReturnCode HalNetWork_Init(const char* ipAddr, const char* netMask, T_DjiNetworkHandle* halObj);
+    T_DjiReturnCode HalNetWork_DeInit(T_DjiNetworkHandle halObj);
+    T_DjiReturnCode HalNetWork_GetDeviceInfo(T_DjiHalNetworkDeviceInfo* deviceInfo);
 
 #ifdef __cplusplus
 }

@@ -20,68 +20,68 @@
 
 namespace plane::utils
 {
-	class StatusBoardSink final: public _SPDLOG sinks::base_sink<_STD mutex>
-	{
-	public:
-		StatusBoardSink(void) noexcept					   = default;
-		~StatusBoardSink(void) noexcept override		   = default;
-		StatusBoardSink(const StatusBoardSink&)			   = delete;
-		StatusBoardSink& operator=(const StatusBoardSink&) = delete;
+    class StatusBoardSink final: public _SPDLOG sinks::base_sink<_STD mutex>
+    {
+    public:
+        StatusBoardSink(void) noexcept                     = default;
+        ~StatusBoardSink(void) noexcept override           = default;
+        StatusBoardSink(const StatusBoardSink&)            = delete;
+        StatusBoardSink& operator=(const StatusBoardSink&) = delete;
 
-	protected:
-		void sink_it_(const _SPDLOG details::log_msg& msg) override
-		{
-			_SPDLOG memory_buf_t formatted;
-			this->formatter_->format(msg, formatted);
+    protected:
+        void sink_it_(const _SPDLOG details::log_msg& msg) override
+        {
+            _SPDLOG memory_buf_t formatted;
+            this->formatter_->format(msg, formatted);
 
-			const char* const data { formatted.data() };
-			const _STD size_t size { formatted.size() };
-			const auto		  rangeStart { msg.color_range_start };
-			const auto		  rangeStop { msg.color_range_end };
+            const char* const data { formatted.data() };
+            const _STD size_t size { formatted.size() };
+            const auto        rangeStart { msg.color_range_start };
+            const auto        rangeStop { msg.color_range_end };
 
-			_STD string		  text;
-			if (StatusBoard::colorSupported() && rangeStop > rangeStart && rangeStop <= size)
-			{
-				// 仅对 %^...%$ 标记的区间着色 (与 spdlog ansicolor 接收器行为一致)
-				text.reserve(size + 16);
-				text.append(data, rangeStart);
-				text.append(levelColorCode(msg.level));
-				text.append(data + rangeStart, rangeStop - rangeStart);
-				text.append("\033[0m");
-				text.append(data + rangeStop, size - rangeStop);
-			}
-			else
-			{
-				text.assign(data, size);
-			}
+            _STD string       text;
+            if (StatusBoard::colorSupported() && rangeStop > rangeStart && rangeStop <= size)
+            {
+                // 仅对 %^...%$ 标记的区间着色 (与 spdlog ansicolor 接收器行为一致)
+                text.reserve(size + 16);
+                text.append(data, rangeStart);
+                text.append(levelColorCode(msg.level));
+                text.append(data + rangeStart, rangeStop - rangeStart);
+                text.append("\033[0m");
+                text.append(data + rangeStop, size - rangeStop);
+            }
+            else
+            {
+                text.assign(data, size);
+            }
 
-			StatusBoard::getInstance().log(text);
-		}
+            StatusBoard::getInstance().log(text);
+        }
 
-		void flush_(void) override {}
+        void flush_(void) override {}
 
-	private:
-		// 日志级别颜色映射 (对齐 spdlog ansicolor 接收器的默认配色)
-		_NODISCARD static const char* levelColorCode(_SPDLOG level::level_enum level) noexcept
-		{
-			switch (level)
-			{
-				case _SPDLOG level::trace:
-					return "\033[37m";	 // 白
-				case _SPDLOG level::debug:
-					return "\033[36m";	 // 青
-				case _SPDLOG level::info:
-					return "\033[32m";	 // 绿
-				case _SPDLOG level::warn:
-					return "\033[33m";	 // 黄
-				case _SPDLOG level::err:
-					return "\033[31m";	 // 红
-				case _SPDLOG level::critical:
-					return "\033[1;31m"; // 粗红
-				case _SPDLOG level::off:
-				default:
-					return "";
-			}
-		}
-	};
+    private:
+        // 日志级别颜色映射 (对齐 spdlog ansicolor 接收器的默认配色)
+        _NODISCARD static const char* levelColorCode(_SPDLOG level::level_enum level) noexcept
+        {
+            switch (level)
+            {
+                case _SPDLOG level::trace:
+                    return "\033[37m";   // 白
+                case _SPDLOG level::debug:
+                    return "\033[36m";   // 青
+                case _SPDLOG level::info:
+                    return "\033[32m";   // 绿
+                case _SPDLOG level::warn:
+                    return "\033[33m";   // 黄
+                case _SPDLOG level::err:
+                    return "\033[31m";   // 红
+                case _SPDLOG level::critical:
+                    return "\033[1;31m"; // 粗红
+                case _SPDLOG level::off:
+                default:
+                    return "";
+            }
+        }
+    };
 } // namespace plane::utils

@@ -12,22 +12,22 @@
 
 namespace plane::catalog::internal
 {
-	class CppHttpTransport final: public HttpTransport
-	{
-	public:
-		CppHttpTransport(void)			 = default;
-		~CppHttpTransport(void) override = default;
+    class CppHttpTransport final: public HttpTransport
+    {
+    public:
+        CppHttpTransport(void)           = default;
+        ~CppHttpTransport(void) override = default;
 
-		HttpResponseData get(const _STD string& url) override;
-		HttpResponseData post(const _STD string& url, const _STD string& body) override;
-		HttpResponseData put(const _STD string& url, const _STD string& body) override;
-		HttpResponseData del(const _STD string& url) override;
-		void			 setTimeout(_STD_CHRONO milliseconds timeout) override;
+        HttpResponseData get(const _STD string& url) override;
+        HttpResponseData post(const _STD string& url, const _STD string& body) override;
+        HttpResponseData put(const _STD string& url, const _STD string& body) override;
+        HttpResponseData del(const _STD string& url) override;
+        void             setTimeout(_STD_CHRONO milliseconds timeout) override;
 
-	private:
-		// 统一发送; method: 0=GET 1=POST 2=PUT 3=DELETE
-		HttpResponseData sendRequest(int method, const _STD string& url, const _STD string& body);
+    private:
+        // 统一发送; method: 0=GET 1=POST 2=PUT 3=DELETE
+        HttpResponseData sendRequest(int method, const _STD string& url, const _STD string& body);
 
-		_STD atomic<long long> timeout_ms_ { 10'000 };
-	};
+        _STD atomic<long long> timeout_ms_ { 10'000 };
+    };
 } // namespace plane::catalog::internal

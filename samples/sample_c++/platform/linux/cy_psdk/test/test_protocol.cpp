@@ -13,102 +13,102 @@
 
 namespace
 {
-	using plane::protocol::n_json;
-	using namespace plane::protocol;
+    using plane::protocol::n_json;
+    using namespace plane::protocol;
 } // namespace
 
 TEST(ProtocolDataClass, MissionControlActionEnumRoundTrip)
 {
-	n_json j = MissionControlAction::RWJS;
-	EXPECT_EQ(j.get<_STD string>(), "RWJS");
-	EXPECT_EQ(j.get<MissionControlAction>(), MissionControlAction::RWJS);
+    n_json j = MissionControlAction::RWJS;
+    EXPECT_EQ(j.get<_STD string>(), "RWJS");
+    EXPECT_EQ(j.get<MissionControlAction>(), MissionControlAction::RWJS);
 
-	n_json j2 = MissionControlAction::RWKS;
-	EXPECT_EQ(j2.get<_STD string>(), "RWKS");
-	EXPECT_EQ(j2.get<MissionControlAction>(), MissionControlAction::RWKS);
+    n_json j2 = MissionControlAction::RWKS;
+    EXPECT_EQ(j2.get<_STD string>(), "RWKS");
+    EXPECT_EQ(j2.get<MissionControlAction>(), MissionControlAction::RWKS);
 }
 
 TEST(ProtocolDataClass, WaypointDefaultsForMissingFields)
 {
-	const auto parsed = n_json::parse(R"({"JD":1.5,"WD":2.5,"GD":10.0})").get<Waypoint>();
-	EXPECT_DOUBLE_EQ(parsed.JD, 1.5);
-	EXPECT_DOUBLE_EQ(parsed.WD, 2.5);
-	EXPECT_DOUBLE_EQ(parsed.GD, 10.0);
-	EXPECT_DOUBLE_EQ(parsed.SD, 5.0);	   // 未提供 -> 默认 5.0
-	EXPECT_DOUBLE_EQ(parsed.YTFYJ, -90.0); // 未提供 -> 默认 -90.0
-	EXPECT_EQ(parsed.PHJ, 0);
-	// PHJ 为 int, 缺字段时取 NSDMI 默认值 0
+    const auto parsed = n_json::parse(R"({"JD":1.5,"WD":2.5,"GD":10.0})").get<Waypoint>();
+    EXPECT_DOUBLE_EQ(parsed.JD, 1.5);
+    EXPECT_DOUBLE_EQ(parsed.WD, 2.5);
+    EXPECT_DOUBLE_EQ(parsed.GD, 10.0);
+    EXPECT_DOUBLE_EQ(parsed.SD, 5.0);      // 未提供 -> 默认 5.0
+    EXPECT_DOUBLE_EQ(parsed.YTFYJ, -90.0); // 未提供 -> 默认 -90.0
+    EXPECT_EQ(parsed.PHJ, 0);
+    // PHJ 为 int, 缺字段时取 NSDMI 默认值 0
 }
 
 TEST(ProtocolDataClass, WaypointFullRoundTrip)
 {
-	Waypoint w {};
-	w.JD			= 116.3912;
-	w.WD			= 39.9075;
-	w.GD			= 120.0;
-	w.SD			= 6.5;
-	w.YTFYJ			= -30.0;
-	w.PHJ			= 45;
+    Waypoint w {};
+    w.JD            = 116.3912;
+    w.WD            = 39.9075;
+    w.GD            = 120.0;
+    w.SD            = 6.5;
+    w.YTFYJ         = -30.0;
+    w.PHJ           = 45;
 
-	n_json	   j	= w;
-	const auto back = j.get<Waypoint>();
+    n_json     j    = w;
+    const auto back = j.get<Waypoint>();
 
-	EXPECT_DOUBLE_EQ(back.JD, 116.3912);
-	EXPECT_DOUBLE_EQ(back.YTFYJ, -30.0);
-	EXPECT_DOUBLE_EQ(back.SD, 6.5);
-	EXPECT_EQ(back.PHJ, 45);
+    EXPECT_DOUBLE_EQ(back.JD, 116.3912);
+    EXPECT_DOUBLE_EQ(back.YTFYJ, -30.0);
+    EXPECT_DOUBLE_EQ(back.SD, 6.5);
+    EXPECT_EQ(back.PHJ, 45);
 }
 
 TEST(ProtocolDataClass, NetworkMessageOmitsEmptyOptionalPayload)
 {
-	NetworkMessage<MissionProgressPayload> msg {};
-	msg.ZBID = "10074000";
-	msg.XXID = "RWJD-10074000-1";
-	msg.XXLX = "RWJD";
-	msg.SJC	 = 123'456'789;
+    NetworkMessage<MissionProgressPayload> msg {};
+    msg.ZBID = "10074000";
+    msg.XXID = "RWJD-10074000-1";
+    msg.XXLX = "RWJD";
+    msg.SJC  = 123'456'789;
 
-	n_json j = msg;
-	EXPECT_FALSE(j.contains("XXXX"));
-	EXPECT_FALSE(j.contains("SBSJ"));
+    n_json j = msg;
+    EXPECT_FALSE(j.contains("XXXX"));
+    EXPECT_FALSE(j.contains("SBSJ"));
 }
 
 TEST(ProtocolDataClass, NetworkMessageRoundTripWithPayload)
 {
-	NetworkMessage<MissionProgressPayload> msg {};
-	msg.ZBID = "10074000";
-	msg.XXID = "RWJD-10074000-1";
-	msg.XXLX = "RWJD";
-	msg.SJC	 = 123'456'789;
-	msg.SBSJ = "2026-09-09 10:00:00";
-	msg.XXXX = MissionProgressPayload { .RWID = "task-1", .DQHD = 3, .ZHD = 10, .JD = 30, .ZT = 48 };
+    NetworkMessage<MissionProgressPayload> msg {};
+    msg.ZBID = "10074000";
+    msg.XXID = "RWJD-10074000-1";
+    msg.XXLX = "RWJD";
+    msg.SJC  = 123'456'789;
+    msg.SBSJ = "2026-09-09 10:00:00";
+    msg.XXXX = MissionProgressPayload { .RWID = "task-1", .DQHD = 3, .ZHD = 10, .JD = 30, .ZT = 48 };
 
-	n_json j = msg;
-	EXPECT_TRUE(j.contains("XXXX"));
-	EXPECT_EQ(j.at("SBSJ").get<_STD string>(), "2026-09-09 10:00:00");
+    n_json j = msg;
+    EXPECT_TRUE(j.contains("XXXX"));
+    EXPECT_EQ(j.at("SBSJ").get<_STD string>(), "2026-09-09 10:00:00");
 
-	const auto back = j.get<NetworkMessage<MissionProgressPayload>>();
-	ASSERT_TRUE(back.XXXX.has_value());
-	EXPECT_EQ(back.XXXX->RWID.value(), "task-1");
-	EXPECT_EQ(back.XXXX->ZT.value(), 48);
-	EXPECT_EQ(back.SJC, 123'456'789);
+    const auto back = j.get<NetworkMessage<MissionProgressPayload>>();
+    ASSERT_TRUE(back.XXXX.has_value());
+    EXPECT_EQ(back.XXXX->RWID.value(), "task-1");
+    EXPECT_EQ(back.XXXX->ZT.value(), 48);
+    EXPECT_EQ(back.SJC, 123'456'789);
 }
 
 TEST(ProtocolDataClass, StatusPayloadFieldRoundTrip)
 {
-	StatusPayload st {};
-	st.DQJD			= 116.3912;
-	st.DQWD			= 39.9075;
-	st.YTFY			= -12.5;
-	st.CJ			= "DJI";
-	st.XH			= "M350";
-	st.MODE			= "P-GPS";
+    StatusPayload st {};
+    st.DQJD         = 116.3912;
+    st.DQWD         = 39.9075;
+    st.YTFY         = -12.5;
+    st.CJ           = "DJI";
+    st.XH           = "M350";
+    st.MODE         = "P-GPS";
 
-	n_json	   j	= st;
-	const auto back = j.get<StatusPayload>();
+    n_json     j    = st;
+    const auto back = j.get<StatusPayload>();
 
-	EXPECT_DOUBLE_EQ(back.DQJD, 116.3912);
-	EXPECT_DOUBLE_EQ(back.YTFY, -12.5);
-	EXPECT_EQ(back.CJ, "DJI");
-	EXPECT_EQ(back.MODE, "P-GPS");
-	EXPECT_TRUE(back.WZT.empty()); // 未提供 -> 默认空
+    EXPECT_DOUBLE_EQ(back.DQJD, 116.3912);
+    EXPECT_DOUBLE_EQ(back.YTFY, -12.5);
+    EXPECT_EQ(back.CJ, "DJI");
+    EXPECT_EQ(back.MODE, "P-GPS");
+    EXPECT_TRUE(back.WZT.empty()); // 未提供 -> 默认空
 }

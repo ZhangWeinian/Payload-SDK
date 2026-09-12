@@ -35,11 +35,11 @@ extern "C"
 #endif
 
 /* Exported constants --------------------------------------------------------*/
-#define DJI_USE_ONLY_UART				 (0)
+#define DJI_USE_ONLY_UART                (0)
 #define DJI_USE_UART_AND_USB_BULK_DEVICE (1)
-#define DJI_USE_UART_AND_NETWORK_DEVICE	 (2)
-#define DJI_USE_ONLY_USB_BULK_DEVICE	 (3)
-#define DJI_USE_ONLY_NETWORK_DEVICE		 (4)
+#define DJI_USE_UART_AND_NETWORK_DEVICE  (2)
+#define DJI_USE_ONLY_USB_BULK_DEVICE     (3)
+#define DJI_USE_ONLY_NETWORK_DEVICE      (4)
 
 /*!< Attention: Select your hardware connection mode here.
  * */
@@ -57,9 +57,9 @@ extern "C"
 
 #define CONFIG_MODULE_SAMPLE_DATA_TRANSMISSION_ON
 
-	/* Exported types ------------------------------------------------------------*/
+    /* Exported types ------------------------------------------------------------*/
 
-	/* Exported functions --------------------------------------------------------*/
+    /* Exported functions --------------------------------------------------------*/
 
 #ifdef __cplusplus
 }

@@ -19,7 +19,7 @@
 
 namespace plane::catalog
 {
-	// 通用结果: 成功携带 T, 失败携带 CatalogFailure (标准库 std::expected 别名)
-	template<typename T>
-	using Result = _STD expected<T, CatalogFailure>;
+    // 通用结果: 成功携带 T, 失败携带 CatalogFailure (标准库 std::expected 别名)
+    template<typename T>
+    using Result = _STD expected<T, CatalogFailure>;
 } // namespace plane::catalog

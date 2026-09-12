@@ -12,6 +12,6 @@
 
 namespace plane::catalog::internal
 {
-	// 展开探测目标列表; 单个规格非法或结果超过 max_count 时返回 INVALID_ARGUMENT。
-	_NODISCARD Result<_STD vector<_STD string>> expandTargets(const _STD vector<_STD string>& specs, int max_count);
+    // 展开探测目标列表; 单个规格非法或结果超过 max_count 时返回 INVALID_ARGUMENT。
+    _NODISCARD Result<_STD vector<_STD string>> expandTargets(const _STD vector<_STD string>& specs, int max_count);
 } // namespace plane::catalog::internal

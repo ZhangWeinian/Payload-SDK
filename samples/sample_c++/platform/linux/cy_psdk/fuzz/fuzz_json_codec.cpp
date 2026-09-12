@@ -29,84 +29,84 @@ using plane::catalog::internal::JsonCodec::statusToJson;
 
 namespace
 {
-	// 对齐 ServiceGateway 的发送路径: 序列化结果需要 dump() 成字符串
-	void dumpIfPossible(const auto& json_result)
-	{
-		if (!json_result.has_value())
-		{
-			return;
-		}
-		try
-		{
-			const _STD string dumped { json_result.value().dump() };
-			(void)dumped;
-		}
-		catch (const _STD exception&)
-		{
-			// 任意字节注入字符串字段后, dump() 可能因非法 UTF-8 抛 type_error —
-			// 生产侧前提是内部字符串均为合法 UTF-8, 此处按预期拒绝处理。
-		}
-	}
+    // 对齐 ServiceGateway 的发送路径: 序列化结果需要 dump() 成字符串
+    void dumpIfPossible(const auto& json_result)
+    {
+        if (!json_result.has_value())
+        {
+            return;
+        }
+        try
+        {
+            const _STD string dumped { json_result.value().dump() };
+            (void)dumped;
+        }
+        catch (const _STD exception&)
+        {
+            // 任意字节注入字符串字段后, dump() 可能因非法 UTF-8 抛 type_error —
+            // 生产侧前提是内部字符串均为合法 UTF-8, 此处按预期拒绝处理。
+        }
+    }
 } // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const _STD uint8_t* data, _STD size_t size)
 {
-	const _STD string blob { reinterpret_cast<const char*>(data), size };
+    const _STD string blob { reinterpret_cast<const char*>(data), size };
 
-	// 1) 注册体: 字符串字段与端口信息全部注入模糊数据
-	{
-		ServiceRegistration registration {};
-		registration.namespace_name = blob;
-		registration.group_name		= blob;
-		registration.service_id		= blob;
-		registration.service_name	= blob;
-		registration.version		= blob;
-		registration.metadata_json	= blob;
+    // 1) 注册体: 字符串字段与端口信息全部注入模糊数据
+    {
+        ServiceRegistration registration {};
+        registration.namespace_name = blob;
+        registration.group_name     = blob;
+        registration.service_id     = blob;
+        registration.service_name   = blob;
+        registration.version        = blob;
+        registration.metadata_json  = blob;
 
-		ExposedPort port {};
-		port.name				   = blob;
-		port.protocol			   = blob;
-		port.url				   = blob;
-		port.port				   = size >= 2 ? static_cast<int>((data[0] << 8) | data[1]) : static_cast<int>(size);
-		registration.exposed_ports = { port };
+        ExposedPort port {};
+        port.name                  = blob;
+        port.protocol              = blob;
+        port.url                   = blob;
+        port.port                  = size >= 2 ? static_cast<int>((data[0] << 8) | data[1]) : static_cast<int>(size);
+        registration.exposed_ports = { port };
 
-		dumpIfPossible(registrationToJson(registration, blob));
-	}
+        dumpIfPossible(registrationToJson(registration, blob));
+    }
 
-	// 2) 状态体: overall_status 偶尔给合法枚举以进入深层路径
-	{
-		ServiceStatus status {};
-		status.healthy		  = size > 0 && (data[0] & 0X01u) != 0;
-		status.overall_status = (size > 0 && (data[0] & 0X02u) != 0) ? _STD string { "UP" } : blob;
-		status.code			  = blob;
-		status.message		  = blob;
-		if (!blob.empty())
-		{
-			status.details.emplace(blob, blob);
-		}
+    // 2) 状态体: overall_status 偶尔给合法枚举以进入深层路径
+    {
+        ServiceStatus status {};
+        status.healthy        = size > 0 && (data[0] & 0X01u) != 0;
+        status.overall_status = (size > 0 && (data[0] & 0X02u) != 0) ? _STD string { "UP" } : blob;
+        status.code           = blob;
+        status.message        = blob;
+        if (!blob.empty())
+        {
+            status.details.emplace(blob, blob);
+        }
 
-		ServiceComponentStatus component {};
-		component.name	  = blob;
-		component.status  = (size > 0 && (data[0] & 0X04u) != 0) ? _STD string { "DOWN" } : blob;
-		component.code	  = blob;
-		component.message = blob;
-		if (!blob.empty())
-		{
-			component.details.emplace(blob, blob);
-		}
-		status.components = { component };
+        ServiceComponentStatus component {};
+        component.name    = blob;
+        component.status  = (size > 0 && (data[0] & 0X04u) != 0) ? _STD string { "DOWN" } : blob;
+        component.code    = blob;
+        component.message = blob;
+        if (!blob.empty())
+        {
+            component.details.emplace(blob, blob);
+        }
+        status.components = { component };
 
-		dumpIfPossible(statusToJson(status));
-	}
+        dumpIfPossible(statusToJson(status));
+    }
 
-	// 3) 传输层解析语义 (CatalogTransport::parseRawJson 私有; 同语义直连)
-	try
-	{
-		const auto parsed { _NLOHMANN_JSON json::parse(blob) };
-		(void)parsed;
-	}
-	catch (const _STD exception&)
-	{}
+    // 3) 传输层解析语义 (CatalogTransport::parseRawJson 私有; 同语义直连)
+    try
+    {
+        const auto parsed { _NLOHMANN_JSON json::parse(blob) };
+        (void)parsed;
+    }
+    catch (const _STD exception&)
+    {}
 
-	return 0;
+    return 0;
 }

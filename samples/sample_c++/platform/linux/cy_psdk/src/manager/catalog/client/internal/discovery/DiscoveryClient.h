@@ -13,15 +13,15 @@
 
 namespace plane::catalog::internal
 {
-	class DiscoveryClient
-	{
-	public:
-		virtual ~DiscoveryClient(void) = default;
+    class DiscoveryClient
+    {
+    public:
+        virtual ~DiscoveryClient(void) = default;
 
-		// 同步探测; cancelled 置位时尽快返回
-		virtual DiscoveryReport discover(const DiscoveryConfig& config, const _STD atomic<bool>& cancelled) = 0;
+        // 同步探测; cancelled 置位时尽快返回
+        virtual DiscoveryReport discover(const DiscoveryConfig& config, const _STD atomic<bool>& cancelled) = 0;
 
-		// 注册成功后记录最近可用目录 IP
-		virtual void saveSuccessfulIp(const _STD string& ip) = 0;
-	};
+        // 注册成功后记录最近可用目录 IP
+        virtual void saveSuccessfulIp(const _STD string& ip) = 0;
+    };
 } // namespace plane::catalog::internal

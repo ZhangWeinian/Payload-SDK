@@ -13,27 +13,27 @@
 
 namespace plane::catalog::internal
 {
-	// HTTP 响应数据 (对齐 java HttpResponseData)
-	struct HttpResponseData
-	{
-		int			status { 0 }; // 服务端 HTTP 状态码 (transport 失败时为 0)
-		_STD string body {};
-		bool		transport_ok { false };
-		_STD string transport_error {};
-	};
+    // HTTP 响应数据 (对齐 java HttpResponseData)
+    struct HttpResponseData
+    {
+        int         status { 0 }; // 服务端 HTTP 状态码 (transport 失败时为 0)
+        _STD string body {};
+        bool        transport_ok { false };
+        _STD string transport_error {};
+    };
 
-	// HTTP 传输接口 (对齐 java HttpTransport)
-	class HttpTransport
-	{
-	public:
-		virtual ~HttpTransport(void)												   = default;
+    // HTTP 传输接口 (对齐 java HttpTransport)
+    class HttpTransport
+    {
+    public:
+        virtual ~HttpTransport(void)                                                   = default;
 
-		virtual HttpResponseData get(const _STD string& url)						   = 0;
-		virtual HttpResponseData post(const _STD string& url, const _STD string& body) = 0;
-		virtual HttpResponseData put(const _STD string& url, const _STD string& body)  = 0;
-		virtual HttpResponseData del(const _STD string& url)						   = 0;
+        virtual HttpResponseData get(const _STD string& url)                           = 0;
+        virtual HttpResponseData post(const _STD string& url, const _STD string& body) = 0;
+        virtual HttpResponseData put(const _STD string& url, const _STD string& body)  = 0;
+        virtual HttpResponseData del(const _STD string& url)                           = 0;
 
-		// 连接与总请求超时 (非正数由实现按 1ms 处理)
-		virtual void setTimeout(_STD_CHRONO milliseconds timeout) = 0;
-	};
+        // 连接与总请求超时 (非正数由实现按 1ms 处理)
+        virtual void setTimeout(_STD_CHRONO milliseconds timeout) = 0;
+    };
 } // namespace plane::catalog::internal

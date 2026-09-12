@@ -12,21 +12,21 @@
 
 namespace plane::catalog::internal
 {
-	// 探测结果状态 (对齐 java DiscoveryStatus)
-	enum class DiscoveryStatus
-	{
-		OK = 0,
-		NOT_FOUND,
-		INVALID_ARGUMENT,
-		SOCKET_ERROR
-	};
+    // 探测结果状态 (对齐 java DiscoveryStatus)
+    enum class DiscoveryStatus
+    {
+        OK = 0,
+        NOT_FOUND,
+        INVALID_ARGUMENT,
+        SOCKET_ERROR
+    };
 
-	// 一轮探测报告 (对齐 java DiscoveryReport)
-	struct DiscoveryReport
-	{
-		DiscoveryStatus status { DiscoveryStatus::NOT_FOUND };
-		_STD string		error {};
-		_STD vector<CatalogEndpoint> endpoints {};
-		bool						 multiple_instances { false };
-	};
+    // 一轮探测报告 (对齐 java DiscoveryReport)
+    struct DiscoveryReport
+    {
+        DiscoveryStatus status { DiscoveryStatus::NOT_FOUND };
+        _STD string     error {};
+        _STD vector<CatalogEndpoint> endpoints {};
+        bool                         multiple_instances { false };
+    };
 } // namespace plane::catalog::internal

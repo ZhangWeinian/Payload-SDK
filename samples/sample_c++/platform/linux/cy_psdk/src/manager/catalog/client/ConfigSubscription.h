@@ -12,51 +12,51 @@
 
 namespace plane::catalog
 {
-	class ConfigSubscription
-	{
-	public:
-		ConfigSubscription(void) noexcept = default;
+    class ConfigSubscription
+    {
+    public:
+        ConfigSubscription(void) noexcept = default;
 
-		explicit ConfigSubscription(_STD function<void()> cancel): cancel_(_STD move(cancel)) {}
+        explicit ConfigSubscription(_STD function<void()> cancel): cancel_(_STD move(cancel)) {}
 
-		~ConfigSubscription(void)
-		{
-			this->cancel();
-		}
+        ~ConfigSubscription(void)
+        {
+            this->cancel();
+        }
 
-		ConfigSubscription(ConfigSubscription&& other) noexcept: cancel_(_STD move(other.cancel_)) {}
+        ConfigSubscription(ConfigSubscription&& other) noexcept: cancel_(_STD move(other.cancel_)) {}
 
-		ConfigSubscription& operator=(ConfigSubscription&& other) noexcept
-		{
-			if (this != &other)
-			{
-				this->cancel();
-				this->cancel_ = _STD move(other.cancel_);
-			}
-			return *this;
-		}
+        ConfigSubscription& operator=(ConfigSubscription&& other) noexcept
+        {
+            if (this != &other)
+            {
+                this->cancel();
+                this->cancel_ = _STD move(other.cancel_);
+            }
+            return *this;
+        }
 
-		ConfigSubscription(const ConfigSubscription&)			 = delete;
-		ConfigSubscription& operator=(const ConfigSubscription&) = delete;
+        ConfigSubscription(const ConfigSubscription&)            = delete;
+        ConfigSubscription& operator=(const ConfigSubscription&) = delete;
 
-		// 取消监听。重复调用是安全的。
-		void cancel(void)
-		{
-			if (!this->cancel_)
-			{
-				return;
-			}
-			_STD function<void()> action {};
-			action.swap(this->cancel_);
-			action();
-		}
+        // 取消监听。重复调用是安全的。
+        void cancel(void)
+        {
+            if (!this->cancel_)
+            {
+                return;
+            }
+            _STD function<void()> action {};
+            action.swap(this->cancel_);
+            action();
+        }
 
-		_NODISCARD bool valid(void) const noexcept
-		{
-			return static_cast<bool>(this->cancel_);
-		}
+        _NODISCARD bool valid(void) const noexcept
+        {
+            return static_cast<bool>(this->cancel_);
+        }
 
-	private:
-		_STD function<void()> cancel_ {};
-	};
+    private:
+        _STD function<void()> cancel_ {};
+    };
 } // namespace plane::catalog

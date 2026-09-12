@@ -13,14 +13,14 @@
 
 namespace
 {
-	using WsStream = boost::beast::websocket::stream<boost::asio::ip::tcp::socket>;
+    using WsStream = boost::beast::websocket::stream<boost::asio::ip::tcp::socket>;
 } // namespace
 
 TEST(BoostBeastSmoke, WebsocketStreamIsUsable)
 {
-	boost::asio::io_context io {};
-	WsStream				stream { boost::asio::ip::tcp::socket { io } };
+    boost::asio::io_context io {};
+    WsStream                stream { boost::asio::ip::tcp::socket { io } };
 
-	EXPECT_FALSE(stream.is_open());
-	stream.binary(true);
+    EXPECT_FALSE(stream.is_open());
+    stream.binary(true);
 }

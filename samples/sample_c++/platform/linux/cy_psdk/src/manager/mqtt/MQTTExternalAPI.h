@@ -8,13 +8,13 @@
 
 namespace plane::manager
 {
-	class MQTTExternalAPI
-	{
-	public:
-		MQTTExternalAPI(void) noexcept	= default;
-		~MQTTExternalAPI(void) noexcept = default;
+    class MQTTExternalAPI
+    {
+    public:
+        MQTTExternalAPI(void) noexcept  = default;
+        ~MQTTExternalAPI(void) noexcept = default;
 
-	private:
-		// TODO
-	};
+    private:
+        // TODO
+    };
 } // namespace plane::manager

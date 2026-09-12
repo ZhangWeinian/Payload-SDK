@@ -18,381 +18,380 @@
 
 namespace plane::manager
 {
-	TelemetryReporter& TelemetryReporter::getInstance(void) noexcept
-	{
-		static TelemetryReporter instance {};
-		return instance;
-	}
+    TelemetryReporter& TelemetryReporter::getInstance(void) noexcept
+    {
+        static TelemetryReporter instance {};
+        return instance;
+    }
 
-	TelemetryReporter::TelemetryReporter(void) noexcept:
-		event_processing_pool_(_STD make_unique<_BS thread_pool<>>(6)),
-		last_health_ping_time_(_STD_CHRONO steady_clock::now())
-	{}
+    TelemetryReporter::TelemetryReporter(void) noexcept: event_processing_pool_(_STD make_unique<_BS thread_pool<>>(6)),
+                                                         last_health_ping_time_(_STD_CHRONO steady_clock::now())
+    {}
 
-	TelemetryReporter::~TelemetryReporter(void) noexcept
-	{
-		try
-		{
-			this->stop();
-		}
-		catch (const _STD exception& e)
-		{
-			LOG_ERROR("遥测上报服务析构异常: {}", e.what());
-		}
-		catch (...)
-		{
-			LOG_ERROR("遥测上报服务析构发生未知异常: <non-std exception>");
-		}
-	}
+    TelemetryReporter::~TelemetryReporter(void) noexcept
+    {
+        try
+        {
+            this->stop();
+        }
+        catch (const _STD exception& e)
+        {
+            LOG_ERROR("遥测上报服务析构异常: {}", e.what());
+        }
+        catch (...)
+        {
+            LOG_ERROR("遥测上报服务析构发生未知异常: <non-std exception>");
+        }
+    }
 
-	bool TelemetryReporter::start(void)
-	{
-		if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))
-		{
-			LOG_WARN("TelemetryReporter::start() 被重复调用，已忽略");
-			return true;
-		}
-		else
-		{
-			LOG_DEBUG("TelemetryReporter::start() 正在执行");
-		}
+    bool TelemetryReporter::start(void)
+    {
+        if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))
+        {
+            LOG_WARN("TelemetryReporter::start() 被重复调用，已忽略");
+            return true;
+        }
+        else
+        {
+            LOG_DEBUG("TelemetryReporter::start() 正在执行");
+        }
 
-		try
-		{
-			auto&							 dispatcher { plane::manager::EventManager::getInstance().getStatusDispatcher() };
-			this->psdk_event_remover_ = _STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::StatusDispatcher>>(dispatcher);
+        try
+        {
+            auto&                            dispatcher { plane::manager::EventManager::getInstance().getStatusDispatcher() };
+            this->psdk_event_remover_ = _STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::StatusDispatcher>>(dispatcher);
 
-			this->psdk_event_remover_->appendListener(
-				plane::manager::EventManager::PSDKEvent::TelemetryUpdated,
-				[this](const plane::manager::EventManager::PSDKEventData& data)
-				{
-					this->onPSDKEvent(data);
-				}
-			);
+            this->psdk_event_remover_->appendListener(
+                plane::manager::EventManager::PSDKEvent::TelemetryUpdated,
+                [this](const plane::manager::EventManager::PSDKEventData& data)
+                {
+                    this->onPSDKEvent(data);
+                }
+            );
 
-			this->psdk_event_remover_->appendListener(
-				plane::manager::EventManager::PSDKEvent::MissionStateChanged,
-				[this](const plane::manager::EventManager::PSDKEventData& data)
-				{
-					this->onPSDKEvent(data);
-				}
-			);
+            this->psdk_event_remover_->appendListener(
+                plane::manager::EventManager::PSDKEvent::MissionStateChanged,
+                [this](const plane::manager::EventManager::PSDKEventData& data)
+                {
+                    this->onPSDKEvent(data);
+                }
+            );
 
-			this->psdk_event_remover_->appendListener(
-				plane::manager::EventManager::PSDKEvent::ActionStateChanged,
-				[this](const plane::manager::EventManager::PSDKEventData& data)
-				{
-					this->onPSDKEvent(data);
-				}
-			);
+            this->psdk_event_remover_->appendListener(
+                plane::manager::EventManager::PSDKEvent::ActionStateChanged,
+                [this](const plane::manager::EventManager::PSDKEventData& data)
+                {
+                    this->onPSDKEvent(data);
+                }
+            );
 
-			this->psdk_event_remover_->appendListener(
-				plane::manager::EventManager::PSDKEvent::HealthPing,
-				[this](const plane::manager::EventManager::PSDKEventData& data)
-				{
-					if (auto* p_time { _STD get_if<_STD_CHRONO steady_clock::time_point>(&data) })
-					{
-						this->last_health_ping_time_ = *p_time;
-					}
-				}
-			);
+            this->psdk_event_remover_->appendListener(
+                plane::manager::EventManager::PSDKEvent::HealthPing,
+                [this](const plane::manager::EventManager::PSDKEventData& data)
+                {
+                    if (auto* p_time { _STD get_if<_STD_CHRONO steady_clock::time_point>(&data) })
+                    {
+                        this->last_health_ping_time_ = *p_time;
+                    }
+                }
+            );
 
-			this->psdk_event_remover_->appendListener(
-				plane::manager::EventManager::PSDKEvent::HealthStatusUpdated,
-				[this](const plane::manager::EventManager::PSDKEventData& data)
-				{
-					this->onPSDKEvent(data);
-				}
-			);
+            this->psdk_event_remover_->appendListener(
+                plane::manager::EventManager::PSDKEvent::HealthStatusUpdated,
+                [this](const plane::manager::EventManager::PSDKEventData& data)
+                {
+                    this->onPSDKEvent(data);
+                }
+            );
 
-			auto& system_dispatcher { plane::manager::EventManager::getInstance().getSystemDispatcher() };
-			this->system_event_remover_ =
-				_STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::SystemDispatcher>>(system_dispatcher);
+            auto& system_dispatcher { plane::manager::EventManager::getInstance().getSystemDispatcher() };
+            this->system_event_remover_ =
+                _STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::SystemDispatcher>>(system_dispatcher);
 
-			this->system_event_remover_->appendListener(
-				plane::manager::EventManager::SystemEvent::HeartbeatTick,
-				[this](const plane::manager::EventManager::SystemEventData& data)
-				{
-					this->onHeartbeatTick(data);
-				}
-			);
+            this->system_event_remover_->appendListener(
+                plane::manager::EventManager::SystemEvent::HeartbeatTick,
+                [this](const plane::manager::EventManager::SystemEventData& data)
+                {
+                    this->onHeartbeatTick(data);
+                }
+            );
 
-			if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
-			{
-				this->run_watchdog_ = true;
-				this->event_processing_pool_->detach_task(
-					[this]
-					{
-						this->runWatchdogCheck();
-					}
-				);
-				LOG_INFO("PSDK 看门狗已启动");
-			}
-			else
-			{
-				LOG_INFO("PSDK 未启用，看门狗将不会启动");
-			}
+            if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
+            {
+                this->run_watchdog_ = true;
+                this->event_processing_pool_->detach_task(
+                    [this]
+                    {
+                        this->runWatchdogCheck();
+                    }
+                );
+                LOG_INFO("PSDK 看门狗已启动");
+            }
+            else
+            {
+                LOG_INFO("PSDK 未启用，看门狗将不会启动");
+            }
 
-			LOG_INFO("遥测上报服务已启动");
+            LOG_INFO("遥测上报服务已启动");
 
-			return true;
-		}
-		catch (const _STD exception& ex)
-		{
-			LOG_ERROR("遥测上报服务启动失败，出现异常: {}", ex.what());
-			this->stop();
-			return false;
-		}
-		catch (...)
-		{
-			LOG_ERROR("遥测上报服务启动失败，出现未知异常");
-			this->stop();
-			return false;
-		}
-	}
+            return true;
+        }
+        catch (const _STD exception& ex)
+        {
+            LOG_ERROR("遥测上报服务启动失败，出现异常: {}", ex.what());
+            this->stop();
+            return false;
+        }
+        catch (...)
+        {
+            LOG_ERROR("遥测上报服务启动失败，出现未知异常");
+            this->stop();
+            return false;
+        }
+    }
 
-	void TelemetryReporter::stop(void)
-	{
-		if (bool expected { true }; !this->running_.compare_exchange_strong(expected, false))
-		{
-			return;
-		}
+    void TelemetryReporter::stop(void)
+    {
+        if (bool expected { true }; !this->running_.compare_exchange_strong(expected, false))
+        {
+            return;
+        }
 
-		this->run_watchdog_ = false;
+        this->run_watchdog_ = false;
 
-		if (this->system_event_remover_)
-		{
-			this->system_event_remover_.reset();
-			LOG_DEBUG("遥测上报服务已停止 (注销了所有系统事件监听器)");
-		}
+        if (this->system_event_remover_)
+        {
+            this->system_event_remover_.reset();
+            LOG_DEBUG("遥测上报服务已停止 (注销了所有系统事件监听器)");
+        }
 
-		if (this->psdk_event_remover_)
-		{
-			this->psdk_event_remover_.reset();
-			LOG_DEBUG("遥测上报服务已停止 (注销了所有 PSDK 事件监听器)");
-		}
+        if (this->psdk_event_remover_)
+        {
+            this->psdk_event_remover_.reset();
+            LOG_DEBUG("遥测上报服务已停止 (注销了所有 PSDK 事件监听器)");
+        }
 
-		if (this->event_processing_pool_)
-		{
-			this->event_processing_pool_.reset();
-			LOG_DEBUG("遥测上报服务已停止 (关闭事件处理线程池)");
-		}
+        if (this->event_processing_pool_)
+        {
+            this->event_processing_pool_.reset();
+            LOG_DEBUG("遥测上报服务已停止 (关闭事件处理线程池)");
+        }
 
-		LOG_INFO("遥测上报服务已停止");
-	}
+        LOG_INFO("遥测上报服务已停止");
+    }
 
-	bool TelemetryReporter::publishJson(_STD string_view topic, _STD string_view statusJson) noexcept
-	{
-		if (!plane::manager::MQTTv5Service::getInstance().isConnected())
-		{
-			LOG_DEBUG("MQTTv5Service 未连接, 无法发布");
-			return false;
-		}
+    bool TelemetryReporter::publishJson(_STD string_view topic, _STD string_view statusJson) noexcept
+    {
+        if (!plane::manager::MQTTv5Service::getInstance().isConnected())
+        {
+            LOG_DEBUG("MQTTv5Service 未连接, 无法发布");
+            return false;
+        }
 
-		try
-		{
-			if (!plane::manager::MQTTv5Service::getInstance().publish(topic, statusJson))
-			{
-				LOG_DEBUG("MQTTv5Service 在'{}' 发布失败", topic);
-				return false;
-			}
-		}
-		catch (const _STD exception& ex)
-		{
-			LOG_ERROR("MQTTv5Service 在'{}' 发布时出现异常: {}", topic, ex.what());
-			return false;
-		}
-		catch (...)
-		{
-			LOG_ERROR("MQTTv5Service 在'{}' 发布时出现未知异常", topic);
-			return false;
-		}
-		return true;
-	}
+        try
+        {
+            if (!plane::manager::MQTTv5Service::getInstance().publish(topic, statusJson))
+            {
+                LOG_DEBUG("MQTTv5Service 在'{}' 发布失败", topic);
+                return false;
+            }
+        }
+        catch (const _STD exception& ex)
+        {
+            LOG_ERROR("MQTTv5Service 在'{}' 发布时出现异常: {}", topic, ex.what());
+            return false;
+        }
+        catch (...)
+        {
+            LOG_ERROR("MQTTv5Service 在'{}' 发布时出现未知异常", topic);
+            return false;
+        }
+        return true;
+    }
 
-	void TelemetryReporter::onPSDKEvent(const plane::manager::EventManager::PSDKEventData& eventData)
-	{
-		if (!this->event_processing_pool_)
-		{
-			LOG_WARN("事件处理线程池未初始化，无法处理 PSDK 事件");
-			return;
-		}
+    void TelemetryReporter::onPSDKEvent(const plane::manager::EventManager::PSDKEventData& eventData)
+    {
+        if (!this->event_processing_pool_)
+        {
+            LOG_WARN("事件处理线程池未初始化，无法处理 PSDK 事件");
+            return;
+        }
 
-		if (this->queued_task_count_ >= this->MAX_EVENT_QUEUE_SIZE)
-		{
-			// 日志节流: 仅日志使用, 多线程下以原子毫秒计数避免数据竞争
-			static _STD atomic<int64_t> last_log_ms { 0 };
-			const int64_t				now_ms {
-				_STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(_STD_CHRONO steady_clock::now().time_since_epoch()).count()
-			};
-			int64_t prev_ms { last_log_ms.load(_STD memory_order_relaxed) };
-			if (now_ms - prev_ms > 5000 && last_log_ms.compare_exchange_strong(prev_ms, now_ms, _STD memory_order_relaxed))
-			{
-				LOG_WARN("TelemetryReporter 事件处理队列已满 (超过 {} 个任务)，正在丢弃新事件", MAX_EVENT_QUEUE_SIZE);
-			}
-			return;
-		}
+        if (this->queued_task_count_ >= this->MAX_EVENT_QUEUE_SIZE)
+        {
+            // 日志节流: 仅日志使用, 多线程下以原子毫秒计数避免数据竞争
+            static _STD atomic<int64_t> last_log_ms { 0 };
+            const int64_t               now_ms {
+                _STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(_STD_CHRONO steady_clock::now().time_since_epoch()).count()
+            };
+            int64_t prev_ms { last_log_ms.load(_STD memory_order_relaxed) };
+            if (now_ms - prev_ms > 5000 && last_log_ms.compare_exchange_strong(prev_ms, now_ms, _STD memory_order_relaxed))
+            {
+                LOG_WARN("TelemetryReporter 事件处理队列已满 (超过 {} 个任务)，正在丢弃新事件", MAX_EVENT_QUEUE_SIZE);
+            }
+            return;
+        }
 
-		++(this->queued_task_count_);
+        ++(this->queued_task_count_);
 
-		this->event_processing_pool_->detach_task(
-			[this, eventData]
-			{
-				auto counter_guard = _GSL finally(
-					[this]
-					{
-						--(this->queued_task_count_);
-					}
-				);
+        this->event_processing_pool_->detach_task(
+            [this, eventData]
+            {
+                auto counter_guard = _GSL finally(
+                    [this]
+                    {
+                        --(this->queued_task_count_);
+                    }
+                );
 
-				_STD visit(
-					[this](const auto& event)
-					{
-						using T = _STD decay_t<decltype(event)>;
+                _STD visit(
+                    [this](const auto& event)
+                    {
+                        using T = _STD decay_t<decltype(event)>;
 
-						if constexpr (_STD is_same_v<T, _STD_CHRONO steady_clock::time_point>)
-						{
-							this->last_health_ping_time_ = event;
-							return;
-						}
-						else if constexpr (_STD is_same_v<T, plane::protocol::StatusPayload>)
-						{
-							if (!plane::manager::MQTTv5Service::getInstance().isConnected())
-							{
-								return;
-							}
+                        if constexpr (_STD is_same_v<T, _STD_CHRONO steady_clock::time_point>)
+                        {
+                            this->last_health_ping_time_ = event;
+                            return;
+                        }
+                        else if constexpr (_STD is_same_v<T, plane::protocol::StatusPayload>)
+                        {
+                            if (!plane::manager::MQTTv5Service::getInstance().isConnected())
+                            {
+                                return;
+                            }
 
-							auto payload { event };
+                            auto payload { event };
 
-							// 多线程下共享计数, 用 atomic 避免数据竞争
-							static _STD atomic<int> status_counter { 0 };
-							if (status_counter.fetch_add(1, _STD memory_order_relaxed) >= 4)
-							{
-								status_counter.store(0, _STD memory_order_relaxed);
+                            // 多线程下共享计数, 用 atomic 避免数据竞争
+                            static _STD atomic<int> status_counter { 0 };
+                            if (status_counter.fetch_add(1, _STD memory_order_relaxed) >= 4)
+                            {
+                                status_counter.store(0, _STD memory_order_relaxed);
 
-								// 视频源: 本机 RTSP 推流地址 (由域模型拼装); 本机 IP 未就绪/配置不完整时不含视频源
-								const _STD string rtsp_url {
-									plane::utils::buildLocalRtspUrl(plane::domain::PlaneStateStore::getInstance().snapshot())
-								};
-								if (!rtsp_url.empty())
-								{
-									payload.WZT = {
-										plane::protocol::VideoSource { .SPURL = rtsp_url, .SPXY = "RTSP", .ZBZT = 1 }
-									};
-								}
-								else
-								{
-									LOG_DEBUG("本机 RTSP 地址不可得, 本次状态不含视频源");
-								}
+                                // 视频源: 本机 RTSP 推流地址 (由域模型拼装); 本机 IP 未就绪/配置不完整时不含视频源
+                                const _STD string rtsp_url {
+                                    plane::utils::buildLocalRtspUrl(plane::domain::PlaneStateStore::getInstance().snapshot())
+                                };
+                                if (!rtsp_url.empty())
+                                {
+                                    payload.WZT = {
+                                        plane::protocol::VideoSource { .SPURL = rtsp_url, .SPXY = "RTSP", .ZBZT = 1 }
+                                    };
+                                }
+                                else
+                                {
+                                    LOG_DEBUG("本机 RTSP 地址不可得, 本次状态不含视频源");
+                                }
 
-								LOG_DEBUG("准备上报飞行状态");
+                                LOG_DEBUG("准备上报飞行状态");
 
-								(void)this
-									->publishJson(plane::manager::TOPIC_STATUS, plane::utils::JsonConverter::buildStatusReportJson(payload));
-							}
-						}
-						else if constexpr (_STD is_same_v<T, plane::protocol::HealthStatusPayload>)
-						{
-							LOG_DEBUG("准备上报健康状态");
+                                (void)this
+                                    ->publishJson(plane::manager::TOPIC_STATUS, plane::utils::JsonConverter::buildStatusReportJson(payload));
+                            }
+                        }
+                        else if constexpr (_STD is_same_v<T, plane::protocol::HealthStatusPayload>)
+                        {
+                            LOG_DEBUG("准备上报健康状态");
 
-							(void)this
-								->publishJson(plane::manager::TOPIC_HEALTH_MANAGE, plane::utils::JsonConverter::buildHealthStatusJson(event));
-						}
-						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3MissionState>)
-						{
-							plane::protocol::MissionProgressPayload progress {};
-							progress.ZT	  = static_cast<int>(event.state);
-							progress.DQHD = event.currentWaypointIndex;
-							progress.RWID = _STD to_string(event.wayLineId);
-							// (void)this->publishJson(plane::manager::TOPIC_MISSION_PROGRESS,
-							// 				  plane::utils::JsonConverter::buildMissionProgressJson(progress));
-						}
-						else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3ActionState>)
-						{
-							LOG_DEBUG("接收到航线动作更新");
-							// TODO: 根据需要处理或上报动作状态
-						}
-						else
-						{
-							LOG_WARN("收到未知类型的 PSDK 事件数据");
-						}
-					},
-					eventData
-				);
-			}
-		);
-	}
+                            (void)this
+                                ->publishJson(plane::manager::TOPIC_HEALTH_MANAGE, plane::utils::JsonConverter::buildHealthStatusJson(event));
+                        }
+                        else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3MissionState>)
+                        {
+                            plane::protocol::MissionProgressPayload progress {};
+                            progress.ZT   = static_cast<int>(event.state);
+                            progress.DQHD = event.currentWaypointIndex;
+                            progress.RWID = _STD to_string(event.wayLineId);
+                            // (void)this->publishJson(plane::manager::TOPIC_MISSION_PROGRESS,
+                            // 				  plane::utils::JsonConverter::buildMissionProgressJson(progress));
+                        }
+                        else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3ActionState>)
+                        {
+                            LOG_DEBUG("接收到航线动作更新");
+                            // TODO: 根据需要处理或上报动作状态
+                        }
+                        else
+                        {
+                            LOG_WARN("收到未知类型的 PSDK 事件数据");
+                        }
+                    },
+                    eventData
+                );
+            }
+        );
+    }
 
-	void TelemetryReporter::onHeartbeatTick(const plane::manager::EventManager::SystemEventData& eventData)
-	{
-		if (!this->event_processing_pool_)
-		{
-			return;
-		}
+    void TelemetryReporter::onHeartbeatTick(const plane::manager::EventManager::SystemEventData& eventData)
+    {
+        if (!this->event_processing_pool_)
+        {
+            return;
+        }
 
-		this->event_processing_pool_->detach_task(
-			[this]
-			{
-				if (!plane::manager::MQTTv5Service::getInstance().isConnected())
-				{
-					LOG_TRACE("MQTT 未连接，跳过本次固定信息心跳上报");
-					return;
-				}
+        this->event_processing_pool_->detach_task(
+            [this]
+            {
+                if (!plane::manager::MQTTv5Service::getInstance().isConnected())
+                {
+                    LOG_TRACE("MQTT 未连接，跳过本次固定信息心跳上报");
+                    return;
+                }
 
-				// 未启用 PSDK 模式: 无采集事件, 由心跳周期推送状态 (SBZT, 字段即显式默认值)
-				if (!plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
-				{
-					plane::protocol::StatusPayload builtin_payload {};
-					(void)this->publishJson(plane::manager::TOPIC_STATUS, plane::utils::JsonConverter::buildStatusReportJson(builtin_payload));
-					LOG_TRACE("已通过心跳事件上报状态");
-				}
+                // 未启用 PSDK 模式: 无采集事件, 由心跳周期推送状态 (SBZT, 字段即显式默认值)
+                if (!plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
+                {
+                    plane::protocol::StatusPayload builtin_payload {};
+                    (void)this->publishJson(plane::manager::TOPIC_STATUS, plane::utils::JsonConverter::buildStatusReportJson(builtin_payload));
+                    LOG_TRACE("已通过心跳事件上报状态");
+                }
 
-				static const auto ip_address { plane::utils::getLocalIPV4().value_or("N/A") };
+                static const auto ip_address { plane::utils::getLocalIPV4().value_or("N/A") };
 
-				const auto		  snapshot { plane::domain::PlaneStateStore::getInstance().snapshot() };
-				const auto&		  plane_code { snapshot.serial_number };
-				if (plane_code.empty())
-				{
-					LOG_WARN("飞行器序列号为空, 本次固定信息上报跳过");
-					return;
-				}
+                const auto        snapshot { plane::domain::PlaneStateStore::getInstance().snapshot() };
+                const auto&       plane_code { snapshot.serial_number };
+                if (plane_code.empty())
+                {
+                    LOG_WARN("飞行器序列号为空, 本次固定信息上报跳过");
+                    return;
+                }
 
-				plane::protocol::MissionInfoPayload info_payload { .FJSN   = plane_code,
-																   .YKQIP  = ip_address,
-																   .YSRTSP = plane::utils::buildLocalRtspUrl(snapshot) };
+                plane::protocol::MissionInfoPayload info_payload { .FJSN   = plane_code,
+                                                                   .YKQIP  = ip_address,
+                                                                   .YSRTSP = plane::utils::buildLocalRtspUrl(snapshot) };
 
-				(void)this->publishJson(plane::manager::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
+                (void)this->publishJson(plane::manager::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
 
-				LOG_TRACE("已通过心跳事件上报固定信息 (MissionInfoPayload) ");
-			}
-		);
-	}
+                LOG_TRACE("已通过心跳事件上报固定信息 (MissionInfoPayload) ");
+            }
+        );
+    }
 
-	void TelemetryReporter::runWatchdogCheck(void) noexcept
-	{
-		if (!this->run_watchdog_)
-		{
-			LOG_INFO("看门狗任务收到停止信号，不再调度下一次检查");
-			return;
-		}
+    void TelemetryReporter::runWatchdogCheck(void) noexcept
+    {
+        if (!this->run_watchdog_)
+        {
+            LOG_INFO("看门狗任务收到停止信号，不再调度下一次检查");
+            return;
+        }
 
-		const auto now { _STD_CHRONO steady_clock::now() };
-		const auto last_update { this->last_health_ping_time_.load() };
-		if (now - last_update > this->PSDK_WATCHDOG_TIMEOUT)
-		{
-			LOG_ERROR("看门狗超时！PSDK 数据源已超过 {} 秒没有更新！", this->PSDK_WATCHDOG_TIMEOUT.count());
-		}
-		else
-		{
-			LOG_TRACE("看门狗检查通过，PSDK 数据源正常");
-		}
+        const auto now { _STD_CHRONO steady_clock::now() };
+        const auto last_update { this->last_health_ping_time_.load() };
+        if (now - last_update > this->PSDK_WATCHDOG_TIMEOUT)
+        {
+            LOG_ERROR("看门狗超时！PSDK 数据源已超过 {} 秒没有更新！", this->PSDK_WATCHDOG_TIMEOUT.count());
+        }
+        else
+        {
+            LOG_TRACE("看门狗检查通过，PSDK 数据源正常");
+        }
 
-		this->event_processing_pool_->detach_task(
-			[this]
-			{
-				_STD this_thread::sleep_for(this->PSDK_WATCHDOG_CHECK_INTERVAL);
-				this->runWatchdogCheck();
-			}
-		);
-	}
+        this->event_processing_pool_->detach_task(
+            [this]
+            {
+                _STD this_thread::sleep_for(this->PSDK_WATCHDOG_CHECK_INTERVAL);
+                this->runWatchdogCheck();
+            }
+        );
+    }
 } // namespace plane::manager

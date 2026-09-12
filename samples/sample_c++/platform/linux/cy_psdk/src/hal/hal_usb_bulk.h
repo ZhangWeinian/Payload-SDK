@@ -40,7 +40,7 @@
 
 #ifdef LIBUSB_INSTALLED
 
-	#include <libusb-1.0/libusb.h>
+    #include <libusb-1.0/libusb.h>
 
 #endif
 
@@ -52,38 +52,38 @@ extern "C"
 #endif
 
 /* Exported constants --------------------------------------------------------*/
-#define LINUX_USB_BULK1_EP_IN_FD	  "/dev/usb-ffs/bulk1/ep1"
-#define LINUX_USB_BULK1_EP_OUT_FD	  "/dev/usb-ffs/bulk1/ep2"
+#define LINUX_USB_BULK1_EP_IN_FD      "/dev/usb-ffs/bulk1/ep1"
+#define LINUX_USB_BULK1_EP_OUT_FD     "/dev/usb-ffs/bulk1/ep2"
 
 #define LINUX_USB_BULK1_INTERFACE_NUM (0)
 #define LINUX_USB_BULK1_END_POINT_IN  (0X81)
 #define LINUX_USB_BULK1_END_POINT_OUT (0X01)
 
-#define LINUX_USB_BULK2_EP_IN_FD	  "/dev/usb-ffs/bulk2/ep1"
-#define LINUX_USB_BULK2_EP_OUT_FD	  "/dev/usb-ffs/bulk2/ep2"
+#define LINUX_USB_BULK2_EP_IN_FD      "/dev/usb-ffs/bulk2/ep1"
+#define LINUX_USB_BULK2_EP_OUT_FD     "/dev/usb-ffs/bulk2/ep2"
 
 #define LINUX_USB_BULK2_INTERFACE_NUM (1)
 #define LINUX_USB_BULK2_END_POINT_IN  (0X82)
 #define LINUX_USB_BULK2_END_POINT_OUT (0X02)
 
-#define LINUX_USB_BULK3_EP_IN_FD	  "/dev/usb-ffs/bulk3/ep1"
-#define LINUX_USB_BULK3_EP_OUT_FD	  "/dev/usb-ffs/bulk3/ep2"
+#define LINUX_USB_BULK3_EP_IN_FD      "/dev/usb-ffs/bulk3/ep1"
+#define LINUX_USB_BULK3_EP_OUT_FD     "/dev/usb-ffs/bulk3/ep2"
 
 #define LINUX_USB_BULK3_INTERFACE_NUM (2)
 #define LINUX_USB_BULK3_END_POINT_IN  (0X83)
 #define LINUX_USB_BULK3_END_POINT_OUT (0X03)
 
-#define LINUX_USB_VID				  (0X2ca3)
-#define LINUX_USB_PID				  (0Xf001)
+#define LINUX_USB_VID                 (0X2ca3)
+#define LINUX_USB_PID                 (0Xf001)
 
-	/* Exported types ------------------------------------------------------------*/
+    /* Exported types ------------------------------------------------------------*/
 
-	/* Exported functions --------------------------------------------------------*/
-	T_DjiReturnCode HalUsbBulk_Init(T_DjiHalUsbBulkInfo usbBulkInfo, T_DjiUsbBulkHandle* usbBulkHandle);
-	T_DjiReturnCode HalUsbBulk_DeInit(T_DjiUsbBulkHandle usbBulkHandle);
-	T_DjiReturnCode HalUsbBulk_WriteData(T_DjiUsbBulkHandle usbBulkHandle, const uint8_t* buf, uint32_t len, uint32_t* realLen);
-	T_DjiReturnCode HalUsbBulk_ReadData(T_DjiUsbBulkHandle usbBulkHandle, uint8_t* buf, uint32_t len, uint32_t* realLen);
-	T_DjiReturnCode HalUsbBulk_GetDeviceInfo(T_DjiHalUsbBulkDeviceInfo* deviceInfo);
+    /* Exported functions --------------------------------------------------------*/
+    T_DjiReturnCode HalUsbBulk_Init(T_DjiHalUsbBulkInfo usbBulkInfo, T_DjiUsbBulkHandle* usbBulkHandle);
+    T_DjiReturnCode HalUsbBulk_DeInit(T_DjiUsbBulkHandle usbBulkHandle);
+    T_DjiReturnCode HalUsbBulk_WriteData(T_DjiUsbBulkHandle usbBulkHandle, const uint8_t* buf, uint32_t len, uint32_t* realLen);
+    T_DjiReturnCode HalUsbBulk_ReadData(T_DjiUsbBulkHandle usbBulkHandle, uint8_t* buf, uint32_t len, uint32_t* realLen);
+    T_DjiReturnCode HalUsbBulk_GetDeviceInfo(T_DjiHalUsbBulkDeviceInfo* deviceInfo);
 
 #ifdef __cplusplus
 }
