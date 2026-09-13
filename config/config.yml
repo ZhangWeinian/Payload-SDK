@@ -13,9 +13,18 @@ catalog:
         - 192.168.1.131
         - 192.168.1.*
 
-# 设备标识与 RID 起降点 (可选):
-# plane:
-#     code: <设备标识>         # 未配置时使用 PSDK 飞控序列号
-#     takeoff_lat: 22.5428    # RID 起降点纬度 (度; 未配置时 RID 上报 0 并告警)
-#     takeoff_lon: 113.9589   # RID 起降点经度 (度)
-#     takeoff_alt: 10         # RID 起降点海拔 (米)
+plane:
+    code: 0A1B2C3D4E5F6078 # 飞机唯一16位识别码
+    use_mqtt_v5_server: true # 使用 MQTT v5
+    waypoint_3d_distance_tolerance: 0.5 # 3D 航点距离容差 (m)
+    stick_sensitivity: 0.33 # 摇杆灵敏度 0.1~1.0
+    tcp_frame_server_port: 1234 # TCP 帧服务端口
+    service_reconnect_interval_s: 2 # 服务重连间隔 (s)
+    max_waypoints_per_mission: 500 # 单任务最大航点数
+    max_total_waypoints: 1000 # 最大总航点数
+    gps_satellite_alert_threshold: 15 # GPS 卫星告警阈值
+    video_quality_level: 75 # 视频质量等级 10~100
+    simulator_default_longitude: "118.892591" # 模拟器默认经度
+    simulator_default_latitude: "32.067228" # 模拟器默认纬度
+    simulator_default_gps_count: "15" # 模拟器默认卫星数量
+    custom_central_meridian: 0.0 # 自定义中央子午线 (度)

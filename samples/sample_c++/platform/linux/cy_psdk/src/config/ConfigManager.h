@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "define.h"
+#include "domain/AppConfigEntity.h"
 
 namespace plane::config
 {
@@ -42,10 +43,9 @@ namespace plane::config
         [[nodiscard]] bool                         isSkipRC(void) const noexcept;
         [[nodiscard]] bool                         isSaveKmz(void) const noexcept;
 
-        // plane.takeoff_*: RID 起降点 (单位: 度 / 米; 未配置时为 0)
-        [[nodiscard]] double getTakeoffLatitudeDeg(void) const noexcept;
-        [[nodiscard]] double getTakeoffLongitudeDeg(void) const noexcept;
-        [[nodiscard]] double getTakeoffAltitudeM(void) const noexcept;
+        // plane.*: 应用配置实体用户可配置子集 (登记项与 config/config.yml 的 plane 小节一致;
+        // 其余字段由程序内部维护)
+        [[nodiscard]] plane::domain::AppConfigEntity getAppConfig() const noexcept;
 
         // catalog.*: 目录发现配置
         [[nodiscard]] ::std::string                getCatalogNodeId(void) const noexcept;
@@ -75,27 +75,43 @@ namespace plane::config
         // 获取一个随机生成的唯一客户端 ID
         [[nodiscard]] ::std::string getNewGenerateUniqueClientId(void) noexcept;
 
-        // config.yml 节点读取: 节/键缺失或类型不符时返回 fallback
+        // config.yml 单字段合并到现值: 键缺失 → 静默保留现值; 类型不符 → 告警并保留现值
         template<typename T>
-        [[nodiscard]] T readValue(const char* section, const char* key, const T& fallback) const noexcept
+        void mergeField(const char* section, const char* key, T& value) const noexcept
         {
+            const auto node { this->config_node_[section][key] };
+            if (!node || node.IsNull())
+            {
+                return;
+            }
+
             try
             {
-                const auto node { this->config_node_[section][key] };
-                if (!node || node.IsNull())
-                {
-                    return fallback;
-                }
-                return node.as<T>(fallback);
+                value = node.as<T>();
             }
             catch (...)
             {
-                return fallback;
+                this->warnTypeMismatch(section, key);
             }
         }
 
-        ::YAML::Node  config_node_ {};
-        bool          loaded_ { false };
-        ::std::string mqtt_client_id_ {};
+        // config.yml 单键读取: 键缺失 → 静默回落 fallback; 类型不符 → 告警并回落 fallback
+        template<typename T>
+        [[nodiscard]] T readValue(const char* section, const char* key, const T& fallback) const noexcept
+        {
+            T value { fallback };
+            this->mergeField(section, key, value);
+            return value;
+        }
+
+        // 类型不符告警 (定义在 .cpp, 避免头文件引入日志依赖)
+        void warnTypeMismatch(const char* section, const char* key) const noexcept;
+
+        // config.yml 序列读取: 键缺失 → 空列表; 类型不符 → 告警并返回空列表
+        [[nodiscard]] ::std::vector<::std::string> readList(const char* section, const char* key) const noexcept;
+
+        ::YAML::Node                               config_node_ {};
+        bool                                       loaded_ { false };
+        ::std::string                              mqtt_client_id_ {};
     };
 } // namespace plane::config

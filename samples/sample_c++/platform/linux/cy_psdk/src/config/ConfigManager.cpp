@@ -193,19 +193,27 @@ namespace plane::config
         return this->readValue<bool>("features", "save_kmz_file", false);
     }
 
-    double ConfigManager::getTakeoffLatitudeDeg(void) const noexcept
+    plane::domain::AppConfigEntity ConfigManager::getAppConfig(void) const noexcept
     {
-        return this->readValue<double>("plane", "takeoff_lat", 0.0);
-    }
+        // plane.* → AppConfigEntity 的“用户可配置子集” (登记项与 config.yml 的 plane 小节一一对应;
+        // 其余字段由程序内部维护, 不在此登记)。键缺失/类型不符保留 NSDMI 缺省。
+        plane::domain::AppConfigEntity app_config {};
 
-    double ConfigManager::getTakeoffLongitudeDeg(void) const noexcept
-    {
-        return this->readValue<double>("plane", "takeoff_lon", 0.0);
-    }
+        this->mergeField("plane", "use_mqtt_v5_server", app_config.use_mqtt_v5_server);
+        this->mergeField("plane", "waypoint_3d_distance_tolerance", app_config.waypoint_3d_distance_tolerance);
+        this->mergeField("plane", "stick_sensitivity", app_config.stick_sensitivity);
+        this->mergeField("plane", "tcp_frame_server_port", app_config.tcp_frame_server_port);
+        this->mergeField("plane", "service_reconnect_interval_s", app_config.service_reconnect_interval_s);
+        this->mergeField("plane", "max_waypoints_per_mission", app_config.max_waypoints_per_mission);
+        this->mergeField("plane", "max_total_waypoints", app_config.max_total_waypoints);
+        this->mergeField("plane", "gps_satellite_alert_threshold", app_config.gps_satellite_alert_threshold);
+        this->mergeField("plane", "video_quality_level", app_config.video_quality_level);
+        this->mergeField("plane", "simulator_default_longitude", app_config.simulator_default_longitude);
+        this->mergeField("plane", "simulator_default_latitude", app_config.simulator_default_latitude);
+        this->mergeField("plane", "simulator_default_gps_count", app_config.simulator_default_gps_count);
+        this->mergeField("plane", "custom_central_meridian", app_config.custom_central_meridian);
 
-    double ConfigManager::getTakeoffAltitudeM(void) const noexcept
-    {
-        return this->readValue<double>("plane", "takeoff_alt", 0.0);
+        return app_config;
     }
 
     ::std::string ConfigManager::getCatalogNodeId(void) const noexcept
@@ -220,28 +228,45 @@ namespace plane::config
 
     ::std::vector<::std::string> ConfigManager::getCatalogTargets(void) const noexcept
     {
-        ::std::vector<::std::string> targets {};
+        return this->readList("catalog", "targets");
+    }
+
+    ::std::vector<::std::string> ConfigManager::readList(const char* section, const char* key) const noexcept
+    {
+        ::std::vector<::std::string> values {};
+        const auto                   node { this->config_node_[section][key] };
+        if (!node || node.IsNull())
+        {
+            return values;
+        }
+        if (!node.IsSequence())
+        {
+            this->warnTypeMismatch(section, key);
+            return values;
+        }
+
         try
         {
-            const auto node { this->config_node_["catalog"]["targets"] };
-            if (!node || !node.IsSequence())
-            {
-                return targets;
-            }
-
             for (const auto& item : node)
             {
-                if (::std::string value { item.as<::std::string>("") }; !value.empty())
+                if (::std::string value { item.as<::std::string>() }; !value.empty())
                 {
-                    targets.push_back(::std::move(value));
+                    values.push_back(::std::move(value));
                 }
             }
         }
         catch (...)
         {
-            targets.clear();
+            this->warnTypeMismatch(section, key);
+            values.clear();
         }
-        return targets;
+        return values;
+    }
+
+    void ConfigManager::warnTypeMismatch(const char* section, const char* key) const noexcept
+    {
+        // 缺键静默回落 (字段可以少), 类型不符必须可见 (不能错)
+        LOG_WARN("配置项 '{}.{}' 类型不符, 已回落内置缺省; 请修正 config.yml", section, key);
     }
 
     ::std::string ConfigManager::getCatalogVersion(void) const noexcept

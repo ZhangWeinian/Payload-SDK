@@ -216,19 +216,20 @@ namespace plane::manager
             }
 
             // 初始化飞控模块 (必须先初始化再调用任何 DjiFlightController_* API, 否则模块未就绪会崩溃)
-            // ridInfo: RID 合规要求上报"真实起降点"; 由部署配置提供 (plane.takeoff_lat/lon/alt, 单位: 度/米);
-            // 未配置时上报 0 并告警 (绝不使用任何样例坐标)
+            // ridInfo: RID 合规要求上报"真实起降点"; 数据源为 state_ 的独立字段 (不从 config.yml 读取;
+            // 默认取模拟器默认坐标, 部署后由上层按实际位置更新)。
+            // PSDK 契约: 初始化时一次性传入, 之后无任何更新接口
+            // 字段级一致读取: 3 个字段同一把锁内取齐 (只复制 24 字节, 不整份快照)
+            const auto [takeoff_lat_deg, takeoff_lon_deg, takeoff_alt_m] { plane::domain::PlaneStateStore::getInstance().read(
+                &plane::domain::PlaneStateDataClass::rid_takeoff_latitude_deg,
+                &plane::domain::PlaneStateDataClass::rid_takeoff_longitude_deg,
+                &plane::domain::PlaneStateDataClass::rid_takeoff_altitude_m
+            ) };
             ::T_DjiFlightControllerRidInfo ridInfo {};
-            const double                   takeoff_lat_deg { config.getTakeoffLatitudeDeg() };
-            const double                   takeoff_lon_deg { config.getTakeoffLongitudeDeg() };
-            const double                   takeoff_alt_m { config.getTakeoffAltitudeM() };
-            if (takeoff_lat_deg == 0.0 && takeoff_lon_deg == 0.0)
-            {
-                LOG_WARN("未配置 'plane.takeoff_lat/lon/alt', RID 起降点将上报 0; 请按实际部署位置配置");
-            }
             ridInfo.latitude  = takeoff_lat_deg * (1.0 / RAD_TO_DEG); // PSDK 要求弧度
             ridInfo.longitude = takeoff_lon_deg * (1.0 / RAD_TO_DEG);
             ridInfo.altitude  = static_cast<::std::uint16_t>(takeoff_alt_m);
+            LOG_INFO("RID 起降点 (state_): 纬度={}, 经度={}, 海拔={}m", takeoff_lat_deg, takeoff_lon_deg, takeoff_alt_m);
             if (::T_DjiReturnCode returnCode { ::DjiFlightController_Init(ridInfo) }; returnCode != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
             {
                 LOG_ERROR("飞控模块初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));

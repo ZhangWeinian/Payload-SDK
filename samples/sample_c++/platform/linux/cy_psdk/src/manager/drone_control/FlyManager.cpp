@@ -111,14 +111,14 @@ namespace plane::manager
 
     void FlyManager::rotateGimbal(const plane::protocol::GimbalControlPayload& gimbalParams) const noexcept
     {
-        LOG_INFO("FlyManager: 发送【云台角度控制】命令事件: 俯仰角={}, 偏航角={}", gimbalParams.FYJ, gimbalParams.PHJ);
+        LOG_INFO("FlyManager: 发送【云台角度控制】命令事件: 俯仰角={}, 偏航角={}", gimbalParams.FYJ, gimbalParams.FJPHJ);
         // 使用 GimbalControlPayload，MS=0 表示角度控制 (根据你的定义调整)
         plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::RotateGimbal, gimbalParams);
     }
 
     void FlyManager::rotateGimbalBySpeed(const plane::protocol::GimbalControlPayload& gimbalParams) const noexcept
     {
-        LOG_INFO("FlyManager: 发送【云台速度控制】命令事件: 俯仰角={}, 偏航角={}", gimbalParams.FYJ, gimbalParams.PHJ);
+        LOG_INFO("FlyManager: 发送【云台速度控制】命令事件: 俯仰角={}, 偏航角={}", gimbalParams.FYJ, gimbalParams.FJPHJ);
         // 使用 GimbalControlPayload，MS=1 表示速度控制 (根据你的定义调整)
         // rollSpeed 暂时没有对应字段，如果需要可以扩展 GimbalControlPayload
         plane::manager::EventManager::getInstance()

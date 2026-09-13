@@ -1655,12 +1655,12 @@ namespace plane::manager
 
     void PSDKAdapter::rotateGimbal(const plane::protocol::GimbalControlPayload& payload)
     {
-        LOG_INFO("收到云台控制请求, 俯仰角: {}, 偏航角: {}, 模式: {}", payload.FYJ, payload.PHJ, payload.MS);
+        LOG_INFO("收到云台控制请求, 云台俯仰角: {}, 飞机偏航角: {}, 模式: {}", payload.FYJ, payload.FJPHJ, payload.MS);
 
         (void)this->executePsdkCommandAsync(
             [payload](void) -> ::T_DjiReturnCode
             {
-                LOG_INFO("线程池任务: 执行云台控制: 俯仰角: {}, 偏航角: {}, 模式: {}", payload.FYJ, payload.PHJ, payload.MS);
+                LOG_INFO("线程池任务: 执行云台控制: 云台俯仰角: {}, 飞机偏航角: {}, 模式: {}", payload.FYJ, payload.FJPHJ, payload.MS);
                 return ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
             }
         );
@@ -1758,7 +1758,7 @@ namespace plane::manager
             payload.SDN,
             payload.SDD,
             payload.SDX,
-            payload.PHJ,
+            payload.FJPHJ,
             payload.MS
         );
 
@@ -1770,7 +1770,7 @@ namespace plane::manager
                     payload.SDN,
                     payload.SDD,
                     payload.SDX,
-                    payload.PHJ,
+                    payload.FJPHJ,
                     payload.MS
                 );
                 return ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值

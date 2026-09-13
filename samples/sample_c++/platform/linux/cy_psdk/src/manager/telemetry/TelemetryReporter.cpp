@@ -6,6 +6,7 @@
 #include "manager/mqtt/MQTTTopics.h"
 #include "manager/mqtt/service/MQTTv5Service.h"
 #include "manager/plane_state/PlaneStateStore.h"
+#include "manager/psdk/PSDKAdapter.h"
 #include "utils/json_converter/BuildAndParse.h"
 #include "utils/log_util/Logger.h"
 #include "utils/network_util/GetLocalIPV4.h"
@@ -62,14 +63,6 @@ namespace plane::manager
             this->psdk_event_remover_ = ::std::make_unique<::eventpp::ScopedRemover<plane::manager::EventManager::StatusDispatcher>>(dispatcher);
 
             this->psdk_event_remover_->appendListener(
-                plane::manager::EventManager::PSDKEvent::TelemetryUpdated,
-                [this](const plane::manager::EventManager::PSDKEventData& data)
-                {
-                    this->onPSDKEvent(data);
-                }
-            );
-
-            this->psdk_event_remover_->appendListener(
                 plane::manager::EventManager::PSDKEvent::MissionStateChanged,
                 [this](const plane::manager::EventManager::PSDKEventData& data)
                 {
@@ -104,17 +97,10 @@ namespace plane::manager
                 }
             );
 
-            auto& system_dispatcher { plane::manager::EventManager::getInstance().getSystemDispatcher() };
-            this->system_event_remover_ =
-                ::std::make_unique<::eventpp::ScopedRemover<plane::manager::EventManager::SystemDispatcher>>(system_dispatcher);
-
-            this->system_event_remover_->appendListener(
-                plane::manager::EventManager::SystemEvent::HeartbeatTick,
-                [this](const plane::manager::EventManager::SystemEventData& data)
-                {
-                    this->onHeartbeatTick(data);
-                }
-            );
+            // 上报节拍自治: 本组件自持定时线程 (STATUS 10Hz / FIXED_INFO 1Hz),
+            // 不从 PSDK 采集事件或心跳 tick 借频率
+            this->report_thread_ = ::std::thread(&TelemetryReporter::runReportLoop, this);
+            LOG_INFO("上报节拍线程已启动 (STATUS 10Hz / FIXED_INFO 1Hz)");
 
             if (plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
             {
@@ -159,10 +145,10 @@ namespace plane::manager
 
         this->run_watchdog_ = false;
 
-        if (this->system_event_remover_)
+        if (this->report_thread_.joinable())
         {
-            this->system_event_remover_.reset();
-            LOG_DEBUG("遥测上报服务已停止 (注销了所有系统事件监听器)");
+            this->report_thread_.join();
+            LOG_DEBUG("遥测上报服务已停止 (上报节拍线程已退出)");
         }
 
         if (this->psdk_event_remover_)
@@ -254,42 +240,6 @@ namespace plane::manager
                             this->last_health_ping_time_ = event;
                             return;
                         }
-                        else if constexpr (::std::is_same_v<T, plane::protocol::StatusPayload>)
-                        {
-                            if (!plane::manager::MQTTv5Service::getInstance().isConnected())
-                            {
-                                return;
-                            }
-
-                            auto payload { event };
-
-                            // 多线程下共享计数, 用 atomic 避免数据竞争
-                            static ::std::atomic<int> status_counter { 0 };
-                            if (status_counter.fetch_add(1, ::std::memory_order_relaxed) >= 4)
-                            {
-                                status_counter.store(0, ::std::memory_order_relaxed);
-
-                                // 视频源: 本机 RTSP 推流地址 (由域模型拼装); 本机 IP 未就绪/配置不完整时不含视频源
-                                const ::std::string rtsp_url {
-                                    plane::utils::buildLocalRtspUrl(plane::domain::PlaneStateStore::getInstance().snapshot())
-                                };
-                                if (!rtsp_url.empty())
-                                {
-                                    payload.WZT = {
-                                        plane::protocol::VideoSource { .SPURL = rtsp_url, .SPXY = "RTSP", .ZBZT = 1 }
-                                    };
-                                }
-                                else
-                                {
-                                    LOG_DEBUG("本机 RTSP 地址不可得, 本次状态不含视频源");
-                                }
-
-                                LOG_DEBUG("准备上报飞行状态");
-
-                                (void)this
-                                    ->publishJson(plane::manager::TOPIC_STATUS, plane::utils::JsonConverter::buildStatusReportJson(payload));
-                            }
-                        }
                         else if constexpr (::std::is_same_v<T, plane::protocol::HealthStatusPayload>)
                         {
                             LOG_DEBUG("准备上报健康状态");
@@ -322,49 +272,78 @@ namespace plane::manager
         );
     }
 
-    void TelemetryReporter::onHeartbeatTick(const plane::manager::EventManager::SystemEventData&)
+    void TelemetryReporter::runReportLoop(void) noexcept
     {
-        if (!this->event_processing_pool_)
+        // 节拍自治: STATUS 固定 10Hz; 每第 FIXED_INFO_EVERY_N_TICKS 拍附发一次 FIXED_INFO (1Hz)。
+        // 数据的新旧/真假不由发送者评判: PSDK 未连/序列号未就绪时也照常按节拍发出。
+        int  tick { 0 };
+        auto next_wakeup { ::std::chrono::steady_clock::now() };
+        while (this->running_)
+        {
+            next_wakeup += this->STATUS_REPORT_INTERVAL;
+            this->publishStatusReport();
+            if (++tick >= this->FIXED_INFO_EVERY_N_TICKS)
+            {
+                tick = 0;
+                this->publishFixedInfo();
+            }
+            ::std::this_thread::sleep_until(next_wakeup);
+        }
+    }
+
+    void TelemetryReporter::publishStatusReport(void) noexcept
+    {
+        if (!plane::manager::MQTTv5Service::getInstance().isConnected())
+        {
+            return; // 未连接: 静默跳过本拍 (节拍相位不受影响, 连接恢复后自动接续)
+        }
+
+        // 数据源: PSDK 适配器维护的最新状态负载 (拉取式读取, 与采集频率无关)
+        plane::protocol::StatusPayload payload { plane::manager::PSDKAdapter::getInstance().getLatestStatusPayload() };
+
+        // 视频源: 本机 RTSP 推流地址 (域模型字段级读取, 不整份快照); IP 未就绪/配置不完整时不含视频源
+        const auto [rtsp_user, rtsp_password, rtsp_base_url, rtsp_port] { plane::domain::PlaneStateStore::getInstance().read(
+            &plane::domain::PlaneStateDataClass::rtsp_push_video_user_name,
+            &plane::domain::PlaneStateDataClass::rtsp_push_video_password,
+            &plane::domain::PlaneStateDataClass::rtsp_push_video_base_url,
+            &plane::domain::PlaneStateDataClass::rtsp_push_video_server_port
+        ) };
+        if (const ::std::string rtsp_url { plane::utils::buildLocalRtspUrl(rtsp_user, rtsp_password, rtsp_base_url, rtsp_port) };
+            !rtsp_url.empty())
+        {
+            payload.WZT = {
+                plane::protocol::VideoSource { .SPURL = rtsp_url, .SPXY = "RTSP", .ZBZT = 1 }
+            };
+        }
+
+        (void)this->publishJson(plane::manager::TOPIC_STATUS, plane::utils::JsonConverter::buildStatusReportJson(payload));
+    }
+
+    void TelemetryReporter::publishFixedInfo(void) noexcept
+    {
+        if (!plane::manager::MQTTv5Service::getInstance().isConnected())
         {
             return;
         }
 
-        this->event_processing_pool_->detach_task(
-            [this]
-            {
-                if (!plane::manager::MQTTv5Service::getInstance().isConnected())
-                {
-                    LOG_TRACE("MQTT 未连接，跳过本次固定信息心跳上报");
-                    return;
-                }
+        // 字段级读取 (不整份快照): 序列号 + RTSP 配置
+        const auto [serial_number, rtsp_user, rtsp_password, rtsp_base_url, rtsp_port] { plane::domain::PlaneStateStore::getInstance().read(
+            &plane::domain::PlaneStateDataClass::serial_number,
+            &plane::domain::PlaneStateDataClass::rtsp_push_video_user_name,
+            &plane::domain::PlaneStateDataClass::rtsp_push_video_password,
+            &plane::domain::PlaneStateDataClass::rtsp_push_video_base_url,
+            &plane::domain::PlaneStateDataClass::rtsp_push_video_server_port
+        ) };
 
-                // 未启用 PSDK 模式: 无采集事件, 由心跳周期推送状态 (SBZT, 字段即显式默认值)
-                if (!plane::config::ConfigManager::getInstance().isStandardProceduresEnabled())
-                {
-                    plane::protocol::StatusPayload builtin_payload {};
-                    (void)this->publishJson(plane::manager::TOPIC_STATUS, plane::utils::JsonConverter::buildStatusReportJson(builtin_payload));
-                    LOG_TRACE("已通过心跳事件上报状态");
-                }
+        static const auto                         ip_address { plane::utils::getLocalIPV4().value_or("N/A") };
 
-                static const auto ip_address { plane::utils::getLocalIPV4().value_or("N/A") };
+        const plane::protocol::MissionInfoPayload info_payload {
+            .FJSN   = serial_number,
+            .YKQIP  = ip_address,
+            .YSRTSP = plane::utils::buildLocalRtspUrl(rtsp_user, rtsp_password, rtsp_base_url, rtsp_port)
+        };
 
-                const auto        snapshot { plane::domain::PlaneStateStore::getInstance().snapshot() };
-                const auto&       plane_code { snapshot.serial_number };
-                if (plane_code.empty())
-                {
-                    LOG_WARN("飞行器序列号为空, 本次固定信息上报跳过");
-                    return;
-                }
-
-                plane::protocol::MissionInfoPayload info_payload { .FJSN   = plane_code,
-                                                                   .YKQIP  = ip_address,
-                                                                   .YSRTSP = plane::utils::buildLocalRtspUrl(snapshot) };
-
-                (void)this->publishJson(plane::manager::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
-
-                LOG_TRACE("已通过心跳事件上报固定信息 (MissionInfoPayload) ");
-            }
-        );
+        (void)this->publishJson(plane::manager::TOPIC_FIXED_INFO, plane::utils::JsonConverter::buildMissionInfoJson(info_payload));
     }
 
     void TelemetryReporter::runWatchdogCheck(void) noexcept

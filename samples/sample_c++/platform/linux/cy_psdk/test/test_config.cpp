@@ -37,9 +37,6 @@ TEST(ConfigManager, LoadsSharedConfigAndExposesValues)
 
     // plane.code 来自测试夹具 (生产代码无内置占位 SN); MQTT 地址仅由目录服务发现提供
     EXPECT_EQ(sv(cfg.getPlaneCode()), "0A1B2C3D4E5F6078");
-    EXPECT_DOUBLE_EQ(cfg.getTakeoffLatitudeDeg(), 22.5);
-    EXPECT_DOUBLE_EQ(cfg.getTakeoffLongitudeDeg(), 114.0);
-    EXPECT_DOUBLE_EQ(cfg.getTakeoffAltitudeM(), 12.5);
     EXPECT_FALSE(cfg.getMqttClientId().empty());
     EXPECT_NE(cfg.getMqttClientId().find("cv_"), ::std::string::npos);
 
@@ -69,4 +66,30 @@ TEST(ConfigManager, CatalogIdentityAndBrokerDiscoveryAreCodeFixed)
     EXPECT_TRUE(cfg.isCatalogBrokerDiscoveryEnabled());
     EXPECT_EQ(sv(cfg.getCatalogBrokerServiceId()), "swarm.mqtt.base");
     EXPECT_EQ(sv(cfg.getCatalogBrokerPortProtocol()), "tcp");
+}
+
+TEST(ConfigManager, MapsPlaneSectionToAppConfigEntity)
+{
+    auto&      cfg { ConfigManager::getInstance() };
+
+    const auto app_config { cfg.getAppConfig() };
+
+    // plane.* 用户可配置子集: 显式覆盖 (夹具值)
+    EXPECT_FALSE(app_config.use_mqtt_v5_server);
+    EXPECT_FLOAT_EQ(app_config.stick_sensitivity, 0.9f);
+    EXPECT_EQ(app_config.tcp_frame_server_port, 4321);
+    EXPECT_EQ(app_config.simulator_default_gps_count, "20");
+    EXPECT_DOUBLE_EQ(app_config.custom_central_meridian, 114.5);
+
+    // 未配置 / 类型不符的键回落到 struct 内置缺省
+    EXPECT_FLOAT_EQ(app_config.waypoint_3d_distance_tolerance, 0.5f);
+    EXPECT_EQ(app_config.max_total_waypoints, 1000); // yml 值类型不符 → 告警并回落
+    EXPECT_EQ(app_config.video_quality_level, 75);
+    EXPECT_EQ(app_config.registry_ip, "127.0.0.1");
+
+    // “程序内部维护”字段不参与 yml 解析 (即使显式出现也被忽略)
+    EXPECT_TRUE(app_config.local_uuid.empty());
+    EXPECT_TRUE(app_config.catalog_targets.empty());
+    EXPECT_TRUE(app_config.virtual_stick_feature_enabled);
+    EXPECT_TRUE(app_config.catalog_node_id.empty());
 }

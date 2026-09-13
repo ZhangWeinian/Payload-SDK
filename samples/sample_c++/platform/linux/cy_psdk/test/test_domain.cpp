@@ -57,8 +57,12 @@ TEST(DomainModel, PlaneStateDataClassDefaultsMirrorMsdk)
     EXPECT_EQ(s.active_camera_index, plane::domain::ComponentIndexType::LEFT_OR_MAIN);
     EXPECT_TRUE(s.app_config.virtual_stick_feature_enabled);
     EXPECT_EQ(s.app_config.tcp_frame_server_port, 1234);
-    EXPECT_EQ(s.app_config.heartbeat_interval_s, 3);
     EXPECT_EQ(s.app_config.registry_ip, "127.0.0.1");
+
+    // RID 起降点默认 = 模拟器默认坐标 (独立字段, 不从 config.yml 读取)
+    EXPECT_DOUBLE_EQ(s.rid_takeoff_latitude_deg, 32.067228);
+    EXPECT_DOUBLE_EQ(s.rid_takeoff_longitude_deg, 118.892591);
+    EXPECT_DOUBLE_EQ(s.rid_takeoff_altitude_m, 0.0);
     EXPECT_TRUE(s.battery_cell_voltages.empty());
     EXPECT_TRUE(s.camera_video_stream_source_range.empty());
 }

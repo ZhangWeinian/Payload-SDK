@@ -9,7 +9,7 @@
 
 namespace plane::utils
 {
-    ::std::string buildLocalRtspUrl(const plane::domain::PlaneStateDataClass& snapshot) noexcept
+    ::std::string buildLocalRtspUrl(::std::string_view user, ::std::string_view password, ::std::string_view base_url, int server_port) noexcept
     {
         const auto local_ip { plane::utils::getLocalIPV4() };
         if (!local_ip.has_value() || local_ip->empty())
@@ -18,20 +18,22 @@ namespace plane::utils
             return {};
         }
 
-        if (snapshot.rtsp_push_video_user_name.empty() || snapshot.rtsp_push_video_password.empty() ||
-            snapshot.rtsp_push_video_base_url.empty() || snapshot.rtsp_push_video_server_port <= 0)
+        if (user.empty() || password.empty() || base_url.empty() || server_port <= 0)
         {
             LOG_DEBUG("RTSP 推流配置不完整 (user/pass/port/base), 地址留空");
             return {};
         }
 
-        return ::fmt::format(
-            "rtsp://{}:{}@{}:{}/{}",
+        return ::fmt::format("rtsp://{}:{}@{}:{}/{}", user, password, *local_ip, server_port, base_url);
+    }
+
+    ::std::string buildLocalRtspUrl(const plane::domain::PlaneStateDataClass& snapshot) noexcept
+    {
+        return buildLocalRtspUrl(
             snapshot.rtsp_push_video_user_name,
             snapshot.rtsp_push_video_password,
-            *local_ip,
-            snapshot.rtsp_push_video_server_port,
-            snapshot.rtsp_push_video_base_url
+            snapshot.rtsp_push_video_base_url,
+            snapshot.rtsp_push_video_server_port
         );
     }
 } // namespace plane::utils

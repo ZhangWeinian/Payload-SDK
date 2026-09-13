@@ -221,12 +221,12 @@ namespace plane::manager
             {
                 if (payload.MS == 0) // 角度控制
                 {
-                    LOG_INFO("[MQTT] 收到【云台角度控制】指令: pitch={}, yaw={}", payload.FYJ, payload.PHJ);
+                    LOG_INFO("[MQTT] 收到【云台角度控制】指令: pitch={}, yaw={}", payload.FYJ, payload.FJPHJ);
                     plane::manager::FlyManager::getInstance().rotateGimbal(payload);
                 }
                 else // 速度控制
                 {
-                    LOG_INFO("[MQTT] 收到【云台速度控制】指令: pitch={}, yaw={}", payload.FYJ, payload.PHJ);
+                    LOG_INFO("[MQTT] 收到【云台速度控制】指令: pitch={}, yaw={}", payload.FYJ, payload.FJPHJ);
                     plane::manager::FlyManager::getInstance().rotateGimbalBySpeed(payload);
                 }
             }
@@ -299,7 +299,7 @@ namespace plane::manager
                     payload.SDN,
                     payload.SDD,
                     payload.SDX,
-                    payload.PHJ,
+                    payload.FJPHJ,
                     payload.MS
                 );
                 plane::manager::FlyManager::getInstance().sendNedVelocityCommand(payload);

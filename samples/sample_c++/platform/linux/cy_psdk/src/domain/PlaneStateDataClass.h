@@ -413,6 +413,12 @@ namespace plane::domain
         ::std::string camera_firmware_version { "" };  // 相机固件版本
         ::std::string serial_number { "" };            // 飞机序列号 (飞控 SN 优先; 不可得时为 SDK CC SN 兜底)
 
+        // RID 起降点 (部署常量; PSDK 飞控初始化时一次性上报, 之后无法更新; 不从 config.yml 读取;
+        // 默认取模拟器默认坐标, 部署后由上层按实际位置更新)
+        double rid_takeoff_latitude_deg { 32.067228 };   // 纬度 (度)
+        double rid_takeoff_longitude_deg { 118.892591 }; // 经度 (度)
+        double rid_takeoff_altitude_m { 0.0 };           // 海拔 (m)
+
         // 高斯坐标转换设置
         CentralMeridianMode coordinate_transformation_mode { CentralMeridianMode::TARGET_NORMALIZED };
         ZoneWidth           coordinate_transformation_zone_width { ZoneWidth::DEGREE_6 };

@@ -98,7 +98,7 @@ namespace plane::protocol
         double GD {};           // 高度
         double SD { 5.0 };      // 速度
         double YTFYJ { -90.0 }; // 云台俯仰角
-        int    PHJ {};          // 偏航角
+        int    FJPHJ {};        // 偏航角
     };
 
     struct WaypointPayload
@@ -206,7 +206,7 @@ namespace plane::protocol
     struct GimbalControlPayload
     {
         double FYJ {};   // 俯仰角
-        double PHJ {};   // 偏航角
+        double FJPHJ {}; // 偏航角
         int    MS { 1 }; // 模式 (0:角度控制, 1:速度控制)
     };
 
@@ -232,11 +232,11 @@ namespace plane::protocol
 
     struct NedVelocityPayload
     {
-        double SDN { 0 }; // 北向速度
-        double SDD { 0 }; // 东向速度
-        double SDX { 0 }; // 地向速度 (下为正)
-        double PHJ { 0 }; // 偏航角速率
-        int    MS { 1 };  // 模式 (1:角度控制, 2:角速度控制)
+        double SDN { 0 };   // 北向速度
+        double SDD { 0 };   // 东向速度
+        double SDX { 0 };   // 地向速度 (下为正)
+        double FJPHJ { 0 }; // 偏航角速率
+        int    MS { 1 };    // 模式 (1:角度控制, 2:角速度控制)
     };
 
     struct LaserControlPayload
@@ -293,17 +293,17 @@ namespace plane::protocol
         }
     }
 
-    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Waypoint, JD, WD, GD, SD, YTFYJ, PHJ);
+    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Waypoint, JD, WD, GD, SD, YTFYJ, FJPHJ);
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(WaypointPayload, HDJ, RWID);
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(TakeoffPayload, MBWD, MBJD, MBGD, FHMS, FHGD, ZDMSD, AQJC);
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ControlStrategyPayload, YTJSCL);
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CircleFlyPayload, JD, WD, GD, SD, BJ, QS);
-    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GimbalControlPayload, FYJ, PHJ, MS);
+    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GimbalControlPayload, FYJ, FJPHJ, MS);
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ZoomControlPayload, XJSY, XJLX, BJB);
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(WaypointAction, LX, CS);
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(StickDataPayload, YML, PHL, FYL, HGL);
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(StickModeSwitchPayload, YGMS);
-    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(NedVelocityPayload, SDN, SDD, SDX, PHJ, MS);
+    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(NedVelocityPayload, SDN, SDD, SDX, FJPHJ, MS);
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(MissionProgressPayload, RWID, DQHD, ZHD, JD, ZT);
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(LaserControlPayload, JGKG);
 } // namespace plane::protocol

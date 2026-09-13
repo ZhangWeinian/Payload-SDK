@@ -18,8 +18,9 @@ namespace plane::test
         return ::std::filesystem::temp_directory_path() / "cy_psdk_unit_config.yml";
     }
 
-    // 与仓库 config/config.yml 对齐; plane.code/takeoff_* 为测试夹具值
+    // 与仓库 config/config.yml 对齐; plane.code 为测试夹具值
     // (生产代码无内置占位 SN: 设备标识 = 配置 plane.code → PSDK 序列号 → 空)
+    // plane 小节另含映射用例: 覆盖 / 类型不符回落 / 非解析字段被忽略
     inline bool writeSharedConfig()
     {
         constexpr static const char* kYaml {
@@ -36,9 +37,13 @@ catalog:
         - 127.0.0.1
 plane:
     code: 0A1B2C3D4E5F6078
-    takeoff_lat: 22.5
-    takeoff_lon: 114.0
-    takeoff_alt: 12.5
+    use_mqtt_v5_server: false
+    stick_sensitivity: 0.9
+    tcp_frame_server_port: 4321
+    simulator_default_gps_count: "20"
+    max_total_waypoints: not_a_number # 类型不符 → 告警并回落缺省 (用例校验)
+    local_uuid: ignored-by-parser # 程序内部维护字段, 不入解析列表 (用例校验)
+    custom_central_meridian: 114.5
 )"
         };
 

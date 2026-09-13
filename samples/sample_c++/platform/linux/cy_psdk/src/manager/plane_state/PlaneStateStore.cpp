@@ -4,6 +4,7 @@
 
 namespace plane::domain
 {
+    // 进程级唯一实例: 函数静态变量 (C++11 起保证首次构造的线程安全), 生命周期与进程相同
     PlaneStateStore& PlaneStateStore::getInstance(void) noexcept
     {
         static PlaneStateStore instance {};

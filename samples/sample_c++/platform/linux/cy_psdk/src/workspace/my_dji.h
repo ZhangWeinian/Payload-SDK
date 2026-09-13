@@ -389,6 +389,7 @@ namespace plane::my_dji
                 // 序列号不做任何伪造 (仅 PSDK 来源)
                 st.swarm_agent_identifier = resolved_agent_identifier;
                 st.app_version            = config.getCatalogVersion();
+                st.app_config             = config.getAppConfig(); // plane.* → AppConfigEntity (启动装载)
             }
         );
 
