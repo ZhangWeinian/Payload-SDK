@@ -18,8 +18,8 @@ namespace plane::domain
 
     struct CatalogNode
     {
-        _STD string nodeId { "" };           // Catalog 节点 ID
-        _STD vector<_STD string> targets {}; // 探测目标 (IP/网段)
-        CatalogNodeSource        source { CatalogNodeSource::MANUAL };
+        ::std::string                nodeId { "" }; // Catalog 节点 ID
+        ::std::vector<::std::string> targets {};    // 探测目标 (IP/网段)
+        CatalogNodeSource            source { CatalogNodeSource::MANUAL };
     };
 } // namespace plane::domain

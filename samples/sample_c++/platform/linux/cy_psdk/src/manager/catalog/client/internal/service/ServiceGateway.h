@@ -22,23 +22,23 @@ namespace plane::catalog::internal
     {
     public:
         // http 为空时使用默认 CppHttpTransport
-        ServiceGateway(_STD string catalog_url, _STD unique_ptr<HttpTransport> http, _STD_CHRONO milliseconds timeout);
-        ~ServiceGateway(void)                                   = default;
+        ServiceGateway(::std::string catalog_url, ::std::unique_ptr<HttpTransport> http, ::std::chrono::milliseconds timeout);
+        ~ServiceGateway(void)                                        = default;
 
-        ServiceGateway(const ServiceGateway&)                   = delete;
-        ServiceGateway&        operator=(const ServiceGateway&) = delete;
+        ServiceGateway(const ServiceGateway&)                        = delete;
+        ServiceGateway&             operator=(const ServiceGateway&) = delete;
 
-        _NODISCARD _STD string catalogUrl(void) const
+        [[nodiscard]] ::std::string catalogUrl(void) const
         {
             return this->transport_.catalogUrl();
         }
 
-        void setCatalogUrl(_STD string value)
+        void setCatalogUrl(::std::string value)
         {
-            this->transport_.setCatalogUrl(_STD move(value));
+            this->transport_.setCatalogUrl(::std::move(value));
         }
 
-        void setTimeout(_STD_CHRONO milliseconds value)
+        void setTimeout(::std::chrono::milliseconds value)
         {
             this->transport_.setTimeout(value);
         }
@@ -59,48 +59,50 @@ namespace plane::catalog::internal
         }
 
         // 注册实例, 成功返回实例 ID (幂等: 409 且服务端判幂等时也视为成功)
-        _NODISCARD Result<_STD string> registerInstance(const ServiceRegistration& registration);
-        _NODISCARD Result<void> heartbeat(const ServiceRegistration& registration, const _STD string& instance_id);
-        _NODISCARD              Result<void>
-                   reportStatus(const ServiceRegistration& registration, const _STD string& instance_id, const ServiceStatus& status);
-        _NODISCARD Result<void> deleteInstance(const ServiceRegistration& registration, const _STD string& instance_id);
+        [[nodiscard]] Result<::std::string> registerInstance(const ServiceRegistration& registration);
+        [[nodiscard]] Result<void>          heartbeat(const ServiceRegistration& registration, const ::std::string& instance_id);
+        [[nodiscard]] Result<void>
+            reportStatus(const ServiceRegistration& registration, const ::std::string& instance_id, const ServiceStatus& status);
+        [[nodiscard]] Result<void>            deleteInstance(const ServiceRegistration& registration, const ::std::string& instance_id);
 
-        _NODISCARD Result<ResolvedService> resolve(const ServiceQuery& query);
-        _NODISCARD Result<ServicePage> listServices(const _STD string& namespace_name, const _STD string& service_name, int page, int page_size);
-        _NODISCARD Result<ServiceStatus> getInstanceStatus(
-            const _STD string& namespace_name,
-            const _STD string& group_name,
-            const _STD string& service_id,
-            const _STD string& instance_id
+        [[nodiscard]] Result<ResolvedService> resolve(const ServiceQuery& query);
+        [[nodiscard]] Result<ServicePage>
+            listServices(const ::std::string& namespace_name, const ::std::string& service_name, int page, int page_size);
+        [[nodiscard]] Result<ServiceStatus> getInstanceStatus(
+            const ::std::string& namespace_name,
+            const ::std::string& group_name,
+            const ::std::string& service_id,
+            const ::std::string& instance_id
         );
 
-        _NODISCARD Result<_STD string> getLocalIp(
-            const _STD string& namespace_name,
-            const _STD string& group_name,
-            const _STD string& service_id,
-            bool               allow_legacy_fallback
+        [[nodiscard]] Result<::std::string> getLocalIp(
+            const ::std::string& namespace_name,
+            const ::std::string& group_name,
+            const ::std::string& service_id,
+            bool                 allow_legacy_fallback
         );
-        _NODISCARD Result<CatalogServerInfo> getCatalogServerInfo(void);
+        [[nodiscard]] Result<CatalogServerInfo>             getCatalogServerInfo(void);
 
-        _NODISCARD Result<_STD vector<ConfigDocument>> getConfigs(const ConfigQuery& query);
-        _NODISCARD Result<ConfigDocument> getConfig(const ConfigKey& key);
-        _NODISCARD Result<ConfigDocument> putConfig(const ConfigUploadRequest& request);
+        [[nodiscard]] Result<::std::vector<ConfigDocument>> getConfigs(const ConfigQuery& query);
+        [[nodiscard]] Result<ConfigDocument>                getConfig(const ConfigKey& key);
+        [[nodiscard]] Result<ConfigDocument>                putConfig(const ConfigUploadRequest& request);
 
     private:
         // JSON 字段解析辅助 (服务端响应字段为 camelCase)
-        static Result<_STD string> requiredString(const _NLOHMANN_JSON json& json, const _STD string& field);
-        static Result<_STD string> optionalString(const _NLOHMANN_JSON json& json, const _STD string& field);
-        static Result<void>        validateDataIds(const _STD vector<_STD string>& ids);
-        static Result<void>        validateConfigUploadRequest(const ConfigUploadRequest& request);
+        static Result<::std::string> requiredString(const ::nlohmann::json& json, const ::std::string& field);
+        static Result<::std::string> optionalString(const ::nlohmann::json& json, const ::std::string& field);
+        static Result<void>          validateDataIds(const ::std::vector<::std::string>& ids);
+        static Result<void>          validateConfigUploadRequest(const ConfigUploadRequest& request);
 
-        static _STD string instanceCollection(const _STD string& namespace_name, const _STD string& group_name, const _STD string& service_id);
-        static _STD string scopeValue(const _STD string& value, const _STD string& fallback);
+        static ::std::string
+            instanceCollection(const ::std::string& namespace_name, const ::std::string& group_name, const ::std::string& service_id);
+        static ::std::string             scopeValue(const ::std::string& value, const ::std::string& fallback);
 
-        static Result<ServiceEndpoint>   parseEndpoint(const _NLOHMANN_JSON json& json, bool& healthy);
-        static Result<ConfigDocument>    parseConfig(const _NLOHMANN_JSON json& json);
-        static Result<ServiceStatus>     parseServiceStatus(const _NLOHMANN_JSON json& json);
-        static Result<ServiceSummary>    parseServiceSummary(const _NLOHMANN_JSON json& json);
-        static Result<CatalogServerInfo> parseCatalogServerInfo(const _NLOHMANN_JSON json& json);
+        static Result<ServiceEndpoint>   parseEndpoint(const ::nlohmann::json& json, bool& healthy);
+        static Result<ConfigDocument>    parseConfig(const ::nlohmann::json& json);
+        static Result<ServiceStatus>     parseServiceStatus(const ::nlohmann::json& json);
+        static Result<ServiceSummary>    parseServiceSummary(const ::nlohmann::json& json);
+        static Result<CatalogServerInfo> parseCatalogServerInfo(const ::nlohmann::json& json);
 
         static CatalogFailure            remapNotFound(CatalogFailure failure, CatalogError replacement);
 

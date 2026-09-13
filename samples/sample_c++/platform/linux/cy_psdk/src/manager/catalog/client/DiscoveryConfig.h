@@ -16,15 +16,15 @@ namespace plane::catalog
     // UDP 目录发现配置
     struct DiscoveryConfig
     {
-        _STD string node_id {};              // 探测包携带的节点 ID (需与服务端 local-node-id 匹配才会回复)
-        int         port { 0 };              // UDP 探测端口 (服务端 swarm.udp.port, 默认 30906)
-        _STD vector<_STD string> targets {}; // 探测目标 (单 IP / 末段通配 .* / CIDR / 起止范围)
+        ::std::string                node_id {}; // 探测包携带的节点 ID (需与服务端 local-node-id 匹配才会回复)
+        int                          port { 0 }; // UDP 探测端口 (服务端 swarm.udp.port, 默认 30906)
+        ::std::vector<::std::string> targets {}; // 探测目标 (单 IP / 末段通配 .* / CIDR / 起止范围)
 
         // 等待响应窗口
-        _STD_CHRONO milliseconds response_window { 500 };
+        ::std::chrono::milliseconds response_window { 500 };
         // 初始重试间隔 (保留字段, 与 java 对齐)
-        _STD_CHRONO milliseconds retry_initial { 1000 };
+        ::std::chrono::milliseconds retry_initial { 1000 };
         // READY 后周期重发现的间隔
-        _STD_CHRONO milliseconds ready_probe_interval { 30'000 };
+        ::std::chrono::milliseconds ready_probe_interval { 30'000 };
     };
 } // namespace plane::catalog

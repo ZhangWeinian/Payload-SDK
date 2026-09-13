@@ -23,7 +23,7 @@ namespace plane::manager
 {
     namespace
     {
-        using Ms = _STD_CHRONO milliseconds;
+        using Ms = ::std::chrono::milliseconds;
 
         // 绑定重试/轮询周期
         constexpr Ms kRetryInterval { 3000 };
@@ -34,7 +34,7 @@ namespace plane::manager
         // planeTypeCode = "DJI" + 相机类型名 (临时兼容: M4E 一律按 M4T 上报)。
         // 当前 PSDK 相机枚举尚未扩展 (camera_type 仅占位), 先固定 DJIM4T;
         // PSDK 相机类型就绪后由 camera_type 映射。
-        _NODISCARD _STD string resolvePlaneTypeCode(const plane::domain::PlaneStateDataClass& snapshot) noexcept
+        [[nodiscard]] ::std::string resolvePlaneTypeCode(const plane::domain::PlaneStateDataClass& snapshot) noexcept
         {
             (void)snapshot;
             return "DJIM4T";
@@ -43,7 +43,7 @@ namespace plane::manager
         // 后台明确否定当前绑定 (业务拒绝 / 响应缺 planeId) 时回退本机绑定态:
         // 仅当本机曾处于绑定态才清理域状态并恢复目录默认服务名;
         // 传输层失败 (后台不可达) 不应走此路径, 避免已绑定状态闪断
-        void applyUnboundIfNeeded(const plane::domain::PlaneStateDataClass& snapshot, _STD string& bound_sn) noexcept
+        void applyUnboundIfNeeded(const plane::domain::PlaneStateDataClass& snapshot, ::std::string& bound_sn) noexcept
         {
             const bool ever_bound { !bound_sn.empty() || snapshot.device_binding || !snapshot.internal_plane_id.empty() ||
                                     snapshot.device_nickname != "未绑定" };
@@ -79,23 +79,23 @@ namespace plane::manager
 
     void DeviceBinder::start(void) noexcept
     {
-        if (this->started_.exchange(true, _STD memory_order_acq_rel))
+        if (this->started_.exchange(true, ::std::memory_order_acq_rel))
         {
             return;
         }
-        this->running_.store(true, _STD memory_order_release);
-        this->thread_ = _STD thread(&DeviceBinder::runLoop, this);
+        this->running_.store(true, ::std::memory_order_release);
+        this->thread_ = ::std::thread(&DeviceBinder::runLoop, this);
         LOG_INFO("设备绑定流程已启动 (等待目录就绪与序列号)");
     }
 
     void DeviceBinder::stop(void) noexcept
     {
-        if (!this->started_.exchange(false, _STD memory_order_acq_rel))
+        if (!this->started_.exchange(false, ::std::memory_order_acq_rel))
         {
-            this->running_.store(false, _STD memory_order_release);
+            this->running_.store(false, ::std::memory_order_release);
             return;
         }
-        this->running_.store(false, _STD memory_order_release);
+        this->running_.store(false, ::std::memory_order_release);
         if (this->thread_.joinable())
         {
             this->thread_.join();
@@ -105,21 +105,21 @@ namespace plane::manager
 
     void DeviceBinder::runLoop(void) noexcept
     {
-        bool        need_bind { true }; // 首次必绑
-        bool        last_ready { false };
-        _STD string bound_sn {};
+        bool          need_bind { true }; // 首次必绑
+        bool          last_ready { false };
+        ::std::string bound_sn {};
 
-        while (this->running_.load(_STD memory_order_acquire))
+        while (this->running_.load(::std::memory_order_acquire))
         {
-            const auto        snapshot { plane::domain::PlaneStateStore::getInstance().snapshot() };
-            const _STD string sn { snapshot.serial_number };
-            const bool        ready { plane::manager::CatalogManager::getInstance().isCatalogReady() };
+            const auto          snapshot { plane::domain::PlaneStateStore::getInstance().snapshot() };
+            const ::std::string sn { snapshot.serial_number };
+            const bool          ready { plane::manager::CatalogManager::getInstance().isCatalogReady() };
 
             // 目录未就绪: 等待 (失联后恢复视为新的绑定机会)
             if (!ready)
             {
                 last_ready = false;
-                _STD this_thread::sleep_for(kRetryInterval);
+                ::std::this_thread::sleep_for(kRetryInterval);
                 continue;
             }
             if (!last_ready)
@@ -135,7 +135,7 @@ namespace plane::manager
             }
             if (!need_bind)
             {
-                _STD this_thread::sleep_for(kRetryInterval);
+                ::std::this_thread::sleep_for(kRetryInterval);
                 continue;
             }
 
@@ -143,25 +143,25 @@ namespace plane::manager
             if (sn.empty())
             {
                 LOG_DEBUG("设备序列号未就绪, 等待后再试");
-                _STD this_thread::sleep_for(kRetryInterval);
+                ::std::this_thread::sleep_for(kRetryInterval);
                 continue;
             }
 
             // 经 Catalog 定位后台"业务"服务
-            const _STD string base { plane::manager::CatalogManager::getInstance().resolveServiceBaseUrl("swarm.service.base", "http") };
+            const ::std::string base { plane::manager::CatalogManager::getInstance().resolveServiceBaseUrl("swarm.service.base", "http") };
             if (base.empty())
             {
                 LOG_WARN("未定位到后台业务服务 (swarm.service.base), 稍后重试绑定");
-                _STD this_thread::sleep_for(kRetryInterval);
+                ::std::this_thread::sleep_for(kRetryInterval);
                 continue;
             }
 
             // 构造绑定请求 (对齐 msdk: planeTypeCode/serialNumber/imageUrl)
-            const _STD string type_code { resolvePlaneTypeCode(snapshot) };
-            const _STD string image_url { plane::utils::buildLocalRtspUrl(snapshot) };
+            const ::std::string type_code { resolvePlaneTypeCode(snapshot) };
+            const ::std::string image_url { plane::utils::buildLocalRtspUrl(snapshot) };
             LOG_INFO("开始设备绑定: SN={}, planeTypeCode={}, imageUrl={}", sn, type_code, image_url.empty() ? "(空)" : image_url);
 
-            _NLOHMANN_JSON json payload;
+            ::nlohmann::json payload;
             payload["planeTypeCode"] = type_code;
             payload["serialNumber"]  = sn;
             payload["imageUrl"]      = image_url;
@@ -180,17 +180,17 @@ namespace plane::manager
                     response.transport_error
                 );
                 need_bind = true;
-                _STD this_thread::sleep_for(kRetryInterval);
+                ::std::this_thread::sleep_for(kRetryInterval);
                 continue;
             }
 
             // 解析响应。后台契约: {code,message,data{planeId,planeName,planeCode,typeId}}。
             // 结构不符 (含顶层数组等) 时记录原始响应以便诊断。
-            int         code { -1 };
-            _STD string message {};
-            _STD string plane_id {};
-            _STD string plane_name {};
-            _STD string raw_body { response.body };
+            int           code { -1 };
+            ::std::string message {};
+            ::std::string plane_id {};
+            ::std::string plane_name {};
+            ::std::string raw_body { response.body };
             if (raw_body.size() > 1024)
             {
                 raw_body.resize(1024);
@@ -198,9 +198,9 @@ namespace plane::manager
             }
             try
             {
-                const _NLOHMANN_JSON json parsed = _NLOHMANN_JSON json::parse(response.body);
+                const ::nlohmann::json parsed = ::nlohmann::json::parse(response.body);
                 // 容错: 正常契约是对象; 若被网关包装成单元素对象数组则取其首元素
-                _NLOHMANN_JSON json root = parsed;
+                ::nlohmann::json root = parsed;
                 if (root.is_array() && !root.empty() && root[0].is_object())
                 {
                     root = root[0];
@@ -216,14 +216,14 @@ namespace plane::manager
                 }
                 else
                 {
-                    code                           = root.value("code", -1);
-                    message                        = root.value("message", _STD string {});
-                    const _NLOHMANN_JSON json data = root.contains("data") ? root["data"] : _NLOHMANN_JSON json::object();
-                    plane_id                       = data.is_object() ? data.value("planeId", _STD string {}) : _STD string {};
-                    plane_name                     = data.is_object() ? data.value("planeName", _STD string {}) : _STD string {};
+                    code                        = root.value("code", -1);
+                    message                     = root.value("message", ::std::string {});
+                    const ::nlohmann::json data = root.contains("data") ? root["data"] : ::nlohmann::json::object();
+                    plane_id                    = data.is_object() ? data.value("planeId", ::std::string {}) : ::std::string {};
+                    plane_name                  = data.is_object() ? data.value("planeName", ::std::string {}) : ::std::string {};
                 }
             }
-            catch (const _STD exception& ex)
+            catch (const ::std::exception& ex)
             {
                 LOG_ERROR("绑定响应 JSON 解析失败: {}; 原始响应: {}", ex.what(), raw_body);
             }
@@ -234,7 +234,7 @@ namespace plane::manager
                 plane::domain::PlaneStateStore::getInstance().update(
                     [&plane_id, &plane_name](plane::domain::PlaneStateDataClass& state)
                     {
-                        state.device_nickname   = plane_name.empty() ? _STD string { "未绑定" } : plane_name;
+                        state.device_nickname   = plane_name.empty() ? ::std::string { "未绑定" } : plane_name;
                         state.internal_plane_id = plane_id;
                         state.device_binding    = true;
                     }
@@ -246,7 +246,7 @@ namespace plane::manager
                 }
                 bound_sn  = sn;
                 need_bind = false;
-                this->bound_.store(true, _STD memory_order_release);
+                this->bound_.store(true, ::std::memory_order_release);
                 LOG_INFO("设备绑定成功: planeId='{}', planeName='{}'", plane_id, plane_name);
             }
             else
@@ -261,9 +261,9 @@ namespace plane::manager
                 }
                 // 仅业务性否定 (后台明确未接受本 SN) 才回退已生效绑定并恢复目录默认名
                 applyUnboundIfNeeded(snapshot, bound_sn);
-                this->bound_.store(false, _STD memory_order_release);
+                this->bound_.store(false, ::std::memory_order_release);
             }
-            _STD this_thread::sleep_for(kRetryInterval);
+            ::std::this_thread::sleep_for(kRetryInterval);
         }
     }
 } // namespace plane::manager

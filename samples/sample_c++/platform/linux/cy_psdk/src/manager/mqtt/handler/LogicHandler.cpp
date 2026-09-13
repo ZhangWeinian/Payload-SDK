@@ -16,11 +16,11 @@
 
 namespace plane::manager
 {
-    using n_json = _NLOHMANN_JSON json;
+    using n_json = ::nlohmann::json;
 
-    using namespace _STD          literals;
+    using namespace ::std::literals;
 
-    LogicHandler&                 LogicHandler::getInstance(void) noexcept
+    LogicHandler& LogicHandler::getInstance(void) noexcept
     {
         static LogicHandler instance {};
         return instance;
@@ -34,30 +34,31 @@ namespace plane::manager
             auto& msg_handler { plane::manager::MqttMessageHandler::getInstance() };
 
             msg_handler
-                .registerHandler(plane::manager::TOPIC_MISSION_CONTROL, "XFHXRW", _STD bind_front(&LogicHandler::handleWaypointMission, this));
-            msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "QF", _STD bind_front(&LogicHandler::handleTakeoff, this));
-            msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "FH", _STD bind_front(&LogicHandler::handleGoHome, this));
-            msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "XT", _STD bind_front(&LogicHandler::handleHover, this));
-            msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "JL", _STD bind_front(&LogicHandler::handleLand, this));
+                .registerHandler(plane::manager::TOPIC_MISSION_CONTROL, "XFHXRW", ::std::bind_front(&LogicHandler::handleWaypointMission, this));
+            msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "QF", ::std::bind_front(&LogicHandler::handleTakeoff, this));
+            msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "FH", ::std::bind_front(&LogicHandler::handleGoHome, this));
+            msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "XT", ::std::bind_front(&LogicHandler::handleHover, this));
+            msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "JL", ::std::bind_front(&LogicHandler::handleLand, this));
             msg_handler.registerHandler(
                 plane::manager::TOPIC_COMMAND_CONTROL,
                 "YTJSCL",
-                _STD bind_front(&LogicHandler::handleControlStrategySwitch, this)
+                ::std::bind_front(&LogicHandler::handleControlStrategySwitch, this)
             );
-            msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "ZNHR", _STD bind_front(&LogicHandler::handleCircleFly, this));
+            msg_handler.registerHandler(plane::manager::TOPIC_COMMAND_CONTROL, "ZNHR", ::std::bind_front(&LogicHandler::handleCircleFly, this));
             msg_handler
-                .registerHandler(plane::manager::TOPIC_PAYLOAD_CONTROL, "YTKZ", _STD bind_front(&LogicHandler::handleGimbalControl, this));
+                .registerHandler(plane::manager::TOPIC_PAYLOAD_CONTROL, "YTKZ", ::std::bind_front(&LogicHandler::handleGimbalControl, this));
             msg_handler
-                .registerHandler(plane::manager::TOPIC_PAYLOAD_CONTROL, "BJKZ", _STD bind_front(&LogicHandler::handleCameraControl, this));
-            msg_handler.registerHandler(plane::manager::TOPIC_ROCKER_CONTROL, "YGFXZL", _STD bind_front(&LogicHandler::handleStickData, this));
+                .registerHandler(plane::manager::TOPIC_PAYLOAD_CONTROL, "BJKZ", ::std::bind_front(&LogicHandler::handleCameraControl, this));
+            msg_handler.registerHandler(plane::manager::TOPIC_ROCKER_CONTROL, "YGFXZL", ::std::bind_front(&LogicHandler::handleStickData, this));
             msg_handler
-                .registerHandler(plane::manager::TOPIC_ROCKER_CONTROL, "YGMSQH", _STD bind_front(&LogicHandler::handleStickModeSwitch, this));
-            msg_handler.registerHandler(plane::manager::TOPIC_VELOCITY_CONTROL, "SDKZ", _STD bind_front(&LogicHandler::handleNedVelocity, this));
+                .registerHandler(plane::manager::TOPIC_ROCKER_CONTROL, "YGMSQH", ::std::bind_front(&LogicHandler::handleStickModeSwitch, this));
+            msg_handler
+                .registerHandler(plane::manager::TOPIC_VELOCITY_CONTROL, "SDKZ", ::std::bind_front(&LogicHandler::handleNedVelocity, this));
 
             LOG_INFO("MQTT 业务逻辑处理器初始化成功");
             return true;
         }
-        catch (const _STD exception& e)
+        catch (const ::std::exception& e)
         {
             LOG_ERROR("初始化 MQTT 业务逻辑处理器时发生异常: {}", e.what());
             return false;
@@ -65,15 +66,15 @@ namespace plane::manager
     }
 
     template<typename PayloadType, typename Func>
-    void LogicHandler::handleCommand(_STD string_view commandName, const n_json& payloadJson, Func&& handler)
+    void LogicHandler::handleCommand(::std::string_view commandName, const n_json& payloadJson, Func&& handler)
     {
-        if constexpr (_STD is_same_v<PayloadType, _STD monostate>)
+        if constexpr (::std::is_same_v<PayloadType, ::std::monostate>)
         {
             try
             {
                 handler();
             }
-            catch (const _STD exception& e)
+            catch (const ::std::exception& e)
             {
                 LOG_ERROR("执行【{}】指令时发生异常: {}", commandName, e.what());
             }
@@ -88,7 +89,7 @@ namespace plane::manager
             {
                 LOG_ERROR("解析【{}】指令失败: {}, payloadJson:\n{}", commandName, e.what(), payloadJson.dump(4));
             }
-            catch (const _STD exception& e)
+            catch (const ::std::exception& e)
             {
                 LOG_ERROR("执行【{}】指令时发生异常: {}", commandName, e.what());
             }
@@ -145,7 +146,7 @@ namespace plane::manager
 
     void LogicHandler::handleGoHome(const n_json& payloadJson) noexcept
     {
-        this->handleCommand<_STD monostate>(
+        this->handleCommand<::std::monostate>(
             "返航",
             payloadJson,
             [&]
@@ -158,7 +159,7 @@ namespace plane::manager
 
     void LogicHandler::handleHover(const n_json& payloadJson) noexcept
     {
-        this->handleCommand<_STD monostate>(
+        this->handleCommand<::std::monostate>(
             "悬停",
             payloadJson,
             [&]
@@ -171,7 +172,7 @@ namespace plane::manager
 
     void LogicHandler::handleLand(const n_json& payloadJson) noexcept
     {
-        this->handleCommand<_STD monostate>(
+        this->handleCommand<::std::monostate>(
             "降落",
             payloadJson,
             [&]

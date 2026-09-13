@@ -12,24 +12,24 @@
 
 namespace plane::utils
 {
-    class __Dji_error_converter_fun: private __Not_quite_object
+    class Dji_error_converter_fun_: private Not_quite_object_
     {
     public:
-        using __Not_quite_object::__Not_quite_object;
+        using Not_quite_object_::Not_quite_object_;
 
-        _STD string_view operator()(_DJI T_DjiReturnCode code) const noexcept
+        ::std::string_view operator()(::T_DjiReturnCode code) const noexcept
         {
             struct ErrorObject
             {
-                _DJI T_DjiReturnCode code {};
-                const char*          description {};
-                const char*          suggestion {};
+                ::T_DjiReturnCode code {};
+                const char*       description {};
+                const char*       suggestion {};
             };
 
-            static const ErrorObject errorObjects[]                                      = { DJI_ERROR_OBJECTS };
-            static const _STD unordered_map<_DJI T_DjiReturnCode, const char*> error_map = []
+            static const ErrorObject                                          errorObjects[] = { DJI_ERROR_OBJECTS };
+            static const ::std::unordered_map<::T_DjiReturnCode, const char*> error_map      = []
             {
-                _STD unordered_map<_DJI T_DjiReturnCode, const char*> m {};
+                ::std::unordered_map<::T_DjiReturnCode, const char*> m {};
                 for (const auto& obj : errorObjects)
                 {
                     m[obj.code] = obj.description;
@@ -48,5 +48,5 @@ namespace plane::utils
         }
     };
 
-    constexpr inline __Dji_error_converter_fun convertDjiError { __Not_quite_object::__Construct_tag {} };
+    constexpr inline Dji_error_converter_fun_ convertDjiError { Not_quite_object_::Construct_tag_ {} };
 } // namespace plane::utils

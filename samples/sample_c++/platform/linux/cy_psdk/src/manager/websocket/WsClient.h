@@ -39,22 +39,22 @@ namespace plane::manager
         void stop(void) noexcept;
 
         // 当前是否已完成握手并保持连接 (日志/调试用)
-        _NODISCARD bool isConnected(void) const noexcept;
+        [[nodiscard]] bool isConnected(void) const noexcept;
 
         // 组装连接地址: "ws://<ip>:<port>"; ip 为空返回空串 (对齐 msdk webSocketUrl 派生规则)
-        _NODISCARD static _STD string buildWsUrl(const _STD string& ip, _STD uint16_t port)
+        [[nodiscard]] static ::std::string buildWsUrl(const ::std::string& ip, ::std::uint16_t port)
         {
             if (ip.empty())
             {
                 return {};
             }
-            return _FMT format("ws://{}:{}", ip, port);
+            return ::fmt::format("ws://{}:{}", ip, port);
         }
 
         // 组装订阅报文: {"cmd":"subscribe","types":[...]} (对齐 msdk WebSocketRepository)
-        _NODISCARD static _STD string buildSubscribePayload(const _STD vector<_STD string>& types)
+        [[nodiscard]] static ::std::string buildSubscribePayload(const ::std::vector<::std::string>& types)
         {
-            _NLOHMANN_JSON json payload;
+            ::nlohmann::json payload;
             payload["cmd"]   = "subscribe"; // 固定命令字
             payload["types"] = types;       // 需要订阅的数据类型集合
             return payload.dump();
@@ -67,9 +67,9 @@ namespace plane::manager
         WsClient& operator=(const WsClient&) = delete;
 
         struct Impl;
-        _STD unique_ptr<Impl> impl_ {};
+        ::std::unique_ptr<Impl> impl_ {};
 
         // 后台线程生命周期 (防止 start()/stop() 重入)
-        _STD atomic<bool> started_ { false };
+        ::std::atomic<bool> started_ { false };
     };
 } // namespace plane::manager

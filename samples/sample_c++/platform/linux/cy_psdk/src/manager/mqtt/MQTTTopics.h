@@ -8,7 +8,7 @@
 
 namespace plane::manager
 {
-    using namespace _STD  literals;
+    using namespace ::std::literals;
 
     constexpr inline auto TOPIC_MISSION_CONTROL { "/wrgk/uav/mission_control"sv };   // 1. 航线飞行（双向）
     constexpr inline auto TOPIC_COMMAND_CONTROL { "/wrgk/uav/command_control"sv };   // 2. 指令飞行（中心 -> 设备）

@@ -17,9 +17,9 @@ using plane::catalog::internal::decodeAnnouncement;
 using plane::catalog::internal::decodeProbePacket;
 using plane::catalog::internal::encodeProbePacket;
 
-extern "C" int LLVMFuzzerTestOneInput(const _STD uint8_t* data, _STD size_t size)
+extern "C" int LLVMFuzzerTestOneInput(const ::std::uint8_t* data, ::std::size_t size)
 {
-    _STD vector<_STD uint8_t> bytes { data, data + size };
+    ::std::vector<::std::uint8_t> bytes { data, data + size };
 
     (void)decodeAnnouncement(bytes);
 

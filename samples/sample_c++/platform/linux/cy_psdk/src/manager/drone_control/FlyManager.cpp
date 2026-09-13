@@ -23,7 +23,7 @@ namespace plane::manager
         // TODO: 调用 PSDK 的单点飞行 API
     }
 
-    void FlyManager::waypoint(const _DEFINED _KMZ_DATA_TYPE& kmzData)
+    void FlyManager::waypoint(const kmz_data_type& kmzData)
     {
         LOG_INFO("FlyManager: 发送【航线任务】命令事件 (从内存数据 {} 字节)", kmzData.size());
         if (kmzData.empty())
@@ -34,25 +34,25 @@ namespace plane::manager
         plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::WaypointMission, kmzData);
     }
 
-    void FlyManager::waypoint(_STD string_view kmzFilePath)
+    void FlyManager::waypoint(::std::string_view kmzFilePath)
     {
         LOG_INFO("FlyManager: 正在处理【航线任务】(从文件: {})", kmzFilePath);
 
-        _STD_FS path kmz_file_path(kmzFilePath);
-        if (!_STD_FS exists(kmz_file_path))
+        ::std::filesystem::path kmz_file_path(kmzFilePath);
+        if (!::std::filesystem::exists(kmz_file_path))
         {
             LOG_ERROR("航线任务事件发送失败: KMZ 文件 '{}' 不存在", kmzFilePath);
             return;
         }
 
-        _STD ifstream file_stream(kmz_file_path, _STD ios::binary);
+        ::std::ifstream file_stream(kmz_file_path, ::std::ios::binary);
         if (!file_stream)
         {
             LOG_ERROR("航线任务事件发送失败: 无法打开 KMZ 文件 '{}'", kmzFilePath);
             return;
         }
 
-        _DEFINED _KMZ_DATA_TYPE kmz_data { _STD istreambuf_iterator<char>(file_stream), _STD istreambuf_iterator<char>() };
+        kmz_data_type kmz_data { ::std::istreambuf_iterator<char>(file_stream), ::std::istreambuf_iterator<char>() };
 
         this->waypoint(kmz_data);
     }
@@ -66,23 +66,23 @@ namespace plane::manager
     void FlyManager::goHome(void)
     {
         LOG_INFO("FlyManager: 发送【返航】命令事件");
-        plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::GoHome, _STD monostate {});
+        plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::GoHome, ::std::monostate {});
     }
 
     void FlyManager::hover(void)
     {
         LOG_INFO("FlyManager: 发送【悬停/中断】命令事件");
         plane::manager::EventManager::getInstance()
-            .publishCommand(plane::manager::EventManager::CommandEvent::StopWaypointMission, _STD monostate {});
+            .publishCommand(plane::manager::EventManager::CommandEvent::StopWaypointMission, ::std::monostate {});
     }
 
     void FlyManager::land(void)
     {
         LOG_INFO("FlyManager: 发送【降落】命令事件");
-        plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::Land, _STD monostate {});
+        plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::Land, ::std::monostate {});
     }
 
-    void FlyManager::setControlStrategy(const _DEFINED _PTZ_CONTROL_STRATEGY_TYPE& strategyCode)
+    void FlyManager::setControlStrategy(const ptz_control_strategy_type& strategyCode)
     {
         LOG_INFO("FlyManager: 发送【设置云台控制策略】命令事件");
         plane::manager::EventManager::getInstance().publishCommand(plane::manager::EventManager::CommandEvent::SetControlStrategy, strategyCode);
@@ -99,14 +99,14 @@ namespace plane::manager
     {
         LOG_INFO("FlyManager: 发送【暂停航线】命令事件");
         plane::manager::EventManager::getInstance()
-            .publishCommand(plane::manager::EventManager::CommandEvent::PauseWaypointMission, _STD monostate {});
+            .publishCommand(plane::manager::EventManager::CommandEvent::PauseWaypointMission, ::std::monostate {});
     }
 
     void FlyManager::resumeWaypointMission()
     {
         LOG_INFO("FlyManager: 发送【恢复航线】命令事件");
         plane::manager::EventManager::getInstance()
-            .publishCommand(plane::manager::EventManager::CommandEvent::ResumeWaypointMission, _STD monostate {});
+            .publishCommand(plane::manager::EventManager::CommandEvent::ResumeWaypointMission, ::std::monostate {});
     }
 
     void FlyManager::rotateGimbal(const plane::protocol::GimbalControlPayload& gimbalParams) const noexcept

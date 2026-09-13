@@ -18,16 +18,16 @@ namespace plane::catalog::internal
         CppHttpTransport(void)           = default;
         ~CppHttpTransport(void) override = default;
 
-        HttpResponseData get(const _STD string& url) override;
-        HttpResponseData post(const _STD string& url, const _STD string& body) override;
-        HttpResponseData put(const _STD string& url, const _STD string& body) override;
-        HttpResponseData del(const _STD string& url) override;
-        void             setTimeout(_STD_CHRONO milliseconds timeout) override;
+        HttpResponseData get(const ::std::string& url) override;
+        HttpResponseData post(const ::std::string& url, const ::std::string& body) override;
+        HttpResponseData put(const ::std::string& url, const ::std::string& body) override;
+        HttpResponseData del(const ::std::string& url) override;
+        void             setTimeout(::std::chrono::milliseconds timeout) override;
 
     private:
         // 统一发送; method: 0=GET 1=POST 2=PUT 3=DELETE
-        HttpResponseData sendRequest(int method, const _STD string& url, const _STD string& body);
+        HttpResponseData         sendRequest(int method, const ::std::string& url, const ::std::string& body);
 
-        _STD atomic<long long> timeout_ms_ { 10'000 };
+        ::std::atomic<long long> timeout_ms_ { 10'000 };
     };
 } // namespace plane::catalog::internal

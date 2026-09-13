@@ -42,16 +42,16 @@ namespace plane::manager
         using WsError   = beast::error_code;
 
         // --- 协议与策略常量 (对齐 msdk WebSocketRepository / GlobalHttpClient / AppConfigEntity) ---
-        constexpr _STD uint16_t kServerPort { 8888 };                            // msdk: "ws://${registryIp}:8888"
-        constexpr auto          kConnectTimeout { _STD_CHRONO seconds(10) };     // OkHttp connectTimeout=10s (含 WS 握手)
-        constexpr auto          kPingInterval { _STD_CHRONO seconds(15) };       // OkHttp pingInterval=15s, 短于服务端空闲超时
-        constexpr auto          kPingTimeout { _STD_CHRONO seconds(10) };        // 发出 ping 后等待 pong 的时限, 超时判定死链
-        constexpr auto          kReconnectInterval { _STD_CHRONO seconds(2) };   // serviceReconnectIntervalS 默认值
-        constexpr auto          kCatalogWaitInterval { _STD_CHRONO seconds(2) }; // 等待目录就绪的轮询间隔
-        constexpr _STD size_t   kPayloadLogLimit { 1024 };                       // 原始数据日志截断上限 (字节)
+        constexpr ::std::uint16_t kServerPort { 8888 };                               // msdk: "ws://${registryIp}:8888"
+        constexpr auto            kConnectTimeout { ::std::chrono::seconds(10) };     // OkHttp connectTimeout=10s (含 WS 握手)
+        constexpr auto            kPingInterval { ::std::chrono::seconds(15) };       // OkHttp pingInterval=15s, 短于服务端空闲超时
+        constexpr auto            kPingTimeout { ::std::chrono::seconds(10) };        // 发出 ping 后等待 pong 的时限, 超时判定死链
+        constexpr auto            kReconnectInterval { ::std::chrono::seconds(2) };   // serviceReconnectIntervalS 默认值
+        constexpr auto            kCatalogWaitInterval { ::std::chrono::seconds(2) }; // 等待目录就绪的轮询间隔
+        constexpr ::std::size_t   kPayloadLogLimit { 1024 };                          // 原始数据日志截断上限 (字节)
 
-                                                                                 // 连接成功后立即订阅的数据类型 (msdk 默认订阅集)
-        _STD vector<_STD string> subscribeTypes()
+                                                                                      // 连接成功后立即订阅的数据类型 (msdk 默认订阅集)
+        ::std::vector<::std::string> subscribeTypes()
         {
             return { "stationSwarmState", "event", "stationTaskStatus" };
         }
@@ -60,46 +60,46 @@ namespace plane::manager
     struct WsClient::Impl
     {
         // --- 运行时资源 (除原子标志外仅 io 线程访问) ---
-        asio::io_context ioc { 1 };
-        _STD unique_ptr<WsStream> ws {};                      // 每轮连接新建; 关闭后保留至下一轮覆盖
-        asio::steady_timer        ping_timer { ioc };         // 周期 ping
-        asio::steady_timer        ping_timeout_timer { ioc }; // pong 等待超时
-        asio::steady_timer        retry_timer { ioc };        // 目录等待/断线重连
-        beast::flat_buffer        rx_buffer {};               // 接收缓冲
-        _STD string               host {};                    // 当前连接 IP (握手 Host/日志)
-        _STD string               subscribe_payload {};       // 订阅报文 (发送期间保持存活)
-        _STD thread               thread {};
-        _STD atomic<bool> running { false };                  // 期望运行 (stop 后为 false)
-        _STD atomic<bool> conn_active { false };              // 本轮连接仍在进行 (含关闭中)
-        _STD atomic<bool> connected { false };                // 已完成握手且未断开
-        bool              failure_logged { false };           // 连接失败日志降噪 (恢复后重置)
-        bool              wait_logged { false };              // 等待目录/地址日志降噪 (拿到地址后重置)
+        asio::io_context            ioc { 1 };
+        ::std::unique_ptr<WsStream> ws {};                      // 每轮连接新建; 关闭后保留至下一轮覆盖
+        asio::steady_timer          ping_timer { ioc };         // 周期 ping
+        asio::steady_timer          ping_timeout_timer { ioc }; // pong 等待超时
+        asio::steady_timer          retry_timer { ioc };        // 目录等待/断线重连
+        beast::flat_buffer          rx_buffer {};               // 接收缓冲
+        ::std::string               host {};                    // 当前连接 IP (握手 Host/日志)
+        ::std::string               subscribe_payload {};       // 订阅报文 (发送期间保持存活)
+        ::std::thread               thread {};
+        ::std::atomic<bool>         running { false };          // 期望运行 (stop 后为 false)
+        ::std::atomic<bool>         conn_active { false };      // 本轮连接仍在进行 (含关闭中)
+        ::std::atomic<bool>         connected { false };        // 已完成握手且未断开
+        bool                        failure_logged { false };   // 连接失败日志降噪 (恢复后重置)
+        bool                        wait_logged { false };      // 等待目录/地址日志降噪 (拿到地址后重置)
 
-        void              start();
-        void              stop();
+        void                        start();
+        void                        stop();
 
-        void              scheduleConnect();
-        void              doConnect(const _STD string& ip);
-        void              doSubscribe();
-        void              startRead();
-        void              schedulePing();
-        void              doPing();
+        void                        scheduleConnect();
+        void                        doConnect(const ::std::string& ip);
+        void                        doSubscribe();
+        void                        startRead();
+        void                        schedulePing();
+        void                        doPing();
 
-        void              onMessage();
+        void                        onMessage();
 
-        void              onIoError(const char* stage, const WsError& ec);
-        void              teardown(const _STD string& reason);
-        void              closeTransport();
-        void              scheduleReconnect();
+        void                        onIoError(const char* stage, const WsError& ec);
+        void                        teardown(const ::std::string& reason);
+        void                        closeTransport();
+        void                        scheduleReconnect();
     };
 
     // ============================ 生命周期 ============================
 
     void WsClient::Impl::start()
     {
-        this->running.store(true, _STD memory_order_release);
+        this->running.store(true, ::std::memory_order_release);
         this->ioc.restart(); // 支持 stop 后再次 start (此时无线程在 run)
-        this->thread = _STD thread(
+        this->thread = ::std::thread(
             [this]
             {
                 this->ioc.run();
@@ -116,15 +116,15 @@ namespace plane::manager
 
     void WsClient::Impl::stop()
     {
-        this->running.store(false, _STD memory_order_release);
+        this->running.store(false, ::std::memory_order_release);
 
         // 清理任务投递到 io 线程: 关闭连接/取消定时器后 run() 无未决工作, 自然返回
         asio::post(
             this->ioc,
             [this]
             {
-                this->conn_active.store(false, _STD memory_order_release);
-                this->connected.store(false, _STD memory_order_release);
+                this->conn_active.store(false, ::std::memory_order_release);
+                this->connected.store(false, ::std::memory_order_release);
                 this->closeTransport();
                 this->ws.reset();
             }
@@ -150,14 +150,14 @@ namespace plane::manager
 
     void WsClient::Impl::scheduleConnect()
     {
-        if (!this->running.load(_STD memory_order_acquire))
+        if (!this->running.load(::std::memory_order_acquire))
         {
             return;
         }
 
         // 目录未就绪/未发现服务端地址: 稍后重试 (对齐 msdk "registryIp 就绪后才连接")
-        _STD string ip {};
-        auto&       catalog { CatalogManager::getInstance() };
+        ::std::string ip {};
+        auto&         catalog { CatalogManager::getInstance() };
         if (catalog.isCatalogReady())
         {
             ip = catalog.getCatalogServerIp();
@@ -192,9 +192,9 @@ namespace plane::manager
         this->doConnect(ip);
     }
 
-    void WsClient::Impl::doConnect(const _STD string& ip)
+    void WsClient::Impl::doConnect(const ::std::string& ip)
     {
-        if (!this->running.load(_STD memory_order_acquire))
+        if (!this->running.load(::std::memory_order_acquire))
         {
             return;
         }
@@ -209,16 +209,16 @@ namespace plane::manager
         }
 
         this->host = ip;
-        this->ws   = _STD make_unique<WsStream>(this->ioc);
+        this->ws   = ::std::make_unique<WsStream>(this->ioc);
         this->rx_buffer.consume(this->rx_buffer.size()); // 清理上一轮残留
-        this->conn_active.store(true, _STD memory_order_release);
+        this->conn_active.store(true, ::std::memory_order_release);
 
         auto& lowest { beast::get_lowest_layer(*this->ws) };
         lowest.expires_after(kConnectTimeout); // 连接 + 握手共用超时窗口
 
         // Beast 的 async_connect 只接受 endpoint 序列, 单 IP 场景包装为单元素数组;
         // 连接与握手的超时由上方 expires_after 统一控制。
-        _STD array<asio::ip::tcp::endpoint, 1> endpoints {
+        ::std::array<asio::ip::tcp::endpoint, 1> endpoints {
             asio::ip::tcp::endpoint { address, kServerPort }
         };
         lowest.async_connect(
@@ -230,14 +230,14 @@ namespace plane::manager
                     this->onIoError("TCP 连接", ec);
                     return;
                 }
-                if (!this->conn_active.load(_STD memory_order_acquire))
+                if (!this->conn_active.load(::std::memory_order_acquire))
                 {
                     return;
                 }
 
                 // HTTP Upgrade 握手 (Host 头需含端口)
                 this->ws->async_handshake(
-                    _FMT format("{}:{}", this->host, kServerPort),
+                    ::fmt::format("{}:{}", this->host, kServerPort),
                     "/",
                     [this](const WsError& hs_ec)
                     {
@@ -246,15 +246,15 @@ namespace plane::manager
                             this->onIoError("WebSocket 握手", hs_ec);
                             return;
                         }
-                        if (!this->conn_active.load(_STD memory_order_acquire))
+                        if (!this->conn_active.load(::std::memory_order_acquire))
                         {
                             return;
                         }
 
                         beast::get_lowest_layer(*this->ws).expires_never(); // 长连接不设读写超时 (OkHttp readTimeout=0)
-                        this->connected.store(true, _STD memory_order_release);
+                        this->connected.store(true, ::std::memory_order_release);
                         this->failure_logged = false;
-                        const _STD string ws_url { WsClient::buildWsUrl(this->host, kServerPort) };
+                        const ::std::string ws_url { WsClient::buildWsUrl(this->host, kServerPort) };
                         LOG_INFO("WebSocket 已连接: {}", ws_url);
                         plane::domain::PlaneStateStore::getInstance().update(
                             [&ws_url](plane::domain::PlaneStateDataClass& st)
@@ -275,14 +275,14 @@ namespace plane::manager
         this->subscribe_payload = WsClient::buildSubscribePayload(subscribeTypes());
         this->ws->async_write(
             asio::buffer(this->subscribe_payload),
-            [this](const WsError& ec, _STD size_t)
+            [this](const WsError& ec, ::std::size_t)
             {
                 if (ec)
                 {
                     this->onIoError("订阅发送", ec);
                     return;
                 }
-                if (!this->conn_active.load(_STD memory_order_acquire))
+                if (!this->conn_active.load(::std::memory_order_acquire))
                 {
                     return;
                 }
@@ -298,20 +298,20 @@ namespace plane::manager
     {
         this->ws->async_read(
             this->rx_buffer,
-            [this](const WsError& ec, _STD size_t)
+            [this](const WsError& ec, ::std::size_t)
             {
                 if (ec)
                 {
                     this->onIoError("数据接收", ec);
                     return;
                 }
-                if (!this->conn_active.load(_STD memory_order_acquire))
+                if (!this->conn_active.load(::std::memory_order_acquire))
                 {
                     return;
                 }
 
                 this->onMessage();
-                if (this->running.load(_STD memory_order_acquire))
+                if (this->running.load(::std::memory_order_acquire))
                 {
                     this->startRead(); // 持续接收
                 }
@@ -321,26 +321,20 @@ namespace plane::manager
 
     void WsClient::Impl::onMessage()
     {
-        const _STD string text { beast::buffers_to_string(this->rx_buffer.data()) };
+        const ::std::string text { beast::buffers_to_string(this->rx_buffer.data()) };
         this->rx_buffer.consume(this->rx_buffer.size());
 
         // 仅提取 attributeType 作为日志标识; 业务处理 (swarmState/event/taskStatus) 后续接入
-        _STD string type { "-" };
-        try
+        // 非 JSON 报文按原文记录: 解析失败不抛异常 (allow_exceptions=false)
+        ::std::string          type { "-" };
+        const ::nlohmann::json message { ::nlohmann::json::parse(text, nullptr, false) };
+        if (!message.is_discarded() && message.is_object() && message.contains("attributeType") && message["attributeType"].is_string())
         {
-            const _NLOHMANN_JSON json message = _NLOHMANN_JSON json::parse(text);
-            if (message.is_object() && message.contains("attributeType") && message["attributeType"].is_string())
-            {
-                type = message["attributeType"].get<_STD string>();
-            }
-        }
-        catch (const _STD exception&)
-        {
-            // 非 JSON 报文: 按原文记录
+            type = message["attributeType"].get<::std::string>();
         }
 
-        const _STD size_t      limit { text.size() < kPayloadLogLimit ? text.size() : kPayloadLogLimit };
-        const _STD string_view preview { text.data(), limit };
+        const ::std::size_t      limit { text.size() < kPayloadLogLimit ? text.size() : kPayloadLogLimit };
+        const ::std::string_view preview { text.data(), limit };
         LOG_DEBUG("WebSocket 数据 [{}] ({} 字节): {}{}", type, text.size(), preview, text.size() > kPayloadLogLimit ? " ...(已截断)" : "");
     }
 
@@ -352,7 +346,7 @@ namespace plane::manager
         this->ping_timer.async_wait(
             [this](const WsError& ec)
             {
-                if (ec || !this->conn_active.load(_STD memory_order_acquire))
+                if (ec || !this->conn_active.load(::std::memory_order_acquire))
                 {
                     return; // 已取消 (断开/停止)
                 }
@@ -363,7 +357,7 @@ namespace plane::manager
 
     void WsClient::Impl::doPing()
     {
-        if (!this->ws || !this->conn_active.load(_STD memory_order_acquire))
+        if (!this->ws || !this->conn_active.load(::std::memory_order_acquire))
         {
             return;
         }
@@ -373,7 +367,7 @@ namespace plane::manager
         this->ping_timeout_timer.async_wait(
             [this](const WsError& ec)
             {
-                if (ec || !this->conn_active.load(_STD memory_order_acquire))
+                if (ec || !this->conn_active.load(::std::memory_order_acquire))
                 {
                     return; // pong 已在时限内返回 (计时已取消)
                 }
@@ -392,7 +386,7 @@ namespace plane::manager
                     this->onIoError("ping", ec);
                     return;
                 }
-                if (this->conn_active.load(_STD memory_order_acquire))
+                if (this->conn_active.load(::std::memory_order_acquire))
                 {
                     this->schedulePing(); // 下一轮
                 }
@@ -404,11 +398,11 @@ namespace plane::manager
 
     void WsClient::Impl::onIoError(const char* stage, const WsError& ec)
     {
-        if (!this->conn_active.load(_STD memory_order_acquire))
+        if (!this->conn_active.load(::std::memory_order_acquire))
         {
             return; // 清理流程中完成的操作, 忽略
         }
-        this->teardown(_STD string(stage) + ": " + ec.message());
+        this->teardown(::std::string(stage) + ": " + ec.message());
     }
 
     void WsClient::Impl::closeTransport()
@@ -426,15 +420,15 @@ namespace plane::manager
         }
     }
 
-    void WsClient::Impl::teardown(const _STD string& reason)
+    void WsClient::Impl::teardown(const ::std::string& reason)
     {
         // 幂等: 多个回调可能同时报告错误, 仅首个生效
-        if (!this->conn_active.exchange(false, _STD memory_order_acq_rel))
+        if (!this->conn_active.exchange(false, ::std::memory_order_acq_rel))
         {
             return;
         }
 
-        this->connected.store(false, _STD memory_order_release);
+        this->connected.store(false, ::std::memory_order_release);
         plane::domain::PlaneStateStore::getInstance().update(
             [](plane::domain::PlaneStateDataClass& st)
             {
@@ -443,7 +437,7 @@ namespace plane::manager
             }
         );
 
-        if (!this->running.load(_STD memory_order_acquire))
+        if (!this->running.load(::std::memory_order_acquire))
         {
             return; // 手动停止: 不再重连
         }
@@ -473,12 +467,12 @@ namespace plane::manager
 
     // ============================ 对外接口 ============================
 
-    WsClient::WsClient(void) noexcept: impl_(_STD make_unique<Impl>()) {}
+    WsClient::WsClient(void) noexcept: impl_(::std::make_unique<Impl>()) {}
 
     WsClient::~WsClient(void) noexcept
     {
         // 兜底停止; 此处不记日志, 避免静态析构期访问日志系统
-        if (this->started_.exchange(false, _STD memory_order_acq_rel))
+        if (this->started_.exchange(false, ::std::memory_order_acq_rel))
         {
             this->impl_->stop();
         }
@@ -492,7 +486,7 @@ namespace plane::manager
 
     void WsClient::start(void) noexcept
     {
-        if (this->started_.exchange(true, _STD memory_order_acq_rel))
+        if (this->started_.exchange(true, ::std::memory_order_acq_rel))
         {
             return; // 已启动 (幂等)
         }
@@ -503,7 +497,7 @@ namespace plane::manager
 
     void WsClient::stop(void) noexcept
     {
-        if (!this->started_.exchange(false, _STD memory_order_acq_rel))
+        if (!this->started_.exchange(false, ::std::memory_order_acq_rel))
         {
             return; // 未启动 (幂等)
         }
@@ -514,6 +508,6 @@ namespace plane::manager
 
     bool WsClient::isConnected(void) const noexcept
     {
-        return this->impl_->connected.load(_STD memory_order_acquire);
+        return this->impl_->connected.load(::std::memory_order_acquire);
     }
 } // namespace plane::manager

@@ -9,7 +9,7 @@
 
 namespace plane::utils
 {
-    _STD string buildLocalRtspUrl(const plane::domain::PlaneStateDataClass& snapshot) noexcept
+    ::std::string buildLocalRtspUrl(const plane::domain::PlaneStateDataClass& snapshot) noexcept
     {
         const auto local_ip { plane::utils::getLocalIPV4() };
         if (!local_ip.has_value() || local_ip->empty())
@@ -25,7 +25,7 @@ namespace plane::utils
             return {};
         }
 
-        return _FMT format(
+        return ::fmt::format(
             "rtsp://{}:{}@{}:{}/{}",
             snapshot.rtsp_push_video_user_name,
             snapshot.rtsp_push_video_password,

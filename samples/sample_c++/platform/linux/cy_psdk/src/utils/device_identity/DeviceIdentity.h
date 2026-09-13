@@ -14,12 +14,12 @@ namespace plane::utils
     //   3) 均未就绪时返回空串 (调用方等待, 不产生任何占位值)
     struct DeviceIdentity
     {
-        _NODISCARD static _STD string resolveDeviceCode(void) noexcept;
+        [[nodiscard]] static ::std::string resolveDeviceCode(void) noexcept;
 
         // 目录注册 service_id: "swarm.agent.<code>"; code 未就绪时返回空串
-        _NODISCARD static _STD string resolveCatalogServiceId(void) noexcept;
+        [[nodiscard]] static ::std::string resolveCatalogServiceId(void) noexcept;
 
         // 目录注册 service_name: "DJI-PSDK-<code>"; code 未就绪时返回空串
-        _NODISCARD static _STD string resolveCatalogServiceName(void) noexcept;
+        [[nodiscard]] static ::std::string resolveCatalogServiceName(void) noexcept;
     };
 } // namespace plane::utils

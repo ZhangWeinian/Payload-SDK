@@ -24,9 +24,9 @@ namespace plane::catalog::internal
     // 一轮探测报告 (对齐 java DiscoveryReport)
     struct DiscoveryReport
     {
-        DiscoveryStatus status { DiscoveryStatus::NOT_FOUND };
-        _STD string     error {};
-        _STD vector<CatalogEndpoint> endpoints {};
-        bool                         multiple_instances { false };
+        DiscoveryStatus                status { DiscoveryStatus::NOT_FOUND };
+        ::std::string                  error {};
+        ::std::vector<CatalogEndpoint> endpoints {};
+        bool                           multiple_instances { false };
     };
 } // namespace plane::catalog::internal

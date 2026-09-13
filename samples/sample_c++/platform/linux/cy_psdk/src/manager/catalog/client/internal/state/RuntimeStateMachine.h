@@ -16,39 +16,39 @@ namespace plane::catalog::internal
     public:
         RuntimeStateMachine(void) noexcept = default;
 
-        _NODISCARD CatalogState state(void) const noexcept
+        [[nodiscard]] CatalogState state(void) const noexcept
         {
-            return this->state_.load(_STD memory_order_acquire);
+            return this->state_.load(::std::memory_order_acquire);
         }
 
         void set(CatalogState value) noexcept
         {
-            this->state_.store(value, _STD memory_order_release);
+            this->state_.store(value, ::std::memory_order_release);
         }
 
         // Discovered/Registering/Ready 允许查询
-        _NODISCARD bool allowQuery(void) const noexcept
+        [[nodiscard]] bool allowQuery(void) const noexcept
         {
             const CatalogState value { this->state() };
             return value == CatalogState::DISCOVERED || value == CatalogState::REGISTERING || value == CatalogState::READY;
         }
 
-        _NODISCARD bool allowStatusReport(void) const noexcept
+        [[nodiscard]] bool allowStatusReport(void) const noexcept
         {
             return this->state() == CatalogState::READY;
         }
 
-        _NODISCARD bool allowRegister(void) const noexcept
+        [[nodiscard]] bool allowRegister(void) const noexcept
         {
             return this->state() == CatalogState::REGISTERING;
         }
 
-        _NODISCARD bool allowConfigRefresh(void) const noexcept
+        [[nodiscard]] bool allowConfigRefresh(void) const noexcept
         {
             return this->allowQuery();
         }
 
     private:
-        _STD atomic<CatalogState> state_ { CatalogState::STOPPED };
+        ::std::atomic<CatalogState> state_ { CatalogState::STOPPED };
     };
 } // namespace plane::catalog::internal

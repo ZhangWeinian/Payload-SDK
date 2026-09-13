@@ -15,12 +15,12 @@ namespace plane::utils
     {
     public:
         // 将航点列表转换为 KMZ 格式的数据
-        _NODISCARD static _STD optional<_DEFINED _KMZ_DATA_TYPE> convertWaypointsToKmz(
-            const _STD vector<plane::protocol::Waypoint>& waypoints,
-            const plane::protocol::WaypointPayload&       missionInfo = {}
+        [[nodiscard]] static ::std::optional<kmz_data_type> convertWaypointsToKmz(
+            const ::std::vector<plane::protocol::Waypoint>& waypoints,
+            const plane::protocol::WaypointPayload&         missionInfo = {}
         ) noexcept;
 
         // 获取当前（最新一次） KMZ 文件的存储路径
-        _NODISCARD static _STD string getKmzFilePath(void) noexcept;
+        [[nodiscard]] static ::std::string getKmzFilePath(void) noexcept;
     };
 } // namespace plane::utils

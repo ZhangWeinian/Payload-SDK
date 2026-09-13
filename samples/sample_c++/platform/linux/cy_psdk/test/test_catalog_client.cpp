@@ -28,11 +28,11 @@ namespace
     using plane::catalog::internal::decodeProbePacket;
     using plane::catalog::internal::encodeProbePacket;
 
-    _STD vector<_STD string> expand(const _STD vector<_STD string>& specs, int max_count = 1024)
+    ::std::vector<::std::string> expand(const ::std::vector<::std::string>& specs, int max_count = 1024)
     {
         auto result { expandTargets(specs, max_count) };
         EXPECT_TRUE(result.has_value()) << "expand 应成功: " << result.error().message;
-        return result.has_value() ? result.value() : _STD vector<_STD string> {};
+        return result.has_value() ? result.value() : ::std::vector<::std::string> {};
     }
 } // namespace
 
@@ -137,8 +137,8 @@ TEST(CatalogProbeCodec, DecodeAnnouncement)
 
 TEST(CatalogProbeCodec, WrongMagicIsRejected)
 {
-    _STD vector<_STD uint8_t> garbage { 0X00, 0X01, 0X02, 0X03, 0X04, 0X05, 0X06, 0X07, 0X08 };
-    const auto                decoded { decodeProbePacket(garbage) };
+    ::std::vector<::std::uint8_t> garbage { 0X00, 0X01, 0X02, 0X03, 0X04, 0X05, 0X06, 0X07, 0X08 };
+    const auto                    decoded { decodeProbePacket(garbage) };
     EXPECT_FALSE(decoded.has_value());
 }
 
@@ -176,19 +176,19 @@ TEST(CatalogIpCacheTest, SaveAndPrioritizeRoundTrip)
 {
     using plane::catalog::internal::CatalogIpCache;
 
-    const auto      dir { _STD filesystem::temp_directory_path() / "cy_psdk_catalog_ipcache_test" };
-    const auto      file { dir / "last_catalog_ip" };
-    _STD error_code ec {};
-    _STD            filesystem::remove_all(dir, ec);
+    const auto        dir { ::std::filesystem::temp_directory_path() / "cy_psdk_catalog_ipcache_test" };
+    const auto        file { dir / "last_catalog_ip" };
+    ::std::error_code ec {};
+    ::std::filesystem::remove_all(dir, ec);
 
-    CatalogIpCache  cache { file.string() };
+    CatalogIpCache cache { file.string() };
     cache.save("192.168.1.77");
 
-    ASSERT_TRUE(_STD filesystem::exists(file));
+    ASSERT_TRUE(::std::filesystem::exists(file));
     {
-        _STD ifstream in { file, _STD ios::binary };
-        _STD string   line {};
-        _STD          getline(in, line);
+        ::std::ifstream in { file, ::std::ios::binary };
+        ::std::string   line {};
+        ::std::getline(in, line);
         EXPECT_EQ(line, "192.168.1.77");
     }
 
@@ -199,10 +199,10 @@ TEST(CatalogIpCacheTest, SaveAndPrioritizeRoundTrip)
     // 非法 IP 不写入
     cache.save("192.168.1.300");
     {
-        _STD ifstream in { file, _STD ios::binary };
-        _STD string   line {};
-        _STD          getline(in, line);
+        ::std::ifstream in { file, ::std::ios::binary };
+        ::std::string   line {};
+        ::std::getline(in, line);
         EXPECT_EQ(line, "192.168.1.77");
     }
-    _STD filesystem::remove_all(dir, ec);
+    ::std::filesystem::remove_all(dir, ec);
 }

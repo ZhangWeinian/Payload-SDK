@@ -54,10 +54,10 @@ namespace plane::catalog
         // 按值传递 unique_ptr 时调用方需含其完整定义才能析构形参, 因此刻意不提供默认实参 ——
         // 在不完整类型上生成 unique_ptr 默认实参是 GCC 容忍、Clang 报错的可移植性陷阱。
         CatalogRuntime(
-            CatalogRuntimeOptions options,
-            DiscoveryConfig       discovery_config,
-            _STD unique_ptr<internal::HttpTransport> http_transport,
-            _STD unique_ptr<internal::DiscoveryClient> discovery_client
+            CatalogRuntimeOptions                        options,
+            DiscoveryConfig                              discovery_config,
+            ::std::unique_ptr<internal::HttpTransport>   http_transport,
+            ::std::unique_ptr<internal::DiscoveryClient> discovery_client
         );
 
         // 析构 best-effort 停止 (等价 stop(2s))
@@ -68,42 +68,43 @@ namespace plane::catalog
 
         // 同步发现唯一 Catalog 并启动后台维护。成功返回时状态为 Discovered。
         // 重复调用返回 AlreadyStarted。
-        _NODISCARD Result<void> start(void);
+        [[nodiscard]] Result<void> start(void);
 
         // 请求注册当前服务实例。注册与重试由控制线程执行。
-        _NODISCARD Result<void> registerServiceInstance(void);
+        [[nodiscard]] Result<void> registerServiceInstance(void);
 
         // 停止后台线程并 best-effort 注销。timeout 限制注销等待。
-        _NODISCARD Result<void> stop(_STD_CHRONO milliseconds timeout = _STD_CHRONO seconds(5));
+        [[nodiscard]] Result<void>                     stop(::std::chrono::milliseconds timeout = ::std::chrono::seconds(5));
 
-        _NODISCARD CatalogState state(void) const;
-        _NODISCARD _STD optional<CatalogEndpoint> catalogEndpoint(void) const;
-        _NODISCARD _STD string                    instanceId(void) const;
+        [[nodiscard]] CatalogState                     state(void) const;
+        [[nodiscard]] ::std::optional<CatalogEndpoint> catalogEndpoint(void) const;
+        [[nodiscard]] ::std::string                    instanceId(void) const;
 
         // 上报最新健康状态 (快照式)。由调用方周期调用保持最新。
-        _NODISCARD Result<void> updateStatus(const ServiceStatus& status);
+        [[nodiscard]] Result<void>            updateStatus(const ServiceStatus& status);
 
-        _NODISCARD Result<ResolvedService> resolveService(const ServiceQuery& query);
-        _NODISCARD Result<ServicePage> listServices(const _STD string& namespace_name, const _STD string& service_name, int page, int page_size);
-        _NODISCARD Result<ServiceStatus> getInstanceStatus(
-            const _STD string& namespace_name,
-            const _STD string& group_name,
-            const _STD string& service_id,
-            const _STD string& instance_id
+        [[nodiscard]] Result<ResolvedService> resolveService(const ServiceQuery& query);
+        [[nodiscard]] Result<ServicePage>
+            listServices(const ::std::string& namespace_name, const ::std::string& service_name, int page, int page_size);
+        [[nodiscard]] Result<ServiceStatus> getInstanceStatus(
+            const ::std::string& namespace_name,
+            const ::std::string& group_name,
+            const ::std::string& service_id,
+            const ::std::string& instance_id
         );
 
-        _NODISCARD Result<_STD string> getLocalIp(void);
-        _NODISCARD Result<CatalogServerInfo> getCatalogServerInfo(void);
+        [[nodiscard]] Result<::std::string>                 getLocalIp(void);
+        [[nodiscard]] Result<CatalogServerInfo>             getCatalogServerInfo(void);
 
-        _NODISCARD Result<ConfigDocument> putConfig(const ConfigUploadRequest& request);
-        _NODISCARD Result<_STD vector<ConfigDocument>> getConfig(const ConfigQuery& query);
-        _NODISCARD Result<ConfigSubscription> watchConfig(const ConfigKey& key, _STD function<void(const ConfigChangeEvent&)> callback);
+        [[nodiscard]] Result<ConfigDocument>                putConfig(const ConfigUploadRequest& request);
+        [[nodiscard]] Result<::std::vector<ConfigDocument>> getConfig(const ConfigQuery& query);
+        [[nodiscard]] Result<ConfigSubscription> watchConfig(const ConfigKey& key, ::std::function<void(const ConfigChangeEvent&)> callback);
 
-        _NODISCARD Result<void> updateLogPaths(const _STD vector<LogPath>& paths);
-        _NODISCARD Result<void> updateRegistration(const ServiceRegistration& registration);
+        [[nodiscard]] Result<void>               updateLogPaths(const ::std::vector<LogPath>& paths);
+        [[nodiscard]] Result<void>               updateRegistration(const ServiceRegistration& registration);
 
     private:
         struct Impl;
-        _STD unique_ptr<Impl> impl_ {};
+        ::std::unique_ptr<Impl> impl_ {};
     };
 } // namespace plane::catalog

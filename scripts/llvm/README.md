@@ -55,7 +55,8 @@
 | 组件 | 原因 |
 | --- | --- |
 | llvm-ar / ranlib / nm / strip / objcopy | 工程无静态库构建 (`add_library` 为零), 无收益 |
-| scan-build / scan-build-py | 与 clang-tidy 的 `clang-analyzer-*` 检查族重叠 |
+| scan-build / scan-build-py | 实测为 clang-tidy 子集: `analyze-build` 74 TU / 22.6s 仅报 6 条核心检查 (4 deadcode + 2 unix.Malloc), 均已被 clang-tidy `clang-analyzer-*` 覆盖且缺 optin/security 族; CTU 交叉模式 0 增量 |
+| clang-include-cleaner (`misc-include-cleaner`) | 与宏调用约定不兼容: 无法解析 `_STD` / `_ASIO` 等宏包装用法, 实测 6 TU 175 条中 171 条为误报性 "缺直接包含" 建议 |
 | clangd | IntelliSense 目前由 cpptools 承担 (configurationProvider: cmake-tools) |
 | MSan / libc++ | vcpkg 依赖为 libstdc++ ABI; 切换需重建全部依赖且偏离 aarch64 交付环境 |
 | llvm-bolt / llvm-profgen | 仅适用于 LLVM 构建链; x86 产物不交付, aarch64 交付链为 GCC |
@@ -113,6 +114,10 @@ bash scripts/llvm/clang-tidy.sh --fix
 
 检查项配置见仓库根 `.clang-tidy`; 仅分析自有代码 (`src/`, `test/`), 官方样例与 vcpkg 依赖自动过滤。
 
+> **保留名白名单**: 项目有意采用 MSVC STL 风格的调用约定。> `.clang-tidy` 通过 `bugprone-reserved-identifier.AllowedIdentifiers` 白名单化既定
+> 约定 (`_` 前缀宏/类型别名 + `__Xxx_fun` 辅助类, `*` 为前缀通配), 检查仍会捕捉
+> 约定外的新保留名。按此风格新增名称时需同步追加白名单。
+
 > **aarch64 模式说明**: GCC 交叉编译数据库含 `-fdeps-format=p1689r5` /
 > `-fmodule-mapper=...` / `-fmodules-ts` 等 Clang 不识别的 GCC 15+ 参数,
 > 脚本会自动净化到 `<build-dir>/clang-tidy-db/compile_commands.json` 后再分析,
@@ -145,10 +150,10 @@ cmake --build --preset tsan
 ctest --preset tsan
 ```
 
-> **容器限制**: 本开发容器的 seccomp 策略禁止 `personality(ADDR_NO_RANDOMIZE)`:
-> TSan 无法关闭 ASLR (报 `FATAL: ... unable to disable ASLR`), lldb 启动同样受限 (见 §8)。
-> 构建不受影响。根治需改**容器启动参数** (Dockerfile 层无法设置, 因 seccomp 属运行期配置;
-> 且改动后需重建容器才生效):
+> **容器现状 (已解决)**: 2026-09-13 起容器以 `--security-opt seccomp=unconfined` 启动
+> (`import.sh` 已更新), `personality(ADDR_NO_RANDOMIZE)` 放行 —— TSan 与 lldb 均可直接
+> 运行。旧镜像若仍报 `personality set failed` / `unable to disable ASLR`, 在容器启动参数
+> 处放行即可 (Dockerfile 层无法设置, 改动后需重建容器):
 >
 > - `docker run` 启动脚本: 追加 `--security-opt seccomp=unconfined`
 > - docker compose: 服务下加 `security_opt: ["seccomp=unconfined"]`
@@ -158,6 +163,12 @@ ctest --preset tsan
 > `personality` 的允许参数追加 `262144` (ADDR_NO_RANDOMIZE), 再以
 > `--security-opt seccomp=<custom.json>` 引用。
 > 无 seccomp 限制的普通 Linux 主机/目标板无此问题。
+>
+> **TSan 已知不兼容 (已规避)**: httplib 的 `CPPHTTPLIB_USE_NON_BLOCKING_GETADDRINFO`
+> (glibc 异步 DNS) 会创建不经 TSan 注册的 glibc 内部线程, 首次分配即崩在 TSan 分配器
+> (`SizeClassAllocator64::Allocate`); `tsan` 预设已附加
+> `-UCPPHTTPLIB_USE_NON_BLOCKING_GETADDRINFO` 规避 —— 仅影响 TSan 构建的测试二进制,
+> 生产目标保持非阻塞 DNS 不变。
 
 **覆盖率** (LLVM 源码级):
 

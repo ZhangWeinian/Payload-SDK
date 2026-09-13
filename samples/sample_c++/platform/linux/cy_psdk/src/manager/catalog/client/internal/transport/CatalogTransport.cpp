@@ -17,9 +17,9 @@ namespace plane::catalog::internal
     namespace
     {
         // 服务端返回的错误码 (识别后作为协议错误透出 server_code)
-        _NODISCARD bool isRecognizedServerCode(const _STD string& code)
+        [[nodiscard]] bool isRecognizedServerCode(const ::std::string& code)
         {
-            static const _STD set<_STD string> kRecognized {
+            static const ::std::set<::std::string> kRecognized {
                 "NOT_FOUND",        "BAD_REQUEST",           "METHOD_NOT_ALLOWED", "CONFLICT",
                 "SERVICE_CONFLICT", "SERVICE_NAME_CONFLICT", "INTERNAL_ERROR",     "UNAVAILABLE",
             };
@@ -28,12 +28,12 @@ namespace plane::catalog::internal
 
         struct ServerError
         {
-            _STD string code {};
-            _STD string message {};
-            bool        recognized { false };
+            ::std::string code {};
+            ::std::string message {};
+            bool          recognized { false };
         };
 
-        _NODISCARD ServerError parseServerError(const _STD string& body)
+        [[nodiscard]] ServerError parseServerError(const ::std::string& body)
         {
             if (body.empty())
             {
@@ -41,7 +41,7 @@ namespace plane::catalog::internal
             }
             try
             {
-                const _NLOHMANN_JSON json json = _NLOHMANN_JSON json::parse(body);
+                const ::nlohmann::json json = ::nlohmann::json::parse(body);
                 if (!json.is_object() || !json.contains("code") || json["code"].is_null())
                 {
                     return {};
@@ -50,15 +50,15 @@ namespace plane::catalog::internal
                 {
                     return { "", "invalid type: code", true };
                 }
-                const _STD string code { json["code"].get<_STD string>() };
-                _STD string       message { code };
+                const ::std::string code { json["code"].get<::std::string>() };
+                ::std::string       message { code };
                 if (json.contains("message") && json["message"].is_string())
                 {
-                    message = json["message"].get<_STD string>();
+                    message = json["message"].get<::std::string>();
                 }
                 return { code, message, isRecognizedServerCode(code) };
             }
-            catch (const _STD exception& ex)
+            catch (const ::std::exception& ex)
             {
                 return { "", ex.what(), false };
             }
@@ -66,15 +66,15 @@ namespace plane::catalog::internal
     } // namespace
 
     CatalogTransport::CatalogTransport(
-        _STD string base_url,
-        _STD unique_ptr<HttpTransport> http
-    ): http_(http ? _STD move(http) : _STD make_unique<CppHttpTransport>()),
-       base_url_(trimSlash(_STD move(base_url)))
+        ::std::string                    base_url,
+        ::std::unique_ptr<HttpTransport> http
+    ): http_(http ? ::std::move(http) : ::std::make_unique<CppHttpTransport>()),
+       base_url_(trimSlash(::std::move(base_url)))
     {
-        this->http_->setTimeout(_STD_CHRONO milliseconds { 10'000 });
+        this->http_->setTimeout(::std::chrono::milliseconds { 10'000 });
     }
 
-    _NODISCARD _STD string CatalogTransport::trimSlash(_STD string value)
+    [[nodiscard]] ::std::string CatalogTransport::trimSlash(::std::string value)
     {
         while (!value.empty() && value.back() == '/')
         {
@@ -83,7 +83,7 @@ namespace plane::catalog::internal
         return value;
     }
 
-    _NODISCARD _STD string CatalogTransport::fullUrl(const _STD string& path) const
+    [[nodiscard]] ::std::string CatalogTransport::fullUrl(const ::std::string& path) const
     {
         if (path.empty())
         {
@@ -92,34 +92,34 @@ namespace plane::catalog::internal
         return this->catalogUrl() + (path.front() == '/' ? path : "/" + path);
     }
 
-    _NODISCARD Result<void> CatalogTransport::gate(void) const
+    [[nodiscard]] Result<void> CatalogTransport::gate(void) const
     {
-        if (this->stopping_.load(_STD memory_order_acquire))
+        if (this->stopping_.load(::std::memory_order_acquire))
         {
-            return _STD unexpected(makeFailure(CatalogError::STOPPED));
+            return ::std::unexpected(makeFailure(CatalogError::STOPPED));
         }
-        if (this->conflict_.load(_STD memory_order_acquire))
+        if (this->conflict_.load(::std::memory_order_acquire))
         {
-            return _STD unexpected(makeFailure(CatalogError::CATALOG_CONFLICT));
+            return ::std::unexpected(makeFailure(CatalogError::CATALOG_CONFLICT));
         }
-        if (!this->remote_allowed_.load(_STD memory_order_acquire))
+        if (!this->remote_allowed_.load(::std::memory_order_acquire))
         {
-            return _STD unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+            return ::std::unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
         }
         if (this->catalogUrl().empty())
         {
-            return _STD unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "empty URL"));
+            return ::std::unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "empty URL"));
         }
         return {};
     }
 
-    _NODISCARD _STD optional<CatalogFailure> CatalogTransport::mapHttp(const HttpResponseData& response) const
+    [[nodiscard]] ::std::optional<CatalogFailure> CatalogTransport::mapHttp(const HttpResponseData& response) const
     {
         if (!response.transport_ok)
         {
             CatalogFailure failure { makeFailure(
                 CatalogError::CATALOG_UNAVAILABLE,
-                response.transport_error.empty() ? _STD string { defaultErrorMessage(CatalogError::CATALOG_UNAVAILABLE) }
+                response.transport_error.empty() ? ::std::string { defaultErrorMessage(CatalogError::CATALOG_UNAVAILABLE) }
                                                  : response.transport_error
             ) };
             return failure;
@@ -132,7 +132,7 @@ namespace plane::catalog::internal
             {
                 return makeFailure(CatalogError::PROTOCOL_ERROR, server.message, response.status, server.code);
             }
-            return _STD nullopt; // 成功
+            return ::std::nullopt; // 成功
         }
 
         CatalogError code { CatalogError::HTTP_ERROR };
@@ -156,154 +156,154 @@ namespace plane::catalog::internal
             retryable = true;
         }
 
-        _STD string message { server.message };
+        ::std::string message { server.message };
         if (message.empty())
         {
-            message = response.body.empty() ? _FMT format("HTTP {}", response.status) : response.body;
+            message = response.body.empty() ? ::fmt::format("HTTP {}", response.status) : response.body;
         }
-        CatalogFailure failure { makeFailure(code, _STD move(message), response.status, server.code) };
+        CatalogFailure failure { makeFailure(code, ::std::move(message), response.status, server.code) };
         failure.retryable = retryable;
         return failure;
     }
 
-    _NODISCARD Result<_NLOHMANN_JSON json> CatalogTransport::parseRawJson(const _STD string& body, int status) const
+    [[nodiscard]] Result<::nlohmann::json> CatalogTransport::parseRawJson(const ::std::string& body, int status) const
     {
         try
         {
-            return _NLOHMANN_JSON json::parse(body);
+            return ::nlohmann::json::parse(body);
         }
-        catch (const _STD exception& ex)
+        catch (const ::std::exception& ex)
         {
-            return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what(), status, ""));
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what(), status, ""));
         }
     }
 
-    _NODISCARD Result<_NLOHMANN_JSON json> CatalogTransport::parse(const HttpResponseData& response, bool empty_object_allowed) const
+    [[nodiscard]] Result<::nlohmann::json> CatalogTransport::parse(const HttpResponseData& response, bool empty_object_allowed) const
     {
-        const _STD optional<CatalogFailure> failure { this->mapHttp(response) };
+        const ::std::optional<CatalogFailure> failure { this->mapHttp(response) };
         if (failure.has_value())
         {
-            return _STD unexpected(*failure);
+            return ::std::unexpected(*failure);
         }
         if (response.body.empty())
         {
             if (empty_object_allowed)
             {
-                return _NLOHMANN_JSON json::object();
+                return ::nlohmann::json::object();
             }
-            return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "empty JSON body", response.status, ""));
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "empty JSON body", response.status, ""));
         }
         return this->parseRawJson(response.body, response.status);
     }
 
-    _NODISCARD Result<_NLOHMANN_JSON json> CatalogTransport::getJson(const _STD string& path)
+    [[nodiscard]] Result<::nlohmann::json> CatalogTransport::getJson(const ::std::string& path)
     {
         Result<void> check { this->gate() };
         if (!check.has_value())
         {
-            return _STD unexpected(check.error());
+            return ::std::unexpected(check.error());
         }
         return this->parse(this->http_->get(this->fullUrl(path)), false);
     }
 
-    _NODISCARD Result<_NLOHMANN_JSON json>
-               CatalogTransport::postJson(const _STD string& path, const _STD string& body, bool accept_idempotent_register)
+    [[nodiscard]] Result<::nlohmann::json>
+        CatalogTransport::postJson(const ::std::string& path, const ::std::string& body, bool accept_idempotent_register)
     {
         Result<void> check { this->gate() };
         if (!check.has_value())
         {
-            return _STD unexpected(check.error());
+            return ::std::unexpected(check.error());
         }
         const HttpResponseData response { this->http_->post(this->fullUrl(path), body) };
 
         if (accept_idempotent_register && response.transport_ok && response.status == 409)
         {
             // 注册冲突: 若服务端判定幂等 (已注册过, 携带 id) 则视为成功
-            Result<_NLOHMANN_JSON json> parsed { this->parseRawJson(response.body, response.status) };
+            Result<::nlohmann::json> parsed { this->parseRawJson(response.body, response.status) };
             if (!parsed.has_value())
             {
                 return parsed;
             }
-            const _NLOHMANN_JSON json json = parsed.value();
+            const ::nlohmann::json json = parsed.value();
             if (!json.is_object())
             {
-                return _STD unexpected(
+                return ::std::unexpected(
                     makeFailure(CatalogError::PROTOCOL_ERROR, "registration conflict response must be an object", response.status, "")
                 );
             }
-            static const _STD set<_STD string> kIdempotent { "ALREADY_REGISTERED", "ALREADY_EXISTS", "IDEMPOTENT", "DUPLICATE" };
-            _STD string                        code {};
+            static const ::std::set<::std::string> kIdempotent { "ALREADY_REGISTERED", "ALREADY_EXISTS", "IDEMPOTENT", "DUPLICATE" };
+            ::std::string                          code {};
             if (json.contains("code") && !json["code"].is_null())
             {
                 if (!json["code"].is_string())
                 {
-                    return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: code", response.status, ""));
+                    return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: code", response.status, ""));
                 }
-                code = json["code"].get<_STD string>();
+                code = json["code"].get<::std::string>();
             }
-            const bool has_id { json.contains("id") && json["id"].is_string() && !json["id"].get<_STD string>().empty() };
+            const bool has_id { json.contains("id") && json["id"].is_string() && !json["id"].get<::std::string>().empty() };
             if (kIdempotent.find(code) != kIdempotent.end() || has_id)
             {
                 return json;
             }
             CatalogFailure failure { failureWithCode(this->mapHttp(response).value_or(CatalogFailure {}), CatalogError::REGISTRATION_REJECTED) };
             failure.retryable = false;
-            return _STD unexpected(failure);
+            return ::std::unexpected(failure);
         }
         return this->parse(response, false);
     }
 
-    _NODISCARD Result<_NLOHMANN_JSON json> CatalogTransport::putJson(const _STD string& path, const _STD string& body)
+    [[nodiscard]] Result<::nlohmann::json> CatalogTransport::putJson(const ::std::string& path, const ::std::string& body)
     {
         Result<void> check { this->gate() };
         if (!check.has_value())
         {
-            return _STD unexpected(check.error());
+            return ::std::unexpected(check.error());
         }
         return this->parse(this->http_->put(this->fullUrl(path), body), true);
     }
 
-    _NODISCARD Result<void> CatalogTransport::postVoid(const _STD string& path, const _STD string& body)
+    [[nodiscard]] Result<void> CatalogTransport::postVoid(const ::std::string& path, const ::std::string& body)
     {
         Result<void> check { this->gate() };
         if (!check.has_value())
         {
             return check;
         }
-        const _STD optional<CatalogFailure> failure { this->mapHttp(this->http_->post(this->fullUrl(path), body)) };
+        const ::std::optional<CatalogFailure> failure { this->mapHttp(this->http_->post(this->fullUrl(path), body)) };
         if (failure.has_value())
         {
-            return _STD unexpected(*failure);
+            return ::std::unexpected(*failure);
         }
         return {};
     }
 
-    _NODISCARD Result<void> CatalogTransport::putVoid(const _STD string& path, const _STD string& body)
+    [[nodiscard]] Result<void> CatalogTransport::putVoid(const ::std::string& path, const ::std::string& body)
     {
         Result<void> check { this->gate() };
         if (!check.has_value())
         {
             return check;
         }
-        const _STD optional<CatalogFailure> failure { this->mapHttp(this->http_->put(this->fullUrl(path), body)) };
+        const ::std::optional<CatalogFailure> failure { this->mapHttp(this->http_->put(this->fullUrl(path), body)) };
         if (failure.has_value())
         {
-            return _STD unexpected(*failure);
+            return ::std::unexpected(*failure);
         }
         return {};
     }
 
-    _NODISCARD Result<void> CatalogTransport::del(const _STD string& path)
+    [[nodiscard]] Result<void> CatalogTransport::del(const ::std::string& path)
     {
         Result<void> check { this->gate() };
         if (!check.has_value())
         {
             return check;
         }
-        const _STD optional<CatalogFailure> failure { this->mapHttp(this->http_->del(this->fullUrl(path))) };
+        const ::std::optional<CatalogFailure> failure { this->mapHttp(this->http_->del(this->fullUrl(path))) };
         if (failure.has_value())
         {
-            return _STD unexpected(*failure);
+            return ::std::unexpected(*failure);
         }
         return {};
     }

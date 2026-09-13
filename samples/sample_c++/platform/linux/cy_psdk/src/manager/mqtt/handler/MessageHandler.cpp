@@ -12,19 +12,19 @@ namespace plane::manager
         return instance;
     }
 
-    void MqttMessageHandler::registerHandler(_STD string_view topic, _STD string_view messageType, LogicHandler handler) noexcept
+    void MqttMessageHandler::registerHandler(::std::string_view topic, ::std::string_view messageType, LogicHandler handler) noexcept
     {
-        // operator[] 不支持异构查找, 显式转为 _STD string 键 (避免 string_view 悬垂)
-        _STD lock_guard<_STD mutex>                                                   lock(this->handler_mutex_);
-        this->handler_map_[_STD string { topic }][_STD string { messageType }] = _STD move(handler);
+        // operator[] 不支持异构查找, 显式转为 ::std::string 键 (避免 string_view 悬垂)
+        ::std::lock_guard<::std::mutex> lock(this->handler_mutex_);
+        this->handler_map_[::std::string { topic }][::std::string { messageType }] = ::std::move(handler);
         LOG_DEBUG("为主题 '{}', 消息类型 '{}' 注册了处理器", topic, messageType);
     }
 
-    void MqttMessageHandler::routeMessage(_STD string_view topic, _STD string_view messageType, const n_json& payloadJson) noexcept
+    void MqttMessageHandler::routeMessage(::std::string_view topic, ::std::string_view messageType, const n_json& payloadJson) noexcept
     {
         try
         {
-            _STD lock_guard<_STD mutex> lock(this->handler_mutex_);
+            ::std::lock_guard<::std::mutex> lock(this->handler_mutex_);
             if (auto topic_it { this->handler_map_.find(topic) }; topic_it != this->handler_map_.end())
             {
                 if (auto type_it { topic_it->second.find(messageType) }; type_it != topic_it->second.end())
@@ -42,7 +42,7 @@ namespace plane::manager
                 LOG_WARN("收到未注册主题 '{}' 的消息", topic);
             }
         }
-        catch (const _STD exception& e)
+        catch (const ::std::exception& e)
         {
             LOG_ERROR("处理 MQTT 业务逻辑时发生错误 (topic: {}, type: {}): {}", topic, messageType, e.what());
         }

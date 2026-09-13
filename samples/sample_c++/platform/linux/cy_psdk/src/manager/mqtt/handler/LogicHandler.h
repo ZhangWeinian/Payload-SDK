@@ -8,7 +8,7 @@
 
 namespace plane::manager
 {
-    using n_json = _NLOHMANN_JSON json;
+    using n_json = ::nlohmann::json;
 
     class LogicHandler
     {
@@ -37,6 +37,6 @@ namespace plane::manager
         LogicHandler& operator=(const LogicHandler&) noexcept = delete;
 
         template<typename PayloadType, typename Func>
-        void handleCommand(_STD string_view commandName, const n_json& payloadJson, Func&& handler);
+        void handleCommand(::std::string_view commandName, const n_json& payloadJson, Func&& handler);
     };
 } // namespace plane::manager

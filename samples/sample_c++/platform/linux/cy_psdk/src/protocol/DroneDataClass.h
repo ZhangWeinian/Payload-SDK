@@ -13,7 +13,7 @@
 
 namespace plane::protocol
 {
-    using n_json = _NLOHMANN_JSON json;
+    using n_json = ::nlohmann::json;
 
     enum class MissionExecutionStatus: int
     {
@@ -103,23 +103,23 @@ namespace plane::protocol
 
     struct WaypointPayload
     {
-        _STD optional<_STD string> RWID {}; // 任务 ID
-        _STD vector<Waypoint> HDJ {};       // 航点集
+        ::std::optional<::std::string> RWID {}; // 任务 ID
+        ::std::vector<Waypoint>        HDJ {};  // 航点集
     };
 
     struct MissionProgressPayload
     {
-        _STD optional<_STD string> RWID {}; // 任务 ID
-        _STD optional<int> DQHD {};         // 当前航点
-        _STD optional<int> ZHD {};          // 总航点
-        _STD optional<int> JD {};           // 进度
-        _STD optional<int> ZT {};           // 状态
+        ::std::optional<::std::string> RWID {}; // 任务 ID
+        ::std::optional<int>           DQHD {}; // 当前航点
+        ::std::optional<int>           ZHD {};  // 总航点
+        ::std::optional<int>           JD {};   // 进度
+        ::std::optional<int>           ZT {};   // 状态
     };
 
     struct MissionControlPayload
     {
-        _STD string RWID {}; // 任务 ID
-        _STD string RWDZ {}; // 任务动作
+        ::std::string RWID {}; // 任务 ID
+        ::std::string RWDZ {}; // 任务动作
     };
 
     struct LandingPayload
@@ -130,19 +130,19 @@ namespace plane::protocol
 
     struct TakeoffPayload
     {
-        _STD optional<double> MBWD {};      // 目标纬度
-        _STD optional<double> MBJD {};      // 目标经度
-        _STD optional<double> MBGD {};      // 目标高度
-        _STD optional<double> AQQFGD {};    // 安全起飞高度
-        _STD optional<int> FHMS {};         // 返航模式
-        _STD optional<int> FHGD {};         // 返航高度
-        _STD optional<int> SKDZ {};         // 失控动作
-        _STD optional<int> ZDSKDZ {};       // 指点失控动作
-        _STD optional<int> ZDFYMS {};       // 指点飞跃模式
-        _STD optional<int> ZDFYGD {};       // 指点飞跃高度
-        _STD optional<_STD string> RWID {}; // 任务 ID
-        _STD optional<int> ZDMSD {};        // 最大速度
-        _STD optional<int> AQJC {};         // 安全检查
+        ::std::optional<double>        MBWD {};   // 目标纬度
+        ::std::optional<double>        MBJD {};   // 目标经度
+        ::std::optional<double>        MBGD {};   // 目标高度
+        ::std::optional<double>        AQQFGD {}; // 安全起飞高度
+        ::std::optional<int>           FHMS {};   // 返航模式
+        ::std::optional<int>           FHGD {};   // 返航高度
+        ::std::optional<int>           SKDZ {};   // 失控动作
+        ::std::optional<int>           ZDSKDZ {}; // 指点失控动作
+        ::std::optional<int>           ZDFYMS {}; // 指点飞跃模式
+        ::std::optional<int>           ZDFYGD {}; // 指点飞跃高度
+        ::std::optional<::std::string> RWID {};   // 任务 ID
+        ::std::optional<int>           ZDMSD {};  // 最大速度
+        ::std::optional<int>           AQJC {};   // 安全检查
     };
 
     struct FlyToPoint
@@ -154,15 +154,15 @@ namespace plane::protocol
 
     struct FlyToPayload
     {
-        _STD optional<_STD string> FXMBID {}; // 飞行目标 ID
-        _STD optional<double> ZDMSD {};       // 最大速度
-        _STD vector<FlyToPoint> MBDS {};      // 目标点坐标集合
+        ::std::optional<::std::string> FXMBID {}; // 飞行目标 ID
+        ::std::optional<double>        ZDMSD {};  // 最大速度
+        ::std::vector<FlyToPoint>      MBDS {};   // 目标点坐标集合
     };
 
     struct UpdateFlyToPayload
     {
-        _STD optional<double> ZDMSD;    // 最大速度
-        _STD vector<FlyToPoint> GXMBDS; // 需要更新的航点坐标集合
+        ::std::optional<double>   ZDMSD;  // 最大速度
+        ::std::vector<FlyToPoint> GXMBDS; // 需要更新的航点坐标集合
     };
 
     struct TargetCoordinate
@@ -182,15 +182,15 @@ namespace plane::protocol
 
     struct ControlStrategyPayload
     {
-        _STD optional<int> YTJSCL {}; // 云台转身策略
+        ::std::optional<int> YTJSCL {}; // 云台转身策略
     };
 
     struct SmartFollowPayload
     {
-        _STD string MBLX {};                     // 目标类型
-        _STD optional<TargetCoordinate> MBWZ {}; // 目标位置
-        _STD optional<int> MBSY {};              // 目标索引
-        _STD optional<TargetRectangle> MBJX {};  // 目标矩形
+        ::std::string                     MBLX {}; // 目标类型
+        ::std::optional<TargetCoordinate> MBWZ {}; // 目标位置
+        ::std::optional<int>              MBSY {}; // 目标索引
+        ::std::optional<TargetRectangle>  MBJX {}; // 目标矩形
     };
 
     struct CircleFlyPayload
@@ -212,9 +212,9 @@ namespace plane::protocol
 
     struct ZoomControlPayload
     {
-        _STD optional<_STD string> XJSY {}; // 相机索引
-        _STD optional<_STD string> XJLX {}; // 相机类型
-        _STD optional<double> BJB {};       // 变焦倍数
+        ::std::optional<::std::string> XJSY {}; // 相机索引
+        ::std::optional<::std::string> XJLX {}; // 相机类型
+        ::std::optional<double>        BJB {};  // 变焦倍数
     };
 
     struct StickDataPayload
@@ -247,12 +247,12 @@ namespace plane::protocol
     template<typename T>
     struct NetworkMessage
     {
-        _STD string ZBID {};                // 装备 ID
-        _STD string XXID {};                // 消息 ID
-        _STD string XXLX {};                // 消息类型
-        int64_t     SJC {};                 // 时间戳 (毫秒)
-        _STD optional<_STD string> SBSJ {}; // 上报时间
-        _STD optional<T> XXXX {};           // 消息信息
+        ::std::string                  ZBID {}; // 装备 ID
+        ::std::string                  XXID {}; // 消息 ID
+        ::std::string                  XXLX {}; // 消息类型
+        int64_t                        SJC {};  // 时间戳 (毫秒)
+        ::std::optional<::std::string> SBSJ {}; // 上报时间
+        ::std::optional<T>             XXXX {}; // 消息信息
     };
 
     template<typename T>
@@ -285,7 +285,7 @@ namespace plane::protocol
 
         if (j.contains("SBSJ"))
         {
-            msg.SBSJ = j.at("SBSJ").get<_STD string>();
+            msg.SBSJ = j.at("SBSJ").get<::std::string>();
         }
         if (j.contains("XXXX"))
         {

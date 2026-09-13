@@ -49,7 +49,7 @@ namespace
     using plane::catalog::internal::ServiceGateway;
     using plane::catalog::internal::UdpAnnouncementListener;
 
-    using Clock = _STD_CHRONO steady_clock;
+    using Clock = ::std::chrono::steady_clock;
 
     // ---- 注入测试替身 ----
 
@@ -57,42 +57,42 @@ namespace
     {
     public:
         // handler: (method, url, body) -> response; 为空时统一返回 200 {"id":"test-instance"}
-        _STD function<HttpResponseData(const _STD string&, const _STD string&, const _STD string&)> handler {};
+        ::std::function<HttpResponseData(const ::std::string&, const ::std::string&, const ::std::string&)> handler {};
 
-        HttpResponseData                                                                            get(const _STD string& url) override
+        HttpResponseData get(const ::std::string& url) override
         {
             return this->dispatch("GET", url, "");
         }
 
-        HttpResponseData post(const _STD string& url, const _STD string& body) override
+        HttpResponseData post(const ::std::string& url, const ::std::string& body) override
         {
             return this->dispatch("POST", url, body);
         }
 
-        HttpResponseData put(const _STD string& url, const _STD string& body) override
+        HttpResponseData put(const ::std::string& url, const ::std::string& body) override
         {
             return this->dispatch("PUT", url, body);
         }
 
-        HttpResponseData del(const _STD string& url) override
+        HttpResponseData del(const ::std::string& url) override
         {
             return this->dispatch("DELETE", url, "");
         }
 
-        void                   setTimeout(_STD_CHRONO milliseconds) override {}
+        void                        setTimeout(::std::chrono::milliseconds) override {}
 
-        _NODISCARD _STD size_t calls(void) const
+        [[nodiscard]] ::std::size_t calls(void) const
         {
-            _STD lock_guard<_STD mutex> lock { this->mutex };
+            ::std::lock_guard<::std::mutex> lock { this->mutex };
             return this->count;
         }
 
-        _NODISCARD bool sawCall(const _STD string& method, const _STD string& url_fragment) const
+        [[nodiscard]] bool sawCall(const ::std::string& method, const ::std::string& url_fragment) const
         {
-            _STD lock_guard<_STD mutex> lock { this->mutex };
+            ::std::lock_guard<::std::mutex> lock { this->mutex };
             for (const auto& call : this->log)
             {
-                if (call.rfind(method + " ", 0) == 0 && call.find(url_fragment) != _STD string::npos)
+                if (call.rfind(method + " ", 0) == 0 && call.find(url_fragment) != ::std::string::npos)
                 {
                     return true;
                 }
@@ -101,10 +101,10 @@ namespace
         }
 
     private:
-        HttpResponseData dispatch(const _STD string& method, const _STD string& url, const _STD string& body)
+        HttpResponseData dispatch(const ::std::string& method, const ::std::string& url, const ::std::string& body)
         {
             {
-                _STD lock_guard<_STD mutex> lock { this->mutex };
+                ::std::lock_guard<::std::mutex> lock { this->mutex };
                 ++this->count;
                 this->log.push_back(method + " " + url);
             }
@@ -115,7 +115,7 @@ namespace
             return okJson(R"({"id":"test-instance"})");
         }
 
-        static HttpResponseData okJson(const _STD string& body)
+        static HttpResponseData okJson(const ::std::string& body)
         {
             HttpResponseData response {};
             response.transport_ok = true;
@@ -124,15 +124,15 @@ namespace
             return response;
         }
 
-        mutable _STD mutex mutex {};
-        _STD size_t        count { 0 };
-        _STD vector<_STD string> log {};
+        mutable ::std::mutex         mutex {};
+        ::std::size_t                count { 0 };
+        ::std::vector<::std::string> log {};
     };
 
     class FakeDiscoveryClient final: public DiscoveryClient
     {
     public:
-        DiscoveryReport discover(const DiscoveryConfig&, const _STD atomic<bool>&) override
+        DiscoveryReport discover(const DiscoveryConfig&, const ::std::atomic<bool>&) override
         {
             DiscoveryReport report {};
             report.status = DiscoveryStatus::OK;
@@ -140,12 +140,12 @@ namespace
             return report;
         }
 
-        void            saveSuccessfulIp(const _STD string&) override {}
+        void            saveSuccessfulIp(const ::std::string&) override {}
 
         CatalogEndpoint endpoint {};
     };
 
-    _NODISCARD bool waitForState(const CatalogRuntime& runtime, CatalogState expected, _STD_CHRONO milliseconds timeout)
+    [[nodiscard]] bool waitForState(const CatalogRuntime& runtime, CatalogState expected, ::std::chrono::milliseconds timeout)
     {
         const auto deadline { Clock::now() + timeout };
         while (Clock::now() < deadline)
@@ -154,24 +154,24 @@ namespace
             {
                 return true;
             }
-            _STD this_thread::sleep_for(_STD_CHRONO milliseconds { 10 });
+            ::std::this_thread::sleep_for(::std::chrono::milliseconds { 10 });
         }
         return runtime.state() == expected;
     }
 
     struct RuntimeDeps
     {
-        _STD unique_ptr<FakeHttpTransport> transport {};
-        FakeHttpTransport*                 transport_raw { nullptr };
-        _STD unique_ptr<FakeDiscoveryClient> discovery {};
+        ::std::unique_ptr<FakeHttpTransport>   transport {};
+        FakeHttpTransport*                     transport_raw { nullptr };
+        ::std::unique_ptr<FakeDiscoveryClient> discovery {};
     };
 
-    _NODISCARD RuntimeDeps makeDeps(void)
+    [[nodiscard]] RuntimeDeps makeDeps(void)
     {
-        RuntimeDeps           deps {};
-        deps.transport                       = _STD make_unique<FakeHttpTransport>();
+        RuntimeDeps deps {};
+        deps.transport                       = ::std::make_unique<FakeHttpTransport>();
         deps.transport_raw                   = deps.transport.get();
-        deps.discovery                       = _STD make_unique<FakeDiscoveryClient>();
+        deps.discovery                       = ::std::make_unique<FakeDiscoveryClient>();
         deps.discovery->endpoint.instance_id = "catalog-1";
         deps.discovery->endpoint.ip          = "127.0.0.1";
         deps.discovery->endpoint.http_port   = 18'081;
@@ -196,28 +196,28 @@ TEST(CatalogRuntimeInjection, UsesInjectedTransportAndReachesReady)
     discovery_config.port    = 30'906;
     discovery_config.targets = { "127.0.0.1" };
 
-    CatalogRuntime runtime { options, discovery_config, _STD move(deps.transport), _STD move(deps.discovery) };
+    CatalogRuntime runtime { options, discovery_config, ::std::move(deps.transport), ::std::move(deps.discovery) };
 
     ASSERT_TRUE(runtime.start().has_value());
     ASSERT_TRUE(runtime.registerServiceInstance().has_value());
-    ASSERT_TRUE(waitForState(runtime, CatalogState::READY, _STD_CHRONO seconds(3)));
+    ASSERT_TRUE(waitForState(runtime, CatalogState::READY, ::std::chrono::seconds(3)));
 
     // 注入的 transport 必须真实收到注册请求 (回归: 注入不被丢弃)
     EXPECT_TRUE(deps.transport_raw->sawCall("POST", "/api/registry/services"));
     EXPECT_GT(deps.transport_raw->calls(), 0u);
     EXPECT_EQ(runtime.instanceId(), "test-instance");
 
-    ASSERT_TRUE(runtime.stop(_STD_CHRONO seconds(1)).has_value());
+    ASSERT_TRUE(runtime.stop(::std::chrono::seconds(1)).has_value());
 }
 
 TEST(CatalogRuntimeInjection, IdempotentRegisterConflictIsAccepted)
 {
     auto deps { makeDeps() };
-    deps.transport_raw->handler = [](const _STD string& method, const _STD string& url, const _STD string&) -> HttpResponseData
+    deps.transport_raw->handler = [](const ::std::string& method, const ::std::string& url, const ::std::string&) -> HttpResponseData
     {
         HttpResponseData response {};
         response.transport_ok = true;
-        if (method == "POST" && url.find("/instances") != _STD string::npos && url.find("/heartbeat") == _STD string::npos)
+        if (method == "POST" && url.find("/instances") != ::std::string::npos && url.find("/heartbeat") == ::std::string::npos)
         {
             // 服务端幂等: 409 且携带 id -> 视为注册成功
             response.status = 409;
@@ -239,27 +239,27 @@ TEST(CatalogRuntimeInjection, IdempotentRegisterConflictIsAccepted)
     discovery_config.port    = 30'906;
     discovery_config.targets = { "127.0.0.1" };
 
-    CatalogRuntime runtime { options, discovery_config, _STD move(deps.transport), _STD move(deps.discovery) };
+    CatalogRuntime runtime { options, discovery_config, ::std::move(deps.transport), ::std::move(deps.discovery) };
 
     ASSERT_TRUE(runtime.start().has_value());
     ASSERT_TRUE(runtime.registerServiceInstance().has_value());
-    ASSERT_TRUE(waitForState(runtime, CatalogState::READY, _STD_CHRONO seconds(3)));
+    ASSERT_TRUE(waitForState(runtime, CatalogState::READY, ::std::chrono::seconds(3)));
     EXPECT_EQ(runtime.instanceId(), "existing-instance");
 
-    ASSERT_TRUE(runtime.stop(_STD_CHRONO seconds(1)).has_value());
+    ASSERT_TRUE(runtime.stop(::std::chrono::seconds(1)).has_value());
 }
 
 // ---- ServiceGateway ----
 
 TEST(CatalogServiceGateway, ResolveFiltersUnhealthyAndDisabled)
 {
-    auto transport { _STD make_unique<FakeHttpTransport>() };
-    transport->handler = [](const _STD string&, const _STD string& url, const _STD string&) -> HttpResponseData
+    auto transport { ::std::make_unique<FakeHttpTransport>() };
+    transport->handler = [](const ::std::string&, const ::std::string& url, const ::std::string&) -> HttpResponseData
     {
         HttpResponseData response {};
         response.transport_ok = true;
         response.status       = 200;
-        if (url.find("healthyOnly=true") != _STD string::npos)
+        if (url.find("healthyOnly=true") != ::std::string::npos)
         {
             response.body = R"([
 				{"id":"i1","ip":"10.0.0.1","healthy":true,"enabled":true,"endpoints":[{"name":"http","protocol":"http","port":8080}]},
@@ -274,7 +274,7 @@ TEST(CatalogServiceGateway, ResolveFiltersUnhealthyAndDisabled)
         return response;
     };
 
-    ServiceGateway gateway { "http://127.0.0.1:18081", _STD move(transport), _STD_CHRONO milliseconds { 500 } };
+    ServiceGateway gateway { "http://127.0.0.1:18081", ::std::move(transport), ::std::chrono::milliseconds { 500 } };
 
     ServiceQuery   query {};
     query.service_id = "svc-a";
@@ -286,8 +286,8 @@ TEST(CatalogServiceGateway, ResolveFiltersUnhealthyAndDisabled)
 
 TEST(CatalogServiceGateway, InstanceStatusHealthyIsCaseInsensitive)
 {
-    auto transport { _STD make_unique<FakeHttpTransport>() };
-    transport->handler = [](const _STD string&, const _STD string&, const _STD string&) -> HttpResponseData
+    auto transport { ::std::make_unique<FakeHttpTransport>() };
+    transport->handler = [](const ::std::string&, const ::std::string&, const ::std::string&) -> HttpResponseData
     {
         HttpResponseData response {};
         response.transport_ok = true;
@@ -296,7 +296,7 @@ TEST(CatalogServiceGateway, InstanceStatusHealthyIsCaseInsensitive)
         return response;
     };
 
-    ServiceGateway gateway { "http://127.0.0.1:18081", _STD move(transport), _STD_CHRONO milliseconds { 500 } };
+    ServiceGateway gateway { "http://127.0.0.1:18081", ::std::move(transport), ::std::chrono::milliseconds { 500 } };
 
     const auto     result { gateway.getInstanceStatus("public", "DEFAULT_GROUP", "svc-a", "i1") };
     ASSERT_TRUE(result.has_value());
@@ -310,16 +310,16 @@ TEST(CatalogAnnouncementListener, ReceivesLoopbackAnnouncement)
     // 选一个空闲 UDP 端口 (绑 0 获取后立即释放, 小竞态可接受)
     int port { 0 };
     {
-        _ASIO io_context io {};
-        _ASIO ip::udp::socket probe { io };
-        probe.open(_ASIO ip::udp::v4());
-        probe.bind(_ASIO ip::udp::endpoint { _ASIO ip::udp::v4(), 0 });
+        ::asio::io_context      io {};
+        ::asio::ip::udp::socket probe { io };
+        probe.open(::asio::ip::udp::v4());
+        probe.bind(::asio::ip::udp::endpoint { ::asio::ip::udp::v4(), 0 });
         port = probe.local_endpoint().port();
         probe.close();
     }
 
-    _STD mutex                          mutex {};
-    _STD condition_variable             cv {};
+    ::std::mutex                        mutex {};
+    ::std::condition_variable           cv {};
     bool                                got { false };
     plane::catalog::CatalogAnnouncement announcement {};
 
@@ -327,7 +327,7 @@ TEST(CatalogAnnouncementListener, ReceivesLoopbackAnnouncement)
                                                    "127.0.0.1",
                                                    [&](const plane::catalog::CatalogAnnouncement& value)
                                                    {
-                                           _STD lock_guard<_STD mutex> lock { mutex };
+                                           ::std::lock_guard<::std::mutex> lock { mutex };
                                            announcement = value;
                                            got          = true;
                                            cv.notify_all();
@@ -336,9 +336,9 @@ TEST(CatalogAnnouncementListener, ReceivesLoopbackAnnouncement)
 
     // 发送一个 command=0x82 公告包
     {
-        _ASIO io_context io {};
-        _ASIO ip::udp::socket sender { io };
-        sender.open(_ASIO ip::udp::v4());
+        ::asio::io_context      io {};
+        ::asio::ip::udp::socket sender { io };
+        sender.open(::asio::ip::udp::v4());
 
         plane::catalog::internal::ProbePacket packet {};
         packet.command     = plane::catalog::internal::PROBE_ANNOUNCE_COMMAND;
@@ -349,15 +349,15 @@ TEST(CatalogAnnouncementListener, ReceivesLoopbackAnnouncement)
 
         const auto encoded { plane::catalog::internal::encodeProbePacket(packet) };
         ASSERT_TRUE(encoded.has_value());
-        const _ASIO ip::udp::endpoint target { _ASIO ip::make_address("127.0.0.1"), static_cast<unsigned short>(port) };
-        sender.send_to(_ASIO buffer(encoded.value()), target);
+        const ::asio::ip::udp::endpoint target { ::asio::ip::make_address("127.0.0.1"), static_cast<unsigned short>(port) };
+        sender.send_to(::asio::buffer(encoded.value()), target);
     }
 
     {
-        _STD unique_lock<_STD mutex> lock { mutex };
+        ::std::unique_lock<::std::mutex> lock { mutex };
         (void)cv.wait_for(
             lock,
-            _STD_CHRONO seconds(2),
+            ::std::chrono::seconds(2),
             [&]()
             {
                 return got;
@@ -378,17 +378,17 @@ TEST(CppHttpTransportTest, GetRoundTripAndQueryParsing)
 {
     using plane::catalog::internal::CppHttpTransport;
 
-    _HTTPLIB Server server {};
+    ::httplib::Server server {};
     server.Get(
         "/ping",
-        [](const _HTTPLIB Request&, _HTTPLIB Response& res)
+        [](const ::httplib::Request&, ::httplib::Response& res)
         {
             res.set_content("pong", "text/plain");
         }
     );
     server.Get(
         "/echo",
-        [](const _HTTPLIB Request& request, _HTTPLIB Response& res)
+        [](const ::httplib::Request& request, ::httplib::Response& res)
         {
             // 回显原始请求目标, 验证 path + query 拼接完整到达服务端
             res.set_content(request.target, "text/plain");
@@ -397,17 +397,17 @@ TEST(CppHttpTransportTest, GetRoundTripAndQueryParsing)
 
     const int port { server.bind_to_any_port("127.0.0.1") };
     ASSERT_GT(port, 0) << "无法绑定本地测试端口";
-    _STD thread server_thread { [&server]()
-                                {
-                                    (void)server.listen_after_bind();
-                                } };
+    ::std::thread server_thread { [&server]()
+                                  {
+                                      (void)server.listen_after_bind();
+                                  } };
     server.wait_until_ready();
 
     CppHttpTransport transport {};
-    transport.setTimeout(_STD_CHRONO milliseconds { 2000 });
+    transport.setTimeout(::std::chrono::milliseconds { 2000 });
 
-    const _STD string base { "http://127.0.0.1:" + _STD to_string(port) };
-    const auto        ping { transport.get(base + "/ping") };
+    const ::std::string base { "http://127.0.0.1:" + ::std::to_string(port) };
+    const auto          ping { transport.get(base + "/ping") };
     ASSERT_TRUE(ping.transport_ok) << ping.transport_error;
     EXPECT_EQ(ping.status, 200);
     EXPECT_EQ(ping.body, "pong");

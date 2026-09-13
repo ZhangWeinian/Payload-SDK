@@ -15,14 +15,14 @@ namespace plane::catalog::internal
         // URL 解析 (scheme/host/port/path 由 cpp-httplib 内部解析器得出)
         struct ParsedUrl
         {
-            bool        ok { false };
-            _STD string host {};
-            int         port { 80 };
-            _STD string path { "/" };
-            _STD string error {};
+            bool          ok { false };
+            ::std::string host {};
+            int           port { 80 };
+            ::std::string path { "/" };
+            ::std::string error {};
         };
 
-        _NODISCARD ParsedUrl parseUrl(const _STD string& url)
+        [[nodiscard]] ParsedUrl parseUrl(const ::std::string& url)
         {
             ParsedUrl parsed {};
             if (url.empty())
@@ -33,8 +33,8 @@ namespace plane::catalog::internal
 
             // 解析交给 cpp-httplib 内部解析器 (detail::parse_url): scheme/host/port/path/query。
             // 说明: Client 公共构造对无效输入会静默回退 localhost:80, 不足以判错, 故直接使用内部解析结果
-            _HTTPLIB detail::UrlComponents components {};
-            if (!_HTTPLIB detail::parse_url(url, components) || components.host.empty())
+            ::httplib::detail::UrlComponents components {};
+            if (!::httplib::detail::parse_url(url, components) || components.host.empty())
             {
                 parsed.error = "invalid URL";
                 return parsed;
@@ -49,8 +49,8 @@ namespace plane::catalog::internal
             int port { 80 };
             if (!components.port.empty())
             {
-                const auto result { _STD from_chars(components.port.data(), components.port.data() + components.port.size(), port) };
-                if (result.ec != _STD errc {} || result.ptr != components.port.data() + components.port.size() || port <= 0 || port > 65'535)
+                const auto result { ::std::from_chars(components.port.data(), components.port.data() + components.port.size(), port) };
+                if (result.ec != ::std::errc {} || result.ptr != components.port.data() + components.port.size() || port <= 0 || port > 65'535)
                 {
                     parsed.error = "invalid URL port";
                     return parsed;
@@ -66,33 +66,33 @@ namespace plane::catalog::internal
         }
     } // namespace
 
-    HttpResponseData CppHttpTransport::get(const _STD string& url)
+    HttpResponseData CppHttpTransport::get(const ::std::string& url)
     {
         return this->sendRequest(0, url, "");
     }
 
-    HttpResponseData CppHttpTransport::post(const _STD string& url, const _STD string& body)
+    HttpResponseData CppHttpTransport::post(const ::std::string& url, const ::std::string& body)
     {
         return this->sendRequest(1, url, body);
     }
 
-    HttpResponseData CppHttpTransport::put(const _STD string& url, const _STD string& body)
+    HttpResponseData CppHttpTransport::put(const ::std::string& url, const ::std::string& body)
     {
         return this->sendRequest(2, url, body);
     }
 
-    HttpResponseData CppHttpTransport::del(const _STD string& url)
+    HttpResponseData CppHttpTransport::del(const ::std::string& url)
     {
         return this->sendRequest(3, url, "");
     }
 
-    void CppHttpTransport::setTimeout(_STD_CHRONO milliseconds timeout)
+    void CppHttpTransport::setTimeout(::std::chrono::milliseconds timeout)
     {
         const auto value { timeout.count() > 0 ? timeout.count() : 1ll };
-        this->timeout_ms_.store(value, _STD memory_order_release);
+        this->timeout_ms_.store(value, ::std::memory_order_release);
     }
 
-    HttpResponseData CppHttpTransport::sendRequest(int method, const _STD string& url, const _STD string& body)
+    HttpResponseData CppHttpTransport::sendRequest(int method, const ::std::string& url, const ::std::string& body)
     {
         HttpResponseData response {};
 
@@ -103,15 +103,15 @@ namespace plane::catalog::internal
             return response;
         }
 
-        const long long timeout_ms { this->timeout_ms_.load(_STD memory_order_acquire) };
+        const long long timeout_ms { this->timeout_ms_.load(::std::memory_order_acquire) };
 
         // 每个请求使用临时 client: 线程安全且不共享连接状态
-        _HTTPLIB Client client { parsed.host, parsed.port };
-        client.set_connection_timeout(_STD_CHRONO milliseconds { timeout_ms });
-        client.set_read_timeout(_STD_CHRONO milliseconds { timeout_ms });
-        client.set_write_timeout(_STD_CHRONO milliseconds { timeout_ms });
+        ::httplib::Client client { parsed.host, parsed.port };
+        client.set_connection_timeout(::std::chrono::milliseconds { timeout_ms });
+        client.set_read_timeout(::std::chrono::milliseconds { timeout_ms });
+        client.set_write_timeout(::std::chrono::milliseconds { timeout_ms });
 
-        _HTTPLIB Result result {};
+        ::httplib::Result result {};
         switch (method)
         {
             case 0:
@@ -131,9 +131,9 @@ namespace plane::catalog::internal
                 return response;
         }
 
-        if (result.error() != _HTTPLIB Error::Success)
+        if (result.error() != ::httplib::Error::Success)
         {
-            response.transport_error = _HTTPLIB to_string(result.error());
+            response.transport_error = ::httplib::to_string(result.error());
             return response;
         }
 

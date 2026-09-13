@@ -124,7 +124,7 @@ for entry in entries:
 with open(dst, "w") as fh:
     json.dump(entries, fh, indent=1)
 PY
-	echo "已净化交叉编译数据库: ${TIDY_DB_DIR}/compile_commands.json"
+	echo "已净化交叉编译数据库: ${TIDY_DB_DIR}/compile_commands.json" >&2
 fi
 
 # 从编译数据库提取自有代码翻译单元 (排除 vendor/samples/vcpkg)
@@ -156,13 +156,13 @@ if [[ ${#FILES[@]} -eq 0 ]]; then
 	exit 1
 fi
 
-echo "==========================================="
-echo "clang-tidy 静态分析"
-echo "  目标架构 : ${TARGET}"
-echo "  构建目录 : ${BUILD_DIR}"
-echo "  文件数量 : ${#FILES[@]}"
-echo "  fix 模式 : ${FIX}"
-echo "==========================================="
+echo "===========================================" >&2
+echo "clang-tidy 静态分析" >&2
+echo "  目标架构 : ${TARGET}" >&2
+echo "  构建目录 : ${BUILD_DIR}" >&2
+echo "  文件数量 : ${#FILES[@]}" >&2
+echo "  fix 模式 : ${FIX}" >&2
+echo "===========================================" >&2
 
 if [[ ${LIST_ONLY} -eq 1 ]]; then
 	printf '%s\n' "${FILES[@]}"

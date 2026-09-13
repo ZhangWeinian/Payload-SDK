@@ -71,14 +71,14 @@
         {
             "name": "tsan",
             "displayName": "Debug (x86_64-linux, Clang + TSan)",
-            "description": "ThreadSanitizer 数据竞争检测 (与 ASan 互斥, 独立目录); 面向采集/命令/MQTT/WS 多线程流水线",
+            "description": "ThreadSanitizer 数据竞争检测 (与 ASan 互斥); 附加 -UCPPHTTPLIB_USE_NON_BLOCKING_GETADDRINFO: glibc 异步 DNS 内部线程未经 TSan 注册会导致分配器崩溃",
             "inherits": "x86-clang",
             "binaryDir": "${sourceDir}/build/x86_64-linux/tsan",
             "installDir": "${sourceDir}/install/x86_64-linux/tsan",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=thread -fno-sanitize-recover=all",
-                "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=thread -fno-sanitize-recover=all",
+                "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=thread -fno-sanitize-recover=all -UCPPHTTPLIB_USE_NON_BLOCKING_GETADDRINFO",
+                "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=thread -fno-sanitize-recover=all -UCPPHTTPLIB_USE_NON_BLOCKING_GETADDRINFO",
                 "BUILD_TESTING": "ON"
             }
         },

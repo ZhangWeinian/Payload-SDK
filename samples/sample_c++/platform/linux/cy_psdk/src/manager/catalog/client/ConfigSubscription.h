@@ -17,21 +17,21 @@ namespace plane::catalog
     public:
         ConfigSubscription(void) noexcept = default;
 
-        explicit ConfigSubscription(_STD function<void()> cancel): cancel_(_STD move(cancel)) {}
+        explicit ConfigSubscription(::std::function<void()> cancel): cancel_(::std::move(cancel)) {}
 
         ~ConfigSubscription(void)
         {
             this->cancel();
         }
 
-        ConfigSubscription(ConfigSubscription&& other) noexcept: cancel_(_STD move(other.cancel_)) {}
+        ConfigSubscription(ConfigSubscription&& other) noexcept: cancel_(::std::move(other.cancel_)) {}
 
         ConfigSubscription& operator=(ConfigSubscription&& other) noexcept
         {
             if (this != &other)
             {
                 this->cancel();
-                this->cancel_ = _STD move(other.cancel_);
+                this->cancel_ = ::std::move(other.cancel_);
             }
             return *this;
         }
@@ -46,17 +46,17 @@ namespace plane::catalog
             {
                 return;
             }
-            _STD function<void()> action {};
+            ::std::function<void()> action {};
             action.swap(this->cancel_);
             action();
         }
 
-        _NODISCARD bool valid(void) const noexcept
+        [[nodiscard]] bool valid(void) const noexcept
         {
             return static_cast<bool>(this->cancel_);
         }
 
     private:
-        _STD function<void()> cancel_ {};
+        ::std::function<void()> cancel_ {};
     };
 } // namespace plane::catalog

@@ -20,18 +20,18 @@ namespace
 
     TEST(EventManagerTest, SystemEventsDispatchWithData)
     {
-        auto&       event_manager { EventManager::getInstance() };
-        auto&       dispatcher { event_manager.getSystemDispatcher() };
+        auto&                                                    event_manager { EventManager::getInstance() };
+        auto&                                                    dispatcher { event_manager.getSystemDispatcher() };
 
-        _STD string broker_url {};
-        int         heartbeat_count { 0 };
+        ::std::string                                            broker_url {};
+        int                                                      heartbeat_count { 0 };
 
-        _EVENTPP ScopedRemover<EventManager::SystemDispatcher> remover { dispatcher };
+        ::eventpp::ScopedRemover<EventManager::SystemDispatcher> remover { dispatcher };
         remover.appendListener(
             EventManager::SystemEvent::MqttBrokerUpdated,
             [&broker_url](const EventManager::SystemEventData& data)
             {
-                if (const auto* url { _STD get_if<_STD string>(&data) })
+                if (const auto* url { ::std::get_if<::std::string>(&data) })
                 {
                     broker_url = *url;
                 }
@@ -45,7 +45,7 @@ namespace
             }
         );
 
-        event_manager.publishSystemEvent(EventManager::SystemEvent::MqttBrokerUpdated, _STD string { "tcp://10.1.2.3:1883" });
+        event_manager.publishSystemEvent(EventManager::SystemEvent::MqttBrokerUpdated, ::std::string { "tcp://10.1.2.3:1883" });
         EXPECT_EQ(broker_url, "tcp://10.1.2.3:1883");
 
         event_manager.publishSystemEvent(EventManager::SystemEvent::HeartbeatTick);

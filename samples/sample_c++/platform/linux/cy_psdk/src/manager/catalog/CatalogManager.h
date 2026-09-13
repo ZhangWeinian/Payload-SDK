@@ -40,23 +40,23 @@ namespace plane::manager
         void notifyTelemetryRunning(bool running) noexcept;
 
         // 目录是否已注册成功 (Ready)
-        _NODISCARD bool isCatalogReady(void) const noexcept
+        [[nodiscard]] bool isCatalogReady(void) const noexcept
         {
-            return this->catalog_ready_.load(_STD memory_order_acquire);
+            return this->catalog_ready_.load(::std::memory_order_acquire);
         }
 
         // 解析已注册业务服务的基础地址 (如 "swarm.service.base"), 返回 "scheme://ip:port"; 失败返回空串
-        _NODISCARD _STD string resolveServiceBaseUrl(const _STD string& service_id, const _STD string& protocol) noexcept;
+        [[nodiscard]] ::std::string resolveServiceBaseUrl(const ::std::string& service_id, const ::std::string& protocol) noexcept;
 
         // 目录服务端自身 IP (WebSocket 等直连场景使用); 未就绪/失败返回空串
-        _NODISCARD _STD string getCatalogServerIp(void) noexcept;
+        [[nodiscard]] ::std::string getCatalogServerIp(void) noexcept;
 
         // 目录最近一次解析到的中心 MQTT broker 地址; 未解析/已失联返回空串。
         // 广播事件为一次性 (服务可能晚于广播启动), 供 MQTT 服务启动/自检时兜底查询
-        _NODISCARD _STD string getMqttBrokerUrl(void) noexcept;
+        [[nodiscard]] ::std::string getMqttBrokerUrl(void) noexcept;
 
         // 绑定/昵称联动: 更新目录注册的 service_name (触发运行时重注册); 空串恢复默认名
-        void updateServiceName(const _STD string& service_name) noexcept;
+        void updateServiceName(const ::std::string& service_name) noexcept;
 
     private:
         CatalogManager(void) noexcept;
@@ -65,7 +65,7 @@ namespace plane::manager
         CatalogManager& operator=(const CatalogManager&) = delete;
 
         struct Impl;
-        _STD unique_ptr<Impl> impl_ {};
+        ::std::unique_ptr<Impl> impl_ {};
 
         // 后台线程入口: 发现/注册主循环
         void runLoop(void) noexcept;
@@ -77,19 +77,19 @@ namespace plane::manager
         bool trySwitchMqttBroker(void) noexcept;
 
         // 后台线程生命周期 (防止 start()/stop() 重入)
-        _STD atomic<bool> started_ { false };
-        _STD atomic<bool> running_ { false };
-        _STD thread       thread_ {};
+        ::std::atomic<bool> started_ { false };
+        ::std::atomic<bool> running_ { false };
+        ::std::thread       thread_ {};
 
         // 保护 impl_/运行时 跨线程访问 (resolveServiceBaseUrl/updateServiceName 可被业务线程调用)
-        mutable _STD mutex rt_mutex_ {};
+        mutable ::std::mutex rt_mutex_ {};
 
         // 组件状态 (状态上报用; 由启动链在相应服务就绪/停止时更新)
-        _STD atomic<bool> psdk_running_ { false };
-        _STD atomic<bool> heartbeat_running_ { false };
-        _STD atomic<bool> telemetry_running_ { false };
+        ::std::atomic<bool> psdk_running_ { false };
+        ::std::atomic<bool> heartbeat_running_ { false };
+        ::std::atomic<bool> telemetry_running_ { false };
 
         // 目录是否已注册成功 (Ready / RegistrationSucceeded)
-        _STD atomic<bool> catalog_ready_ { false };
+        ::std::atomic<bool> catalog_ready_ { false };
     };
 } // namespace plane::manager

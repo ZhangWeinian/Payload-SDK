@@ -21,7 +21,8 @@
 namespace plane::catalog::internal
 {
     // 探测包命令字
-    enum ProbeCommand: _STD uint8_t {
+    enum ProbeCommand: ::std::uint8_t
+    {
         PROBE_COMMAND          = 0X01, // 客户端探测请求
         PROBE_RESPONSE_COMMAND = 0X81, // 服务端响应
         PROBE_ANNOUNCE_COMMAND = 0X82  // 服务端主动广播公告
@@ -30,24 +31,24 @@ namespace plane::catalog::internal
     // 解码后的探测包内容 (对齐 java ProbePacket)
     struct ProbePacket
     {
-        int         command { 0 };
-        _STD string ip {};
-        _STD string node_id {};
-        int         status { 0 };
-        _STD string node_name {};
-        int         request_id { 0 };
-        bool        has_request_id { false };
-        _STD string instance_id {};
-        int         http_port { 0 };
+        int           command { 0 };
+        ::std::string ip {};
+        ::std::string node_id {};
+        int           status { 0 };
+        ::std::string node_name {};
+        int           request_id { 0 };
+        bool          has_request_id { false };
+        ::std::string instance_id {};
+        int           http_port { 0 };
     };
 
     // 编码探测请求包
-    _NODISCARD Result<_STD vector<_STD uint8_t>> encodeProbePacket(const ProbePacket& packet);
+    [[nodiscard]] Result<::std::vector<::std::uint8_t>> encodeProbePacket(const ProbePacket& packet);
 
     // 解码响应/公告包 (容忍旧服务端的变长布局)
-    _NODISCARD Result<ProbePacket> decodeProbePacket(const _STD vector<_STD uint8_t>& data);
+    [[nodiscard]] Result<ProbePacket> decodeProbePacket(const ::std::vector<::std::uint8_t>& data);
 
     // 解析主动公告包 (command=0x82)。非公告包返回 PROTOCOL_ERROR;
     // 公告包 ip 字段为空时由调用方回退为 UDP 源地址。
-    _NODISCARD Result<CatalogAnnouncement> decodeAnnouncement(const _STD vector<_STD uint8_t>& data);
+    [[nodiscard]] Result<CatalogAnnouncement> decodeAnnouncement(const ::std::vector<::std::uint8_t>& data);
 } // namespace plane::catalog::internal

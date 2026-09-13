@@ -19,7 +19,7 @@ namespace plane::manager
         {
             this->stop();
         }
-        catch (const _STD exception& e)
+        catch (const ::std::exception& e)
         {
             LOG_ERROR("心跳服务析构异常: {}", e.what());
         }
@@ -29,7 +29,7 @@ namespace plane::manager
         }
     }
 
-    bool Heartbeat::start(_STD_CHRONO milliseconds interval)
+    bool Heartbeat::start(::std::chrono::milliseconds interval)
     {
         if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))
         {
@@ -39,12 +39,12 @@ namespace plane::manager
 
         try
         {
-            this->heartbeat_thread_ = _STD thread(&Heartbeat::runLoop, this, interval);
-            const auto&                    frequency { 1000.0 / static_cast<double>(interval.count()) };
+            this->heartbeat_thread_ = ::std::thread(&Heartbeat::runLoop, this, interval);
+            const auto& frequency { 1000.0 / static_cast<double>(interval.count()) };
             LOG_INFO("心跳服务已启动，频率: {:.3f}Hz", frequency);
             return true;
         }
-        catch (const _STD exception& e)
+        catch (const ::std::exception& e)
         {
             LOG_ERROR("心跳服务启动失败，出现异常: {}", e.what());
             this->running_ = false;
@@ -72,14 +72,14 @@ namespace plane::manager
         LOG_INFO("心跳服务已停止");
     }
 
-    void Heartbeat::runLoop(_STD_CHRONO milliseconds interval)
+    void Heartbeat::runLoop(::std::chrono::milliseconds interval)
     {
-        auto next_wakeup_time { _STD_CHRONO steady_clock::now() };
+        auto next_wakeup_time { ::std::chrono::steady_clock::now() };
         while (this->running_)
         {
             next_wakeup_time += interval;
             plane::manager::EventManager::getInstance().publishSystemEvent(plane::manager::EventManager::SystemEvent::HeartbeatTick);
-            _STD this_thread::sleep_until(next_wakeup_time);
+            ::std::this_thread::sleep_until(next_wakeup_time);
         }
     }
 } // namespace plane::manager

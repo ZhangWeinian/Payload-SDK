@@ -14,43 +14,43 @@ namespace plane::catalog::internal
 {
     namespace
     {
-        constexpr _STD uint32_t MAGIC     = 0X53'57'4d'50; // "SWMP"
-        constexpr _STD uint8_t  VERSION   = 0X01;
-        constexpr _STD size_t   MAX_FIELD = 255;
+        constexpr ::std::uint32_t MAGIC     = 0X53'57'4d'50; // "SWMP"
+        constexpr ::std::uint8_t  VERSION   = 0X01;
+        constexpr ::std::size_t   MAX_FIELD = 255;
 
-        void                    appendBytes(_STD vector<_STD uint8_t>& out, const _STD string& value)
+        void                      appendBytes(::std::vector<::std::uint8_t>& out, const ::std::string& value)
         {
             if (value.size() > MAX_FIELD)
             {
-                throw _STD invalid_argument { "packet field exceeds 255 bytes" };
+                throw ::std::invalid_argument { "packet field exceeds 255 bytes" };
             }
-            out.push_back(static_cast<_STD uint8_t>(value.size()));
+            out.push_back(static_cast<::std::uint8_t>(value.size()));
             out.insert(out.end(), value.begin(), value.end());
         }
 
-        void appendU32(_STD vector<_STD uint8_t>& out, _STD uint32_t value)
+        void appendU32(::std::vector<::std::uint8_t>& out, ::std::uint32_t value)
         {
-            out.push_back(static_cast<_STD uint8_t>((value >> 24) & 0Xff));
-            out.push_back(static_cast<_STD uint8_t>((value >> 16) & 0Xff));
-            out.push_back(static_cast<_STD uint8_t>((value >> 8) & 0Xff));
-            out.push_back(static_cast<_STD uint8_t>(value & 0Xff));
+            out.push_back(static_cast<::std::uint8_t>((value >> 24u) & 0Xffu));
+            out.push_back(static_cast<::std::uint8_t>((value >> 16u) & 0Xffu));
+            out.push_back(static_cast<::std::uint8_t>((value >> 8u) & 0Xffu));
+            out.push_back(static_cast<::std::uint8_t>(value & 0Xffu));
         }
 
-        // 读取 1 字节长度前缀 + UTF-8 字段; 越界抛 _STD invalid_argument
-        _STD string readField(const _STD vector<_STD uint8_t>& data, _STD size_t& offset)
+        // 读取 1 字节长度前缀 + UTF-8 字段; 越界抛 ::std::invalid_argument
+        ::std::string readField(const ::std::vector<::std::uint8_t>& data, ::std::size_t& offset)
         {
             if (offset >= data.size())
             {
-                throw _STD invalid_argument { "missing field length" };
+                throw ::std::invalid_argument { "missing field length" };
             }
-            const _STD size_t length { data[offset++] };
+            const ::std::size_t length { data[offset++] };
             if (offset + length > data.size())
             {
-                throw _STD invalid_argument { "truncated packet field" };
+                throw ::std::invalid_argument { "truncated packet field" };
             }
-            _STD string value {};
+            ::std::string value {};
             value.resize(length);
-            for (_STD size_t index { 0 }; index < length; ++index)
+            for (::std::size_t index { 0 }; index < length; ++index)
             {
                 value[index] = static_cast<char>(data[offset + index]);
             }
@@ -59,63 +59,64 @@ namespace plane::catalog::internal
         }
     } // namespace
 
-    Result<_STD vector<_STD uint8_t>> encodeProbePacket(const ProbePacket& packet)
+    Result<::std::vector<::std::uint8_t>> encodeProbePacket(const ProbePacket& packet)
     {
-        _STD vector<_STD uint8_t> out {};
+        ::std::vector<::std::uint8_t> out {};
         try
         {
             appendU32(out, MAGIC);
             out.push_back(VERSION);
-            out.push_back(static_cast<_STD uint8_t>(packet.command));
+            out.push_back(static_cast<::std::uint8_t>(packet.command));
             appendBytes(out, packet.ip);
             appendBytes(out, packet.node_id);
-            out.push_back(static_cast<_STD uint8_t>(packet.status));
+            out.push_back(static_cast<::std::uint8_t>(packet.status));
             appendBytes(out, packet.node_name);
-            appendU32(out, static_cast<_STD uint32_t>(packet.request_id));
+            appendU32(out, static_cast<::std::uint32_t>(packet.request_id));
             appendBytes(out, packet.instance_id);
-            out.push_back(static_cast<_STD uint8_t>((packet.http_port >> 8) & 0Xff));
-            out.push_back(static_cast<_STD uint8_t>(packet.http_port & 0Xff));
+            out.push_back(static_cast<::std::uint8_t>((static_cast<::std::uint32_t>(packet.http_port) >> 8u) & 0Xffu));
+            out.push_back(static_cast<::std::uint8_t>(static_cast<::std::uint32_t>(packet.http_port) & 0Xffu));
             return out;
         }
-        catch (const _STD exception& ex)
+        catch (const ::std::exception& ex)
         {
-            return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what()));
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what()));
         }
     }
 
-    Result<ProbePacket> decodeProbePacket(const _STD vector<_STD uint8_t>& data)
+    Result<ProbePacket> decodeProbePacket(const ::std::vector<::std::uint8_t>& data)
     {
         if (data.size() < 8)
         {
-            return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "packet is too short"));
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "packet is too short"));
         }
         try
         {
-            _STD size_t offset { 0 };
-            auto readU32 = [&data, &offset]() -> _STD uint32_t
+            ::std::size_t offset { 0 };
+            auto          readU32 = [&data, &offset]() -> ::std::uint32_t
             {
                 if (offset + 4 > data.size())
                 {
-                    throw _STD invalid_argument { "truncated packet field" };
+                    throw ::std::invalid_argument { "truncated packet field" };
                 }
-                const _STD uint32_t value { (static_cast<_STD uint32_t>(data[offset]) << 24) |
-                                            (static_cast<_STD uint32_t>(data[offset + 1]) << 16) |
-                                            (static_cast<_STD uint32_t>(data[offset + 2]) << 8) | static_cast<_STD uint32_t>(data[offset + 3]) };
+                const ::std::uint32_t value { (static_cast<::std::uint32_t>(data[offset]) << 24u) |
+                                              (static_cast<::std::uint32_t>(data[offset + 1]) << 16u) |
+                                              (static_cast<::std::uint32_t>(data[offset + 2]) << 8u) |
+                                              static_cast<::std::uint32_t>(data[offset + 3]) };
                 offset += 4;
                 return value;
             };
 
             if (readU32() != MAGIC)
             {
-                return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "wrong packet magic"));
+                return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "wrong packet magic"));
             }
             if (offset >= data.size() || data[offset++] != VERSION)
             {
-                return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "wrong packet version"));
+                return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "wrong packet version"));
             }
             if (offset >= data.size())
             {
-                return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing packet command"));
+                return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing packet command"));
             }
             const int   command { data[offset++] };
 
@@ -125,7 +126,7 @@ namespace plane::catalog::internal
             packet.node_id = readField(data, offset);
             if (offset >= data.size())
             {
-                return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing packet status"));
+                return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing packet status"));
             }
             packet.status = data[offset++];
 
@@ -148,28 +149,29 @@ namespace plane::catalog::internal
             }
             if (offset + 2 <= data.size())
             {
-                packet.http_port = (static_cast<int>(data[offset]) << 8) | static_cast<int>(data[offset + 1]);
+                packet.http_port =
+                    static_cast<int>((static_cast<::std::uint32_t>(data[offset]) << 8u) | static_cast<::std::uint32_t>(data[offset + 1]));
             }
             return packet;
         }
-        catch (const _STD exception& ex)
+        catch (const ::std::exception& ex)
         {
-            return _STD unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what()));
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what()));
         }
     }
 
-    Result<CatalogAnnouncement> decodeAnnouncement(const _STD vector<_STD uint8_t>& data)
+    Result<CatalogAnnouncement> decodeAnnouncement(const ::std::vector<::std::uint8_t>& data)
     {
         Result<ProbePacket> decoded { decodeProbePacket(data) };
         if (!decoded.has_value())
         {
-            return _STD unexpected(decoded.error());
+            return ::std::unexpected(decoded.error());
         }
         const ProbePacket& packet { decoded.value() };
         if (packet.command != PROBE_ANNOUNCE_COMMAND)
         {
-            return _STD unexpected(
-                makeFailure(CatalogError::PROTOCOL_ERROR, _FMT format("not an announcement packet (command=0x{:x})", packet.command))
+            return ::std::unexpected(
+                makeFailure(CatalogError::PROTOCOL_ERROR, ::fmt::format("not an announcement packet (command=0x{:x})", packet.command))
             );
         }
         CatalogAnnouncement announcement {};

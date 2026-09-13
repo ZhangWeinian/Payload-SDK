@@ -20,18 +20,18 @@ namespace plane::catalog::internal
 
         void remember(const ConfigKey& key, const ConfigDocument& document)
         {
-            _STD lock_guard<_STD mutex> lock { this->mutex_ };
+            ::std::lock_guard<::std::mutex> lock { this->mutex_ };
             this->documents_[key] = document;
         }
 
         // 返回 from_cache=true 的缓存副本
-        _STD optional<ConfigDocument> cached(const ConfigKey& key) const
+        ::std::optional<ConfigDocument> cached(const ConfigKey& key) const
         {
-            _STD lock_guard<_STD mutex> lock { this->mutex_ };
-            const auto                  it { this->documents_.find(key) };
+            ::std::lock_guard<::std::mutex> lock { this->mutex_ };
+            const auto                      it { this->documents_.find(key) };
             if (it == this->documents_.end())
             {
-                return _STD nullopt;
+                return ::std::nullopt;
             }
             ConfigDocument document { it->second };
             document.from_cache = true;
@@ -39,19 +39,19 @@ namespace plane::catalog::internal
         }
 
         // 返回当前缓存 (不做 from_cache 标记)
-        _STD optional<ConfigDocument> current(const ConfigKey& key) const
+        ::std::optional<ConfigDocument> current(const ConfigKey& key) const
         {
-            _STD lock_guard<_STD mutex> lock { this->mutex_ };
-            const auto                  it { this->documents_.find(key) };
+            ::std::lock_guard<::std::mutex> lock { this->mutex_ };
+            const auto                      it { this->documents_.find(key) };
             if (it == this->documents_.end())
             {
-                return _STD nullopt;
+                return ::std::nullopt;
             }
             return it->second;
         }
 
     private:
-        mutable _STD mutex mutex_ {};
-        _STD map<ConfigKey, ConfigDocument> documents_ {};
+        mutable ::std::mutex                  mutex_ {};
+        ::std::map<ConfigKey, ConfigDocument> documents_ {};
     };
 } // namespace plane::catalog::internal

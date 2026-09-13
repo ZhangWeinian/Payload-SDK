@@ -13,9 +13,9 @@
 
 namespace plane::test
 {
-    inline _STD filesystem::path sharedConfigPath()
+    inline ::std::filesystem::path sharedConfigPath()
     {
-        return _STD filesystem::temp_directory_path() / "cy_psdk_unit_config.yml";
+        return ::std::filesystem::temp_directory_path() / "cy_psdk_unit_config.yml";
     }
 
     // 与仓库 config/config.yml 对齐; plane.code/takeoff_* 为测试夹具值
@@ -42,21 +42,21 @@ plane:
 )"
         };
 
-        _STD ofstream out { sharedConfigPath() };
+        ::std::ofstream out { sharedConfigPath() };
         out << kYaml;
         return out.good();
     }
 
-    inline _STD filesystem::path invalidConfigPath()
+    inline ::std::filesystem::path invalidConfigPath()
     {
-        return _STD filesystem::temp_directory_path() / "cy_psdk_unit_config_invalid.yml";
+        return ::std::filesystem::temp_directory_path() / "cy_psdk_unit_config_invalid.yml";
     }
 
     // 写入一份"非法 YAML"配置 (缩进错误), 用于"未加载任何合法配置前先拒绝"用例
     inline bool writeInvalidConfig()
     {
         constexpr static const char* kYaml { "a: b\n  bad_indent: c\n" };
-        _STD ofstream                out { invalidConfigPath() };
+        ::std::ofstream              out { invalidConfigPath() };
         out << kYaml;
         return out.good();
     }

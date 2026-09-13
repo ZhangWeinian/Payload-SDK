@@ -20,7 +20,7 @@ namespace plane::manager
         this->stop();
     }
 
-    bool StatusBoardManager::start(_STD_CHRONO milliseconds interval)
+    bool StatusBoardManager::start(::std::chrono::milliseconds interval)
     {
         if (running_)
         {
@@ -29,9 +29,9 @@ namespace plane::manager
         try
         {
             running_       = true;
-            status_thread_ = _STD thread(&StatusBoardManager::runLoop, this, interval);
+            status_thread_ = ::std::thread(&StatusBoardManager::runLoop, this, interval);
         }
-        catch (const _STD system_error&)
+        catch (const ::std::system_error&)
         {
             running_ = false; // 线程创建失败 (资源不足等): 报告失败, 不影响主流程
             return false;
@@ -48,12 +48,12 @@ namespace plane::manager
         }
     }
 
-    void StatusBoardManager::runLoop(_STD_CHRONO milliseconds interval)
+    void StatusBoardManager::runLoop(::std::chrono::milliseconds interval)
     {
         while (running_)
         {
             this->refreshStatus();
-            _STD this_thread::sleep_for(interval);
+            ::std::this_thread::sleep_for(interval);
         }
     }
 
@@ -77,8 +77,8 @@ namespace plane::manager
         // MQTT 连接状态 (已连接时附带地址; 地址未知则只显示连接状态)
         if (state.mqtt_connected)
         {
-            const _STD string value { state.mqtt_connected_url.empty() ? _STD string { "已连接" }
-                                                                       : "已连接 (" + state.mqtt_connected_url + ")" };
+            const ::std::string value { state.mqtt_connected_url.empty() ? ::std::string { "已连接" }
+                                                                         : "已连接 (" + state.mqtt_connected_url + ")" };
             board.update("MQTT", value, plane::utils::StatusLevel::Ok);
         }
         else
@@ -89,8 +89,8 @@ namespace plane::manager
         // WebSocket 连接状态 (已连接时附带地址; 地址未知则只显示连接状态)
         if (state.web_socket_connected)
         {
-            const _STD string value { state.web_socket_connected_url.empty() ? _STD string { "已连接" }
-                                                                             : "已连接 (" + state.web_socket_connected_url + ")" };
+            const ::std::string value { state.web_socket_connected_url.empty() ? ::std::string { "已连接" }
+                                                                               : "已连接 (" + state.web_socket_connected_url + ")" };
             board.update("WebSocket", value, plane::utils::StatusLevel::Ok);
         }
         else

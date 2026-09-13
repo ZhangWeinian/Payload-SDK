@@ -25,9 +25,9 @@ namespace plane::manager
         void               goHome(void);
         void               hover(void);
         void               land(void);
-        void               waypoint(const _DEFINED _KMZ_DATA_TYPE& kmzData);
-        void               waypoint(_STD string_view kmzFilePath);
-        void               setControlStrategy(const _DEFINED _PTZ_CONTROL_STRATEGY_TYPE& strategyCode);
+        void               waypoint(const kmz_data_type& kmzData);
+        void               waypoint(::std::string_view kmzFilePath);
+        void               setControlStrategy(const ptz_control_strategy_type& strategyCode);
         void               flyCircleAroundPoint(const plane::protocol::CircleFlyPayload& circleParams);
 
         void               stopWaypointMission();

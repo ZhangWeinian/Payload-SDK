@@ -51,8 +51,8 @@ namespace plane::manager
             SendNedVelocityCommand // 发送 NED 速度指令
         };
 
-        using CommandData = _STD variant<
-            _STD monostate, // 用于没有参数的命令
+        using CommandData = ::std::variant<
+            ::std::monostate, // 用于没有参数的命令
 
             // 对应 DroneDataClass 中的结构体
             plane::protocol::TakeoffPayload,         // 起飞
@@ -64,11 +64,11 @@ namespace plane::manager
             plane::protocol::NedVelocityPayload,     // 发送 NED 速度指令
 
             // 对于没有直接对应结构体的，使用基本类型
-            _DEFINED _KMZ_DATA_TYPE,             // 航线任务
-            _DEFINED _PTZ_CONTROL_STRATEGY_TYPE, // 设置云台控制策略
-            _DEFINED _VIDEO_SOURCE_TYPE          // 切换视频源
+            kmz_data_type,             // 航线任务
+            ptz_control_strategy_type, // 设置云台控制策略
+            video_source_type          // 切换视频源
         >;
-        using CommandQueue = _EVENTPP EventQueue<_THIS CommandEvent, void(const _THIS CommandEvent&, const CommandData&)>;
+        using CommandQueue = ::eventpp::EventQueue<CommandEvent, void(const CommandEvent&, const CommandData&)>;
 
         // PSDK 状态事件
         enum class PSDKEvent
@@ -79,35 +79,35 @@ namespace plane::manager
             HealthPing,
             HealthStatusUpdated
         };
-        using PSDKEventData = _STD variant<
+        using PSDKEventData = ::std::variant<
             plane::protocol::StatusPayload,
-            _DJI        T_DjiWaypointV3MissionState,
-            _DJI        T_DjiWaypointV3ActionState,
-            _STD_CHRONO steady_clock::time_point,
+            ::T_DjiWaypointV3MissionState,
+            ::T_DjiWaypointV3ActionState,
+            ::std::chrono::steady_clock::time_point,
             plane::protocol::HealthStatusPayload
         >;
 
-        using StatusDispatcher = _EVENTPP EventDispatcher<_THIS PSDKEvent, void(const PSDKEventData&)>;
+        using StatusDispatcher = ::eventpp::EventDispatcher<PSDKEvent, void(const PSDKEventData&)>;
 
         enum class SystemEvent
         {
             HeartbeatTick,
-            MqttBrokerUpdated // 数据: _STD string (由 Catalog 服务发现解析得到的 broker URL)
+            MqttBrokerUpdated // 数据: ::std::string (由 Catalog 服务发现解析得到的 broker URL)
         };
 
-        using SystemEventData  = _STD      variant<_STD monostate, _STD string>;
-        using SystemDispatcher = _EVENTPP EventDispatcher<_THIS SystemEvent, void(const SystemEventData&)>;
+        using SystemEventData  = ::std::variant<::std::monostate, ::std::string>;
+        using SystemDispatcher = ::eventpp::EventDispatcher<SystemEvent, void(const SystemEventData&)>;
 
-        static EventManager&              getInstance(void) noexcept;
+        static EventManager& getInstance(void) noexcept;
 
         // 发布一个命令事件
-        void publishCommand(_THIS CommandEvent event, const CommandData& data);
+        void publishCommand(CommandEvent event, const CommandData& data);
 
         // 发布一个 PSDK 状态事件
-        void publishStatus(_THIS PSDKEvent event, const PSDKEventData& data);
+        void publishStatus(PSDKEvent event, const PSDKEventData& data);
 
         // 发布一个系统事件
-        void publishSystemEvent(_THIS SystemEvent event, const SystemEventData& data = _STD monostate {});
+        void publishSystemEvent(SystemEvent event, const SystemEventData& data = ::std::monostate {});
 
         // 获取命令事件队列的引用
         CommandQueue& getCommandQueue(void) noexcept

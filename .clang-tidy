@@ -42,11 +42,11 @@ HeaderFilterRegex: '.*cy_psdk/(src|test)/.*\.h(pp)?$'
 FormatStyle: file
 
 CheckOptions:
-    # --- 并发: 与项目大量使用 std::mutex/atomic 的现实匹配 ---
+    # 并发: 与项目大量使用 std::mutex/atomic 的现实匹配
     - key: concurrency-mt-unsafe.FunctionSet
       value: "posix"
 
-    # --- bugprone: 精调, 降低误报 ---
+    # bugprone: 精调, 降低误报
     - key: bugprone-argument-comment.StrictMode
       value: "0"
     - key: bugprone-suspicious-stringview-data-usage.StringViewTypes
@@ -56,11 +56,14 @@ CheckOptions:
     - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
       value: "1"
 
-    # --- performance: 保留有价值的项 ---
+    # bugprone-reserved-identifier: 白名单已清空 (LLVM 风格迁移后无任何保留名需求);
+    # 如需新增: AllowedIdentifiers 官方定义为正则列表且为非锚定匹配, 条目务必用 ^...$ 锚定防误伤
+
+    # performance: 保留有价值的项
     - key: performance-move-const-arg.CheckTriviallyCopyableMove
       value: "1"
 
-    # --- modernize: 与 C++23 目标对齐 ---
+    # modernize: 与 C++23 目标对齐
     - key: modernize-use-nullptr.NullMacros
       value: "NULL"
     - key: modernize-use-override.IgnoreDestructors

@@ -32,7 +32,7 @@ namespace plane::catalog
     };
 
     // 该错误类别是否可重试 (对齐 java CatalogError.retryable)
-    _NODISCARD inline bool isRetryableError(CatalogError code) noexcept
+    [[nodiscard]] inline bool isRetryableError(CatalogError code) noexcept
     {
         switch (code)
         {
@@ -47,7 +47,7 @@ namespace plane::catalog
     }
 
     // 默认错误消息 (对齐 java CatalogError.defaultMessage)
-    _NODISCARD inline _STD string_view defaultErrorMessage(CatalogError code) noexcept
+    [[nodiscard]] inline ::std::string_view defaultErrorMessage(CatalogError code) noexcept
     {
         switch (code)
         {

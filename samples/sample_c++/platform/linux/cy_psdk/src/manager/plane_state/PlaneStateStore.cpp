@@ -12,23 +12,23 @@ namespace plane::domain
 
     void PlaneStateStore::update(PlaneStateDataClass data) noexcept
     {
-        _STD lock_guard<_STD mutex> lock { this->mutex_ };
-        this->state_ = _STD         move(data);
+        ::std::lock_guard<::std::mutex> lock { this->mutex_ };
+        this->state_ = ::std::move(data);
     }
 
-    void PlaneStateStore::update(const _STD function<void(PlaneStateDataClass&)>& mutator) noexcept
+    void PlaneStateStore::update(const ::std::function<void(PlaneStateDataClass&)>& mutator) noexcept
     {
         if (!mutator)
         {
             return;
         }
-        _STD lock_guard<_STD mutex> lock { this->mutex_ };
+        ::std::lock_guard<::std::mutex> lock { this->mutex_ };
         mutator(this->state_);
     }
 
     PlaneStateDataClass PlaneStateStore::snapshot(void) const noexcept
     {
-        _STD lock_guard<_STD mutex> lock { this->mutex_ };
+        ::std::lock_guard<::std::mutex> lock { this->mutex_ };
         return this->state_;
     }
 } // namespace plane::domain

@@ -14,26 +14,26 @@
 namespace
 {
     // ---------------------------------------------------------------- 终端环境探测
-    _NODISCARD bool stdoutIsTerminal() noexcept
+    [[nodiscard]] bool stdoutIsTerminal() noexcept
     {
-        return _CSTD isatty(STDOUT_FILENO) != 0;
+        return ::isatty(STDOUT_FILENO) != 0;
     }
 
-    _NODISCARD bool terminalSupportsAnsi() noexcept
+    [[nodiscard]] bool terminalSupportsAnsi() noexcept
     {
-        const char*                     term { _CSTD getenv("TERM") };
-        return term != nullptr && _CSTD strcmp(term, "dumb") != 0;
+        const char* term { ::getenv("TERM") };
+        return term != nullptr && ::strcmp(term, "dumb") != 0;
     }
 
-    _NODISCARD bool colorEnabled() noexcept
+    [[nodiscard]] bool colorEnabled() noexcept
     {
-        return _CSTD getenv("NO_COLOR") == nullptr && terminalSupportsAnsi();
+        return ::getenv("NO_COLOR") == nullptr && terminalSupportsAnsi();
     }
 
-    _NODISCARD int terminalWidth() noexcept
+    [[nodiscard]] int terminalWidth() noexcept
     {
         struct winsize ws {};
-        if (_CSTD ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0)
+        if (::ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0)
         {
             return static_cast<int>(ws.ws_col);
         }
@@ -42,58 +42,58 @@ namespace
 
     // UTF-8 近似显示宽度: ASCII 1 列; 双字节码点 1 列; 三/四字节码点 (CJK/emoji) 2 列。
     // 注意: 保守估算, 宁可略宽也不让状态行折行 (折行会破坏状态块的固定行数)。
-    _NODISCARD int displayWidth(_STD string_view text) noexcept
+    [[nodiscard]] int displayWidth(::std::string_view text) noexcept
     {
         int width { 0 };
         for (size_t i = 0; i < text.size();)
         {
             const unsigned char b { static_cast<unsigned char>(text[i]) };
             size_t              len { 1 };
-            if ((b & 0Xe0) == 0Xc0)
+            if ((b & 0Xe0u) == 0Xc0)
             {
                 len = 2;
             }
-            else if ((b & 0Xf0) == 0Xe0)
+            else if ((b & 0Xf0u) == 0Xe0)
             {
                 len = 3;
             }
-            else if ((b & 0Xf8) == 0Xf0)
+            else if ((b & 0Xf8u) == 0Xf0)
             {
                 len = 4;
             }
             width += (b < 0X80) ? 1 : ((len == 2) ? 1 : 2);
-            i     += _STD min(len, text.size() - i);
+            i     += ::std::min(len, text.size() - i);
         }
         return width;
     }
 
-    _NODISCARD _STD string truncateToWidth(_STD string_view text, int maxWidth)
+    [[nodiscard]] ::std::string truncateToWidth(::std::string_view text, int maxWidth)
     {
         if (maxWidth <= 0 || displayWidth(text) <= maxWidth)
         {
-            return _STD string { text };
+            return ::std::string { text };
         }
-        _STD string out;
-        int         width { 0 };
-        size_t      i { 0 };
+        ::std::string out;
+        int           width { 0 };
+        size_t        i { 0 };
         while (i < text.size())
         {
             const unsigned char b { static_cast<unsigned char>(text[i]) };
             size_t              len { 1 };
-            if ((b & 0Xe0) == 0Xc0)
+            if ((b & 0Xe0u) == 0Xc0)
             {
                 len = 2;
             }
-            else if ((b & 0Xf0) == 0Xe0)
+            else if ((b & 0Xf0u) == 0Xe0)
             {
                 len = 3;
             }
-            else if ((b & 0Xf8) == 0Xf0)
+            else if ((b & 0Xf8u) == 0Xf0)
             {
                 len = 4;
             }
-            len = _STD min(len, text.size() - i);
-            const int  w { (b < 0X80) ? 1 : ((len == 2) ? 1 : 2) };
+            len = ::std::min(len, text.size() - i);
+            const int w { (b < 0X80) ? 1 : ((len == 2) ? 1 : 2) };
             if (width + w > maxWidth - 1) // 预留 1 列给省略号
             {
                 out += "…";
@@ -137,15 +137,15 @@ namespace plane::utils
         return stdoutIsTerminal() && colorEnabled();
     }
 
-    void StatusBoard::update(const _STD string& key, _STD string value, StatusLevel level)
+    void StatusBoard::update(const ::std::string& key, ::std::string value, StatusLevel level)
     {
-        _STD lock_guard lock { mutex_ };
-        Item&           item { this->findOrCreateLocked(key) };
+        ::std::lock_guard lock { mutex_ };
+        Item&             item { this->findOrCreateLocked(key) };
         if (item.value == value && item.level == level)
         {
             return; // 值未变化, 不产生任何输出
         }
-        item.value = _STD move(value);
+        item.value = ::std::move(value);
         item.level = level;
         if (this->interactiveLocked())
         {
@@ -159,12 +159,12 @@ namespace plane::utils
         }
     }
 
-    void StatusBoard::log(_STD string_view line)
+    void StatusBoard::log(::std::string_view line)
     {
-        _STD lock_guard lock { mutex_ };
+        ::std::lock_guard lock { mutex_ };
         if (!this->interactiveLocked())
         {
-            this->writePlainLocked(_STD string { line });
+            this->writePlainLocked(::std::string { line });
             return;
         }
         this->eraseBlockLocked();
@@ -175,7 +175,7 @@ namespace plane::utils
 
     void StatusBoard::finish(void) noexcept
     {
-        _STD lock_guard lock { mutex_ };
+        ::std::lock_guard lock { mutex_ };
         if (this->interactiveLocked())
         {
             this->eraseBlockLocked();
@@ -188,9 +188,9 @@ namespace plane::utils
         return enabled_ && stdoutIsTerminal() && terminalSupportsAnsi();
     }
 
-    StatusBoard::Item& StatusBoard::findOrCreateLocked(const _STD string& key)
+    StatusBoard::Item& StatusBoard::findOrCreateLocked(const ::std::string& key)
     {
-        auto it { _STD find_if(
+        auto it { ::std::find_if(
             items_.begin(),
             items_.end(),
             [&key](const Item& item)
@@ -216,7 +216,7 @@ namespace plane::utils
         size_t offset { 0 };
         while (offset < buffer_.size())
         {
-            const _CSTD ssize_t written { _CSTD write(STDOUT_FILENO, buffer_.data() + offset, buffer_.size() - offset) };
+            const ::ssize_t written { ::write(STDOUT_FILENO, buffer_.data() + offset, buffer_.size() - offset) };
             if (written < 0)
             {
                 if (errno == EINTR)
@@ -230,10 +230,10 @@ namespace plane::utils
         buffer_.clear();
     }
 
-    void StatusBoard::writePlainLocked(const _STD string& line)
+    void StatusBoard::writePlainLocked(const ::std::string& line)
     {
         // 剥离调用方可能自带的行尾, 统一追加单个换行 (避免重定向到文件时出现空行)
-        _STD string_view view { line };
+        ::std::string_view view { line };
         while (!view.empty() && (view.back() == '\n' || view.back() == '\r'))
         {
             view.remove_suffix(1);
@@ -243,7 +243,7 @@ namespace plane::utils
         this->flushLocked();
     }
 
-    void StatusBoard::writeLogLocked(_STD string_view text)
+    void StatusBoard::writeLogLocked(::std::string_view text)
     {
         for (const char c : text)
         {
@@ -273,7 +273,7 @@ namespace plane::utils
         if (drawn_lines_ > 1)
         {
             buffer_.append("\033[");
-            buffer_.append(_STD to_string(drawn_lines_ - 1));
+            buffer_.append(::std::to_string(drawn_lines_ - 1));
             buffer_.append("A");
         }
         buffer_.append("\r\033[J");
@@ -296,13 +296,13 @@ namespace plane::utils
         constexpr int SEPARATOR_LINES { 2 }; // 状态块与日志区之间的空行数
 
         // 各项的纯文本与最大宽度 (用于决定列数)
-        _STD vector<_STD string> plains;
+        ::std::vector<::std::string> plains;
         plains.reserve(items_.size());
         int maxItemWidth { 0 };
         for (const Item& item : items_)
         {
             plains.push_back(item.key + " : " + item.value);
-            maxItemWidth = _STD max(maxItemWidth, displayWidth(plains.back()));
+            maxItemWidth = ::std::max(maxItemWidth, displayWidth(plains.back()));
         }
 
         constexpr int GAP_WIDTH { 3 }; // 相邻列之间的最小间隔 (空格数)
@@ -329,7 +329,7 @@ namespace plane::utils
         int lines { 0 };
         for (size_t i = 0; i < items_.size(); i += static_cast<size_t>(columns))
         {
-            const size_t rowEnd { _STD min(items_.size(), i + static_cast<size_t>(columns)) };
+            const size_t rowEnd { ::std::min(items_.size(), i + static_cast<size_t>(columns)) };
             int          cursorPos { 0 }; // 本行已输出到的显示列位置
             for (size_t j = i; j < rowEnd; ++j)
             {
@@ -339,7 +339,7 @@ namespace plane::utils
                 // 本格起点: 终端宽度的固定等分位置
                 const int startPos { static_cast<int>(static_cast<long long>(width) * static_cast<int>(col) / columns) };
                 const int endPos { lastInRow ? width : static_cast<int>(static_cast<long long>(width) * (static_cast<int>(col) + 1) / columns) };
-                const int avail { _STD max(endPos - startPos - 1, 1) }; // 预留 1 列间隔
+                const int avail { ::std::max(endPos - startPos - 1, 1) }; // 预留 1 列间隔
 
                 const int pad { startPos - cursorPos };
                 if (pad > 0)
@@ -347,9 +347,9 @@ namespace plane::utils
                     buffer_.append(static_cast<size_t>(pad), ' ');
                 }
 
-                const Item&        item { items_[j] };
-                const _STD string& plain { plains[j] };
-                _STD string        text { plain };
+                const Item&          item { items_[j] };
+                const ::std::string& plain { plains[j] };
+                ::std::string        text { plain };
                 if (displayWidth(text) > avail)
                 {
                     text = truncateToWidth(text, avail); // 超宽截断 (放弃着色)

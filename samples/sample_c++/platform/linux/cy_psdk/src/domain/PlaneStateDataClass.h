@@ -191,8 +191,8 @@ namespace plane::domain
     // 相机变焦范围
     struct ZoomRatiosRange
     {
-        bool is_continuous { false }; // 是否连续变焦
-        _STD vector<double> gears {}; // 关键档位
+        bool                  is_continuous { false }; // 是否连续变焦
+        ::std::vector<double> gears {};                // 关键档位
     };
 
     // 云台角度限位
@@ -273,7 +273,7 @@ namespace plane::domain
         bool        aircraft_connected { false };              // 飞行器连接状态
 
         // 航线任务状态
-        _STD string                 kmz_file_path { "" };                                                    // 活动航线文件
+        ::std::string               kmz_file_path { "" };                                                    // 活动航线文件
         FlightMode                  flight_mode { FlightMode::UNKNOWN };                                     // 飞行模式
         WaypointMissionExecuteState waypoint_mission_execute_state { WaypointMissionExecuteState::UNKNOWN }; // 航点任务状态
         int                         current_point { 0 };                                                     // 当前航点
@@ -281,17 +281,17 @@ namespace plane::domain
         bool                        mission_pausing { false };                                               // 航线任务是否已暂停
 
         // 云台状态
-        Attitude           gimbal_attitude {};                                            // 云台角 (yaw 已做 IMU 补偿)
-        double             imu_coordinate_tran { 0.0 };                                   // IMU 坐标系转换角度
-        int                camera_angle_mode { 0 };                                       // 云台模式 (GimbalCMode 码)
-        ComponentIndexType active_camera_index { ComponentIndexType::LEFT_OR_MAIN };      // 当前活跃相机
-        _STD vector<CameraVideoStreamSourceType> camera_video_stream_source_range {};     // 视频流类型列表
-        double                                   real_camera_optical_zoom_factor { 1.0 }; // 光学变焦倍数
-        double                                   camera_optical_zoom_factor { 1.0 };      // 兼容处理后的变焦倍数
-        int                                      camera_focal_length { 0 };               // 等效焦距
-        ZoomRatiosRange                          zoom_ratios_range {};                    // 摄像头变焦范围
-        GimbalAttitudeRange                      gimbal_attitude_range {};                // 云台限位
-        _STD vector<CameraMode> camera_mode_range {};                                     // 可设置的相机模式 (码)
+        Attitude                                   gimbal_attitude {};                                       // 云台角 (yaw 已做 IMU 补偿)
+        double                                     imu_coordinate_tran { 0.0 };                              // IMU 坐标系转换角度
+        int                                        camera_angle_mode { 0 };                                  // 云台模式 (GimbalCMode 码)
+        ComponentIndexType                         active_camera_index { ComponentIndexType::LEFT_OR_MAIN }; // 当前活跃相机
+        ::std::vector<CameraVideoStreamSourceType> camera_video_stream_source_range {};                      // 视频流类型列表
+        double                                     real_camera_optical_zoom_factor { 1.0 };                  // 光学变焦倍数
+        double                                     camera_optical_zoom_factor { 1.0 };                       // 兼容处理后的变焦倍数
+        int                                        camera_focal_length { 0 };                                // 等效焦距
+        ZoomRatiosRange                            zoom_ratios_range {};                                     // 摄像头变焦范围
+        GimbalAttitudeRange                        gimbal_attitude_range {};                                 // 云台限位
+        ::std::vector<CameraMode>                  camera_mode_range {};                                     // 可设置的相机模式 (码)
 
         // 虚拟摇杆 / 遥控器
         VirtualStickState          virtual_stick_state {};                                      // 虚拟摇杆状态
@@ -329,53 +329,53 @@ namespace plane::domain
         int    aircraft_total_flight_times { 0 };      // 飞行总次数
 
         // 后台服务连接状态
-        _STD string localhost_ip { "" };                                               // 本地 IP
-        _STD string swarm_agent_identifier { "" };                                     // = "swarm.agent.<SN>"
-        _STD string swarm_agent_name { "" };                                           // = "swarm.agent.<SN>.server"
-        _STD string device_nickname { "未绑定" };                                      // 设备昵称
-        _STD string internal_plane_id { "" };                                          // 后台内部飞机 ID
-        bool        network_service_connected { false };                               // 网络服务连接
-        bool        device_binding { false };                                          // 有效绑定
-        bool        mqtt_connected { false };                                          // MQTT 是否连接
-        _STD string mqtt_connected_url { "" };                                         // MQTT 地址
-        bool        web_socket_connected { false };                                    // WebSocket 是否连接
-        _STD string web_socket_connected_url { "" };                                   // WebSocket 地址
-        bool        rtsp_push_video { false };                                         // RTSP 推流状态
-        int         rtsp_push_video_fps { 0 };                                         // RTSP 帧率
-        _STD string rtsp_push_video_user_name { "admin" };                             // RTSP 用户名
-        _STD string rtsp_push_video_password { "1" };                                  // RTSP 密码
-        _STD string rtsp_push_video_base_url { "streaming/live/1" };                   // RTSP 后缀
-        int         rtsp_push_video_server_port { 8554 };                              // RTSP 端口
-        bool        tcp_push_data { false };                                           // TCP 推流状态
-        _STD string catalog_state { "" };                                              // Catalog SDK 状态名
-        bool        catalog_ready { false };                                           // Catalog 是否就绪
-        _STD string catalog_endpoint { "" };                                           // Catalog "ip:httpPort"
-        _STD string catalog_instance_id { "" };                                        // Catalog 实例 ID
-        _STD vector<CatalogNode> discovered_catalog_nodes {};                          // 自动发现节点
-        _STD vector<CatalogNode> manual_catalog_nodes {};                              // 手动节点
-        bool                     catalog_probe_listening { false };                    // 公告监听是否运行
-        int                      catalog_probe_count { 0 };                            // 累计公告数
-        _STD vector<PortHealthState> port_health {};                                   // 端口层观测
-        _STD string                  swarm_perception_rtsp_pull_video_head_url { "" }; // 目标流 rtsp 地址头
-        _STD string                  swarm_perception_id { "" };                       // 目标感知 rtsp 查询 id
-        bool                         swarm_plane_connect { false };                    // 后台机载是否连接本机
+        ::std::string                  localhost_ip { "" };                              // 本地 IP
+        ::std::string                  swarm_agent_identifier { "" };                    // = "swarm.agent.<SN>"
+        ::std::string                  swarm_agent_name { "" };                          // = "swarm.agent.<SN>.server"
+        ::std::string                  device_nickname { "未绑定" };                     // 设备昵称
+        ::std::string                  internal_plane_id { "" };                         // 后台内部飞机 ID
+        bool                           network_service_connected { false };              // 网络服务连接
+        bool                           device_binding { false };                         // 有效绑定
+        bool                           mqtt_connected { false };                         // MQTT 是否连接
+        ::std::string                  mqtt_connected_url { "" };                        // MQTT 地址
+        bool                           web_socket_connected { false };                   // WebSocket 是否连接
+        ::std::string                  web_socket_connected_url { "" };                  // WebSocket 地址
+        bool                           rtsp_push_video { false };                        // RTSP 推流状态
+        int                            rtsp_push_video_fps { 0 };                        // RTSP 帧率
+        ::std::string                  rtsp_push_video_user_name { "admin" };            // RTSP 用户名
+        ::std::string                  rtsp_push_video_password { "1" };                 // RTSP 密码
+        ::std::string                  rtsp_push_video_base_url { "streaming/live/1" };  // RTSP 后缀
+        int                            rtsp_push_video_server_port { 8554 };             // RTSP 端口
+        bool                           tcp_push_data { false };                          // TCP 推流状态
+        ::std::string                  catalog_state { "" };                             // Catalog SDK 状态名
+        bool                           catalog_ready { false };                          // Catalog 是否就绪
+        ::std::string                  catalog_endpoint { "" };                          // Catalog "ip:httpPort"
+        ::std::string                  catalog_instance_id { "" };                       // Catalog 实例 ID
+        ::std::vector<CatalogNode>     discovered_catalog_nodes {};                      // 自动发现节点
+        ::std::vector<CatalogNode>     manual_catalog_nodes {};                          // 手动节点
+        bool                           catalog_probe_listening { false };                // 公告监听是否运行
+        int                            catalog_probe_count { 0 };                        // 累计公告数
+        ::std::vector<PortHealthState> port_health {};                                   // 端口层观测
+        ::std::string                  swarm_perception_rtsp_pull_video_head_url { "" }; // 目标流 rtsp 地址头
+        ::std::string                  swarm_perception_id { "" };                       // 目标感知 rtsp 查询 id
+        bool                           swarm_plane_connect { false };                    // 后台机载是否连接本机
 
         // 图传状态
-        int         airlink_signal_quality { 0 };           // 信号质量 0-100
-        double      airlink_dynamic_data_rate { 0.0 };      // 图传码率 (Mbps)
-        _STD string airlink_frequency_band { "" };          // 工作频段
-        _STD string airlink_bandwidth { "" };               // 下行带宽
-        _STD string airlink_air_link_type { "" };           // 图传类型
-        _STD vector<_STD string> frequency_interference {}; // msdk: List<FrequencyInterferenceInfo>(SDK 结构) → 基础类型占位
-        _STD vector<_STD string> frequency_band_range {};   // msdk: List<FrequencyBand>(SDK 枚举) → 基础类型占位
+        int                          airlink_signal_quality { 0 };      // 信号质量 0-100
+        double                       airlink_dynamic_data_rate { 0.0 }; // 图传码率 (Mbps)
+        ::std::string                airlink_frequency_band { "" };     // 工作频段
+        ::std::string                airlink_bandwidth { "" };          // 下行带宽
+        ::std::string                airlink_air_link_type { "" };      // 图传类型
+        ::std::vector<::std::string> frequency_interference {};         // msdk: List<FrequencyInterferenceInfo>(SDK 结构) → 基础类型占位
+        ::std::vector<::std::string> frequency_band_range {};           // msdk: List<FrequencyBand>(SDK 枚举) → 基础类型占位
 
         // 电池详情 (主电池)
-        double battery_temperature { 0.0 };                      // 温度 (℃)
-        int    battery_current { 0 };                            // 电流 (mA, 负=放电)
-        int    battery_number_of_discharges { 0 };               // 总放电次数
-        int    battery_number_of_cells { 0 };                    // 电芯个数
-        _STD vector<int> battery_cell_voltages {};               // 各电芯电压 (mV)
-        int64_t          battery_high_voltage_storage_sec { 0 }; // 高电压存储时间 (s)
+        double             battery_temperature { 0.0 };            // 温度 (℃)
+        int                battery_current { 0 };                  // 电流 (mA, 负=放电)
+        int                battery_number_of_discharges { 0 };     // 总放电次数
+        int                battery_number_of_cells { 0 };          // 电芯个数
+        ::std::vector<int> battery_cell_voltages {};               // 各电芯电压 (mV)
+        int64_t            battery_high_voltage_storage_sec { 0 }; // 高电压存储时间 (s)
 
         // 低电量告警阈值
         int serious_low_battery_warning_threshold { 0 }; // 严重低电量阈值 (%)
@@ -385,51 +385,51 @@ namespace plane::domain
         LowBatteryRTHInfo low_battery_rth_info {};
 
         // WebSocket Target Info (感知/后端链路, PSDK 预留)
-        bool        tracking_state_enabled { false };
-        bool        is_tracking_correcting { false };
-        _STD string selected_target_type { "" };
-        _STD string selected_target_type_name { "" };
-        double      track_lat { 0.0 };
-        double      track_lon { 0.0 };
-        double      track_gauss_east { 0.0 };
-        double      track_gauss_north { 0.0 };
-        double      track_abs_height { 0.0 };
-        int         maximum_speed_during_tracking { 0 };
+        bool          tracking_state_enabled { false };
+        bool          is_tracking_correcting { false };
+        ::std::string selected_target_type { "" };
+        ::std::string selected_target_type_name { "" };
+        double        track_lat { 0.0 };
+        double        track_lon { 0.0 };
+        double        track_gauss_east { 0.0 };
+        double        track_gauss_north { 0.0 };
+        double        track_abs_height { 0.0 };
+        int           maximum_speed_during_tracking { 0 };
 
         // pip 状态相关 (UI 决策)
         BackgroundLayer             background_layer { BackgroundLayer::MAP };
         CameraVideoStreamSourceType camera_video_stream_source { CameraVideoStreamSourceType::WIDE_CAMERA };
 
         // 固定设备信息 (App 生命周期内不变, 连接后刷新)
-        _STD string app_version { "" };              // 应用/代理版本
-        _STD string sdk_version { "" };              // SDK 版本 (psdk: PSDK 版本)
-        _STD string sdk_build_version { "" };        // SDK 构建号
-        bool        is_debug_sdk_build { false };    // 是否 Debug
-        bool        is_us_version { false };         // 是否美版
-        _STD string package_category { "" };         // 产品类别
-        _STD string core_info { "" };                // 内核信息
-        _STD string product_firmware_version { "" }; // 飞机固件版本
-        _STD string rc_firmware_version { "" };      // 遥控器固件版本
-        _STD string camera_firmware_version { "" };  // 相机固件版本
-        _STD string serial_number { "" };            // 飞机序列号 (飞控 SN 优先; 不可得时为 SDK CC SN 兜底)
+        ::std::string app_version { "" };              // 应用/代理版本
+        ::std::string sdk_version { "" };              // SDK 版本 (psdk: PSDK 版本)
+        ::std::string sdk_build_version { "" };        // SDK 构建号
+        bool          is_debug_sdk_build { false };    // 是否 Debug
+        bool          is_us_version { false };         // 是否美版
+        ::std::string package_category { "" };         // 产品类别
+        ::std::string core_info { "" };                // 内核信息
+        ::std::string product_firmware_version { "" }; // 飞机固件版本
+        ::std::string rc_firmware_version { "" };      // 遥控器固件版本
+        ::std::string camera_firmware_version { "" };  // 相机固件版本
+        ::std::string serial_number { "" };            // 飞机序列号 (飞控 SN 优先; 不可得时为 SDK CC SN 兜底)
 
         // 高斯坐标转换设置
         CentralMeridianMode coordinate_transformation_mode { CentralMeridianMode::TARGET_NORMALIZED };
         ZoneWidth           coordinate_transformation_zone_width { ZoneWidth::DEGREE_6 };
 
         // 网络状态
-        PingResult ping_swarm_server_side {};              // 注册服务地址延迟
-        _STD vector<PingResult> ping_tcp_clients {};       // TCP 客户端延迟栈
-        _STD vector<SwarmSubscriber> swarm_subscribers {}; // Swarm 订阅者
+        PingResult                     ping_swarm_server_side {}; // 注册服务地址延迟
+        ::std::vector<PingResult>      ping_tcp_clients {};       // TCP 客户端延迟栈
+        ::std::vector<SwarmSubscriber> swarm_subscribers {};      // Swarm 订阅者
 
         // 应用运行时配置
         AppConfigEntity app_config {};
 
         // 杂项
-        bool        central_meridian_manually_set { false }; // 是否手动指定中央子午线
-        bool        registry_ip_manually_set { false };      // 注册中心 IP 是否手动输入
-        _STD string udp_multicast_group { "239.255.18.18" }; // UDP 组播默认地址
-        int         udp_multicast_port { 38'500 };           // UDP 组播默认端口
-        int         udp_receive_buffer { 16'384 };           // UDP 组播默认接收缓冲
+        bool          central_meridian_manually_set { false }; // 是否手动指定中央子午线
+        bool          registry_ip_manually_set { false };      // 注册中心 IP 是否手动输入
+        ::std::string udp_multicast_group { "239.255.18.18" }; // UDP 组播默认地址
+        int           udp_multicast_port { 38'500 };           // UDP 组播默认端口
+        int           udp_receive_buffer { 16'384 };           // UDP 组播默认接收缓冲
     };
 } // namespace plane::domain

@@ -19,7 +19,7 @@ namespace plane::manager
         static StatusBoardManager& getInstance(void) noexcept;
 
         // 启动状态同步服务, interval 指定刷新间隔, 默认为 1 秒 (幂等)
-        _NODISCARD bool start(_STD_CHRONO milliseconds interval = _STD_CHRONO seconds(1));
+        [[nodiscard]] bool start(::std::chrono::milliseconds interval = ::std::chrono::seconds(1));
 
         // 停止状态同步服务 (幂等)
         void stop(void);
@@ -30,12 +30,12 @@ namespace plane::manager
         StatusBoardManager(const StatusBoardManager&)            = delete;
         StatusBoardManager& operator=(const StatusBoardManager&) = delete;
 
-        void                runLoop(_STD_CHRONO milliseconds interval);
+        void                runLoop(::std::chrono::milliseconds interval);
 
         // 从 PlaneStateStore 读取最新状态并同步到状态板
-        void        refreshStatus(void);
+        void                refreshStatus(void);
 
-        _STD thread status_thread_ {};
-        _STD atomic<bool> running_ { false };
+        ::std::thread       status_thread_ {};
+        ::std::atomic<bool> running_ { false };
     };
 } // namespace plane::manager

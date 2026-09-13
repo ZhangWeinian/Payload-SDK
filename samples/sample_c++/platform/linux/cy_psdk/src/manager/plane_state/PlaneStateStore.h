@@ -24,18 +24,18 @@ namespace plane::domain
         void update(PlaneStateDataClass data) noexcept;
 
         // 就地更新最新状态 (回调在锁内执行, 不得阻塞/重入)
-        void update(const _STD function<void(PlaneStateDataClass&)>& mutator) noexcept;
+        void update(const ::std::function<void(PlaneStateDataClass&)>& mutator) noexcept;
 
         // 取快照 (线程安全, 返回拷贝)
-        _NODISCARD PlaneStateDataClass snapshot(void) const noexcept;
+        [[nodiscard]] PlaneStateDataClass snapshot(void) const noexcept;
 
     private:
-        PlaneStateStore(void) noexcept                        = default;
-        ~PlaneStateStore(void) noexcept                       = default;
-        PlaneStateStore(const PlaneStateStore&)               = delete;
-        PlaneStateStore&    operator=(const PlaneStateStore&) = delete;
+        PlaneStateStore(void) noexcept                         = default;
+        ~PlaneStateStore(void) noexcept                        = default;
+        PlaneStateStore(const PlaneStateStore&)                = delete;
+        PlaneStateStore&     operator=(const PlaneStateStore&) = delete;
 
-        mutable _STD mutex  mutex_ {};
-        PlaneStateDataClass state_ {};
+        mutable ::std::mutex mutex_ {};
+        PlaneStateDataClass  state_ {};
     };
 } // namespace plane::domain

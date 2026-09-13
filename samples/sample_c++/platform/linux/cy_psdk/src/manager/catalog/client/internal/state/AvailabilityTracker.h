@@ -18,13 +18,13 @@ namespace plane::catalog::internal
         // 计数一次可重试失败; 达到阈值返回 true
         bool retryableFailureTrips(void) noexcept
         {
-            const int failures { this->failures_.fetch_add(1, _STD memory_order_acq_rel) + 1 };
+            const int failures { this->failures_.fetch_add(1, ::std::memory_order_acq_rel) + 1 };
             return failures >= this->threshold_;
         }
 
         void success(void) noexcept
         {
-            this->failures_.store(0, _STD memory_order_release);
+            this->failures_.store(0, ::std::memory_order_release);
         }
 
         void reset(void) noexcept
@@ -33,7 +33,7 @@ namespace plane::catalog::internal
         }
 
     private:
-        const int threshold_ { 3 };
-        _STD atomic<int> failures_ { 0 };
+        const int          threshold_ { 3 };
+        ::std::atomic<int> failures_ { 0 };
     };
 } // namespace plane::catalog::internal

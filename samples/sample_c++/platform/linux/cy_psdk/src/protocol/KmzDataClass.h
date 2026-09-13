@@ -24,10 +24,10 @@ namespace plane::protocol
             double longitude { 0 };
             double latitude { 0 };
 
-            void   toXml(_PUGI xml_node& parent) const
+            void   toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("Point") };
-                node.append_child("coordinates").text().set(_FMT format("{:.12f},{:.12f}", longitude, latitude));
+                node.append_child("coordinates").text().set(::fmt::format("{:.12f},{:.12f}", longitude, latitude));
             }
         };
 
@@ -37,7 +37,7 @@ namespace plane::protocol
             int  payloadSubEnumValue { 0 };
             int  payloadPositionIndex { 7 };
 
-            void toXml(_PUGI xml_node& parent) const
+            void toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:payloadInfo") };
                 node.append_child("wpml:payloadEnumValue").text().set(payloadEnumValue);
@@ -48,14 +48,14 @@ namespace plane::protocol
 
         struct PublicKmlMissionConfig
         {
-            _STD string     flyToWaylineMode { "safely" };
-            _STD string     finishAction { "noAction" };
-            _STD string     exitOnRCLost { "executeLostAction" };
+            ::std::string   flyToWaylineMode { "safely" };
+            ::std::string   finishAction { "noAction" };
+            ::std::string   exitOnRCLost { "executeLostAction" };
             double          takeOffSecurityHeight { 20.0 };
             double          globalTransitionalSpeed {};
             WpmlPayloadInfo payloadInfo {};
 
-            virtual void    toXml(_PUGI xml_node& parent) const = 0;
+            virtual void    toXml(::pugi::xml_node& parent) const = 0;
         };
 
         struct PublicWpmlPlacemark
@@ -65,7 +65,7 @@ namespace plane::protocol
             int          isRisky { 0 };
             int          useStraightLine { 1 };
 
-            virtual void toXml(_PUGI xml_node& parent) const = 0;
+            virtual void toXml(::pugi::xml_node& parent) const = 0;
         };
     } // namespace kmz
 
@@ -73,19 +73,19 @@ namespace plane::protocol
     {
         struct WpmlActionActuatorFuncParam
         {
-            _STD string gimbalHeadingYawBase { "aircraft" };
-            _STD string gimbalRotateMode { "absoluteAngle" };
-            int         gimbalPitchRotateEnable { 1 };
-            double      gimbalPitchRotateAngle { -90 };
-            int         gimbalRollRotateEnable { 0 };
-            double      gimbalRollRotateAngle { 0 };
-            int         gimbalYawRotateEnable { 0 };
-            double      gimbalYawRotateAngle { 0 };
-            int         gimbalRotateTimeEnable { 0 };
-            int         gimbalRotateTime { 10 };
-            int         payloadPositionIndex { 0 };
+            ::std::string gimbalHeadingYawBase { "aircraft" };
+            ::std::string gimbalRotateMode { "absoluteAngle" };
+            int           gimbalPitchRotateEnable { 1 };
+            double        gimbalPitchRotateAngle { -90 };
+            int           gimbalRollRotateEnable { 0 };
+            double        gimbalRollRotateAngle { 0 };
+            int           gimbalYawRotateEnable { 0 };
+            double        gimbalYawRotateAngle { 0 };
+            int           gimbalRotateTimeEnable { 0 };
+            int           gimbalRotateTime { 10 };
+            int           payloadPositionIndex { 0 };
 
-            void        toXml(_PUGI xml_node& parent) const
+            void          toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:actionActuatorFuncParam") };
                 node.append_child("wpml:gimbalHeadingYawBase").text().set(gimbalHeadingYawBase);
@@ -105,10 +105,10 @@ namespace plane::protocol
         struct WpmlAction
         {
             int                         actionId { 0 };
-            _STD string                 actionActuatorFunc {};
+            ::std::string               actionActuatorFunc {};
             WpmlActionActuatorFuncParam actionActuatorFuncParam {};
 
-            void                        toXml(_PUGI xml_node& parent) const
+            void                        toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:action") };
                 node.append_child("wpml:actionId").text().set(actionId);
@@ -119,14 +119,14 @@ namespace plane::protocol
 
         struct WpmlActionGroup
         {
-            int         actionGroupId { 0 };
-            int         actionGroupStartIndex { 1 };
-            int         actionGroupEndIndex { 1 };
-            _STD string actionGroupMode { "sequence" };
-            _STD string actionTriggerType {};
-            _STD vector<WpmlAction> actions {};
+            int                       actionGroupId { 0 };
+            int                       actionGroupStartIndex { 1 };
+            int                       actionGroupEndIndex { 1 };
+            ::std::string             actionGroupMode { "sequence" };
+            ::std::string             actionTriggerType {};
+            ::std::vector<WpmlAction> actions {};
 
-            void                    toXml(_PUGI xml_node& parent) const
+            void                      toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:actionGroup") };
                 node.append_child("wpml:actionGroupId").text().set(actionGroupId);
@@ -146,13 +146,13 @@ namespace plane::protocol
 
         struct WpmlWaypointHeadingParam
         {
-            _STD string waypointHeadingMode { "followWayline" };
-            double      waypointHeadingAngle { 0 };
-            _STD string waypointPoiPoint { _FMT format("{:.6f},{:.6f},{:.6f}", .0, .0, .0) };
-            int         waypointHeadingAngleEnable { 0 };
-            int         waypointHeadingPoiIndex { 0 };
+            ::std::string waypointHeadingMode { "followWayline" };
+            double        waypointHeadingAngle { 0 };
+            ::std::string waypointPoiPoint { ::fmt::format("{:.6f},{:.6f},{:.6f}", .0, .0, .0) };
+            int           waypointHeadingAngleEnable { 0 };
+            int           waypointHeadingPoiIndex { 0 };
 
-            void        toXml(_PUGI xml_node& parent) const
+            void          toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:waypointHeadingParam") };
                 node.append_child("wpml:waypointHeadingMode").text().set(waypointHeadingMode);
@@ -165,10 +165,10 @@ namespace plane::protocol
 
         struct WpmlWaypointTurnParam
         {
-            _STD string waypointTurnMode { "toPointAndStopWithDiscontinuityCurvature" };
-            double      waypointTurnDampingDist { 0 };
+            ::std::string waypointTurnMode { "toPointAndStopWithDiscontinuityCurvature" };
+            double        waypointTurnDampingDist { 0 };
 
-            void        toXml(_PUGI xml_node& parent) const
+            void          toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:waypointTurnParam") };
                 node.append_child("wpml:waypointTurnMode").text().set(waypointTurnMode);
@@ -181,7 +181,7 @@ namespace plane::protocol
             double waypointGimbalPitchAngle { 0 };
             double waypointGimbalYawAngle { 0 };
 
-            void   toXml(_PUGI xml_node& parent) const
+            void   toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:waypointGimbalHeadingParam") };
                 node.append_child("wpml:waypointGimbalPitchAngle").text().set(waypointGimbalPitchAngle);
@@ -191,15 +191,15 @@ namespace plane::protocol
 
         struct WpmlPlacemark final: public kmz::PublicWpmlPlacemark
         {
-            double executeHeight { 40 };
-            double waypointSpeed { 5 };
-            int    waypointWorkType { 0 };
-            _STD vector<WpmlActionGroup> actionGroups {};
-            WpmlWaypointHeadingParam     waypointHeadingParam {};
-            WpmlWaypointTurnParam        waypointTurnParam {};
-            WpmlGimbalHeadingParam       waypointGimbalHeadingParam {};
+            double                         executeHeight { 40 };
+            double                         waypointSpeed { 5 };
+            int                            waypointWorkType { 0 };
+            ::std::vector<WpmlActionGroup> actionGroups {};
+            WpmlWaypointHeadingParam       waypointHeadingParam {};
+            WpmlWaypointTurnParam          waypointTurnParam {};
+            WpmlGimbalHeadingParam         waypointGimbalHeadingParam {};
 
-            void                         toXml(_PUGI xml_node& parent) const
+            void                           toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("Placemark") };
                 point.toXml(node);
@@ -221,22 +221,22 @@ namespace plane::protocol
 
         struct WpmlFolder
         {
-            int         templateId { 0 };
-            _STD string executeHeightMode { "relativeToStartPoint" };
-            int         waylineId { 0 };
-            double      distance { 530.481018066406 };
-            double      duration { 149.069183349609 };
-            double      autoFlightSpeed { 5 };
-            _STD vector<WpmlPlacemark> placemarks {};
+            int                          templateId { 0 };
+            ::std::string                executeHeightMode { "relativeToStartPoint" };
+            int                          waylineId { 0 };
+            double                       distance { 530.481018066406 };
+            double                       duration { 149.069183349609 };
+            double                       autoFlightSpeed { 5 };
+            ::std::vector<WpmlPlacemark> placemarks {};
 
-            void                       toXml(_PUGI xml_node& parent) const
+            void                         toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("Folder") };
                 node.append_child("wpml:templateId").text().set(templateId);
                 node.append_child("wpml:executeHeightMode").text().set(executeHeightMode);
                 node.append_child("wpml:waylineId").text().set(waylineId);
-                node.append_child("wpml:distance").text().set(_FMT format("{:.12f}", distance));
-                node.append_child("wpml:duration").text().set(_FMT format("{:.12f}", duration));
+                node.append_child("wpml:distance").text().set(::fmt::format("{:.12f}", distance));
+                node.append_child("wpml:duration").text().set(::fmt::format("{:.12f}", duration));
                 node.append_child("wpml:autoFlightSpeed").text().set(autoFlightSpeed);
                 for (const auto& pm : placemarks)
                 {
@@ -251,7 +251,7 @@ namespace plane::protocol
             int  payloadSubEnumValue { 0 };
             int  payloadPositionIndex { 0 };
 
-            void toXml(_PUGI xml_node& parent) const
+            void toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:payloadInfo") };
                 node.append_child("wpml:payloadEnumValue").text().set(payloadEnumValue);
@@ -265,7 +265,7 @@ namespace plane::protocol
             int  droneEnumValue { 65'535 };
             int  droneSubEnumValue { 0 };
 
-            void toXml(_PUGI xml_node& parent) const
+            void toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:droneInfo") };
                 node.append_child("wpml:droneEnumValue").text().set(droneEnumValue);
@@ -275,10 +275,10 @@ namespace plane::protocol
 
         struct KmlMissionConfig final: public kmz::PublicKmlMissionConfig
         {
-            _STD string   executeRCLostAction { "goBack" };
+            ::std::string executeRCLostAction { "goBack" };
             WpmlDroneInfo droneInfo {};
 
-            void          toXml(_PUGI xml_node& parent) const
+            void          toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:missionConfig") };
                 node.append_child("wpml:flyToWaylineMode").text().set(flyToWaylineMode);
@@ -298,7 +298,7 @@ namespace plane::protocol
             KmlMissionConfig missionConfig {};
             WpmlFolder       folder {};
 
-            void             toXml(_PUGI xml_node& parent) const
+            void             toXml(::pugi::xml_node& parent) const
             {
                 missionConfig.toXml(parent);
                 folder.toXml(parent);
@@ -309,9 +309,9 @@ namespace plane::protocol
         {
             WpmlDocument document {};
 
-            void         toXml(_PUGI xml_document& doc) const noexcept
+            void         toXml(::pugi::xml_document& doc) const noexcept
             {
-                auto decl { doc.append_child(_PUGI node_declaration) };
+                auto decl { doc.append_child(::pugi::node_declaration) };
                 decl.append_attribute("version")  = "1.0";
                 decl.append_attribute("encoding") = "UTF-8";
 
@@ -329,11 +329,11 @@ namespace plane::protocol
     {
         struct WpmlCoordinateSysParam
         {
-            _STD string coordinateMode { "WGS84" };
-            _STD string heightMode { "relativeToStartPoint" };
-            _STD string positioningType { "GPS" };
+            ::std::string coordinateMode { "WGS84" };
+            ::std::string heightMode { "relativeToStartPoint" };
+            ::std::string positioningType { "GPS" };
 
-            void        toXml(_PUGI xml_node& parent) const
+            void          toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:waylineCoordinateSysParam") };
                 node.append_child("wpml:coordinateMode").text().set(coordinateMode);
@@ -344,12 +344,12 @@ namespace plane::protocol
 
         struct WpmlGlobalWaypointHeadingParam
         {
-            _STD string waypointHeadingMode { "followWayline" };
-            double      waypointHeadingAngle { 0 };
-            _STD string waypointPoiPoint { _FMT format("{:.6f},{:.6f},{:.6f}", .0, .0, .0) };
-            int         waypointHeadingPoiIndex { 0 };
+            ::std::string waypointHeadingMode { "followWayline" };
+            double        waypointHeadingAngle { 0 };
+            ::std::string waypointPoiPoint { ::fmt::format("{:.6f},{:.6f},{:.6f}", .0, .0, .0) };
+            int           waypointHeadingPoiIndex { 0 };
 
-            void        toXml(_PUGI xml_node& parent) const
+            void          toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:globalWaypointHeadingParam") };
                 node.append_child("wpml:waypointHeadingMode").text().set(waypointHeadingMode);
@@ -363,7 +363,7 @@ namespace plane::protocol
         {
             int  payloadPositionIndex { 7 };
 
-            void toXml(_PUGI xml_node& parent) const
+            void toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:payloadParam") };
                 node.append_child("wpml:payloadPositionIndex").text().set(payloadPositionIndex);
@@ -380,7 +380,7 @@ namespace plane::protocol
             int    useGlobalHeadingParam { 1 };
             int    useGlobalTurnParam { 1 };
 
-            void   toXml(_PUGI xml_node& parent) const
+            void   toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("Placemark") };
                 point.toXml(node);
@@ -399,20 +399,20 @@ namespace plane::protocol
 
         struct WpmlFolder
         {
-            _STD string                    templateType { "waypoint" };
+            ::std::string                  templateType { "waypoint" };
             int                            templateId { 0 };
             WpmlCoordinateSysParam         coordinateSysParam {};
             double                         autoFlightSpeed { 10.0 };
             double                         globalHeight { 100.0 };
             int                            caliFlightEnable { 0 };
-            _STD string                    gimbalPitchMode { "usePointSetting" };
+            ::std::string                  gimbalPitchMode { "usePointSetting" };
             WpmlGlobalWaypointHeadingParam globalWaypointHeadingParam {};
-            _STD string                    globalWaypointTurnMode { "toPointAndStopWithDiscontinuityCurvature" };
+            ::std::string                  globalWaypointTurnMode { "toPointAndStopWithDiscontinuityCurvature" };
             int                            globalUseStraightLine { 1 };
             WpmlPayloadParam               payloadParam {};
-            _STD vector<WpmlPlacemark> placemarks {};
+            ::std::vector<WpmlPlacemark>   placemarks {};
 
-            void                       toXml(_PUGI xml_node& parent) const
+            void                           toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("Folder") };
                 node.append_child("wpml:templateType").text().set(templateType);
@@ -438,7 +438,7 @@ namespace plane::protocol
             int  droneEnumValue { 78 };
             int  droneSubEnumValue { 0 };
 
-            void toXml(_PUGI xml_node& parent) const
+            void toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:droneInfo") };
                 node.append_child("wpml:droneEnumValue").text().set(droneEnumValue);
@@ -452,7 +452,7 @@ namespace plane::protocol
             int  payloadSubEnumValue { 0 };
             int  payloadPositionIndex { 7 };
 
-            void toXml(_PUGI xml_node& parent) const
+            void toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:payloadInfo") };
                 node.append_child("wpml:payloadEnumValue").text().set(payloadEnumValue);
@@ -463,10 +463,10 @@ namespace plane::protocol
 
         struct KmlMissionConfig final: public kmz::PublicKmlMissionConfig
         {
-            _STD string   executeRCLostAction { "goBack" };
+            ::std::string executeRCLostAction { "goBack" };
             WpmlDroneInfo droneInfo {};
 
-            void          toXml(_PUGI xml_node& parent) const
+            void          toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:missionConfig") };
                 node.append_child("wpml:flyToWaylineMode").text().set(flyToWaylineMode);
@@ -485,7 +485,7 @@ namespace plane::protocol
             KmlMissionConfig missionConfig {};
             WpmlFolder       folder {};
 
-            void             toXml(_PUGI xml_node& parent) const
+            void             toXml(::pugi::xml_node& parent) const
             {
                 missionConfig.toXml(parent);
                 folder.toXml(parent);
@@ -494,20 +494,22 @@ namespace plane::protocol
 
         struct TemplateKmlFile
         {
-            _STD string  createTime {};
-            _STD string  updateTime {};
-            WpmlDocument document {};
+            ::std::string createTime {};
+            ::std::string updateTime {};
+            WpmlDocument  document {};
 
             explicit TemplateKmlFile(void) noexcept
             {
-                auto now_ms { _STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(_STD_CHRONO system_clock::now().time_since_epoch()).count() };
-                createTime = _STD to_string(now_ms);
+                auto now_ms {
+                    ::std::chrono::duration_cast<::std::chrono::milliseconds>(::std::chrono::system_clock::now().time_since_epoch()).count()
+                };
+                createTime = ::std::to_string(now_ms);
                 updateTime = createTime;
             }
 
-            void toXml(_PUGI xml_document& doc) const noexcept
+            void toXml(::pugi::xml_document& doc) const noexcept
             {
-                auto decl { doc.append_child(_PUGI node_declaration) };
+                auto decl { doc.append_child(::pugi::node_declaration) };
                 decl.append_attribute("version")  = "1.0";
                 decl.append_attribute("encoding") = "UTF-8";
 

@@ -48,7 +48,7 @@ namespace plane::my_dji
 {
     namespace
     {
-        _STD atomic<bool> g_should_exit(false);
+        ::std::atomic<bool> g_should_exit(false);
 
         // 信号处理器: 仅做 async-signal-safe 的原子置位。
         // 注意: 不可在信号上下文调用日志 (spdlog 非异步信号安全, 且与工作线程共享
@@ -71,16 +71,16 @@ namespace plane::my_dji
         {
             try
             {
-                const auto      dumpsPath { plane::utils::getEXEHomePath("dumps") };
-                _STD error_code ec {};
-                _STD_FS         create_directories(dumpsPath, ec);
-                const auto      dumpsStr { dumpsPath.string() };
+                const auto        dumpsPath { plane::utils::getEXEHomePath("dumps") };
+                ::std::error_code ec {};
+                ::std::filesystem::create_directories(dumpsPath, ec);
+                const auto dumpsStr { dumpsPath.string() };
                 if (!dumpsStr.empty() && dumpsStr.size() < sizeof(g_crashDumpDir))
                 {
-                    _CSTD snprintf(g_crashDumpDir, sizeof(g_crashDumpDir), "%s", dumpsStr.c_str());
+                    ::snprintf(g_crashDumpDir, sizeof(g_crashDumpDir), "%s", dumpsStr.c_str());
                 }
             }
-            catch (...)
+            catch (...) // NOLINT(bugprone-empty-catch)
             {
                 // 忽略: 崩溃报告文件不可用时, 仍有 stderr 调用栈与内核 core 兜底
             }
@@ -90,8 +90,8 @@ namespace plane::my_dji
         void enableCoreDumps(void) noexcept
         {
             const struct rlimit coreLimit { RLIM_INFINITY, RLIM_INFINITY };
-            (void)_CSTD         setrlimit(RLIMIT_CORE, &coreLimit);
-            (void)_CSTD         prctl(PR_SET_DUMPABLE, 1);
+            (void)::setrlimit(RLIMIT_CORE, &coreLimit);
+            (void)::prctl(PR_SET_DUMPABLE, 1);
         }
 
         // 信号编号 -> 名称 (避免在信号上下文调用非 async-signal-safe 的 strsignal)
@@ -117,18 +117,18 @@ namespace plane::my_dji
         // 拷贝 /proc 下文件内容到 fd (信号上下文内仅用低层调用)
         void copyProcFileTo(int fd, const char* procPath) noexcept
         {
-            const int srcFd { _CSTD open(procPath, O_RDONLY) };
+            const int srcFd { ::open(procPath, O_RDONLY) };
             if (srcFd < 0)
             {
                 return;
             }
             char    buf[4096] {};
             ssize_t readLen { 0 };
-            while ((readLen = _CSTD read(srcFd, buf, sizeof(buf))) > 0)
+            while ((readLen = ::read(srcFd, buf, sizeof(buf))) > 0)
             {
-                (void)_CSTD write(fd, buf, static_cast<_STD size_t>(readLen));
+                (void)::write(fd, buf, static_cast<::std::size_t>(readLen));
             }
-            _CSTD close(srcFd);
+            ::close(srcFd);
         }
 
         // 输出崩溃现场寄存器 (按目标架构取 ucontext 中的核心字段; 其余信息由 core 转储提供)
@@ -142,7 +142,7 @@ namespace plane::my_dji
             int  len { 0 };
 #if defined(__aarch64__)
             const auto* uc { static_cast<const ucontext_t*>(context) };
-            len = _CSTD snprintf(
+            len = ::snprintf(
                 buf,
                 sizeof(buf),
                 "[registers] pc=0x%016llx sp=0x%016llx lr=0x%016llx fp=0x%016llx\n",
@@ -153,7 +153,7 @@ namespace plane::my_dji
             );
 #elif defined(__x86_64__)
             const auto* uc { static_cast<const ucontext_t*>(context) };
-            len = _CSTD snprintf(
+            len = ::snprintf(
                 buf,
                 sizeof(buf),
                 "[registers] rip=0x%016llx rsp=0x%016llx rbp=0x%016llx\n",
@@ -166,8 +166,8 @@ namespace plane::my_dji
 #endif
             if (len > 0)
             {
-                const _STD size_t maxLen { sizeof(buf) - 1 };
-                (void)_CSTD       write(fd, buf, static_cast<_STD size_t>(len) < maxLen ? static_cast<_STD size_t>(len) : maxLen);
+                const ::std::size_t maxLen { sizeof(buf) - 1 };
+                (void)::write(fd, buf, static_cast<::std::size_t>(len) < maxLen ? static_cast<::std::size_t>(len) : maxLen);
             }
         }
 
@@ -180,27 +180,27 @@ namespace plane::my_dji
             }
 
             char path[640] {};
-            int  pathLen { _CSTD snprintf(
+            int  pathLen { ::snprintf(
                 path,
                 sizeof(path),
                 "%s/crash_%lld_%d.txt",
                 g_crashDumpDir,
-                static_cast<long long>(_CSTD time(nullptr)),
-                static_cast<int>(_CSTD getpid())
+                static_cast<long long>(::time(nullptr)),
+                static_cast<int>(::getpid())
             ) };
             if (pathLen <= 0)
             {
                 return;
             }
 
-            const int fd { _CSTD open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644) };
+            const int fd { ::open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644) };
             if (fd < 0)
             {
                 return;
             }
 
             char head[512] {};
-            int  headLen { _CSTD snprintf(
+            int  headLen { ::snprintf(
                 head,
                 sizeof(head),
                 "========== [CRASH REPORT] ==========\n"
@@ -216,43 +216,43 @@ namespace plane::my_dji
                 signalName(signum),
                 (info != nullptr) ? info->si_code : 0,
                 (info != nullptr) ? info->si_addr : nullptr,
-                static_cast<int>(_CSTD getpid()),
-                static_cast<long long>(_CSTD time(nullptr)),
+                static_cast<int>(::getpid()),
+                static_cast<long long>(::time(nullptr)),
                 __DATE__,
                 __TIME__
             ) };
             if (headLen > 0)
             {
-                const _STD size_t maxLen { sizeof(head) - 1 };
-                (void)_CSTD       write(fd, head, static_cast<_STD size_t>(headLen) < maxLen ? static_cast<_STD size_t>(headLen) : maxLen);
+                const ::std::size_t maxLen { sizeof(head) - 1 };
+                (void)::write(fd, head, static_cast<::std::size_t>(headLen) < maxLen ? static_cast<::std::size_t>(headLen) : maxLen);
             }
 
             writeRegisterSnapshot(fd, context);
 
             // 调用栈 (原始帧地址; 离线可用 addr2line/gdb 符号化)
             constexpr static char kStackTag[] { "[backtrace]\n" };
-            (void)_CSTD           write(fd, kStackTag, sizeof(kStackTag) - 1);
-            void*                 frames[64] {};
-            const int             frameCount { _CSTD backtrace(frames, 64) };
-            _CSTD                 backtrace_symbols_fd(frames, frameCount, fd);
+            (void)::write(fd, kStackTag, sizeof(kStackTag) - 1);
+            void*     frames[64] {};
+            const int frameCount { ::backtrace(frames, 64) };
+            ::backtrace_symbols_fd(frames, frameCount, fd);
 
             // 内存映射与进程状态 (离线解析地址归属/线程数所需)
             constexpr static char kMapsTag[] { "\n[memory maps]\n" };
-            (void)_CSTD           write(fd, kMapsTag, sizeof(kMapsTag) - 1);
+            (void)::write(fd, kMapsTag, sizeof(kMapsTag) - 1);
             copyProcFileTo(fd, "/proc/self/maps");
             constexpr static char kStatusTag[] { "\n[proc status]\n" };
-            (void)_CSTD           write(fd, kStatusTag, sizeof(kStatusTag) - 1);
+            (void)::write(fd, kStatusTag, sizeof(kStatusTag) - 1);
             copyProcFileTo(fd, "/proc/self/status");
 
-            _CSTD close(fd);
+            ::close(fd);
 
             // stderr 提示报告路径
             char hint[768] {};
-            int  hintLen { _CSTD snprintf(hint, sizeof(hint), "!!! [CRASH] 详细报告已写入: %s !!!\n", path) };
+            int  hintLen { ::snprintf(hint, sizeof(hint), "!!! [CRASH] 详细报告已写入: %s !!!\n", path) };
             if (hintLen > 0)
             {
-                const _STD size_t maxLen { sizeof(hint) - 1 };
-                (void)_CSTD write(STDERR_FILENO, hint, static_cast<_STD size_t>(hintLen) < maxLen ? static_cast<_STD size_t>(hintLen) : maxLen);
+                const ::std::size_t maxLen { sizeof(hint) - 1 };
+                (void)::write(STDERR_FILENO, hint, static_cast<::std::size_t>(hintLen) < maxLen ? static_cast<::std::size_t>(hintLen) : maxLen);
             }
         }
 
@@ -263,13 +263,13 @@ namespace plane::my_dji
         void crashSignalHandler(int signum, siginfo_t* info, void* context)
         {
             // 防重入: 多线程同时崩溃时只记录一次
-            static volatile _CSTD sig_atomic_t entered { 0 };
+            static volatile ::sig_atomic_t entered { 0 };
             if (entered == 0)
             {
                 entered = 1;
 
                 char header[256] {};
-                int  len { _CSTD snprintf(
+                int  len { ::snprintf(
                     header,
                     sizeof(header),
                     "\n!!! [CRASH] 信号 %d, 故障地址 %p, 调用栈如下 (请连同日志一并发给开发者) !!!\n",
@@ -278,16 +278,16 @@ namespace plane::my_dji
                 ) };
                 if (len > 0)
                 {
-                    const _STD size_t maxLen { sizeof(header) - 1 };
-                    const _STD size_t writeLen { static_cast<_STD size_t>(len) < maxLen ? static_cast<_STD size_t>(len) : maxLen };
-                    (void)_CSTD       write(STDERR_FILENO, header, writeLen);
+                    const ::std::size_t maxLen { sizeof(header) - 1 };
+                    const ::std::size_t writeLen { static_cast<::std::size_t>(len) < maxLen ? static_cast<::std::size_t>(len) : maxLen };
+                    (void)::write(STDERR_FILENO, header, writeLen);
                 }
 
-                void*                 frames[64] {};
-                const int             frameCount { _CSTD backtrace(frames, 64) };
-                _CSTD                 backtrace_symbols_fd(frames, frameCount, STDERR_FILENO);
+                void*     frames[64] {};
+                const int frameCount { ::backtrace(frames, 64) };
+                ::backtrace_symbols_fd(frames, frameCount, STDERR_FILENO);
                 constexpr static char kEndMsg[] { "!!! [CRASH] 调用栈结束 !!!\n" };
-                (void)_CSTD           write(STDERR_FILENO, kEndMsg, sizeof(kEndMsg) - 1);
+                (void)::write(STDERR_FILENO, kEndMsg, sizeof(kEndMsg) - 1);
 
                 writeCrashReportFile(signum, info, context);
 
@@ -295,16 +295,16 @@ namespace plane::my_dji
                 // 让内核按默认动作写出 core 文件并终止进程。
                 // (注意: 处理器内本信号被自动屏蔽, 若只 raise 不解除屏蔽, 信号会滞留
                 //  到处理器返回后才送达; 提前解除屏蔽可让内核立即执行默认动作。)
-                _CSTD          signal(signum, SIG_DFL);
-                _CSTD sigset_t unblockSet {};
-                _CSTD          sigemptyset(&unblockSet);
-                _CSTD          sigaddset(&unblockSet, signum);
-                (void)_CSTD    sigprocmask(SIG_UNBLOCK, &unblockSet, nullptr);
-                _CSTD          raise(signum);
+                ::signal(signum, SIG_DFL);
+                ::sigset_t unblockSet {};
+                ::sigemptyset(&unblockSet);
+                ::sigaddset(&unblockSet, signum);
+                (void)::sigprocmask(SIG_UNBLOCK, &unblockSet, nullptr);
+                ::raise(signum);
             }
 
             // 兜底 (正常流程下不可达): 重发信号后进程应已被内核终止
-            _CSTD _Exit(128 + signum);
+            ::_Exit(128 + signum);
         }
 
         void installCrashDiagnostics(void) noexcept
@@ -315,12 +315,12 @@ namespace plane::my_dji
             struct sigaction action {};
             action.sa_sigaction = crashSignalHandler;
             action.sa_flags     = SA_SIGINFO | SA_RESETHAND;
-            _CSTD sigemptyset(&action.sa_mask);
-            _CSTD sigaction(SIGSEGV, &action, nullptr);
-            _CSTD sigaction(SIGABRT, &action, nullptr);
-            _CSTD sigaction(SIGBUS, &action, nullptr);
-            _CSTD sigaction(SIGFPE, &action, nullptr);
-            _CSTD sigaction(SIGILL, &action, nullptr);
+            ::sigemptyset(&action.sa_mask);
+            ::sigaction(SIGSEGV, &action, nullptr);
+            ::sigaction(SIGABRT, &action, nullptr);
+            ::sigaction(SIGBUS, &action, nullptr);
+            ::sigaction(SIGFPE, &action, nullptr);
+            ::sigaction(SIGILL, &action, nullptr);
         }
     } // namespace
 
@@ -330,7 +330,7 @@ namespace plane::my_dji
         plane::utils::getEXEHomePath.init(argv[0]);
 
         // 持有 DJI Application 实例，确保其生命周期贯穿整个应用程序运行期间
-        _STD unique_ptr<_DJI Application> PSDK_application_ptr_ { nullptr };
+        ::std::unique_ptr<::Application> PSDK_application_ptr_ { nullptr };
 
         // 日志系统初始化（必须最先初始化）
         plane::utils::Logger::getInstance().init();
@@ -347,10 +347,10 @@ namespace plane::my_dji
         }
 
         // 崩溃转储链路自测: CY_PSDK_CRASH_TEST=1 时主动触发一次崩溃 (用于验证报告与 core 生成)
-        if (const char* crashTest { _CSTD getenv("CY_PSDK_CRASH_TEST") }; crashTest != nullptr && crashTest[0] != '\0')
+        if (const char* crashTest { ::getenv("CY_PSDK_CRASH_TEST") }; crashTest != nullptr && crashTest[0] != '\0')
         {
             LOG_WARN("CY_PSDK_CRASH_TEST 已设置: 主动触发 SIGSEGV 验证崩溃转储链路");
-            _CSTD raise(SIGSEGV);
+            ::raise(SIGSEGV);
         }
 
         // 部署完整性自检: 校验 cy_psdk 与 libs/ 的 SHA256 (纯程序内实现, 不依赖板端外部工具)
@@ -372,16 +372,16 @@ namespace plane::my_dji
         // 根据配置设置日志级别
         if (config.isTraceLogLevel())
         {
-            plane::utils::Logger::getInstance().setLocalLogFileLevel(_SPDLOG level::trace);
+            plane::utils::Logger::getInstance().setLocalLogFileLevel(::spdlog::level::trace);
         }
         else
         {
-            plane::utils::Logger::getInstance().setLocalLogFileLevel(_SPDLOG level::info);
+            plane::utils::Logger::getInstance().setLocalLogFileLevel(::spdlog::level::info);
         }
 
         // 注意: resolveCatalogServiceId() 内部要读取 PlaneStateStore 快照, 必须在 update() 加锁之前解析;
         // 在 update() 回调内调用会因 std::mutex 不可重入而自锁 (曾导致板端启动卡死, 无任何后续日志)
-        const _STD string resolved_agent_identifier { plane::utils::DeviceIdentity::resolveCatalogServiceId() };
+        const ::std::string resolved_agent_identifier { plane::utils::DeviceIdentity::resolveCatalogServiceId() };
         plane::domain::PlaneStateStore::getInstance().update(
             [&config, &resolved_agent_identifier](plane::domain::PlaneStateDataClass& st)
             {
@@ -429,11 +429,11 @@ namespace plane::my_dji
             try
             {
                 LOG_INFO("初始化 PSDK CORE , 请等待");
-                PSDK_application_ptr_ = _STD make_unique<_DJI Application>(argc, argv);
+                PSDK_application_ptr_ = ::std::make_unique<::Application>(argc, argv);
                 LOG_INFO("PSDK CORE 初始化完成");
-                _STD this_thread::sleep_for(_STD_CHRONO seconds(5));
+                ::std::this_thread::sleep_for(::std::chrono::seconds(5));
             }
-            catch (const _STD exception& e)
+            catch (const ::std::exception& e)
             {
                 LOG_ERROR("PSDK CORE 初始化异常: {}", e.what());
                 return 1;
@@ -518,20 +518,20 @@ namespace plane::my_dji
 
         // 等待一段时间让各服务稳定运行，随后报告应用已启动
         LOG_DEBUG("等待各服务稳定运行");
-        _STD this_thread::sleep_for(_STD_CHRONO seconds(2));
+        ::std::this_thread::sleep_for(::std::chrono::seconds(2));
         LOG_INFO("==========================================================");
         LOG_INFO("               应用程序初始化完成, 正在运行中");
         LOG_INFO("                    按 Ctrl+C 退出");
         LOG_INFO("==========================================================");
 
         // 注册信号处理
-        _CSTD signal(SIGINT, _UNNAMED signalHandler);
-        _CSTD signal(SIGTERM, _UNNAMED signalHandler);
+        ::signal(SIGINT, signalHandler);
+        ::signal(SIGTERM, signalHandler);
 
         // 主循环，等待退出信号
         while (!g_should_exit)
         {
-            _STD this_thread::sleep_for(_STD_CHRONO milliseconds(500));
+            ::std::this_thread::sleep_for(::std::chrono::milliseconds(500));
         }
 
         // 收到退出信号，开始关闭各服务
@@ -568,7 +568,7 @@ namespace plane::my_dji
         plane::manager::CatalogManager::getInstance().stop();
 
         // 等待一段时间确保所有服务已正确关闭
-        _STD this_thread::sleep_for(_STD_CHRONO seconds(1));
+        ::std::this_thread::sleep_for(::std::chrono::seconds(1));
         // 最后停止状态板同步: 退出过程中的状态变化 (连接断开等) 也真实反映到板面
         plane::manager::StatusBoardManager::getInstance().stop();
         LOG_INFO("应用程序已关闭");

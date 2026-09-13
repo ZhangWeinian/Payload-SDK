@@ -45,21 +45,21 @@ namespace plane::utils
         void setEnabled(bool enabled) noexcept;
 
         // 状态板是否启用 (不含终端能力判断)
-        _NODISCARD bool isEnabled(void) const noexcept;
+        [[nodiscard]] bool isEnabled(void) const noexcept;
 
         // 是否运行于可交互终端 (否则自动降级: 状态变化以普通日志形式输出)
-        _NODISCARD bool isInteractive(void) const noexcept;
+        [[nodiscard]] bool isInteractive(void) const noexcept;
 
         // 终端是否支持 ANSI 颜色 (isatty + TERM 非 dumb + 未设置 NO_COLOR)
         // 日志接收器 (StatusBoardSink) 的着色判断与此保持一致
-        _NODISCARD static bool colorSupported(void) noexcept;
+        [[nodiscard]] static bool colorSupported(void) noexcept;
 
         // 更新一项状态; 值 (含级别) 未变化时不产生任何输出
-        void update(const _STD string& key, _STD string value, StatusLevel level = StatusLevel::Info);
+        void update(const ::std::string& key, ::std::string value, StatusLevel level = StatusLevel::Info);
 
         // 输出一条日志 (可含换行): 抹除状态块 -> 打印日志 -> 重绘状态块
         // 非交互终端下行为与直接打印一致
-        void log(_STD string_view line);
+        void log(::std::string_view line);
 
         // 退出前抹除状态块, 不在终端留下残影
         void finish(void) noexcept;
@@ -72,25 +72,25 @@ namespace plane::utils
 
         struct Item
         {
-            _STD string key;
-            _STD string value;
-            StatusLevel level { StatusLevel::Info };
+            ::std::string key;
+            ::std::string value;
+            StatusLevel   level { StatusLevel::Info };
         };
 
         // ---- 内部操作 (均需持有 mutex_) ----
-        _NODISCARD bool    interactiveLocked(void) const noexcept;
-        Item&              findOrCreateLocked(const _STD string& key);
-        void               flushLocked(void);
-        void               writePlainLocked(const _STD string& line);
-        void               writeLogLocked(_STD string_view text);
-        void               eraseBlockLocked(void);
-        void               drawBlockLocked(void);
-        static const char* levelColor(StatusLevel level) noexcept;
+        [[nodiscard]] bool  interactiveLocked(void) const noexcept;
+        Item&               findOrCreateLocked(const ::std::string& key);
+        void                flushLocked(void);
+        void                writePlainLocked(const ::std::string& line);
+        void                writeLogLocked(::std::string_view text);
+        void                eraseBlockLocked(void);
+        void                drawBlockLocked(void);
+        static const char*  levelColor(StatusLevel level) noexcept;
 
-        _STD mutex         mutex_ {};
-        _STD vector<Item> items_ {};          // 顺序即显示顺序 (首次 update 的顺序)
-        _STD string       buffer_ {};         // 单次临界区内的输出缓冲, 一次 write 落盘
-        int               drawn_lines_ { 0 }; // 当前已绘制的状态块行数 (0 = 未绘制)
-        _STD atomic<bool> enabled_ { true };
+        ::std::mutex        mutex_ {};
+        ::std::vector<Item> items_ {};          // 顺序即显示顺序 (首次 update 的顺序)
+        ::std::string       buffer_ {};         // 单次临界区内的输出缓冲, 一次 write 落盘
+        int                 drawn_lines_ { 0 }; // 当前已绘制的状态块行数 (0 = 未绘制)
+        ::std::atomic<bool> enabled_ { true };
     };
 } // namespace plane::utils

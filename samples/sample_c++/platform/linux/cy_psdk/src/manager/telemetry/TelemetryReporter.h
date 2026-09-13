@@ -29,7 +29,7 @@ namespace plane::manager
         static TelemetryReporter& getInstance(void) noexcept;
 
         // 启动遥测上报服务
-        _NODISCARD bool start(void);
+        [[nodiscard]] bool start(void);
 
         // 停止遥测上报服务
         void stop(void);
@@ -41,7 +41,7 @@ namespace plane::manager
         TelemetryReporter& operator=(const TelemetryReporter&) noexcept = delete;
 
         // 发布 JSON 字符串到 MQTT 主题
-        _NODISCARD bool publishJson(_STD string_view topic, _STD string_view statusJson) noexcept;
+        [[nodiscard]] bool publishJson(::std::string_view topic, ::std::string_view statusJson) noexcept;
 
         // PSDK 事件处理相关
         void onPSDKEvent(const plane::manager::EventManager::PSDKEventData& eventData);
@@ -50,17 +50,17 @@ namespace plane::manager
         void onHeartbeatTick(const plane::manager::EventManager::SystemEventData& eventData);
 
         // 启动看门狗检查
-        void runWatchdogCheck(void) noexcept;
+        void                                                                                        runWatchdogCheck(void) noexcept;
 
-        _STD unique_ptr<_EVENTPP ScopedRemover<plane::manager::EventManager::StatusDispatcher>> psdk_event_remover_ {};
-        _STD unique_ptr<_EVENTPP ScopedRemover<plane::manager::EventManager::SystemDispatcher>> system_event_remover_ {};
-        _STD unique_ptr<_BS thread_pool<>> event_processing_pool_ {};
-        _STD atomic<bool> run_watchdog_ { false };
-        _STD atomic<bool> running_ { false };
-        _STD atomic<_STD_CHRONO steady_clock::time_point> last_health_ping_time_ {};
-        _STD atomic<_STD size_t> queued_task_count_ { 0 };
-        constexpr static auto    PSDK_WATCHDOG_CHECK_INTERVAL { _STD_CHRONO seconds(1) };
-        constexpr static auto    MAX_EVENT_QUEUE_SIZE { 100 };
-        constexpr static auto    PSDK_WATCHDOG_TIMEOUT { _STD_CHRONO seconds(1) };
+        ::std::unique_ptr<::eventpp::ScopedRemover<plane::manager::EventManager::StatusDispatcher>> psdk_event_remover_ {};
+        ::std::unique_ptr<::eventpp::ScopedRemover<plane::manager::EventManager::SystemDispatcher>> system_event_remover_ {};
+        ::std::unique_ptr<::BS::thread_pool<>>                                                      event_processing_pool_ {};
+        ::std::atomic<bool>                                                                         run_watchdog_ { false };
+        ::std::atomic<bool>                                                                         running_ { false };
+        ::std::atomic<::std::chrono::steady_clock::time_point>                                      last_health_ping_time_ {};
+        ::std::atomic<::std::size_t>                                                                queued_task_count_ { 0 };
+        constexpr static auto PSDK_WATCHDOG_CHECK_INTERVAL { ::std::chrono::seconds(1) };
+        constexpr static auto MAX_EVENT_QUEUE_SIZE { 100 };
+        constexpr static auto PSDK_WATCHDOG_TIMEOUT { ::std::chrono::seconds(1) };
     };
 } // namespace plane::manager

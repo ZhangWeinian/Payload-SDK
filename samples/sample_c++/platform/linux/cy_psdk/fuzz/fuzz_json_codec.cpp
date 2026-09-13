@@ -38,10 +38,10 @@ namespace
         }
         try
         {
-            const _STD string dumped { json_result.value().dump() };
+            const ::std::string dumped { json_result.value().dump() };
             (void)dumped;
         }
-        catch (const _STD exception&)
+        catch (const ::std::exception&)
         {
             // 任意字节注入字符串字段后, dump() 可能因非法 UTF-8 抛 type_error —
             // 生产侧前提是内部字符串均为合法 UTF-8, 此处按预期拒绝处理。
@@ -49,9 +49,9 @@ namespace
     }
 } // namespace
 
-extern "C" int LLVMFuzzerTestOneInput(const _STD uint8_t* data, _STD size_t size)
+extern "C" int LLVMFuzzerTestOneInput(const ::std::uint8_t* data, ::std::size_t size)
 {
-    const _STD string blob { reinterpret_cast<const char*>(data), size };
+    const ::std::string blob { reinterpret_cast<const char*>(data), size };
 
     // 1) 注册体: 字符串字段与端口信息全部注入模糊数据
     {
@@ -77,7 +77,7 @@ extern "C" int LLVMFuzzerTestOneInput(const _STD uint8_t* data, _STD size_t size
     {
         ServiceStatus status {};
         status.healthy        = size > 0 && (data[0] & 0X01u) != 0;
-        status.overall_status = (size > 0 && (data[0] & 0X02u) != 0) ? _STD string { "UP" } : blob;
+        status.overall_status = (size > 0 && (data[0] & 0X02u) != 0) ? ::std::string { "UP" } : blob;
         status.code           = blob;
         status.message        = blob;
         if (!blob.empty())
@@ -87,7 +87,7 @@ extern "C" int LLVMFuzzerTestOneInput(const _STD uint8_t* data, _STD size_t size
 
         ServiceComponentStatus component {};
         component.name    = blob;
-        component.status  = (size > 0 && (data[0] & 0X04u) != 0) ? _STD string { "DOWN" } : blob;
+        component.status  = (size > 0 && (data[0] & 0X04u) != 0) ? ::std::string { "DOWN" } : blob;
         component.code    = blob;
         component.message = blob;
         if (!blob.empty())
@@ -102,10 +102,10 @@ extern "C" int LLVMFuzzerTestOneInput(const _STD uint8_t* data, _STD size_t size
     // 3) 传输层解析语义 (CatalogTransport::parseRawJson 私有; 同语义直连)
     try
     {
-        const auto parsed { _NLOHMANN_JSON json::parse(blob) };
+        const auto parsed { ::nlohmann::json::parse(blob) };
         (void)parsed;
     }
-    catch (const _STD exception&)
+    catch (const ::std::exception&)
     {}
 
     return 0;

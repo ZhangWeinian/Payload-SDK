@@ -44,9 +44,9 @@ namespace plane::manager
         using ExposedPort            = plane::catalog::ExposedPort;
         using ServiceRegistration    = plane::catalog::ServiceRegistration;
 
-        using Ms                     = _STD            chrono::milliseconds;
+        using Ms                     = ::std::chrono::milliseconds;
 
-        constexpr _STD string_view stateText(CatalogState state) noexcept
+        constexpr ::std::string_view stateText(CatalogState state) noexcept
         {
             switch (state)
             {
@@ -71,7 +71,7 @@ namespace plane::manager
         }
 
         // 端点协议 -> URL scheme (mqtt/tcp 按 tcp://; ws/wss/http/https/rtsp 原样)
-        constexpr _STD string_view schemeForProtocol(const _STD string& protocol) noexcept
+        constexpr ::std::string_view schemeForProtocol(const ::std::string& protocol) noexcept
         {
             if (protocol == "ws")
             {
@@ -101,25 +101,25 @@ namespace plane::manager
         constexpr Ms kStatusReportInterval { 3000 };
 
         // 中心 broker 地址解析: 未成功前快速重试, 成功后周期校验 (检测迁移/变更)
-        constexpr auto kBrokerResolveRetryInterval { _STD_CHRONO seconds(5) };
-        constexpr auto kBrokerResolveCheckInterval { _STD_CHRONO seconds(30) };
+        constexpr auto kBrokerResolveRetryInterval { ::std::chrono::seconds(5) };
+        constexpr auto kBrokerResolveCheckInterval { ::std::chrono::seconds(30) };
     } // namespace
 
     struct CatalogManager::Impl
     {
         // 自研目录运行时 (后台线程持有; 业务线程经 rt_mutex_ 取 shared_ptr 快照后锁外调用)
-        _STD shared_ptr<CatalogRuntime> runtime {};
+        ::std::shared_ptr<CatalogRuntime> runtime {};
 
         // 最近一次 broker 解析尝试时刻与最近广播的地址 (写入仅在后台上报线程;
         // 广播走 EventManager 系统事件, 由 MQTT 模块订阅后自治重连;
         // last_published_url 另经 getMqttBrokerUrl() 被业务线程读取)
-        _STD_CHRONO steady_clock::time_point last_broker_attempt {};
-        _STD string                          last_published_url {};
-        mutable _STD mutex                   broker_url_mutex {}; // 保护 last_published_url 跨线程读写
+        ::std::chrono::steady_clock::time_point last_broker_attempt {};
+        ::std::string                           last_published_url {};
+        mutable ::std::mutex                    broker_url_mutex {}; // 保护 last_published_url 跨线程读写
 
         // 待解析的"中心"服务与端点协议 (来自 ConfigManager 固定值)
-        _STD string broker_service_id {};
-        _STD string broker_protocol {};
+        ::std::string broker_service_id {};
+        ::std::string broker_protocol {};
     };
 
     CatalogManager& CatalogManager::getInstance(void) noexcept
@@ -137,22 +137,22 @@ namespace plane::manager
 
     void CatalogManager::notifyPsdkRunning(bool running) noexcept
     {
-        this->psdk_running_.store(running, _STD memory_order_release);
+        this->psdk_running_.store(running, ::std::memory_order_release);
     }
 
     void CatalogManager::notifyHeartbeatRunning(bool running) noexcept
     {
-        this->heartbeat_running_.store(running, _STD memory_order_release);
+        this->heartbeat_running_.store(running, ::std::memory_order_release);
     }
 
     void CatalogManager::notifyTelemetryRunning(bool running) noexcept
     {
-        this->telemetry_running_.store(running, _STD memory_order_release);
+        this->telemetry_running_.store(running, ::std::memory_order_release);
     }
 
     void CatalogManager::start(void) noexcept
     {
-        if (this->started_.exchange(true, _STD memory_order_acq_rel))
+        if (this->started_.exchange(true, ::std::memory_order_acq_rel))
         {
             return;
         }
@@ -160,12 +160,12 @@ namespace plane::manager
         auto& config { plane::config::ConfigManager::getInstance() };
 
         // 发现参数缺失: 无 node_id/targets 无法探测, 目录接入降级不启动 (不兜底)
-        const _STD string node_id { config.getCatalogNodeId() };
-        const auto&       targets { config.getCatalogTargets() };
+        const ::std::string node_id { config.getCatalogNodeId() };
+        const auto&         targets { config.getCatalogTargets() };
         if (node_id.empty() || targets.empty())
         {
             LOG_WARN("SwarmCatalog 发现参数缺失 (node_id/targets 未配置), 本次不启动目录接入");
-            this->running_.store(false, _STD memory_order_release);
+            this->running_.store(false, ::std::memory_order_release);
             // 同步域模型: 目录本次未启动 (供状态板显示真实状态, 避免长期显示“初始化中…”)
             plane::domain::PlaneStateStore::getInstance().update(
                 [](plane::domain::PlaneStateDataClass& st)
@@ -177,12 +177,12 @@ namespace plane::manager
             return;
         }
 
-        this->impl_                    = _STD                    make_unique<Impl>();
-        this->impl_->broker_service_id = _STD string { config.getCatalogBrokerServiceId() };
-        this->impl_->broker_protocol   = _STD   string { config.getCatalogBrokerPortProtocol() };
+        this->impl_                    = ::std::make_unique<Impl>();
+        this->impl_->broker_service_id = ::std::string { config.getCatalogBrokerServiceId() };
+        this->impl_->broker_protocol   = ::std::string { config.getCatalogBrokerPortProtocol() };
 
-        this->running_.store(true, _STD memory_order_release);
-        this->thread_ = _STD thread(&CatalogManager::runLoop, this);
+        this->running_.store(true, ::std::memory_order_release);
+        this->thread_ = ::std::thread(&CatalogManager::runLoop, this);
         LOG_INFO(
             "SwarmCatalog 接入启动: service_id='{}', service_name='{}', version='{}', discover_broker={}",
             plane::utils::DeviceIdentity::resolveCatalogServiceId(),
@@ -194,19 +194,19 @@ namespace plane::manager
 
     void CatalogManager::stop(void) noexcept
     {
-        if (!this->started_.exchange(false, _STD memory_order_acq_rel))
+        if (!this->started_.exchange(false, ::std::memory_order_acq_rel))
         {
-            this->running_.store(false, _STD memory_order_release);
+            this->running_.store(false, ::std::memory_order_release);
             return;
         }
 
-        this->running_.store(false, _STD memory_order_release);
+        this->running_.store(false, ::std::memory_order_release);
         if (this->thread_.joinable())
         {
             this->thread_.join();
         }
 
-        this->catalog_ready_.store(false, _STD memory_order_release);
+        this->catalog_ready_.store(false, ::std::memory_order_release);
         LOG_INFO("SwarmCatalog 接入已停止");
     }
 
@@ -219,7 +219,7 @@ namespace plane::manager
         // 两者均未就绪时不做任何伪造, 周期提示并等待 (stop() 可打断)
         {
             int wait_round { 0 };
-            while (this->running_.load(_STD memory_order_acquire) && plane::utils::DeviceIdentity::resolveDeviceCode().empty())
+            while (this->running_.load(::std::memory_order_acquire) && plane::utils::DeviceIdentity::resolveDeviceCode().empty())
             {
                 if (wait_round == 0)
                 {
@@ -236,9 +236,9 @@ namespace plane::manager
                     LOG_WARN("仍在等待设备标识 (未配置 'plane.code' 且尚未取得 PSDK 序列号)");
                 }
                 ++wait_round;
-                _STD this_thread::sleep_for(_STD_CHRONO milliseconds(500));
+                ::std::this_thread::sleep_for(::std::chrono::milliseconds(500));
             }
-            if (!this->running_.load(_STD memory_order_acquire))
+            if (!this->running_.load(::std::memory_order_acquire))
             {
                 return;
             }
@@ -277,16 +277,16 @@ namespace plane::manager
 
             if (ready)
             {
-                this->catalog_ready_.store(true, _STD memory_order_release);
+                this->catalog_ready_.store(true, ::std::memory_order_release);
                 LOG_INFO("SwarmCatalog 注册成功 (Ready), 实例对外可见");
             }
             else if (lost)
             {
-                this->catalog_ready_.store(false, _STD memory_order_release);
+                this->catalog_ready_.store(false, ::std::memory_order_release);
                 // 目录失联/恢复后允许重新解析动态 broker (端点可能已变化)
                 this->impl_->last_broker_attempt = {};
                 {
-                    _STD lock_guard<_STD mutex> lock { this->impl_->broker_url_mutex };
+                    ::std::lock_guard<::std::mutex> lock { this->impl_->broker_url_mutex };
                     this->impl_->last_published_url.clear();
                 }
             }
@@ -297,8 +297,8 @@ namespace plane::manager
         discovery.port    = static_cast<int>(config.getCatalogDiscoveryPort());
         discovery.targets = config.getCatalogTargets();
 
-        impl.runtime      = _STD make_shared<CatalogRuntime>(_STD move(options), _STD move(discovery));
-        CatalogRuntime*     rt { impl.runtime.get() };
+        impl.runtime      = ::std::make_shared<CatalogRuntime>(::std::move(options), ::std::move(discovery));
+        CatalogRuntime* rt { impl.runtime.get() };
 
         // ---- 同步发现 (失败按可重试性退避; 参数非法不可重试则放弃) ----
         bool started { false };
@@ -326,22 +326,22 @@ namespace plane::manager
             }
 
             // 分片睡眠: stop() 时最多等待 200ms 而非整个退避周期
-            const auto deadline { _STD_CHRONO steady_clock::now() + backoff };
-            while (this->running_.load(_STD memory_order_acquire) && _STD_CHRONO steady_clock::now() < deadline)
+            const auto deadline { ::std::chrono::steady_clock::now() + backoff };
+            while (this->running_.load(::std::memory_order_acquire) && ::std::chrono::steady_clock::now() < deadline)
             {
-                _STD this_thread::sleep_for(Ms { 200 });
+                ::std::this_thread::sleep_for(Ms { 200 });
             }
-            backoff = _STD min(backoff * 2, Ms { 60'000 });
+            backoff = ::std::min(backoff * 2, Ms { 60'000 });
         }
 
         if (!started)
         {
             (void)rt->stop(Ms { 1000 });
             {
-                _STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+                ::std::lock_guard<::std::mutex> lock { this->rt_mutex_ };
                 impl.runtime.reset();
             }
-            this->running_.store(false, _STD memory_order_release);
+            this->running_.store(false, ::std::memory_order_release);
             LOG_WARN("SwarmCatalog 接入未就绪, 已降级 (PSDK/MQTT 主链路不受影响)");
             return;
         }
@@ -350,14 +350,14 @@ namespace plane::manager
         (void)rt->registerServiceInstance();
 
         // ---- 主循环: 周期状态上报 + Ready 后单次动态 broker 解析 ----
-        auto lastReport { _STD_CHRONO steady_clock::now() };
+        auto lastReport { ::std::chrono::steady_clock::now() };
         while (this->running_.load())
         {
-            if (this->catalog_ready_.load(_STD memory_order_acquire) && config.isCatalogBrokerDiscoveryEnabled())
+            if (this->catalog_ready_.load(::std::memory_order_acquire) && config.isCatalogBrokerDiscoveryEnabled())
             {
                 // 地址未广播前快速重试 (5s); 已广播后转为周期校验 (30s), 检测中心 broker 迁移
                 const auto interval { impl.last_published_url.empty() ? kBrokerResolveRetryInterval : kBrokerResolveCheckInterval };
-                const auto now { _STD_CHRONO steady_clock::now() };
+                const auto now { ::std::chrono::steady_clock::now() };
                 if (now - impl.last_broker_attempt >= interval)
                 {
                     impl.last_broker_attempt = now;
@@ -365,22 +365,22 @@ namespace plane::manager
                 }
             }
 
-            const auto now { _STD_CHRONO steady_clock::now() };
+            const auto now { ::std::chrono::steady_clock::now() };
             if (now - lastReport >= kStatusReportInterval)
             {
                 this->reportStatus();
                 lastReport = now;
             }
 
-            _STD this_thread::sleep_for(Ms { 200 });
+            ::std::this_thread::sleep_for(Ms { 200 });
         }
 
         (void)rt->stop(Ms { 2000 });
         {
-            _STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+            ::std::lock_guard<::std::mutex> lock { this->rt_mutex_ };
             impl.runtime.reset();
         }
-        this->catalog_ready_.store(false, _STD memory_order_release);
+        this->catalog_ready_.store(false, ::std::memory_order_release);
         LOG_INFO("SwarmCatalog 后台线程已退出");
     }
 
@@ -397,7 +397,7 @@ namespace plane::manager
         status.healthy    = true;
         status.message    = "全部组件正常";
 
-        auto addComponent = [&status](const _STD string& name, bool ok, const _STD string& message)
+        auto addComponent = [&status](const ::std::string& name, bool ok, const ::std::string& message)
         {
             ServiceComponentStatus component {};
             component.name    = name;
@@ -407,15 +407,15 @@ namespace plane::manager
             {
                 status.healthy = false;
             }
-            status.components.push_back(_STD move(component));
+            status.components.push_back(::std::move(component));
         };
 
         const bool mqtt_ok { plane::manager::MQTTv5Service::getInstance().isConnected() };
-        addComponent("catalog", this->catalog_ready_.load(_STD memory_order_acquire), "服务目录已连接");
+        addComponent("catalog", this->catalog_ready_.load(::std::memory_order_acquire), "服务目录已连接");
         addComponent("mqtt", mqtt_ok, mqtt_ok ? "MQTT 已连接" : "MQTT 未连接");
-        addComponent("psdk", this->psdk_running_.load(_STD memory_order_acquire), this->psdk_running_.load() ? "PSDK 已就绪" : "PSDK 未就绪");
-        addComponent("heartbeat", this->heartbeat_running_.load(_STD memory_order_acquire), "心跳服务状态");
-        addComponent("telemetry", this->telemetry_running_.load(_STD memory_order_acquire), "遥测服务状态");
+        addComponent("psdk", this->psdk_running_.load(::std::memory_order_acquire), this->psdk_running_.load() ? "PSDK 已就绪" : "PSDK 未就绪");
+        addComponent("heartbeat", this->heartbeat_running_.load(::std::memory_order_acquire), "心跳服务状态");
+        addComponent("telemetry", this->telemetry_running_.load(::std::memory_order_acquire), "遥测服务状态");
 
         if (!status.healthy)
         {
@@ -495,12 +495,12 @@ namespace plane::manager
         }
 
         // 端点协议 -> URL scheme
-        const auto  scheme { schemeForProtocol(impl.broker_protocol) };
-        const auto  discovered_url { _FMT format("{}://{}:{}", scheme, host, matched->port) };
+        const auto    scheme { schemeForProtocol(impl.broker_protocol) };
+        const auto    discovered_url { ::fmt::format("{}://{}:{}", scheme, host, matched->port) };
 
-        _STD string last_published {};
+        ::std::string last_published {};
         {
-            _STD lock_guard<_STD mutex> lock { impl.broker_url_mutex };
+            ::std::lock_guard<::std::mutex> lock { impl.broker_url_mutex };
             last_published = impl.last_published_url;
         }
         if (discovered_url == last_published)
@@ -515,18 +515,18 @@ namespace plane::manager
         plane::manager::EventManager::getInstance()
             .publishSystemEvent(plane::manager::EventManager::SystemEvent::MqttBrokerUpdated, discovered_url);
         {
-            _STD lock_guard<_STD mutex> lock { impl.broker_url_mutex };
+            ::std::lock_guard<::std::mutex> lock { impl.broker_url_mutex };
             impl.last_published_url = discovered_url;
         }
         return true;
     }
 
     // 目录服务端自身 IP (WebSocket 等直连场景使用); 未就绪/失败返回空串
-    _STD string CatalogManager::getCatalogServerIp(void) noexcept
+    ::std::string CatalogManager::getCatalogServerIp(void) noexcept
     {
-        _STD shared_ptr<CatalogRuntime> runtime {};
+        ::std::shared_ptr<CatalogRuntime> runtime {};
         {
-            _STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+            ::std::lock_guard<::std::mutex> lock { this->rt_mutex_ };
             if (!this->impl_ || !this->impl_->runtime)
             {
                 return {};
@@ -545,27 +545,27 @@ namespace plane::manager
 
     // 目录最近一次解析到的中心 MQTT broker 地址 (广播事件为一次性, 供 MQTT 服务晚启动/自检兜底查询);
     // 未解析/已失联返回空串
-    _STD string CatalogManager::getMqttBrokerUrl(void) noexcept
+    ::std::string CatalogManager::getMqttBrokerUrl(void) noexcept
     {
-        _STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+        ::std::lock_guard<::std::mutex> lock { this->rt_mutex_ };
         if (!this->impl_)
         {
             return {};
         }
-        _STD lock_guard<_STD mutex> broker_lock { this->impl_->broker_url_mutex };
+        ::std::lock_guard<::std::mutex> broker_lock { this->impl_->broker_url_mutex };
         return this->impl_->last_published_url;
     }
 
-    _STD string CatalogManager::resolveServiceBaseUrl(const _STD string& service_id, const _STD string& protocol) noexcept
+    ::std::string CatalogManager::resolveServiceBaseUrl(const ::std::string& service_id, const ::std::string& protocol) noexcept
     {
         if (service_id.empty())
         {
             return {};
         }
 
-        _STD shared_ptr<CatalogRuntime> runtime {};
+        ::std::shared_ptr<CatalogRuntime> runtime {};
         {
-            _STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+            ::std::lock_guard<::std::mutex> lock { this->rt_mutex_ };
             if (!this->impl_ || !this->impl_->runtime)
             {
                 return {};
@@ -628,14 +628,14 @@ namespace plane::manager
             LOG_WARN("服务实例 IP 为空: service_id='{}'", service_id);
             return {};
         }
-        return _FMT format("{}://{}:{}", schemeForProtocol(protocol), host, matched->port);
+        return ::fmt::format("{}://{}:{}", schemeForProtocol(protocol), host, matched->port);
     }
 
-    void CatalogManager::updateServiceName(const _STD string& service_name) noexcept
+    void CatalogManager::updateServiceName(const ::std::string& service_name) noexcept
     {
-        _STD shared_ptr<CatalogRuntime> runtime {};
+        ::std::shared_ptr<CatalogRuntime> runtime {};
         {
-            _STD lock_guard<_STD mutex> lock { this->rt_mutex_ };
+            ::std::lock_guard<::std::mutex> lock { this->rt_mutex_ };
             if (!this->impl_ || !this->impl_->runtime)
             {
                 return;

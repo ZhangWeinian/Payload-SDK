@@ -20,7 +20,7 @@
 
 namespace plane::utils
 {
-    class StatusBoardSink final: public _SPDLOG sinks::base_sink<_STD mutex>
+    class StatusBoardSink final: public ::spdlog::sinks::base_sink<::std::mutex>
     {
     public:
         StatusBoardSink(void) noexcept                     = default;
@@ -29,17 +29,17 @@ namespace plane::utils
         StatusBoardSink& operator=(const StatusBoardSink&) = delete;
 
     protected:
-        void sink_it_(const _SPDLOG details::log_msg& msg) override
+        void sink_it_(const ::spdlog::details::log_msg& msg) override
         {
-            _SPDLOG memory_buf_t formatted;
+            ::spdlog::memory_buf_t formatted;
             this->formatter_->format(msg, formatted);
 
-            const char* const data { formatted.data() };
-            const _STD size_t size { formatted.size() };
-            const auto        rangeStart { msg.color_range_start };
-            const auto        rangeStop { msg.color_range_end };
+            const char* const   data { formatted.data() };
+            const ::std::size_t size { formatted.size() };
+            const auto          rangeStart { msg.color_range_start };
+            const auto          rangeStop { msg.color_range_end };
 
-            _STD string       text;
+            ::std::string       text;
             if (StatusBoard::colorSupported() && rangeStop > rangeStart && rangeStop <= size)
             {
                 // 仅对 %^...%$ 标记的区间着色 (与 spdlog ansicolor 接收器行为一致)
@@ -62,23 +62,23 @@ namespace plane::utils
 
     private:
         // 日志级别颜色映射 (对齐 spdlog ansicolor 接收器的默认配色)
-        _NODISCARD static const char* levelColorCode(_SPDLOG level::level_enum level) noexcept
+        [[nodiscard]] static const char* levelColorCode(::spdlog::level::level_enum level) noexcept
         {
             switch (level)
             {
-                case _SPDLOG level::trace:
+                case ::spdlog::level::trace:
                     return "\033[37m";   // 白
-                case _SPDLOG level::debug:
+                case ::spdlog::level::debug:
                     return "\033[36m";   // 青
-                case _SPDLOG level::info:
+                case ::spdlog::level::info:
                     return "\033[32m";   // 绿
-                case _SPDLOG level::warn:
+                case ::spdlog::level::warn:
                     return "\033[33m";   // 黄
-                case _SPDLOG level::err:
+                case ::spdlog::level::err:
                     return "\033[31m";   // 红
-                case _SPDLOG level::critical:
+                case ::spdlog::level::critical:
                     return "\033[1;31m"; // 粗红
-                case _SPDLOG level::off:
+                case ::spdlog::level::off:
                 default:
                     return "";
             }

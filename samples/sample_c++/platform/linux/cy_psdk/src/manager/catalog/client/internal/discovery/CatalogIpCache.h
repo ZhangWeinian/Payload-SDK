@@ -16,16 +16,16 @@ namespace plane::catalog::internal
     class CatalogIpCache
     {
     public:
-        explicit CatalogIpCache(_STD string file);
+        explicit CatalogIpCache(::std::string file);
         ~CatalogIpCache(void) = default;
 
         // 若缓存 IP 在 targets 中, 移到首位优先探测
-        _NODISCARD _STD vector<_STD string> prioritize(const _STD vector<_STD string>& targets);
+        [[nodiscard]] ::std::vector<::std::string> prioritize(const ::std::vector<::std::string>& targets);
 
         // 原子写入缓存 IP (非规范 IPv4 时忽略)
-        void save(const _STD string& ip);
+        void save(const ::std::string& ip);
 
     private:
-        _STD string file_ {};
+        ::std::string file_ {};
     };
 } // namespace plane::catalog::internal

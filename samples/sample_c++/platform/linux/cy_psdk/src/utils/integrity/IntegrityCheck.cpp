@@ -20,52 +20,52 @@
 namespace
 {
     // 由 argv[0] 推导交付目录 (cy_psdk 所在目录)
-    _STD_FS path getExeDirectory(const char* argv0)
+    ::std::filesystem::path getExeDirectory(const char* argv0)
     {
-        _STD error_code ec;
+        ::std::error_code ec;
         if (argv0 != nullptr && argv0[0] != '\0')
         {
-            _STD_FS path exe { argv0 };
+            ::std::filesystem::path exe { argv0 };
             if (exe.is_relative())
             {
-                exe = _STD_FS current_path(ec) / exe;
+                exe = ::std::filesystem::current_path(ec) / exe;
             }
-            if (auto canonical { _STD_FS weakly_canonical(exe, ec) }; !ec)
+            if (auto canonical { ::std::filesystem::weakly_canonical(exe, ec) }; !ec)
             {
                 return canonical.parent_path();
             }
         }
 
         // 兜底: /proc/self/exe (常规直接启动时有效; loader 显式启动时指向解释器, 仅作兜底)
-        auto self { _STD_FS read_symlink("/proc/self/exe", ec) };
+        auto self { ::std::filesystem::read_symlink("/proc/self/exe", ec) };
         if (!ec && !self.empty())
         {
             return self.parent_path();
         }
-        return _STD_FS current_path(ec);
+        return ::std::filesystem::current_path(ec);
     }
 
     // 计算文件 SHA256, 输出小写 hex; 失败返回 false
-    bool computeSha256Hex(const _STD_FS path& file, _STD string& hex_out)
+    bool computeSha256Hex(const ::std::filesystem::path& file, ::std::string& hex_out)
     {
-        _STD ifstream in(file, _STD ios::binary);
+        ::std::ifstream in(file, ::std::ios::binary);
         if (!in)
         {
             return false;
         }
 
-        _STD unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> ctx { EVP_MD_CTX_new(), EVP_MD_CTX_free };
+        ::std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> ctx { EVP_MD_CTX_new(), EVP_MD_CTX_free };
         if (!ctx || EVP_DigestInit_ex(ctx.get(), EVP_sha256(), nullptr) != 1)
         {
             return false;
         }
 
-        _STD array<char, 64 * 1024> buf {};
+        ::std::array<char, 64 * 1024> buf {};
         while (in.good())
         {
-            in.read(buf.data(), static_cast<_STD streamsize>(buf.size()));
+            in.read(buf.data(), static_cast<::std::streamsize>(buf.size()));
             auto n { in.gcount() };
-            if (n > 0 && EVP_DigestUpdate(ctx.get(), buf.data(), static_cast<_STD size_t>(n)) != 1)
+            if (n > 0 && EVP_DigestUpdate(ctx.get(), buf.data(), static_cast<::std::size_t>(n)) != 1)
             {
                 return false;
             }
@@ -79,18 +79,18 @@ namespace
         }
 
         hex_out.clear();
-        hex_out.reserve(static_cast<_STD size_t>(digest_len) * 2);
+        hex_out.reserve(static_cast<::std::size_t>(digest_len) * 2);
         for (unsigned int i { 0 }; i < digest_len; ++i)
         {
-            _FMT format_to(_STD back_inserter(hex_out), "{:02x}", static_cast<unsigned int>(digest[i]));
+            ::fmt::format_to(::std::back_inserter(hex_out), "{:02x}", static_cast<unsigned int>(digest[i]));
         }
         return true;
     }
 
     // 读取 .sha256 文件中第一段文本作为期望哈希
-    bool readStoredHash(const _STD_FS path& checksum_file, _STD string& hash_out)
+    bool readStoredHash(const ::std::filesystem::path& checksum_file, ::std::string& hash_out)
     {
-        _STD ifstream in(checksum_file);
+        ::std::ifstream in(checksum_file);
         if (!in)
         {
             return false;
@@ -100,11 +100,11 @@ namespace
     }
 
     // 校验单个文件; required=false 时缺失校验文件仅告警不判失败
-    bool verifyFile(const _STD_FS path& file, bool required)
+    bool verifyFile(const ::std::filesystem::path& file, bool required)
     {
-        _STD string expected;
-        _STD string actual;
-        const auto  checksum_file { _STD string(file.string()) + ".sha256" };
+        ::std::string expected;
+        ::std::string actual;
+        const auto    checksum_file { ::std::string(file.string()) + ".sha256" };
 
         if (!readStoredHash(checksum_file, expected))
         {
@@ -139,7 +139,7 @@ namespace plane::utils
     bool verifyDeploymentIntegrity(const char* argv0)
     {
         // 开发调试用跳过开关
-        if (const char* skip { _CSTD getenv("CY_PSDK_SKIP_INTEGRITY") }; skip != nullptr && _CSTD strcmp(skip, "1") == 0)
+        if (const char* skip { ::getenv("CY_PSDK_SKIP_INTEGRITY") }; skip != nullptr && ::strcmp(skip, "1") == 0)
         {
             LOG_WARN("检测到 CY_PSDK_SKIP_INTEGRITY=1, 跳过部署完整性自检");
             return true;
@@ -152,16 +152,16 @@ namespace plane::utils
         // 1) 主程序本身 (必须有校验文件)
         const auto exe_dir { getExeDirectory(argv0) };
         const auto exe_path { exe_dir / "cy_psdk" };
-        if (!_STD_FS exists(exe_path) || !verifyFile(exe_path, true))
+        if (!::std::filesystem::exists(exe_path) || !verifyFile(exe_path, true))
         {
             all_ok = false;
         }
 
         // 2) libs/ 下所有运行库 (构建时会为每个库生成 .sha256)
         const auto libs_dir { exe_dir / "libs" };
-        if (_STD_FS is_directory(libs_dir))
+        if (::std::filesystem::is_directory(libs_dir))
         {
-            for (const auto& entry : _STD_FS directory_iterator(libs_dir))
+            for (const auto& entry : ::std::filesystem::directory_iterator(libs_dir))
             {
                 if (!entry.is_regular_file())
                 {

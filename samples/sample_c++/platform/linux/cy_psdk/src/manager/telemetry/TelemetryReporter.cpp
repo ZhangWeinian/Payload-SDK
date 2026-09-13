@@ -24,8 +24,8 @@ namespace plane::manager
         return instance;
     }
 
-    TelemetryReporter::TelemetryReporter(void) noexcept: event_processing_pool_(_STD make_unique<_BS thread_pool<>>(6)),
-                                                         last_health_ping_time_(_STD_CHRONO steady_clock::now())
+    TelemetryReporter::TelemetryReporter(void) noexcept: event_processing_pool_(::std::make_unique<::BS::thread_pool<>>(6)),
+                                                         last_health_ping_time_(::std::chrono::steady_clock::now())
     {}
 
     TelemetryReporter::~TelemetryReporter(void) noexcept
@@ -34,7 +34,7 @@ namespace plane::manager
         {
             this->stop();
         }
-        catch (const _STD exception& e)
+        catch (const ::std::exception& e)
         {
             LOG_ERROR("遥测上报服务析构异常: {}", e.what());
         }
@@ -58,8 +58,8 @@ namespace plane::manager
 
         try
         {
-            auto&                            dispatcher { plane::manager::EventManager::getInstance().getStatusDispatcher() };
-            this->psdk_event_remover_ = _STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::StatusDispatcher>>(dispatcher);
+            auto& dispatcher { plane::manager::EventManager::getInstance().getStatusDispatcher() };
+            this->psdk_event_remover_ = ::std::make_unique<::eventpp::ScopedRemover<plane::manager::EventManager::StatusDispatcher>>(dispatcher);
 
             this->psdk_event_remover_->appendListener(
                 plane::manager::EventManager::PSDKEvent::TelemetryUpdated,
@@ -89,7 +89,7 @@ namespace plane::manager
                 plane::manager::EventManager::PSDKEvent::HealthPing,
                 [this](const plane::manager::EventManager::PSDKEventData& data)
                 {
-                    if (auto* p_time { _STD get_if<_STD_CHRONO steady_clock::time_point>(&data) })
+                    if (auto* p_time { ::std::get_if<::std::chrono::steady_clock::time_point>(&data) })
                     {
                         this->last_health_ping_time_ = *p_time;
                     }
@@ -106,7 +106,7 @@ namespace plane::manager
 
             auto& system_dispatcher { plane::manager::EventManager::getInstance().getSystemDispatcher() };
             this->system_event_remover_ =
-                _STD make_unique<_EVENTPP ScopedRemover<plane::manager::EventManager::SystemDispatcher>>(system_dispatcher);
+                ::std::make_unique<::eventpp::ScopedRemover<plane::manager::EventManager::SystemDispatcher>>(system_dispatcher);
 
             this->system_event_remover_->appendListener(
                 plane::manager::EventManager::SystemEvent::HeartbeatTick,
@@ -136,7 +136,7 @@ namespace plane::manager
 
             return true;
         }
-        catch (const _STD exception& ex)
+        catch (const ::std::exception& ex)
         {
             LOG_ERROR("遥测上报服务启动失败，出现异常: {}", ex.what());
             this->stop();
@@ -180,7 +180,7 @@ namespace plane::manager
         LOG_INFO("遥测上报服务已停止");
     }
 
-    bool TelemetryReporter::publishJson(_STD string_view topic, _STD string_view statusJson) noexcept
+    bool TelemetryReporter::publishJson(::std::string_view topic, ::std::string_view statusJson) noexcept
     {
         if (!plane::manager::MQTTv5Service::getInstance().isConnected())
         {
@@ -196,7 +196,7 @@ namespace plane::manager
                 return false;
             }
         }
-        catch (const _STD exception& ex)
+        catch (const ::std::exception& ex)
         {
             LOG_ERROR("MQTTv5Service 在'{}' 发布时出现异常: {}", topic, ex.what());
             return false;
@@ -220,12 +220,12 @@ namespace plane::manager
         if (this->queued_task_count_ >= this->MAX_EVENT_QUEUE_SIZE)
         {
             // 日志节流: 仅日志使用, 多线程下以原子毫秒计数避免数据竞争
-            static _STD atomic<int64_t> last_log_ms { 0 };
-            const int64_t               now_ms {
-                _STD_CHRONO duration_cast<_STD_CHRONO milliseconds>(_STD_CHRONO steady_clock::now().time_since_epoch()).count()
+            static ::std::atomic<int64_t> last_log_ms { 0 };
+            const int64_t                 now_ms {
+                ::std::chrono::duration_cast<::std::chrono::milliseconds>(::std::chrono::steady_clock::now().time_since_epoch()).count()
             };
-            int64_t prev_ms { last_log_ms.load(_STD memory_order_relaxed) };
-            if (now_ms - prev_ms > 5000 && last_log_ms.compare_exchange_strong(prev_ms, now_ms, _STD memory_order_relaxed))
+            int64_t prev_ms { last_log_ms.load(::std::memory_order_relaxed) };
+            if (now_ms - prev_ms > 5000 && last_log_ms.compare_exchange_strong(prev_ms, now_ms, ::std::memory_order_relaxed))
             {
                 LOG_WARN("TelemetryReporter 事件处理队列已满 (超过 {} 个任务)，正在丢弃新事件", MAX_EVENT_QUEUE_SIZE);
             }
@@ -237,24 +237,24 @@ namespace plane::manager
         this->event_processing_pool_->detach_task(
             [this, eventData]
             {
-                auto counter_guard = _GSL finally(
+                auto counter_guard = ::gsl::finally(
                     [this]
                     {
                         --(this->queued_task_count_);
                     }
                 );
 
-                _STD visit(
+                ::std::visit(
                     [this](const auto& event)
                     {
-                        using T = _STD decay_t<decltype(event)>;
+                        using T = ::std::decay_t<decltype(event)>;
 
-                        if constexpr (_STD is_same_v<T, _STD_CHRONO steady_clock::time_point>)
+                        if constexpr (::std::is_same_v<T, ::std::chrono::steady_clock::time_point>)
                         {
                             this->last_health_ping_time_ = event;
                             return;
                         }
-                        else if constexpr (_STD is_same_v<T, plane::protocol::StatusPayload>)
+                        else if constexpr (::std::is_same_v<T, plane::protocol::StatusPayload>)
                         {
                             if (!plane::manager::MQTTv5Service::getInstance().isConnected())
                             {
@@ -264,13 +264,13 @@ namespace plane::manager
                             auto payload { event };
 
                             // 多线程下共享计数, 用 atomic 避免数据竞争
-                            static _STD atomic<int> status_counter { 0 };
-                            if (status_counter.fetch_add(1, _STD memory_order_relaxed) >= 4)
+                            static ::std::atomic<int> status_counter { 0 };
+                            if (status_counter.fetch_add(1, ::std::memory_order_relaxed) >= 4)
                             {
-                                status_counter.store(0, _STD memory_order_relaxed);
+                                status_counter.store(0, ::std::memory_order_relaxed);
 
                                 // 视频源: 本机 RTSP 推流地址 (由域模型拼装); 本机 IP 未就绪/配置不完整时不含视频源
-                                const _STD string rtsp_url {
+                                const ::std::string rtsp_url {
                                     plane::utils::buildLocalRtspUrl(plane::domain::PlaneStateStore::getInstance().snapshot())
                                 };
                                 if (!rtsp_url.empty())
@@ -290,23 +290,23 @@ namespace plane::manager
                                     ->publishJson(plane::manager::TOPIC_STATUS, plane::utils::JsonConverter::buildStatusReportJson(payload));
                             }
                         }
-                        else if constexpr (_STD is_same_v<T, plane::protocol::HealthStatusPayload>)
+                        else if constexpr (::std::is_same_v<T, plane::protocol::HealthStatusPayload>)
                         {
                             LOG_DEBUG("准备上报健康状态");
 
                             (void)this
                                 ->publishJson(plane::manager::TOPIC_HEALTH_MANAGE, plane::utils::JsonConverter::buildHealthStatusJson(event));
                         }
-                        else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3MissionState>)
+                        else if constexpr (::std::is_same_v<T, ::T_DjiWaypointV3MissionState>)
                         {
                             plane::protocol::MissionProgressPayload progress {};
                             progress.ZT   = static_cast<int>(event.state);
                             progress.DQHD = event.currentWaypointIndex;
-                            progress.RWID = _STD to_string(event.wayLineId);
+                            progress.RWID = ::std::to_string(event.wayLineId);
                             // (void)this->publishJson(plane::manager::TOPIC_MISSION_PROGRESS,
                             // 				  plane::utils::JsonConverter::buildMissionProgressJson(progress));
                         }
-                        else if constexpr (_STD is_same_v<T, _DJI T_DjiWaypointV3ActionState>)
+                        else if constexpr (::std::is_same_v<T, ::T_DjiWaypointV3ActionState>)
                         {
                             LOG_DEBUG("接收到航线动作更新");
                             // TODO: 根据需要处理或上报动作状态
@@ -375,7 +375,7 @@ namespace plane::manager
             return;
         }
 
-        const auto now { _STD_CHRONO steady_clock::now() };
+        const auto now { ::std::chrono::steady_clock::now() };
         const auto last_update { this->last_health_ping_time_.load() };
         if (now - last_update > this->PSDK_WATCHDOG_TIMEOUT)
         {
@@ -389,7 +389,7 @@ namespace plane::manager
         this->event_processing_pool_->detach_task(
             [this]
             {
-                _STD this_thread::sleep_for(this->PSDK_WATCHDOG_CHECK_INTERVAL);
+                ::std::this_thread::sleep_for(this->PSDK_WATCHDOG_CHECK_INTERVAL);
                 this->runWatchdogCheck();
             }
         );

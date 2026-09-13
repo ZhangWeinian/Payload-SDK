@@ -16,9 +16,9 @@ namespace
     using plane::config::ConfigManager;
 
     // 返回字符串拷贝(规避 getter 返回 string_view 指向单例内部)
-    _STD string sv(_STD string_view view)
+    ::std::string sv(::std::string_view view)
     {
-        return _STD string { view };
+        return ::std::string { view };
     }
 } // namespace
 
@@ -41,7 +41,7 @@ TEST(ConfigManager, LoadsSharedConfigAndExposesValues)
     EXPECT_DOUBLE_EQ(cfg.getTakeoffLongitudeDeg(), 114.0);
     EXPECT_DOUBLE_EQ(cfg.getTakeoffAltitudeM(), 12.5);
     EXPECT_FALSE(cfg.getMqttClientId().empty());
-    EXPECT_NE(cfg.getMqttClientId().find("cv_"), _STD string::npos);
+    EXPECT_NE(cfg.getMqttClientId().find("cv_"), ::std::string::npos);
 
     EXPECT_FALSE(cfg.isStandardProceduresEnabled());
     EXPECT_FALSE(cfg.isTraceLogLevel());

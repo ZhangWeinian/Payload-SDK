@@ -15,7 +15,7 @@ namespace plane::manager
         static Heartbeat& getInstance(void) noexcept;
 
         // 启动心跳服务，interval 参数指定心跳间隔，默认为 1 秒
-        _NODISCARD bool start(_STD_CHRONO milliseconds interval = _STD_CHRONO seconds(1));
+        [[nodiscard]] bool start(::std::chrono::milliseconds interval = ::std::chrono::seconds(1));
 
         // 停止心跳服务
         void stop(void);
@@ -23,12 +23,12 @@ namespace plane::manager
     private:
         explicit Heartbeat(void) noexcept = default;
         ~Heartbeat(void) noexcept;
-        Heartbeat(const Heartbeat&)             = delete;
-        Heartbeat&  operator=(const Heartbeat&) = delete;
+        Heartbeat(const Heartbeat&)                     = delete;
+        Heartbeat&          operator=(const Heartbeat&) = delete;
 
-        void        runLoop(_STD_CHRONO milliseconds interval);
+        void                runLoop(::std::chrono::milliseconds interval);
 
-        _STD thread heartbeat_thread_ {};
-        _STD atomic<bool> running_ { false };
+        ::std::thread       heartbeat_thread_ {};
+        ::std::atomic<bool> running_ { false };
     };
 } // namespace plane::manager

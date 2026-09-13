@@ -24,47 +24,47 @@ namespace plane::config
         static ConfigManager& getInstance(void) noexcept;
 
         // 加载并检查配置文件
-        _NODISCARD bool loadAndCheck(_STD_FS path filepath = "") noexcept;
+        [[nodiscard]] bool loadAndCheck(::std::filesystem::path filepath = "") noexcept;
 
         // ---- config.yml 读取项 ----
 
         // mqtt.client_id: 未配置时自动生成
-        _NODISCARD _STD string getMqttClientId(void) const noexcept;
+        [[nodiscard]] ::std::string getMqttClientId(void) const noexcept;
 
         // plane.code: 设备标识 (可选; 未配置时使用 PSDK 飞控序列号)
-        _NODISCARD _STD string_view getPlaneCode(void) const noexcept;
+        [[nodiscard]] ::std::string_view getPlaneCode(void) const noexcept;
 
         // features.*: 功能开关
-        _NODISCARD bool                            isStandardProceduresEnabled(void) const noexcept;
-        _NODISCARD bool                            isStatusBoardEnabled(void) const noexcept;
-        _NODISCARD bool                            isTraceLogLevel(void) const noexcept;
-        _NODISCARD _DJI E_DjiLoggerConsoleLogLevel getPsdkLogLevel(void) const noexcept;
-        _NODISCARD bool                            isSkipRC(void) const noexcept;
-        _NODISCARD bool                            isSaveKmz(void) const noexcept;
+        [[nodiscard]] bool                         isStandardProceduresEnabled(void) const noexcept;
+        [[nodiscard]] bool                         isStatusBoardEnabled(void) const noexcept;
+        [[nodiscard]] bool                         isTraceLogLevel(void) const noexcept;
+        [[nodiscard]] ::E_DjiLoggerConsoleLogLevel getPsdkLogLevel(void) const noexcept;
+        [[nodiscard]] bool                         isSkipRC(void) const noexcept;
+        [[nodiscard]] bool                         isSaveKmz(void) const noexcept;
 
         // plane.takeoff_*: RID 起降点 (单位: 度 / 米; 未配置时为 0)
-        _NODISCARD double getTakeoffLatitudeDeg(void) const noexcept;
-        _NODISCARD double getTakeoffLongitudeDeg(void) const noexcept;
-        _NODISCARD double getTakeoffAltitudeM(void) const noexcept;
+        [[nodiscard]] double getTakeoffLatitudeDeg(void) const noexcept;
+        [[nodiscard]] double getTakeoffLongitudeDeg(void) const noexcept;
+        [[nodiscard]] double getTakeoffAltitudeM(void) const noexcept;
 
         // catalog.*: 目录发现配置
-        _NODISCARD _STD string   getCatalogNodeId(void) const noexcept;
-        _NODISCARD _STD uint16_t getCatalogDiscoveryPort(void) const noexcept;
-        _NODISCARD _STD vector<_STD string> getCatalogTargets(void) const noexcept;
+        [[nodiscard]] ::std::string                getCatalogNodeId(void) const noexcept;
+        [[nodiscard]] ::std::uint16_t              getCatalogDiscoveryPort(void) const noexcept;
+        [[nodiscard]] ::std::vector<::std::string> getCatalogTargets(void) const noexcept;
 
         // ---- 代码固定契约 (非本地配置项) ----
 
         // 注册版本号
-        _NODISCARD _STD string getCatalogVersion(void) const noexcept;
+        [[nodiscard]] ::std::string getCatalogVersion(void) const noexcept;
 
         // 是否启用目录解析动态 MQTT broker (固定启用)
-        _NODISCARD bool isCatalogBrokerDiscoveryEnabled(void) const noexcept;
+        [[nodiscard]] bool isCatalogBrokerDiscoveryEnabled(void) const noexcept;
 
         // 待解析的"中心"MQTT broker 服务 service_id (固定 swarm.mqtt.base)
-        _NODISCARD _STD string_view getCatalogBrokerServiceId(void) const noexcept;
+        [[nodiscard]] ::std::string_view getCatalogBrokerServiceId(void) const noexcept;
 
         // 取"中心"服务的端点协议 (固定 tcp)
-        _NODISCARD _STD string_view getCatalogBrokerPortProtocol(void) const noexcept;
+        [[nodiscard]] ::std::string_view getCatalogBrokerPortProtocol(void) const noexcept;
 
     private:
         explicit ConfigManager(void) noexcept          = default;
@@ -73,11 +73,11 @@ namespace plane::config
         ConfigManager& operator=(const ConfigManager&) = delete;
 
         // 获取一个随机生成的唯一客户端 ID
-        _NODISCARD _STD string getNewGenerateUniqueClientId(void) noexcept;
+        [[nodiscard]] ::std::string getNewGenerateUniqueClientId(void) noexcept;
 
         // config.yml 节点读取: 节/键缺失或类型不符时返回 fallback
         template<typename T>
-        _NODISCARD T readValue(const char* section, const char* key, const T& fallback) const noexcept
+        [[nodiscard]] T readValue(const char* section, const char* key, const T& fallback) const noexcept
         {
             try
             {
@@ -94,8 +94,8 @@ namespace plane::config
             }
         }
 
-        _YAML Node  config_node_ {};
-        bool        loaded_ { false };
-        _STD string mqtt_client_id_ {};
+        ::YAML::Node  config_node_ {};
+        bool          loaded_ { false };
+        ::std::string mqtt_client_id_ {};
     };
 } // namespace plane::config

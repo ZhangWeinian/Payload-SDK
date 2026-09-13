@@ -29,9 +29,9 @@ namespace plane::manager
         void stop(void) noexcept;
 
         // 是否已绑定成功 (只读标志)
-        _NODISCARD bool isBound(void) const noexcept
+        [[nodiscard]] bool isBound(void) const noexcept
         {
-            return this->bound_.load(_STD memory_order_acquire);
+            return this->bound_.load(::std::memory_order_acquire);
         }
 
     private:
@@ -43,9 +43,9 @@ namespace plane::manager
         void          runLoop(void) noexcept;
 
         // 后台线程生命周期 (防止 start()/stop() 重入)
-        _STD atomic<bool> started_ { false };
-        _STD atomic<bool> running_ { false };
-        _STD atomic<bool> bound_ { false };
-        _STD thread       thread_ {};
+        ::std::atomic<bool> started_ { false };
+        ::std::atomic<bool> running_ { false };
+        ::std::atomic<bool> bound_ { false };
+        ::std::thread       thread_ {};
     };
 } // namespace plane::manager

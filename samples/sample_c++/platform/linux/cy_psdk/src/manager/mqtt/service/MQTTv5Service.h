@@ -28,30 +28,30 @@ namespace plane::manager
     protected:
         struct Impl
         {
-            _STD unique_ptr<_MQTT async_client> client {};
-            _STD shared_ptr<class MqttCallback> callback {};
-            _STD string                         serverURI {};
-            _STD string                         clientId {};
-            int                                 reconnectAttempts { 0 };
-            _STD_CHRONO steady_clock::time_point lastDisconnectTime {};
-            _STD_CHRONO steady_clock::time_point lastConnectTime {};
-            bool                                 manualDisconnect { false };
-            _STD deque<_STD pair<_STD string, _STD string>> messageDeque {};
-            _STD mutex                                      dequeMutex {};
-            _STD condition_variable                         dequeCv {};
-            _STD thread                                     senderThread {};
-            _STD atomic<bool> runSender { false };
-            bool              isDroppingMessages { false };
-            _STD_CHRONO steady_clock::time_point lastDropLogTime {};
+            ::std::unique_ptr<::mqtt::async_client>                 client {};
+            ::std::shared_ptr<class MqttCallback>                   callback {};
+            ::std::string                                           serverURI {};
+            ::std::string                                           clientId {};
+            int                                                     reconnectAttempts { 0 };
+            ::std::chrono::steady_clock::time_point                 lastDisconnectTime {};
+            ::std::chrono::steady_clock::time_point                 lastConnectTime {};
+            bool                                                    manualDisconnect { false };
+            ::std::deque<::std::pair<::std::string, ::std::string>> messageDeque {};
+            ::std::mutex                                            dequeMutex {};
+            ::std::condition_variable                               dequeCv {};
+            ::std::thread                                           senderThread {};
+            ::std::atomic<bool>                                     runSender { false };
+            bool                                                    isDroppingMessages { false };
+            ::std::chrono::steady_clock::time_point                 lastDropLogTime {};
 
             // ---- 维护线程 (周期自检 / 断线重连) ----
-            _STD thread maintainThread {};
-            _STD atomic<bool>       runMaintain { false };
-            _STD mutex              maintainMutex {};
-            _STD condition_variable maintainCv {};
-            _STD mutex              clientMutex {};                  // 保护 client 指针与连接状态的交换/使用
-            _STD string             activeUrl {};                    // 最近一次连接尝试对应的 broker URL
-            _STD_CHRONO steady_clock::time_point lastAttemptTime {}; // 最近一次连接尝试(或断开)时刻
+            ::std::thread                           maintainThread {};
+            ::std::atomic<bool>                     runMaintain { false };
+            ::std::mutex                            maintainMutex {};
+            ::std::condition_variable               maintainCv {};
+            ::std::mutex                            clientMutex {};     // 保护 client 指针与连接状态的交换/使用
+            ::std::string                           activeUrl {};       // 最近一次连接尝试对应的 broker URL
+            ::std::chrono::steady_clock::time_point lastAttemptTime {}; // 最近一次连接尝试(或断开)时刻
 
             explicit Impl(void) noexcept          = default;
             ~Impl(void) noexcept                  = default;
@@ -66,7 +66,7 @@ namespace plane::manager
 
         // 启动 MQTT 自治运行 (发送线程 + 自检维护线程), 这是一个幂等的操作;
         // 无可用 broker 地址时同样启动, 由维护线程周期自检, 地址就绪后自动连接
-        _NODISCARD bool start(void) noexcept;
+        [[nodiscard]] bool start(void) noexcept;
 
         // 停止 MQTT 客户端并断开连接，这是一个幂等的操作
         void stop(void) noexcept;
@@ -75,16 +75,16 @@ namespace plane::manager
         void restart(void) noexcept;
 
         // 设置动态 broker 地址覆盖 (SwarmCatalog 服务发现结果); 地址变化将立即唤醒自检线程重连
-        void setBrokerUrlOverride(_STD string url) noexcept;
+        void setBrokerUrlOverride(::std::string url) noexcept;
 
         // 检查当前是否已连接到 MQTT 服务器
-        _NODISCARD bool isConnected(void) const noexcept;
+        [[nodiscard]] bool isConnected(void) const noexcept;
 
         // 发布消息到指定的 MQTT 主题，返回是否成功入队
-        _NODISCARD bool publish(_STD string_view topic, _STD string_view payload) noexcept;
+        [[nodiscard]] bool publish(::std::string_view topic, ::std::string_view payload) noexcept;
 
         // 订阅指定的 MQTT 主题
-        void  subscribe(_STD string_view topic) noexcept;
+        void  subscribe(::std::string_view topic) noexcept;
 
         Impl& getImpl(void) noexcept
         {
@@ -116,30 +116,30 @@ namespace plane::manager
         void ensureBrokerConnection(void) noexcept;
 
         // 重建 client 并连接指定 broker 地址 (仅由维护线程调用)
-        void reconnectToBroker(const _STD string& url) noexcept;
+        void reconnectToBroker(const ::std::string& url) noexcept;
 
         // 当前有效 broker 地址 (仅目录服务发现结果); 未就绪返回空串
-        _NODISCARD _STD string effectiveBrokerUrl(void) noexcept;
+        [[nodiscard]] ::std::string effectiveBrokerUrl(void) noexcept;
 
         // 兜底: 主动查询目录最近解析的 broker 地址 (广播事件为一次性, 目录可能早于本服务启动完成解析);
         // 查到非空时同步为动态覆盖并返回该地址, 否则返回空串
-        _NODISCARD _STD string seedBrokerUrlFromCatalog(void) noexcept;
+        [[nodiscard]] ::std::string seedBrokerUrlFromCatalog(void) noexcept;
 
         // 设置连接状态
         void setConnected(bool status) noexcept;
 
         // 将连接状态同步到域模型 (PlaneStateStore; 供本地展示与上报; url 取当前维护中的 activeUrl)
-        void        syncConnectionStateToStore(bool connected) noexcept;
+        void                                  syncConnectionStateToStore(bool connected) noexcept;
 
-        _STD mutex  mutex_ {};
-        _STD string broker_url_override_ {}; // 动态 broker 覆盖 (Catalog 服务发现), 由 mutex_ 保护
-        _STD atomic<bool> running_ { false };
-        _STD atomic<bool> connected_ { false };
-        _STD unique_ptr<Impl>               impl_ { _STD make_unique<Impl>() };
-        constexpr static inline _STD size_t MAX_DEQUE_SIZE { 30 };
-        constexpr static inline auto        LOG_THROTTLE_INTERVAL { _STD_CHRONO seconds(5) };
-        constexpr static inline auto        kMaintainInterval { _STD_CHRONO seconds(3) };      // 自检周期
-        constexpr static inline auto        kConnectAttemptTimeout { _STD_CHRONO seconds(8) }; // 单次连接尝试判定窗口
-        _STD unique_ptr<_EVENTPP ScopedRemover<plane::manager::EventManager::SystemDispatcher>> system_event_remover_ {};
+        ::std::mutex                          mutex_ {};
+        ::std::string                         broker_url_override_ {}; // 动态 broker 覆盖 (Catalog 服务发现), 由 mutex_ 保护
+        ::std::atomic<bool>                   running_ { false };
+        ::std::atomic<bool>                   connected_ { false };
+        ::std::unique_ptr<Impl>               impl_ { ::std::make_unique<Impl>() };
+        constexpr static inline ::std::size_t MAX_DEQUE_SIZE { 30 };
+        constexpr static inline auto          LOG_THROTTLE_INTERVAL { ::std::chrono::seconds(5) };
+        constexpr static inline auto          kMaintainInterval { ::std::chrono::seconds(3) };      // 自检周期
+        constexpr static inline auto          kConnectAttemptTimeout { ::std::chrono::seconds(8) }; // 单次连接尝试判定窗口
+        ::std::unique_ptr<::eventpp::ScopedRemover<plane::manager::EventManager::SystemDispatcher>> system_event_remover_ {};
     };
 } // namespace plane::manager

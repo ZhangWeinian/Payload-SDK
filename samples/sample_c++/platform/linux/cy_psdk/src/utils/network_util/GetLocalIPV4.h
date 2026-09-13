@@ -25,16 +25,16 @@
 
 namespace plane::utils
 {
-    class __Get_local_ipv4_fun: private __Not_quite_object
+    class Get_local_ipv4_fun_: private Not_quite_object_
     {
     public:
-        using __Not_quite_object::__Not_quite_object;
+        using Not_quite_object_::Not_quite_object_;
 
-        _NODISCARD _STD optional<_STD string> operator()(void) noexcept
+        [[nodiscard]] ::std::optional<::std::string> operator()(void) noexcept
         {
-            using namespace _STD literals;
-            _STD lock_guard<_STD mutex> lock(this->cache_mutex_);
-            auto                        now { _STD_CHRONO steady_clock::now() };
+            using namespace ::std::literals;
+            ::std::lock_guard<::std::mutex> lock(this->cache_mutex_);
+            auto                            now { ::std::chrono::steady_clock::now() };
 
             if (this->cached_ip_ && (now - this->cached_ip_->timestamp) < this->CACHE_DURATION)
             {
@@ -46,7 +46,7 @@ namespace plane::utils
             auto result { this->getDeviceIpv4AddressImpl() };
             if (result)
             {
-                this->cached_ip_ = _THIS CachedResult { .ip = *result, .timestamp = now };
+                this->cached_ip_ = CachedResult { .ip = *result, .timestamp = now };
             }
             else
             {
@@ -58,17 +58,17 @@ namespace plane::utils
     private:
         struct CachedResult
         {
-            _STD string ip {};
-            _STD_CHRONO steady_clock::time_point timestamp {};
+            ::std::string                           ip {};
+            ::std::chrono::steady_clock::time_point timestamp {};
         };
 
-        _STD optional<_THIS CachedResult> cached_ip_ {};
-        _STD mutex                        cache_mutex_ {};
-        constexpr static auto             CACHE_DURATION { _STD_CHRONO minutes(5) };
+        ::std::optional<CachedResult> cached_ip_ {};
+        ::std::mutex                  cache_mutex_ {};
+        constexpr static auto         CACHE_DURATION { ::std::chrono::minutes(5) };
 
-        bool                              isSiteLocalAddress(_STD string_view ip) const noexcept
+        bool                          isSiteLocalAddress(::std::string_view ip) const noexcept
         {
-            using namespace _STD literals;
+            using namespace ::std::literals;
             if (ip.starts_with("192.168."sv) || ip.starts_with("10."sv))
             {
                 return true;
@@ -76,10 +76,10 @@ namespace plane::utils
 
             if (ip.starts_with("172."sv))
             {
-                if (auto dot_pos { ip.find('.', 4) }; dot_pos != _STD string_view::npos)
+                if (auto dot_pos { ip.find('.', 4) }; dot_pos != ::std::string_view::npos)
                 {
-                    _STD string_view segment { ip.substr(4, dot_pos - 4) };
-                    int              value { 0 };
+                    ::std::string_view segment { ip.substr(4, dot_pos - 4) };
+                    int                value { 0 };
 
                     for (char c : segment)
                     {
@@ -95,11 +95,11 @@ namespace plane::utils
             return false;
         }
 
-        bool isHighPriorityInterface(_STD string_view name) const noexcept
+        bool isHighPriorityInterface(::std::string_view name) const noexcept
         {
-            using namespace _STD  literals;
-            constexpr static auto WLAN_PREFIXES = _STD array { "wlan"sv, "wlp"sv, "wlo"sv };
-            constexpr static auto ETH_PREFIXES  = _STD array { "eth"sv, "en"sv, "eno"sv, "ens"sv, "enp"sv };
+            using namespace ::std::literals;
+            constexpr static auto WLAN_PREFIXES = ::std::array { "wlan"sv, "wlp"sv, "wlo"sv };
+            constexpr static auto ETH_PREFIXES  = ::std::array { "eth"sv, "en"sv, "eno"sv, "ens"sv, "enp"sv };
 
             for (auto prefix : WLAN_PREFIXES)
             {
@@ -118,27 +118,27 @@ namespace plane::utils
             return false;
         }
 
-        _STD optional<_STD string> getDeviceIpv4AddressImpl(void) const noexcept
+        ::std::optional<::std::string> getDeviceIpv4AddressImpl(void) const noexcept
         {
-            using namespace _STD literals;
-            struct ifaddrs*      ifaddr { nullptr };
-            if (_CSTD getifaddrs(&ifaddr) == -1)
+            using namespace ::std::literals;
+            struct ifaddrs* ifaddr { nullptr };
+            if (::getifaddrs(&ifaddr) == -1)
             {
-                LOG_WARN("getifaddrs() 失败: {}", _STD system_error(errno, _STD system_category()).what());
-                return _STD nullopt;
+                LOG_WARN("getifaddrs() 失败: {}", ::std::system_error(errno, ::std::system_category()).what());
+                return ::std::nullopt;
             }
 
-            auto ifaddr_guard = _GSL finally(
+            auto ifaddr_guard = ::gsl::finally(
                 [&]
                 {
                     if (ifaddr)
                     {
-                        _CSTD freeifaddrs(ifaddr);
+                        ::freeifaddrs(ifaddr);
                     }
                 }
             );
 
-            _STD vector<_STD pair<_STD string, _STD string>> addresses {};
+            ::std::vector<::std::pair<::std::string, ::std::string>> addresses {};
             for (auto* ifa { ifaddr }; ifa != nullptr; ifa = ifa->ifa_next)
             {
                 if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET || !ifa->ifa_name)
@@ -146,35 +146,35 @@ namespace plane::utils
                     continue;
                 }
 
-                _STD string_view name_sv(ifa->ifa_name);
+                ::std::string_view name_sv(ifa->ifa_name);
                 if (name_sv == "lo"sv)
                 {
                     continue;
                 }
 
-                auto* addr { reinterpret_cast<sockaddr_in*>(ifa->ifa_addr) };
-                _STD array<char, INET_ADDRSTRLEN> ip_buffer {};
-                if (_CSTD inet_ntop(AF_INET, &addr->sin_addr, ip_buffer.data(), ip_buffer.size()) == nullptr)
+                auto*                               addr { reinterpret_cast<sockaddr_in*>(ifa->ifa_addr) };
+                ::std::array<char, INET_ADDRSTRLEN> ip_buffer {};
+                if (::inet_ntop(AF_INET, &addr->sin_addr, ip_buffer.data(), ip_buffer.size()) == nullptr)
                 {
                     continue;
                 }
 
-                _STD string_view ip_sv(ip_buffer.data());
+                ::std::string_view ip_sv(ip_buffer.data());
                 if (ip_sv.empty() || ip_sv == "0.0.0.0"sv)
                 {
                     continue;
                 }
 
-                addresses.emplace_back(_STD string(name_sv), _STD string(ip_sv));
+                addresses.emplace_back(::std::string(name_sv), ::std::string(ip_sv));
             }
 
             if (addresses.empty())
             {
                 LOG_WARN("未找到任何有效的 IPv4 地址");
-                return _STD nullopt;
+                return ::std::nullopt;
             }
 
-            auto high_priority_it = _STD find_if(
+            auto high_priority_it = ::std::find_if(
                 addresses.begin(),
                 addresses.end(),
                 [&](const auto& pair)
@@ -189,7 +189,7 @@ namespace plane::utils
                 return high_priority_it->second;
             }
 
-            auto site_local_it = _STD find_if(
+            auto site_local_it = ::std::find_if(
                 addresses.begin(),
                 addresses.end(),
                 [&](const auto& pair)
@@ -210,5 +210,5 @@ namespace plane::utils
         }
     };
 
-    inline __Get_local_ipv4_fun getLocalIPV4 { __Not_quite_object::__Construct_tag {} };
+    inline Get_local_ipv4_fun_ getLocalIPV4 { Not_quite_object_::Construct_tag_ {} };
 } // namespace plane::utils
