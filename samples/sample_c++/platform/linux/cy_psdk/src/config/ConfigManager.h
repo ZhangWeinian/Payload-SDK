@@ -26,7 +26,7 @@ namespace plane::config
         // 加载并检查配置文件
         [[nodiscard]] bool loadAndCheck(::std::filesystem::path filepath = "") noexcept;
 
-        // ---- config.yml 读取项 ----
+        // config.yml 读取项
 
         // mqtt.client_id: 未配置时自动生成
         [[nodiscard]] ::std::string getMqttClientId(void) const noexcept;
@@ -52,7 +52,7 @@ namespace plane::config
         [[nodiscard]] ::std::uint16_t              getCatalogDiscoveryPort(void) const noexcept;
         [[nodiscard]] ::std::vector<::std::string> getCatalogTargets(void) const noexcept;
 
-        // ---- 代码固定契约 (非本地配置项) ----
+        // 代码固定契约 (非本地配置项)
 
         // 注册版本号
         [[nodiscard]] ::std::string getCatalogVersion(void) const noexcept;

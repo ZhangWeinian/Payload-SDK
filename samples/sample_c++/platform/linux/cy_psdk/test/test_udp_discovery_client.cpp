@@ -104,7 +104,7 @@ namespace
     };
 } // namespace
 
-// ---- 参数校验 (不涉及 socket 收发) ----
+// 参数校验 (不涉及 socket 收发)
 
 TEST(UdpDiscoveryClientTest, RejectsInvalidArguments)
 {
@@ -138,7 +138,7 @@ TEST(UdpDiscoveryClientTest, RejectsInvalidArguments)
     }
 }
 
-// ---- 编码失败: 字段超长 (单字节长度前缀, 上限 255) ----
+// 编码失败: 字段超长 (单字节长度前缀, 上限 255)
 
 TEST(UdpDiscoveryClientTest, RejectsOverlongNodeIdAtEncoding)
 {
@@ -150,7 +150,7 @@ TEST(UdpDiscoveryClientTest, RejectsOverlongNodeIdAtEncoding)
     EXPECT_EQ(report.status, DiscoveryStatus::INVALID_ARGUMENT);
 }
 
-// ---- 取消: 首轮发送检查即返回 ----
+// 取消: 首轮发送检查即返回
 
 TEST(UdpDiscoveryClientTest, CancelledBeforeSending)
 {
@@ -161,7 +161,7 @@ TEST(UdpDiscoveryClientTest, CancelledBeforeSending)
     EXPECT_EQ(report.error, "探测已取消");
 }
 
-// ---- 无响应: 等待整个响应窗口后 NOT_FOUND ----
+// 无响应: 等待整个响应窗口后 NOT_FOUND
 
 TEST(UdpDiscoveryClientTest, NotFoundWithoutResponder)
 {
@@ -173,7 +173,7 @@ TEST(UdpDiscoveryClientTest, NotFoundWithoutResponder)
     EXPECT_TRUE(report.endpoints.empty());
 }
 
-// ---- 绑定地址失效: 回退通配绑定后仍可发现 ----
+// 绑定地址失效: 回退通配绑定后仍可发现
 
 TEST(UdpDiscoveryClientTest, FallsBackToWildcardBindWhenAddressInvalid)
 {
@@ -192,7 +192,7 @@ TEST(UdpDiscoveryClientTest, FallsBackToWildcardBindWhenAddressInvalid)
     EXPECT_EQ(report.status, DiscoveryStatus::OK);
 }
 
-// ---- 环回发现: 完整收发/编解码/上报链路 ----
+// 环回发现: 完整收发/编解码/上报链路
 
 TEST(UdpDiscoveryClientTest, DiscoversResponderOnLoopback)
 {
@@ -216,7 +216,7 @@ TEST(UdpDiscoveryClientTest, DiscoversResponderOnLoopback)
     EXPECT_FALSE(report.multiple_instances);
 }
 
-// ---- 过滤: nodeId / httpPort / status 不符合则不采纳 ----
+// 过滤: nodeId / httpPort / status 不符合则不采纳
 
 TEST(UdpDiscoveryClientTest, IgnoresForeignNodeId)
 {
@@ -282,7 +282,7 @@ TEST(UdpDiscoveryClientTest, StatusZeroIsNotAdopted)
     EXPECT_TRUE(report.endpoints.empty());
 }
 
-// ---- 多实例与去重 ----
+// 多实例与去重
 
 TEST(UdpDiscoveryClientTest, MultipleInstances)
 {

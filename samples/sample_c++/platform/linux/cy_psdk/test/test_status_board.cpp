@@ -218,7 +218,7 @@ namespace
     }
 } // namespace
 
-// ---- 交互 (PTY) 模式 ----
+// 交互 (PTY) 模式
 
 // 空状态板下仅透传日志: erase 无操作, drawBlock 因无条目直接返回
 TEST(StatusBoardTest, LogBeforeFirstUpdatePassesThrough)
@@ -421,7 +421,7 @@ TEST(StatusBoardTest, EnvironmentAndEnabledSwitches)
     }
 }
 
-// ---- 非交互 (管道) 模式 ----
+// 非交互 (管道) 模式
 
 TEST(StatusBoardTest, PlainModeOnPipe)
 {
@@ -460,7 +460,7 @@ TEST(StatusBoardTest, DisabledSuppressesUpdatesButNotLogs)
     expectBytes("reenable", enabled, "[状态] noop2 = y\n");
 }
 
-// ---- StatusBoardSink (spdlog 接收器) ----
+// StatusBoardSink (spdlog 接收器)
 
 TEST(StatusBoardSinkTest, PlainPassthroughAndFlush)
 {

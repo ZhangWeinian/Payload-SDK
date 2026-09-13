@@ -36,7 +36,7 @@ namespace
     }
 } // namespace
 
-// ---- TargetExpander ----
+// TargetExpander
 
 TEST(CatalogTargetExpander, SingleIp)
 {
@@ -82,7 +82,7 @@ TEST(CatalogTargetExpander, MalformedSpecIsInvalid)
     EXPECT_FALSE(result.has_value());
 }
 
-// ---- ProbePacketCodec ----
+// ProbePacketCodec
 
 TEST(CatalogProbeCodec, EncodeDecodeRoundTrip)
 {
@@ -142,7 +142,7 @@ TEST(CatalogProbeCodec, WrongMagicIsRejected)
     EXPECT_FALSE(decoded.has_value());
 }
 
-// ---- 严格解析与 trim 语义 (对齐 java) ----
+// 严格解析与 trim 语义 (对齐 java)
 
 TEST(CatalogTargetExpander, TrimsSpecsAndRejectsLooseOctet)
 {

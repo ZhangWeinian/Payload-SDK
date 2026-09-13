@@ -44,7 +44,7 @@ namespace plane::manager
             bool                                                    isDroppingMessages { false };
             ::std::chrono::steady_clock::time_point                 lastDropLogTime {};
 
-            // ---- 维护线程 (周期自检 / 断线重连) ----
+            // 维护线程 (周期自检 / 断线重连)
             ::std::thread                           maintainThread {};
             ::std::atomic<bool>                     runMaintain { false };
             ::std::mutex                            maintainMutex {};

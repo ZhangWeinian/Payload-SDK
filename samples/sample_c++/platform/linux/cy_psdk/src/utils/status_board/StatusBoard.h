@@ -77,7 +77,7 @@ namespace plane::utils
             StatusLevel   level { StatusLevel::Info };
         };
 
-        // ---- 内部操作 (均需持有 mutex_) ----
+        // 内部操作 (均需持有 mutex_)
         [[nodiscard]] bool  interactiveLocked(void) const noexcept;
         Item&               findOrCreateLocked(const ::std::string& key);
         void                flushLocked(void);

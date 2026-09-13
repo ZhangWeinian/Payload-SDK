@@ -316,7 +316,7 @@ namespace plane::manager
         plane::protocol::StatusPayload                                                          latest_payload_ {};
         constexpr static auto ACQUISITION_INTERVAL { ::std::chrono::milliseconds(20) };
 
-        // ---- 真数据采集运行态 (跳线程: 回调/命令线程写入, 采集线程读取) ----
+        // 真数据采集运行态 (跳线程: 回调/命令线程写入, 采集线程读取)
         ::std::atomic<int>                      mission_current_waypoint_ { 0 }; // 当前航点 (航线任务回调写入)
         ::std::atomic<int>                      virtual_stick_mode_ { 0 };       // 虚拟摇杆模式: 0 关 / 1 启用 / 2 高级 (命令写入)
         ::std::atomic<int>                      laser_distance_01m_ { -1 };      // 激光测距 (0.1m 单位; -1 = 未测到)

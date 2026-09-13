@@ -300,7 +300,7 @@ namespace plane::manager
         impl.runtime      = ::std::make_shared<CatalogRuntime>(::std::move(options), ::std::move(discovery));
         CatalogRuntime* rt { impl.runtime.get() };
 
-        // ---- 同步发现 (失败按可重试性退避; 参数非法不可重试则放弃) ----
+        // 同步发现 (失败按可重试性退避; 参数非法不可重试则放弃)
         bool started { false };
         Ms   backoff { 2000 };
         while (this->running_.load() && !started)
@@ -346,10 +346,10 @@ namespace plane::manager
             return;
         }
 
-        // ---- 请求注册 (注册与重试/心跳由运行时内部控制线程执行) ----
+        // 请求注册 (注册与重试/心跳由运行时内部控制线程执行)
         (void)rt->registerServiceInstance();
 
-        // ---- 主循环: 周期状态上报 + Ready 后单次动态 broker 解析 ----
+        // 主循环: 周期状态上报 + Ready 后单次动态 broker 解析
         auto lastReport { ::std::chrono::steady_clock::now() };
         while (this->running_.load())
         {

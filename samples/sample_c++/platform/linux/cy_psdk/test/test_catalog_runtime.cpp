@@ -51,7 +51,7 @@ namespace
 
     using Clock = ::std::chrono::steady_clock;
 
-    // ---- 注入测试替身 ----
+    // 注入测试替身
 
     class FakeHttpTransport final: public HttpTransport
     {
@@ -180,7 +180,7 @@ namespace
     }
 } // namespace
 
-// ---- CatalogRuntime 注入与注册主链 ----
+// CatalogRuntime 注入与注册主链
 
 TEST(CatalogRuntimeInjection, UsesInjectedTransportAndReachesReady)
 {
@@ -249,7 +249,7 @@ TEST(CatalogRuntimeInjection, IdempotentRegisterConflictIsAccepted)
     ASSERT_TRUE(runtime.stop(::std::chrono::seconds(1)).has_value());
 }
 
-// ---- ServiceGateway ----
+// ServiceGateway
 
 TEST(CatalogServiceGateway, ResolveFiltersUnhealthyAndDisabled)
 {
@@ -303,7 +303,7 @@ TEST(CatalogServiceGateway, InstanceStatusHealthyIsCaseInsensitive)
     EXPECT_TRUE(result.value().healthy);
 }
 
-// ---- UdpAnnouncementListener ----
+// UdpAnnouncementListener
 
 TEST(CatalogAnnouncementListener, ReceivesLoopbackAnnouncement)
 {
@@ -372,7 +372,7 @@ TEST(CatalogAnnouncementListener, ReceivesLoopbackAnnouncement)
     EXPECT_EQ(announcement.http_port, 8081);
 }
 
-// ---- CppHttpTransport (端到端, 本地回环服务) ----
+// CppHttpTransport (端到端, 本地回环服务)
 
 TEST(CppHttpTransportTest, GetRoundTripAndQueryParsing)
 {

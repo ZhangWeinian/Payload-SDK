@@ -12,7 +12,7 @@
 
 namespace
 {
-    // ---------------------------------------------------------------- 终端环境探测
+    // 终端环境探测
     [[nodiscard]] bool stdoutIsTerminal() noexcept
     {
         return ::isatty(STDOUT_FILENO) != 0;

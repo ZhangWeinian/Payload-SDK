@@ -61,7 +61,7 @@ namespace plane::catalog
         }
     } // namespace
 
-    // ---- 实现体: 持有全部运行时状态与线程 ----
+    // 实现体: 持有全部运行时状态与线程
     struct CatalogRuntime::Impl
     {
         struct Watch
@@ -174,7 +174,7 @@ namespace plane::catalog
             }
         }
 
-        // ---- 回调投递 ----
+        // 回调投递
         void dispatch(::std::function<void()> task)
         {
             {
@@ -238,7 +238,7 @@ namespace plane::catalog
             this->wake_cv_.notify_one();
         }
 
-        // ---- 控制线程 ----
+        // 控制线程
         void runControl(void)
         {
             for (;;)
@@ -299,7 +299,7 @@ namespace plane::catalog
             }
         }
 
-        // ---- tick 驱动 (对齐 java tick/tickSafely) ----
+        // tick 驱动 (对齐 java tick/tickSafely)
         void tick(void)
         {
             try
@@ -351,7 +351,7 @@ namespace plane::catalog
             }
         }
 
-        // ---- 注册 / 心跳 / 状态 / 配置 ----
+        // 注册 / 心跳 / 状态 / 配置
         void registerOnce(void)
         {
             if (!this->gateway_)
@@ -585,7 +585,7 @@ namespace plane::catalog
             );
         }
 
-        // ---- 周期重发现 ----
+        // 周期重发现
         void refreshDiscovery(void)
         {
             const CatalogState    previous { this->state_machine_.state() };
@@ -698,7 +698,7 @@ namespace plane::catalog
             this->next_discovery_.store(Clock::time_point::min(), ::std::memory_order_release);
         }
 
-        // ---- 快照访问 ----
+        // 快照访问
         [[nodiscard]] bool hasInstanceId(void) const
         {
             ::std::lock_guard<::std::mutex> lock { this->mu_ };
@@ -729,7 +729,7 @@ namespace plane::catalog
             return this->instance_id_;
         }
 
-        // ---- 配置/查询辅助 ----
+        // 配置/查询辅助
         [[nodiscard]] ::std::optional<::std::vector<ConfigDocument>> allCached(const ConfigQuery& query)
         {
             ::std::vector<ConfigDocument> documents {};
