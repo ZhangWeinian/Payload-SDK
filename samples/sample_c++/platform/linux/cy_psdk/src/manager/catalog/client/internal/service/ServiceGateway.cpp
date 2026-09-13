@@ -62,8 +62,9 @@ namespace plane::catalog::internal
         {
             ::std::string result {};
             result.reserve(value.size());
-            for (const unsigned char ch : value)
+            for (const char raw_ch : value)
             {
+                const unsigned char ch { static_cast<unsigned char>(raw_ch) };
                 const bool safe { (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_' ||
                                   ch == '.' || ch == '~' };
                 if (safe)

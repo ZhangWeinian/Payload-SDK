@@ -23,8 +23,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "application.hpp"
 #include "../manager/psdk/PSDKManager.h" // PSDK 日志重定向到 spdlog
+#include "application.hpp"
 #include "define.h"                      // cy_psdk 全局命名宏 (::std::/ ::/ ::等)
 #include "dji_sdk_app_info.h"
 #include "dji_sdk_config.h"
@@ -34,9 +34,9 @@
 #include <dji_platform.h>
 #include <csignal>
 
-#include "../common/osal/osal.h"
-#include "../common/osal/osal_fs.h"
-#include "../common/osal/osal_socket.h"
+#include "../../../common/osal/osal.h"
+#include "../../../common/osal/osal_fs.h"
+#include "../../../common/osal/osal_socket.h"
 #include "../hal/hal_i2c.h"
 #include "../hal/hal_network.h"
 #include "../hal/hal_uart.h"
@@ -89,73 +89,73 @@ Application::~Application() = default;
 void Application::DjiUser_SetupEnvironment()
 {
     ::T_DjiReturnCode        returnCode;
-    ::T_DjiOsalHandler       osalHandler    = { 0 };
-    ::T_DjiHalUartHandler    uartHandler    = { 0 };
-    ::T_DjiHalUsbBulkHandler usbBulkHandler = { 0 };
+    ::T_DjiOsalHandler       osalHandler {};
+    ::T_DjiHalUartHandler    uartHandler {};
+    ::T_DjiHalUsbBulkHandler usbBulkHandler {};
     ::T_DjiLoggerConsole     printConsole;
     ::T_DjiLoggerConsole     localRecordConsole;
-    ::T_DjiFileSystemHandler fileSystemHandler = { 0 };
-    ::T_DjiSocketHandler     socketHandler { 0 };
-    ::T_DjiHalNetworkHandler networkHandler = { 0 };
-    ::T_DjiHalI2cHandler     i2CHandler     = { 0 };
+    ::T_DjiFileSystemHandler fileSystemHandler {};
+    ::T_DjiSocketHandler     socketHandler {};
+    ::T_DjiHalNetworkHandler networkHandler {};
+    ::T_DjiHalI2cHandler     i2CHandler {};
 
-    networkHandler.NetworkInit              = ::HalNetWork_Init;
-    networkHandler.NetworkDeInit            = ::HalNetWork_DeInit;
-    networkHandler.NetworkGetDeviceInfo     = ::HalNetWork_GetDeviceInfo;
+    networkHandler.NetworkInit          = ::HalNetWork_Init;
+    networkHandler.NetworkDeInit        = ::HalNetWork_DeInit;
+    networkHandler.NetworkGetDeviceInfo = ::HalNetWork_GetDeviceInfo;
 
-    socketHandler.Socket                    = ::Osal_Socket;
-    socketHandler.Bind                      = ::Osal_Bind;
-    socketHandler.Close                     = ::Osal_Close;
-    socketHandler.UdpSendData               = ::Osal_UdpSendData;
-    socketHandler.UdpRecvData               = ::Osal_UdpRecvData;
-    socketHandler.TcpListen                 = ::Osal_TcpListen;
-    socketHandler.TcpAccept                 = ::Osal_TcpAccept;
-    socketHandler.TcpConnect                = ::Osal_TcpConnect;
-    socketHandler.TcpSendData               = ::Osal_TcpSendData;
-    socketHandler.TcpRecvData               = ::Osal_TcpRecvData;
+    socketHandler.Socket                = ::Osal_Socket;
+    socketHandler.Bind                  = ::Osal_Bind;
+    socketHandler.Close                 = ::Osal_Close;
+    socketHandler.UdpSendData           = ::Osal_UdpSendData;
+    socketHandler.UdpRecvData           = ::Osal_UdpRecvData;
+    socketHandler.TcpListen             = ::Osal_TcpListen;
+    socketHandler.TcpAccept             = ::Osal_TcpAccept;
+    socketHandler.TcpConnect            = ::Osal_TcpConnect;
+    socketHandler.TcpSendData           = ::Osal_TcpSendData;
+    socketHandler.TcpRecvData           = ::Osal_TcpRecvData;
 
-    osalHandler.TaskCreate                  = ::Osal_TaskCreate;
-    osalHandler.TaskDestroy                 = ::Osal_TaskDestroy;
-    osalHandler.TaskSleepMs                 = ::Osal_TaskSleepMs;
-    osalHandler.MutexCreate                 = ::Osal_MutexCreate;
-    osalHandler.MutexDestroy                = ::Osal_MutexDestroy;
-    osalHandler.MutexLock                   = ::Osal_MutexLock;
-    osalHandler.MutexUnlock                 = ::Osal_MutexUnlock;
-    osalHandler.SemaphoreCreate             = ::Osal_SemaphoreCreate;
-    osalHandler.SemaphoreDestroy            = ::Osal_SemaphoreDestroy;
-    osalHandler.SemaphoreWait               = ::Osal_SemaphoreWait;
-    osalHandler.SemaphoreTimedWait          = ::Osal_SemaphoreTimedWait;
-    osalHandler.SemaphorePost               = ::Osal_SemaphorePost;
-    osalHandler.Malloc                      = ::Osal_Malloc;
-    osalHandler.Free                        = ::Osal_Free;
-    osalHandler.GetTimeMs                   = ::Osal_GetTimeMs;
-    osalHandler.GetTimeUs                   = ::Osal_GetTimeUs;
-    osalHandler.GetRandomNum                = ::Osal_GetRandomNum;
+    osalHandler.TaskCreate              = ::Osal_TaskCreate;
+    osalHandler.TaskDestroy             = ::Osal_TaskDestroy;
+    osalHandler.TaskSleepMs             = ::Osal_TaskSleepMs;
+    osalHandler.MutexCreate             = ::Osal_MutexCreate;
+    osalHandler.MutexDestroy            = ::Osal_MutexDestroy;
+    osalHandler.MutexLock               = ::Osal_MutexLock;
+    osalHandler.MutexUnlock             = ::Osal_MutexUnlock;
+    osalHandler.SemaphoreCreate         = ::Osal_SemaphoreCreate;
+    osalHandler.SemaphoreDestroy        = ::Osal_SemaphoreDestroy;
+    osalHandler.SemaphoreWait           = ::Osal_SemaphoreWait;
+    osalHandler.SemaphoreTimedWait      = ::Osal_SemaphoreTimedWait;
+    osalHandler.SemaphorePost           = ::Osal_SemaphorePost;
+    osalHandler.Malloc                  = ::Osal_Malloc;
+    osalHandler.Free                    = ::Osal_Free;
+    osalHandler.GetTimeMs               = ::Osal_GetTimeMs;
+    osalHandler.GetTimeUs               = ::Osal_GetTimeUs;
+    osalHandler.GetRandomNum            = ::Osal_GetRandomNum;
 
-    printConsole.func                       = DjiUser_PrintConsole;
-    printConsole.consoleLevel               = ::DJI_LOGGER_CONSOLE_LOG_LEVEL_INFO;
-    printConsole.isSupportColor             = true;
+    printConsole.func                   = DjiUser_PrintConsole;
+    printConsole.consoleLevel           = ::DJI_LOGGER_CONSOLE_LOG_LEVEL_INFO;
+    printConsole.isSupportColor         = true;
 
-    localRecordConsole.consoleLevel         = ::DJI_LOGGER_CONSOLE_LOG_LEVEL_DEBUG;
-    localRecordConsole.func                 = DjiUser_LocalWrite;
-    localRecordConsole.isSupportColor       = false;
+    localRecordConsole.consoleLevel     = ::DJI_LOGGER_CONSOLE_LOG_LEVEL_DEBUG;
+    localRecordConsole.func             = DjiUser_LocalWrite;
+    localRecordConsole.isSupportColor   = false;
 
-    uartHandler.UartInit                    = ::HalUart_Init;
-    uartHandler.UartDeInit                  = ::HalUart_DeInit;
-    uartHandler.UartWriteData               = ::HalUart_WriteData;
-    uartHandler.UartReadData                = ::HalUart_ReadData;
-    uartHandler.UartGetStatus               = ::HalUart_GetStatus;
-    uartHandler.UartGetDeviceInfo           = ::HalUart_GetDeviceInfo;
-    i2CHandler.I2cInit                      = ::HalI2c_Init;
-    i2CHandler.I2cDeInit                    = ::HalI2c_DeInit;
-    i2CHandler.I2cWriteData                 = ::HalI2c_WriteData;
-    i2CHandler.I2cReadData                  = ::HalI2c_ReadData;
+    uartHandler.UartInit                = ::HalUart_Init;
+    uartHandler.UartDeInit              = ::HalUart_DeInit;
+    uartHandler.UartWriteData           = ::HalUart_WriteData;
+    uartHandler.UartReadData            = ::HalUart_ReadData;
+    uartHandler.UartGetStatus           = ::HalUart_GetStatus;
+    uartHandler.UartGetDeviceInfo       = ::HalUart_GetDeviceInfo;
+    i2CHandler.I2cInit                  = ::HalI2c_Init;
+    i2CHandler.I2cDeInit                = ::HalI2c_DeInit;
+    i2CHandler.I2cWriteData             = ::HalI2c_WriteData;
+    i2CHandler.I2cReadData              = ::HalI2c_ReadData;
 
-    usbBulkHandler.UsbBulkInit              = ::HalUsbBulk_Init;
-    usbBulkHandler.UsbBulkDeInit            = ::HalUsbBulk_DeInit;
-    usbBulkHandler.UsbBulkWriteData         = ::HalUsbBulk_WriteData;
-    usbBulkHandler.UsbBulkReadData          = ::HalUsbBulk_ReadData;
-    usbBulkHandler.UsbBulkGetDeviceInfo     = ::HalUsbBulk_GetDeviceInfo;
+    usbBulkHandler.UsbBulkInit          = ::HalUsbBulk_Init;
+    usbBulkHandler.UsbBulkDeInit        = ::HalUsbBulk_DeInit;
+    usbBulkHandler.UsbBulkWriteData     = ::HalUsbBulk_WriteData;
+    usbBulkHandler.UsbBulkReadData      = ::HalUsbBulk_ReadData;
+    usbBulkHandler.UsbBulkGetDeviceInfo = ::HalUsbBulk_GetDeviceInfo;
 
     fileSystemHandler.FileOpen = ::Osal_FileOpen, fileSystemHandler.FileClose = ::Osal_FileClose, fileSystemHandler.FileWrite = ::Osal_FileWrite,
     fileSystemHandler.FileRead = ::Osal_FileRead, fileSystemHandler.FileSync = ::Osal_FileSync, fileSystemHandler.FileSeek = ::Osal_FileSeek,
@@ -394,7 +394,7 @@ void Application::DjiUser_ApplicationStart()
     USER_LOG_INFO("Application start.");
 }
 
-::T_DjiReturnCode Application::DjiUser_PrintConsole(const uint8_t* data, uint16_t dataLen)
+::T_DjiReturnCode Application::DjiUser_PrintConsole(const uint8_t* data, uint16_t)
 {
     ::printf("%s", data);
 
@@ -410,7 +410,7 @@ void Application::DjiUser_ApplicationStart()
         return ::DJI_ERROR_SYSTEM_MODULE_CODE_UNKNOWN;
     }
 
-    realLen = ::fwrite(data, 1, dataLen, s_djiLogFile);
+    realLen = static_cast<int32_t>(::fwrite(data, 1, dataLen, s_djiLogFile));
     ::fflush(s_djiLogFile);
     if (realLen == dataLen)
     {
@@ -469,7 +469,7 @@ void Application::DjiUser_ApplicationStart()
     struct tm*        localTime    = ::localtime(&currentTime);
     uint16_t          logFileIndex = 0;
     uint16_t          currentLogFileIndex;
-    uint8_t           ret;
+    int32_t           ret;
 
     if (localTime == nullptr)
     {
@@ -506,7 +506,7 @@ void Application::DjiUser_ApplicationStart()
             return ::DJI_ERROR_SYSTEM_MODULE_CODE_SYSTEM_ERROR;
         }
 
-        ret = ::fread((uint16_t*)&logFileIndex, 1, sizeof(uint16_t), s_djiLogFileCnt);
+        ret = static_cast<int32_t>(::fread((uint16_t*)&logFileIndex, 1, sizeof(uint16_t), s_djiLogFileCnt));
         if (ret != sizeof(uint16_t))
         {
             ::printf("Read log file index error.\r\n");
@@ -523,7 +523,7 @@ void Application::DjiUser_ApplicationStart()
         return ::DJI_ERROR_SYSTEM_MODULE_CODE_SYSTEM_ERROR;
     }
 
-    ret = ::fwrite((uint16_t*)&logFileIndex, 1, sizeof(uint16_t), s_djiLogFileCnt);
+    ret = static_cast<int32_t>(::fwrite((uint16_t*)&logFileIndex, 1, sizeof(uint16_t), s_djiLogFileCnt));
     if (ret != sizeof(uint16_t))
     {
         ::printf("Write log file index error.\r\n");
@@ -584,7 +584,7 @@ static ::T_DjiReturnCode DjiTest_HighPowerApplyPinInit()
     return ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
 }
 
-static ::T_DjiReturnCode DjiTest_WriteHighPowerApplyPin(::E_DjiPowerManagementPinState pinState)
+static ::T_DjiReturnCode DjiTest_WriteHighPowerApplyPin(::E_DjiPowerManagementPinState)
 {
     // attention: please pull up the HWPR pin state by hardware.
     return ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;

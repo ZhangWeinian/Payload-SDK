@@ -117,7 +117,7 @@ namespace plane::manager
                 else
                 {
                     LOG_INFO("[MQTT] 收到并准备执行【航线任务】, 共 {} 个航点", payload.HDJ.size());
-                    if (auto kmz_data { plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ, payload) }; kmz_data)
+                    if (auto kmz_data { plane::utils::JsonToKmzConverter::convertWaypointsToKmz(payload.HDJ) }; kmz_data)
                     {
                         plane::manager::FlyManager::getInstance().waypoint(kmz_data.value());
                     }

@@ -322,7 +322,7 @@ namespace plane::manager
         );
     }
 
-    void TelemetryReporter::onHeartbeatTick(const plane::manager::EventManager::SystemEventData& eventData)
+    void TelemetryReporter::onHeartbeatTick(const plane::manager::EventManager::SystemEventData&)
     {
         if (!this->event_processing_pool_)
         {

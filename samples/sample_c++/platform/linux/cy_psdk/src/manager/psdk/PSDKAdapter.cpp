@@ -1729,7 +1729,7 @@ namespace plane::manager
         this->virtual_stick_mode_.store(payload.YGMS, ::std::memory_order_release); // 域模型/SBZT 由采集循环同步
 
         (void)this->executePsdkCommandAsync(
-            [payload](void) -> ::T_DjiReturnCode
+            [](void) -> ::T_DjiReturnCode
             {
                 LOG_INFO("线程池任务: 开启虚拟摇杆");
                 return ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值
@@ -1743,7 +1743,7 @@ namespace plane::manager
         this->virtual_stick_mode_.store(0, ::std::memory_order_release);
 
         (void)this->executePsdkCommandAsync(
-            [payload](void) -> ::T_DjiReturnCode
+            [](void) -> ::T_DjiReturnCode
             {
                 LOG_INFO("线程池任务: 关闭虚拟摇杆");
                 return ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS; // 示例返回值

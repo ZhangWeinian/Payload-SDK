@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <cerrno>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
@@ -67,12 +66,10 @@ namespace
         return width;
     }
 
+    // 截断到 maxWidth 显示列并追加省略号。前置条件: 调用方保证 maxWidth >= 1
+    // 且 displayWidth(text) > maxWidth (仅超宽时调用), 因此无需"未超宽直接返回"的保护分支
     [[nodiscard]] ::std::string truncateToWidth(::std::string_view text, int maxWidth)
     {
-        if (maxWidth <= 0 || displayWidth(text) <= maxWidth)
-        {
-            return ::std::string { text };
-        }
         ::std::string out;
         int           width { 0 };
         size_t        i { 0 };
@@ -117,17 +114,17 @@ namespace plane::utils
 
     void StatusBoard::setEnabled(bool enabled) noexcept
     {
-        enabled_ = enabled;
+        this->enabled_ = enabled;
     }
 
     bool StatusBoard::isEnabled(void) const noexcept
     {
-        return enabled_;
+        return this->enabled_;
     }
 
     bool StatusBoard::isInteractive(void) const noexcept
     {
-        return enabled_ && stdoutIsTerminal() && terminalSupportsAnsi();
+        return this->enabled_ && stdoutIsTerminal() && terminalSupportsAnsi();
     }
 
     bool StatusBoard::colorSupported(void) noexcept
@@ -139,7 +136,7 @@ namespace plane::utils
 
     void StatusBoard::update(const ::std::string& key, ::std::string value, StatusLevel level)
     {
-        ::std::lock_guard lock { mutex_ };
+        ::std::lock_guard lock { this->mutex_ };
         Item&             item { this->findOrCreateLocked(key) };
         if (item.value == value && item.level == level)
         {
@@ -153,7 +150,7 @@ namespace plane::utils
             this->drawBlockLocked();
             this->flushLocked();
         }
-        else if (enabled_)
+        else if (this->enabled_)
         {
             this->writePlainLocked("[状态] " + key + " = " + item.value);
         }
@@ -161,7 +158,7 @@ namespace plane::utils
 
     void StatusBoard::log(::std::string_view line)
     {
-        ::std::lock_guard lock { mutex_ };
+        ::std::lock_guard lock { this->mutex_ };
         if (!this->interactiveLocked())
         {
             this->writePlainLocked(::std::string { line });
@@ -175,7 +172,7 @@ namespace plane::utils
 
     void StatusBoard::finish(void) noexcept
     {
-        ::std::lock_guard lock { mutex_ };
+        ::std::lock_guard lock { this->mutex_ };
         if (this->interactiveLocked())
         {
             this->eraseBlockLocked();
@@ -185,7 +182,7 @@ namespace plane::utils
 
     bool StatusBoard::interactiveLocked(void) const noexcept
     {
-        return enabled_ && stdoutIsTerminal() && terminalSupportsAnsi();
+        return this->enabled_ && stdoutIsTerminal() && terminalSupportsAnsi();
     }
 
     StatusBoard::Item& StatusBoard::findOrCreateLocked(const ::std::string& key)
@@ -208,15 +205,16 @@ namespace plane::utils
 
     void StatusBoard::flushLocked(void)
     {
-        if (buffer_.empty())
+        if (this->buffer_.empty())
         {
             return;
         }
-        // write 可能被信号中断 (EINTR) 或短写: 循环写尽, 避免丢失输出
+        // write 可能被信号中断 (EINTR) 或短写: 循环写尽, 避免丢失输出。
+        // 失败分支 (EINTR/EPIPE) 属运行时防御路径, 单测无法注入, 有意保留
         size_t offset { 0 };
-        while (offset < buffer_.size())
+        while (offset < this->buffer_.size())
         {
-            const ::ssize_t written { ::write(STDOUT_FILENO, buffer_.data() + offset, buffer_.size() - offset) };
+            const ::ssize_t written { ::write(STDOUT_FILENO, this->buffer_.data() + offset, this->buffer_.size() - offset) };
             if (written < 0)
             {
                 if (errno == EINTR)
@@ -227,7 +225,7 @@ namespace plane::utils
             }
             offset += static_cast<size_t>(written);
         }
-        buffer_.clear();
+        this->buffer_.clear();
     }
 
     void StatusBoard::writePlainLocked(const ::std::string& line)
@@ -238,8 +236,8 @@ namespace plane::utils
         {
             view.remove_suffix(1);
         }
-        buffer_.append(view);
-        buffer_.push_back('\n');
+        this->buffer_.append(view);
+        this->buffer_.push_back('\n');
         this->flushLocked();
     }
 
@@ -249,16 +247,16 @@ namespace plane::utils
         {
             if (c == '\n')
             {
-                buffer_.append("\r\n");
+                this->buffer_.append("\r\n");
             }
             else
             {
-                buffer_.push_back(c);
+                this->buffer_.push_back(c);
             }
         }
         if (text.empty() || text.back() != '\n')
         {
-            buffer_.append("\r\n");
+            this->buffer_.append("\r\n");
         }
     }
 
@@ -266,25 +264,25 @@ namespace plane::utils
     // 因此上移 (行数-1) 行即可回到块首, 再用 \033[J 清除到屏尾, 即完整抹除。
     void StatusBoard::eraseBlockLocked(void)
     {
-        if (drawn_lines_ <= 0)
+        if (this->drawn_lines_ <= 0)
         {
             return;
         }
-        if (drawn_lines_ > 1)
+        if (this->drawn_lines_ > 1)
         {
-            buffer_.append("\033[");
-            buffer_.append(::std::to_string(drawn_lines_ - 1));
-            buffer_.append("A");
+            this->buffer_.append("\033[");
+            this->buffer_.append(::std::to_string(this->drawn_lines_ - 1));
+            this->buffer_.append("A");
         }
-        buffer_.append("\r\033[J");
-        drawn_lines_ = 0;
+        this->buffer_.append("\r\033[J");
+        this->drawn_lines_ = 0;
     }
 
     // 状态块布局: 每行 2~3 项; 列起点固定为终端宽度的等分位置 (行首 / 1/2; 或 1/3, 2/3),
     // 不随内容长度漂移; 放不下时降级 3 列 -> 2 列 -> 1 列。
     void StatusBoard::drawBlockLocked(void)
     {
-        if (items_.empty())
+        if (this->items_.empty())
         {
             return;
         }
@@ -297,9 +295,9 @@ namespace plane::utils
 
         // 各项的纯文本与最大宽度 (用于决定列数)
         ::std::vector<::std::string> plains;
-        plains.reserve(items_.size());
+        plains.reserve(this->items_.size());
         int maxItemWidth { 0 };
-        for (const Item& item : items_)
+        for (const Item& item : this->items_)
         {
             plains.push_back(item.key + " : " + item.value);
             maxItemWidth = ::std::max(maxItemWidth, displayWidth(plains.back()));
@@ -320,16 +318,16 @@ namespace plane::utils
             }
         }
 
-        buffer_.append("\r");
+        this->buffer_.append("\r");
         // 与日志区之间留空行; 空行跟随状态块一起抹除/重绘, 计入 drawn_lines_
         for (int i = 0; i < SEPARATOR_LINES; ++i)
         {
-            buffer_.append("\r\n");
+            this->buffer_.append("\r\n");
         }
         int lines { 0 };
-        for (size_t i = 0; i < items_.size(); i += static_cast<size_t>(columns))
+        for (size_t i = 0; i < this->items_.size(); i += static_cast<size_t>(columns))
         {
-            const size_t rowEnd { ::std::min(items_.size(), i + static_cast<size_t>(columns)) };
+            const size_t rowEnd { ::std::min(this->items_.size(), i + static_cast<size_t>(columns)) };
             int          cursorPos { 0 }; // 本行已输出到的显示列位置
             for (size_t j = i; j < rowEnd; ++j)
             {
@@ -344,10 +342,10 @@ namespace plane::utils
                 const int pad { startPos - cursorPos };
                 if (pad > 0)
                 {
-                    buffer_.append(static_cast<size_t>(pad), ' ');
+                    this->buffer_.append(static_cast<size_t>(pad), ' ');
                 }
 
-                const Item&          item { items_[j] };
+                const Item&          item { this->items_[j] };
                 const ::std::string& plain { plains[j] };
                 ::std::string        text { plain };
                 if (displayWidth(text) > avail)
@@ -357,23 +355,23 @@ namespace plane::utils
 
                 if (colors && text == plain)
                 {
-                    buffer_.append("\033[36m");
-                    buffer_.append(item.key);
-                    buffer_.append("\033[0m : ");
-                    buffer_.append(levelColor(item.level));
-                    buffer_.append(item.value);
-                    buffer_.append("\033[0m");
+                    this->buffer_.append("\033[36m");
+                    this->buffer_.append(item.key);
+                    this->buffer_.append("\033[0m : ");
+                    this->buffer_.append(levelColor(item.level));
+                    this->buffer_.append(item.value);
+                    this->buffer_.append("\033[0m");
                 }
                 else
                 {
-                    buffer_.append(text);
+                    this->buffer_.append(text);
                 }
                 cursorPos = startPos + displayWidth(text);
             }
             ++lines;
-            if (rowEnd < items_.size())
+            if (rowEnd < this->items_.size())
             {
-                buffer_.append("\r\n");
+                this->buffer_.append("\r\n");
             }
         }
         // 末行不加换行: 光标停在状态块最后一行, 供下次 eraseBlockLocked 定位

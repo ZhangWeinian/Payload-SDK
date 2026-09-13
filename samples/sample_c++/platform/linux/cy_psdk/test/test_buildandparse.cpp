@@ -26,7 +26,7 @@ namespace
     {
         // 幂等: 若已被其他 TU 加载(内容相同)则直接返回 true
         plane::test::writeSharedConfig();
-        plane::config::ConfigManager::getInstance().loadAndCheck(plane::test::sharedConfigPath());
+        (void)plane::config::ConfigManager::getInstance().loadAndCheck(plane::test::sharedConfigPath());
     }
 } // namespace
 

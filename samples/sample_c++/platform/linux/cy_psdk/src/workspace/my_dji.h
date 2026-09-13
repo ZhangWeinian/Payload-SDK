@@ -314,7 +314,7 @@ namespace plane::my_dji
 
             struct sigaction action {};
             action.sa_sigaction = crashSignalHandler;
-            action.sa_flags     = SA_SIGINFO | SA_RESETHAND;
+            action.sa_flags     = static_cast<int>(SA_SIGINFO | SA_RESETHAND);
             ::sigemptyset(&action.sa_mask);
             ::sigaction(SIGSEGV, &action, nullptr);
             ::sigaction(SIGABRT, &action, nullptr);
@@ -445,7 +445,7 @@ namespace plane::my_dji
             }
 
             // 尝试启动 PSDK 底层服务
-            if (!plane::manager::PSDKManager::getInstance().start(argc, argv))
+            if (!plane::manager::PSDKManager::getInstance().start())
             {
                 LOG_ERROR("PSDK 底层服务初始化失败，程序退出");
                 return 1;

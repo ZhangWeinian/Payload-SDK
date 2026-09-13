@@ -24,7 +24,7 @@ namespace plane::manager
     public:
         explicit MqttCallback(plane::manager::MQTTv5Service* service): service_(service) {}
 
-        void connected(const ::std::string& cause) override
+        void connected(const ::std::string&) override
         {
             this->service_->setConnected(true);
             this->service_->syncConnectionStateToStore(true);

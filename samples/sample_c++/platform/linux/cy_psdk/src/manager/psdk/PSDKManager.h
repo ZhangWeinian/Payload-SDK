@@ -22,7 +22,7 @@ namespace plane::manager
         void redirectPsdkLogs(void) noexcept;
 
         // 启动 PSDK 底层服务，这是一个幂等的操作
-        [[nodiscard]] bool start(int argc, char* argv[]);
+        [[nodiscard]] bool start(void);
 
         // 停止 PSDK 底层服务，这是一个幂等的操作
         void stop(void);

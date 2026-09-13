@@ -36,11 +36,10 @@ namespace plane::dji_demo
 {
     void runDjiApplication(int argc, char* argv[])
     {
-        Application                      application(argc, argv);
-        char                             inputChar {};
-        ::T_DjiOsalHandler*              osalHandler = ::DjiPlatform_GetOsalHandler();
-        ::T_DjiReturnCode                returnCode {};
-        ::T_DjiTestApplyHighPowerHandler applyHighPowerHandler {};
+        Application         application(argc, argv);
+        char                inputChar {};
+        ::T_DjiOsalHandler* osalHandler = ::DjiPlatform_GetOsalHandler();
+        ::T_DjiReturnCode   returnCode {};
 
 start:
         ::std::cout << "\n"

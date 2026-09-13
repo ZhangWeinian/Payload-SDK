@@ -158,7 +158,7 @@ namespace plane::manager
         }
     }
 
-    bool PSDKManager::start(int argc, char* argv[])
+    bool PSDKManager::start(void)
     {
         // 确保幂等性
         if (bool expected { false }; !this->running_.compare_exchange_strong(expected, true))

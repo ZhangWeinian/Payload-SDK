@@ -326,14 +326,14 @@ namespace plane::utils
                     first_placemark.waypointHeadingParam.waypointHeadingAngle = .0;
                 }
 
-                // first_placemark.actionGroups.push_back(ag);
+                // 有意保持注释 (作者测试项): first_placemark.actionGroups.push_back(ag);
                 first_placemark.waypointGimbalHeadingParam.waypointGimbalPitchAngle = waypoints[0].YTFYJ;
                 wpml_file.document.folder.placemarks.push_back(first_placemark);
 
                 for (::std::size_t i { 1 }; i < size - 1; ++i)
                 {
                     plane::protocol::wpml::WpmlPlacemark placemark {};
-                    placemark.index                                     = i;
+                    placemark.index                                     = static_cast<int>(i);
                     placemark.point.longitude                           = waypoints[i].JD;
                     placemark.point.latitude                            = waypoints[i].WD;
                     placemark.executeHeight                             = waypoints[i].GD;
@@ -342,22 +342,22 @@ namespace plane::utils
 
                     if (i == 1)
                     {
-                        plane::protocol::wpml::WpmlActionGroup ag {};
-                        ag.actionGroupEndIndex = size > 2 ? static_cast<int>(size - 2) : 0;
-                        ag.actionTriggerType   = "betweenAdjacentPoints";
+                        plane::protocol::wpml::WpmlActionGroup between_ag {};
+                        between_ag.actionGroupEndIndex = size > 2 ? static_cast<int>(size - 2) : 0;
+                        between_ag.actionTriggerType   = "betweenAdjacentPoints";
 
                         plane::protocol::wpml::WpmlAction lock {};
                         lock.actionActuatorFunc                             = "gimbalAngleLock";
                         lock.actionActuatorFuncParam.gimbalPitchRotateAngle = waypoints[i].YTFYJ;
-                        ag.actions.push_back(lock);
+                        between_ag.actions.push_back(lock);
 
                         plane::protocol::wpml::WpmlAction time_lapse {};
                         time_lapse.actionId                                     = 1;
                         time_lapse.actionActuatorFunc                           = "startTimeLapse";
                         time_lapse.actionActuatorFuncParam.payloadPositionIndex = 7;
-                        ag.actions.push_back(time_lapse);
+                        between_ag.actions.push_back(time_lapse);
 
-                        // placemark.actionGroups.push_back(ag);
+                        // 有意保持注释 (作者测试项): placemark.actionGroups.push_back(between_ag);
                     }
 
                     placemark.waypointGimbalHeadingParam.waypointGimbalPitchAngle = waypoints[i].YTFYJ;
@@ -368,30 +368,30 @@ namespace plane::utils
                 {
                     const auto&                          last_wp { waypoints.back() };
                     plane::protocol::wpml::WpmlPlacemark last_placemark {};
-                    last_placemark.index                                     = size - 1;
+                    last_placemark.index                                     = static_cast<int>(size - 1);
                     last_placemark.point.longitude                           = last_wp.JD;
                     last_placemark.point.latitude                            = last_wp.WD;
                     last_placemark.executeHeight                             = last_wp.GD;
                     last_placemark.waypointSpeed                             = last_wp.SD;
                     last_placemark.waypointHeadingParam.waypointHeadingAngle = .0;
 
-                    plane::protocol::wpml::WpmlActionGroup ag {};
-                    ag.actionGroupId         = 1;
-                    ag.actionGroupStartIndex = static_cast<int>(waypoints.size() - 1);
-                    ag.actionGroupEndIndex   = static_cast<int>(waypoints.size() - 1);
-                    ag.actionTriggerType     = "reachPoint";
+                    plane::protocol::wpml::WpmlActionGroup reach_ag {};
+                    reach_ag.actionGroupId         = 1;
+                    reach_ag.actionGroupStartIndex = static_cast<int>(waypoints.size() - 1);
+                    reach_ag.actionGroupEndIndex   = static_cast<int>(waypoints.size() - 1);
+                    reach_ag.actionTriggerType     = "reachPoint";
 
                     plane::protocol::wpml::WpmlAction stop {};
                     stop.actionActuatorFunc                           = "stopTimeLapse";
                     stop.actionActuatorFuncParam.payloadPositionIndex = 7;
-                    ag.actions.push_back(stop);
+                    reach_ag.actions.push_back(stop);
 
                     plane::protocol::wpml::WpmlAction unlock {};
                     unlock.actionId           = 1;
                     unlock.actionActuatorFunc = "gimbalAngleUnlock";
-                    ag.actions.push_back(unlock);
+                    reach_ag.actions.push_back(unlock);
 
-                    // slastPlacemark.actionGroups.push_back(ag);
+                    // 有意保持注释 (作者测试项): lastPlacemark.actionGroups.push_back(reach_ag);
                     last_placemark.waypointGimbalHeadingParam.waypointGimbalPitchAngle = last_wp.YTFYJ;
                     wpml_file.document.folder.placemarks.push_back(last_placemark);
                 }
@@ -400,10 +400,7 @@ namespace plane::utils
             return plane::utils::toXmlString(wpml_file);
         }
 
-        static ::std::string generateTemplateKml(
-            const ::std::vector<plane::protocol::Waypoint>& waypoints,
-            const plane::protocol::WaypointPayload&         missionInfo
-        ) noexcept
+        static ::std::string generateTemplateKml(const ::std::vector<plane::protocol::Waypoint>& waypoints) noexcept
         {
             plane::protocol::kml::TemplateKmlFile kml_file {};
 
@@ -420,7 +417,7 @@ namespace plane::utils
                 const auto&                         wp { waypoints[i] };
                 plane::protocol::kml::WpmlPlacemark pm {};
 
-                pm.index                 = i;
+                pm.index                 = static_cast<int>(i);
                 pm.point.longitude       = wp.JD;
                 pm.point.latitude        = wp.WD;
                 pm.height                = wp.GD;
@@ -438,10 +435,7 @@ namespace plane::utils
         }
     } // namespace
 
-    ::std::optional<kmz_data_type> JsonToKmzConverter::convertWaypointsToKmz(
-        const ::std::vector<plane::protocol::Waypoint>& waypoints,
-        const plane::protocol::WaypointPayload&         missionInfo
-    ) noexcept
+    ::std::optional<kmz_data_type> JsonToKmzConverter::convertWaypointsToKmz(const ::std::vector<plane::protocol::Waypoint>& waypoints) noexcept
     {
         try
         {
@@ -453,7 +447,7 @@ namespace plane::utils
             }
 
             ::std::string      waylines_wpml { generateWaylinesWpml(waypoints) };
-            ::std::string      template_kml { generateTemplateKml(waypoints, missionInfo) };
+            ::std::string      template_kml { generateTemplateKml(waypoints) };
 
             InMemoryZipArchive archive {};
             if (!archive)
@@ -493,7 +487,7 @@ namespace plane::utils
 
                     if (::std::ofstream out_file(kmz_file_path, ::std::ios::binary); out_file)
                     {
-                        out_file.write(reinterpret_cast<const char*>(kmz_data.data()), kmz_data.size());
+                        out_file.write(reinterpret_cast<const char*>(kmz_data.data()), static_cast<::std::streamsize>(kmz_data.size()));
                         out_file.close();
 
                         ::std::lock_guard<::std::mutex> lock(g_kmzPathMutex);

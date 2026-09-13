@@ -27,6 +27,7 @@ add_executable (
 	test_boost_beast_smoke.cpp
 	test_ws_client.cpp
 	test_udp_discovery_client.cpp
+	test_status_board.cpp
 	../src/config/ConfigManager.cpp
 	../src/manager/event_manager/EventManager.cpp
 	../src/manager/mqtt/handler/MessageHandler.cpp

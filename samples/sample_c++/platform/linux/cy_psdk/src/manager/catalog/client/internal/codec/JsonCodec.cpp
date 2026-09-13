@@ -26,8 +26,9 @@ namespace plane::catalog::internal
             [[nodiscard]] bool exceeds128CodePoints(const ::std::string& value)
             {
                 ::std::size_t code_points { 0 };
-                for (const unsigned char ch : value)
+                for (const char raw_ch : value)
                 {
+                    const unsigned char ch { static_cast<unsigned char>(raw_ch) };
                     if ((ch & 0Xc0u) != 0X80)
                     {
                         ++code_points;
