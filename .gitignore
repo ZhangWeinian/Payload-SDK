@@ -33,4 +33,5 @@ core
 core.*
 
 # 和平台/环境相关的，不具备移植性的文件/文件夹
-rsync.sh
+cy_tools/format.sh
+cy_tools/rsync.sh

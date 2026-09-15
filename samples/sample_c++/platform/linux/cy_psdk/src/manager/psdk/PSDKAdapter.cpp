@@ -582,7 +582,15 @@ namespace plane::manager
         this->refreshFixedAircraftInfo();
 
         // 读取相机固定信息 (型号/固件版本) 写入域模型 (一次即可, 失败仅告警)
-        this->refreshFixedCameraInfo();
+        // 相机模块未初始化成功 (如基础许可) 时跳过: 否则只会得到一条误导性的"读取失败"告警
+        if (plane::manager::PSDKManager::getInstance().isCameraInitialized())
+        {
+            this->refreshFixedCameraInfo();
+        }
+        else
+        {
+            LOG_INFO("相机模块未初始化 (基础许可或无相机), 跳过相机固定信息读取");
+        }
 
 #if CY_PSDK_HAS_BATTERY_CAPACITY_GOHOME
         // 注册返航电量/剩余飞行时间回调 (低电量返航评估; 失败仅告警, 飞机不支持时为预期情况)
@@ -1528,10 +1536,8 @@ namespace plane::manager
                         throw return_code;
                     }
 
-                    // ================= 临时阻拦 (TODO: 飞机具备起飞条件后移除本开关) =================
-                    // 当前飞机硬件尚不具备真正起飞条件: KMZ 上传成功即视为执行成功, 暂不启动航线、不等待执行。
-                    // 恢复真机起飞: 将 kEnableMissionLaunch 改为 true 即可 (启动与等待逻辑原样保留在下方)。
-                    constexpr bool kEnableMissionLaunch { false };
+                    // 启动与执行: 飞行能力就绪后启用 (模拟器 / 真机均为"上传 KMZ → 启动 → 等执行完成")
+                    constexpr bool kEnableMissionLaunch { true };
                     if constexpr (kEnableMissionLaunch)
                     {
                         // 启动航线任务

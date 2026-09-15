@@ -44,6 +44,7 @@ TEST(ConfigManager, LoadsSharedConfigAndExposesValues)
     EXPECT_FALSE(cfg.isTraceLogLevel());
     EXPECT_FALSE(cfg.isSkipRC());
     EXPECT_FALSE(cfg.isSaveKmz());
+    EXPECT_EQ(cfg.getUsbBulkPolicy(), ConfigManager::UsbBulkPolicy::Force);
 }
 
 TEST(ConfigManager, CatalogIdentityAndBrokerDiscoveryAreCodeFixed)

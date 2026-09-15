@@ -6,7 +6,9 @@
 #include <dji_camera_manager.h>
 #include <dji_fc_subscription.h>
 #include <dji_flight_controller.h>
+#include <dji_gimbal_manager.h>
 #include <dji_hms_manager.h>
+#include <dji_liveview.h>
 #include <dji_logger.h>
 #include <dji_platform.h>
 
@@ -114,6 +116,26 @@ namespace plane::manager
         return this->hms_initialized_;
     }
 
+    PSDKManager::LicenseLevel PSDKManager::licenseLevel(void) const noexcept
+    {
+        return this->license_level_;
+    }
+
+    bool PSDKManager::isAdvancedLicenseAvailable(void) const noexcept
+    {
+        return this->license_level_ == LicenseLevel::ADVANCED;
+    }
+
+    bool PSDKManager::isLiveviewInitialized(void) const noexcept
+    {
+        return this->liveview_initialized_;
+    }
+
+    bool PSDKManager::isGimbalManagerInitialized(void) const noexcept
+    {
+        return this->gimbal_manager_initialized_;
+    }
+
     void PSDKManager::redirectPsdkLogs(void) noexcept
     {
         static ::std::atomic<bool> redirected { false };
@@ -181,9 +203,12 @@ namespace plane::manager
             // 重置各模块初始化标志, 防止上次未完整清理的残留状态影响本次启动
             this->hms_initialized_             = false;
             this->camera_initialized_          = false;
+            this->liveview_initialized_        = false;
+            this->gimbal_manager_initialized_  = false;
             this->fc_initialized_              = false;
             this->fc_subscription_initialized_ = false;
             this->adapter_subscribed_          = false;
+            this->license_level_               = LicenseLevel::UNKNOWN;
 
             // 重定向 PSDK 日志到 spdlog (幂等; 入口通常已提前调用, 此处兜底)
             this->redirectPsdkLogs();
@@ -204,15 +229,63 @@ namespace plane::manager
                 LOG_INFO("HMS 模块初始化完成");
             }
 
-            // 初始化相机模块 (读取相机固件/激光测距等; 无相机时失败仅告警)
-            if (::T_DjiReturnCode returnCode { ::DjiCameraManager_Init() }; returnCode != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+            // 初始化相机模块 (高级功能: 相机管理)
+            // 同时作为"许可等级"探针: 成功 → 高级许可; NONSUPPORT(Invalid license) → 基础许可
+            const ::T_DjiReturnCode cameraReturnCode { ::DjiCameraManager_Init() };
+            if (cameraReturnCode != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
             {
-                LOG_WARN("相机模块初始化失败 (无相机?), 错误: {}", plane::utils::convertDjiError(returnCode));
+                LOG_WARN("相机管理初始化失败 (错误码 {:#010X}): {}", cameraReturnCode, plane::utils::convertDjiError(cameraReturnCode));
             }
             else
             {
                 this->camera_initialized_ = true;
-                LOG_INFO("相机模块初始化完成");
+                LOG_INFO("相机管理初始化完成");
+            }
+
+            // ---- 许可等级判定 + 高级模块初始化 (相机管理/取流/云台管理/运动规划 均属高级功能) ----
+            if (this->camera_initialized_)
+            {
+                this->license_level_ = LicenseLevel::ADVANCED;
+            }
+            else if (cameraReturnCode == ::DJI_ERROR_SYSTEM_MODULE_CODE_NONSUPPORT)
+            {
+                this->license_level_ = LicenseLevel::BASIC;
+                LOG_WARN(
+                    "当前为基础许可: 相机管理/取流(liveview)/云台管理/运动规划 等高级功能不可用 "
+                    "(如已购买高级许可, 请确认开发者 App 信息与飞机已绑定)"
+                );
+            }
+            else
+            {
+                this->license_level_ = LicenseLevel::UNKNOWN;
+                LOG_WARN("许可等级判定失败 (相机管理返回非许可类错误), 本次不初始化任何高级模块");
+            }
+
+            if (this->license_level_ == LicenseLevel::ADVANCED)
+            {
+                LOG_INFO("检测到高级许可, 启用高级功能模块");
+
+                // 取流模块: 获取飞机相机 H.264 码流 (高级)
+                if (::T_DjiReturnCode returnCode { ::DjiLiveview_Init() }; returnCode != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+                {
+                    LOG_WARN("取流(liveview)模块初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+                }
+                else
+                {
+                    this->liveview_initialized_ = true;
+                    LOG_INFO("取流(liveview)模块初始化完成");
+                }
+
+                // 云台管理模块: 控制飞机云台 (高级; 基础档无对应能力)
+                if (::T_DjiReturnCode returnCode { ::DjiGimbalManager_Init() }; returnCode != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+                {
+                    LOG_WARN("云台管理模块初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+                }
+                else
+                {
+                    this->gimbal_manager_initialized_ = true;
+                    LOG_INFO("云台管理模块初始化完成");
+                }
             }
 
             // 初始化飞控模块 (必须先初始化再调用任何 DjiFlightController_* API, 否则模块未就绪会崩溃)
@@ -335,6 +408,24 @@ namespace plane::manager
                 LOG_WARN("HMS 模块反初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
             }
             this->hms_initialized_ = false;
+        }
+
+        if (this->gimbal_manager_initialized_)
+        {
+            if (::T_DjiReturnCode returnCode { ::DjiGimbalManager_Deinit() }; returnCode != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+            {
+                LOG_WARN("云台管理模块反初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+            }
+            this->gimbal_manager_initialized_ = false;
+        }
+
+        if (this->liveview_initialized_)
+        {
+            if (::T_DjiReturnCode returnCode { ::DjiLiveview_Deinit() }; returnCode != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+            {
+                LOG_WARN("取流(liveview)模块反初始化失败, 错误: {}", plane::utils::convertDjiError(returnCode));
+            }
+            this->liveview_initialized_ = false;
         }
 
         if (this->camera_initialized_)

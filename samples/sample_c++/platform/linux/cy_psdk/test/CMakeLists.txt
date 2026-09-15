@@ -15,6 +15,8 @@ add_executable (
 	${CY_TEST_TARGET}
 	test_config.cpp
 	test_buildandparse.cpp
+	test_kmz.cpp
+	test_kmz_reference.cpp
 	test_protocol.cpp
 	test_exehomepath.cpp
 	test_integrity.cpp
@@ -44,6 +46,7 @@ add_executable (
 	../src/manager/catalog/client/internal/discovery/UdpDiscoveryClient.cpp
 	../src/utils/device_identity/DeviceIdentity.cpp
 	../src/utils/json_converter/BuildAndParse.cpp
+	../src/utils/json_converter/JsonToKmz.cpp
 	../src/utils/log_util/Logger.cpp
 	../src/utils/status_board/StatusBoard.cpp
 	../src/utils/integrity/IntegrityCheck.cpp
@@ -54,6 +57,11 @@ target_include_directories (
 							  "${PSDK_INCLUDE_DIR}"
 )
 
+# 真机基线样例 (kmz_template.json / kmz_template.kmz) 的绝对路径, 见 test_kmz_reference.cpp
+target_compile_definitions (
+	${CY_TEST_TARGET} PRIVATE "CY_TEST_SAMPLE_DATA_DIR=\"${CMAKE_CURRENT_LIST_DIR}/sample_data\""
+)
+
 target_link_libraries (
 	${CY_TEST_TARGET}
 	PRIVATE GTest::gtest_main
@@ -61,6 +69,8 @@ target_link_libraries (
 			spdlog::spdlog
 			yaml-cpp::yaml-cpp
 			nlohmann_json::nlohmann_json
+			libzip::zip
+			pugixml::pugixml
 			OpenSSL::Crypto
 			Boost::beast
 			httplib::httplib

@@ -98,7 +98,7 @@ namespace plane::protocol
         double GD {};           // 高度
         double SD { 5.0 };      // 速度
         double YTFYJ { -90.0 }; // 云台俯仰角
-        int    FJPHJ {};        // 偏航角
+        double FJPHJ {};        // 飞机偏航角
     };
 
     struct WaypointPayload

@@ -30,6 +30,7 @@ namespace plane::test
     set_psdk_log_level: 2
     skip_rc: false
     save_kmz_file: false
+    usb_bulk: force
 catalog:
     node_id: UNIT-TEST-NODE
     port: 30906

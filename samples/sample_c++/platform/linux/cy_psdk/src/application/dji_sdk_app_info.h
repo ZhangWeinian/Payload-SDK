@@ -47,6 +47,9 @@ extern "C"
 #define USER_DEVELOPER_ACCOUNT "accepted"
 #define USER_BAUD_RATE         "460800"
 
+// 负载序列号: PSDK 侧本机负载身份, 需全局唯一 (部署时按实际负载填写, 不得与其它负载重复)
+#define USER_PAYLOAD_SERIAL "PSDK12345678XX"
+
     /* Exported types ------------------------------------------------------------*/
 
     /* Exported functions --------------------------------------------------------*/

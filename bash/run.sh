@@ -34,6 +34,13 @@ if [ -w /proc/sys/kernel/core_pattern ]; then
 	echo "$DIR/dumps/core.%t.%p" > /proc/sys/kernel/core_pattern 2>/dev/null || true
 fi
 
+# USB Bulk 配置必须在启动 cy_psdk 之前完成: PSDK 初始化时会 open() 端点文件
+# (/dev/usb-ffs/bulkN/ep{1,2}), 而这些文件只有 gadget 配置完成后才会出现。
+# 脚本幂等; 失败不阻塞启动 (退化为仅 UART 链路, 无视频/高带宽数据)。
+if [ -f "$DIR/usb_bulk_config.sh" ]; then
+        bash "$DIR/usb_bulk_config.sh" || echo "[警告] USB Bulk 通道配置失败, 本次仅 UART 链路 (无视频)"
+fi
+
 # aarch64 / x86_64 打包解释器二选一
 for LOADER in \
 	"$DIR/libs/ld-linux-aarch64.so.1" \

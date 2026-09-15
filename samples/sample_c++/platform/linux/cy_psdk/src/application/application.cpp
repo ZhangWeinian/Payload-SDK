@@ -24,8 +24,10 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "../manager/psdk/PSDKManager.h" // PSDK 日志重定向到 spdlog
+#include "../utils/log_util/Logger.h"    // LOG_* (spdlog, 与 DJI 日志重定向无关)
 #include "application.hpp"
-#include "define.h"                      // cy_psdk 全局命名宏 (::std::/ ::/ ::等)
+#include "config/ConfigManager.h"
+#include "define.h" // cy_psdk 全局命名宏 (::std::/ ::/ ::等)
 #include "dji_sdk_app_info.h"
 #include "dji_sdk_config.h"
 #include <dji_aircraft_info.h>
@@ -33,6 +35,8 @@
 #include <dji_logger.h>
 #include <dji_platform.h>
 #include <csignal>
+#include <fstream>
+#include <string>
 
 #include "../../../common/osal/osal.h"
 #include "../../../common/osal/osal_fs.h"
@@ -59,9 +63,14 @@
 #define DJI_SYSTEM_CMD_STR_MAX_SIZE  (64)
 #define DJI_LOG_MAX_COUNT            (10)
 
-#define USER_UTIL_UNUSED(x)          ((x) = (x))
-#define USER_UTIL_MIN(a, b)          (((a) < (b)) ? (a) : (b))
-#define USER_UTIL_MAX(a, b)          (((a) > (b)) ? (a) : (b))
+// USB Bulk: "飞机(USB Host)是否已配置我们" 状态文件, 由 usb_bulk_config.sh 启动的
+// usb_bulk_event_watcher 写入 (监听 ep0 的 FUNCTIONFS_ENABLE 事件);
+// 路径须与 usb_bulk_config.sh 的 HOLDER_STATE 一致
+#define USB_BULK_HOST_STATE_FILE "/run/usb_bulk_holder.state"
+
+#define USER_UTIL_UNUSED(x)      ((x) = (x))
+#define USER_UTIL_MIN(a, b)      (((a) < (b)) ? (a) : (b))
+#define USER_UTIL_MAX(a, b)      (((a) > (b)) ? (a) : (b))
 
 /* Private types -------------------------------------------------------------*/
 
@@ -71,6 +80,7 @@ static ::FILE* s_djiLogFileCnt;
 
 /* Private functions declaration ---------------------------------------------*/
 static void              DjiUser_NormalExitHandler(int signalNum);
+static bool              DjiUser_IsUsbBulkHostConfigured();
 static ::T_DjiReturnCode DjiTest_HighPowerApplyPinInit();
 static ::T_DjiReturnCode DjiTest_WriteHighPowerApplyPin(::E_DjiPowerManagementPinState pinState);
 
@@ -86,6 +96,36 @@ Application::Application(int /*argc*/, char** /*argv*/)
 Application::~Application() = default;
 
 /* Private functions definition-----------------------------------------------*/
+
+/* 判断飞机 (USB Host) 是否已配置我们 —— 这是"USB Bulk 链路可承载数据"的唯一可靠判据。
+ *
+ * 为什么不用 /sys/class/udc/<udc>/state: dwc2 在 dr_mode=peripheral 下几乎不更新该字段。
+ * 2026-09-15 板测: 主机每次在 gadget 绑定后都会发出 USBRst + EnumDone 完成高速握手, 但 state
+ * 始终停在 "not attached"; 用它作门禁会让 Bulk 通道永远不注册。
+ *
+ * 可靠信号来自 ep0 事件流: 主机发 SET_CONFIGURATION 时, 内核把 FUNCTIONFS_ENABLE 事件写进
+ * 各 ffs 实例的 ep0 读队列。事件是 8 字节二进制且 type 字段带 NUL, shell 无法解析, 因此由随包
+ * 发布的 usb_bulk_event_watcher 独占读取, 结果落到状态文件 (USB_BULK_HOST_STATE_FILE)。 */
+static bool DjiUser_IsUsbBulkHostConfigured()
+{
+    ::std::ifstream stateStream { USB_BULK_HOST_STATE_FILE };
+    if (!stateStream)
+    {
+        return false; // 监听程序未运行 ⇒ 状态未知 ⇒ 按"未配置"处理 (退化为仅 UART)
+    }
+
+    ::std::string line {};
+    while (::std::getline(stateStream, line))
+    {
+        if (line == "host_configured=1")
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void Application::DjiUser_SetupEnvironment()
 {
     ::T_DjiReturnCode        returnCode;
@@ -182,10 +222,60 @@ void Application::DjiUser_SetupEnvironment()
         throw ::std::runtime_error("Register hal uart handler error.");
     }
 
-    returnCode = ::DjiPlatform_RegHalUsbBulkHandler(&usbBulkHandler);
-    if (returnCode != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+    // USB Bulk 承载视频/高带宽数据, 依赖树莓派 OTG gadget (/dev/usb-ffs/bulk{1,2,3})。
+    // 注册策略由 features.usb_bulk 决定:
+    //   auto (缺省): 仅当飞机已配置我们 (见 DjiUser_IsUsbBulkHostConfigured) 时注册 —— 飞机
+    //                未配置时若注册该链路, PSDK 的 payload negotiate 会因该通道无对端而超时
+    //                (225 TIMEOUT), 使整个 Core init 失败;
+    //   force:      无条件注册 (现场验证用: 观察飞机是否要等 PSDK 请求才拉起 USB 主机);
+    //   off:        不注册, 退化为仅 UART。
+    const auto usbBulkPolicy { ::plane::config::ConfigManager::getInstance().getUsbBulkPolicy() };
+    const bool usbBulkGadgetReady { ::access("/dev/usb-ffs/bulk1/ep1", F_OK) == 0 };
+    bool       usbBulkRegister { false };
+
+    switch (usbBulkPolicy)
     {
-        throw ::std::runtime_error("Register hal usb bulk handler error.");
+        case ::plane::config::ConfigManager::UsbBulkPolicy::Force:
+            usbBulkRegister = usbBulkGadgetReady;
+            break;
+        case ::plane::config::ConfigManager::UsbBulkPolicy::Auto:
+            usbBulkRegister = DjiUser_IsUsbBulkHostConfigured();
+            break;
+        case ::plane::config::ConfigManager::UsbBulkPolicy::Off:
+            usbBulkRegister = false;
+            break;
+    }
+
+    if (usbBulkRegister)
+    {
+        returnCode = ::DjiPlatform_RegHalUsbBulkHandler(&usbBulkHandler);
+        if (returnCode != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+        {
+            throw ::std::runtime_error("Register hal usb bulk handler error.");
+        }
+        if (usbBulkPolicy == ::plane::config::ConfigManager::UsbBulkPolicy::Force)
+        {
+            LOG_WARN(
+                "features.usb_bulk=force: 跳过'飞机已配置我们'检查直接注册; 若飞机未配置该通道, "
+                "PSDK 会在 payload negotiate 阶段超时 (225) 导致 Core init 失败"
+            );
+        }
+        LOG_INFO("USB Bulk 链路已启用 (视频/高带宽数据可用)");
+    }
+    else if (!usbBulkGadgetReady)
+    {
+        LOG_WARN("未检测到 USB Bulk gadget (/dev/usb-ffs/bulk1/ep1): 本次仅 UART 链路, 视频/高带宽数据不可用");
+        LOG_WARN("可执行 sudo bash usb_bulk_config.sh --check 查看设备侧状态");
+    }
+    else if (usbBulkPolicy == ::plane::config::ConfigManager::UsbBulkPolicy::Off)
+    {
+        LOG_INFO("features.usb_bulk=off: 按配置不注册 USB Bulk, 本次仅 UART 链路");
+    }
+    else
+    {
+        LOG_WARN("USB Bulk gadget 已就绪, 但飞机未配置该链路 (状态文件 host_configured=0): 本次仅 UART 链路, 视频/高带宽数据不可用");
+        LOG_WARN("核对: 飞机已上电启动 / E-Port 开发板 USB 主从拨码=Host / 同轴线 A-B 面 / 标识5 用 USB-A 转 USB-C 接树莓派 Type-C");
+        LOG_WARN("也可设 features.usb_bulk=force 强制注册该链路做现场验证");
     }
 #elif (CONFIG_HARDWARE_CONNECTION == DJI_USE_UART_AND_NETWORK_DEVICE)
     returnCode = ::DjiPlatform_RegHalUartHandler(&uartHandler);
@@ -286,7 +376,7 @@ void Application::DjiUser_ApplicationStart()
         throw ::std::runtime_error("Set firmware version error.");
     }
 
-    returnCode = ::DjiCore_SetSerialNumber("PSDK12345678XX");
+    returnCode = ::DjiCore_SetSerialNumber(USER_PAYLOAD_SERIAL);
     if (returnCode != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
     {
         throw ::std::runtime_error("Set serial number error");

@@ -48,14 +48,12 @@ namespace plane::protocol
 
         struct PublicKmlMissionConfig
         {
-            ::std::string   flyToWaylineMode { "safely" };
-            ::std::string   finishAction { "noAction" };
-            ::std::string   exitOnRCLost { "executeLostAction" };
-            double          takeOffSecurityHeight { 20.0 };
-            double          globalTransitionalSpeed {};
-            WpmlPayloadInfo payloadInfo {};
+            ::std::string flyToWaylineMode { "safely" };
+            ::std::string finishAction { "noAction" };
+            ::std::string exitOnRCLost { "executeLostAction" };
+            double        globalTransitionalSpeed {};
 
-            virtual void    toXml(::pugi::xml_node& parent) const = 0;
+            virtual void  toXml(::pugi::xml_node& parent) const = 0;
         };
 
         struct PublicWpmlPlacemark
@@ -102,18 +100,41 @@ namespace plane::protocol
             }
         };
 
+        // gimbalEvenlyRotate 的参数集: 官方文档与真机可飞产物中均只含这 2 个字段
+        struct WpmlGimbalEvenlyRotateParam
+        {
+            double gimbalPitchRotateAngle { 0 };
+            int    payloadPositionIndex { 0 };
+
+            void   toXml(::pugi::xml_node& parent) const
+            {
+                auto node { parent.append_child("wpml:actionActuatorFuncParam") };
+                node.append_child("wpml:gimbalPitchRotateAngle").text().set(gimbalPitchRotateAngle);
+                node.append_child("wpml:payloadPositionIndex").text().set(payloadPositionIndex);
+            }
+        };
+
         struct WpmlAction
         {
             int                         actionId { 0 };
             ::std::string               actionActuatorFunc {};
+            bool                        useEvenlyRotateParam { false };
             WpmlActionActuatorFuncParam actionActuatorFuncParam {};
+            WpmlGimbalEvenlyRotateParam evenlyRotateParam {};
 
             void                        toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:action") };
                 node.append_child("wpml:actionId").text().set(actionId);
                 node.append_child("wpml:actionActuatorFunc").text().set(actionActuatorFunc);
-                actionActuatorFuncParam.toXml(node);
+                if (useEvenlyRotateParam)
+                {
+                    evenlyRotateParam.toXml(node);
+                }
+                else
+                {
+                    actionActuatorFuncParam.toXml(node);
+                }
             }
         };
 
@@ -146,19 +167,24 @@ namespace plane::protocol
 
         struct WpmlWaypointHeadingParam
         {
-            ::std::string waypointHeadingMode { "followWayline" };
-            double        waypointHeadingAngle { 0 };
-            ::std::string waypointPoiPoint { ::fmt::format("{:.6f},{:.6f},{:.6f}", .0, .0, .0) };
-            int           waypointHeadingAngleEnable { 0 };
-            int           waypointHeadingPoiIndex { 0 };
+            ::std::string        waypointHeadingMode { "followWayline" };
+            double               waypointHeadingAngle { 0 };
+            ::std::string        waypointPoiPoint { ::fmt::format("{:.6f},{:.6f},{:.6f}", .0, .0, .0) };
+            ::std::optional<int> waypointHeadingAngleEnable {};
+            ::std::string        waypointHeadingPathMode { "followBadArc" };
+            int                  waypointHeadingPoiIndex { 0 };
 
-            void          toXml(::pugi::xml_node& parent) const
+            void                 toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("wpml:waypointHeadingParam") };
                 node.append_child("wpml:waypointHeadingMode").text().set(waypointHeadingMode);
                 node.append_child("wpml:waypointHeadingAngle").text().set(waypointHeadingAngle);
                 node.append_child("wpml:waypointPoiPoint").text().set(waypointPoiPoint);
-                node.append_child("wpml:waypointHeadingAngleEnable").text().set(waypointHeadingAngleEnable);
+                if (waypointHeadingAngleEnable.has_value())
+                {
+                    node.append_child("wpml:waypointHeadingAngleEnable").text().set(waypointHeadingAngleEnable.value());
+                }
+                node.append_child("wpml:waypointHeadingPathMode").text().set(waypointHeadingPathMode);
                 node.append_child("wpml:waypointHeadingPoiIndex").text().set(waypointHeadingPoiIndex);
             }
         };
@@ -285,11 +311,9 @@ namespace plane::protocol
                 node.append_child("wpml:finishAction").text().set(finishAction);
                 node.append_child("wpml:exitOnRCLost").text().set(exitOnRCLost);
                 node.append_child("wpml:executeRCLostAction").text().set(executeRCLostAction);
-                node.append_child("wpml:takeOffSecurityHeight").text().set(takeOffSecurityHeight);
                 node.append_child("wpml:globalTransitionalSpeed").text().set(globalTransitionalSpeed);
 
                 droneInfo.toXml(node);
-                payloadInfo.toXml(node);
             }
         };
 
@@ -359,38 +383,25 @@ namespace plane::protocol
             }
         };
 
-        struct WpmlPayloadParam
-        {
-            int  payloadPositionIndex { 7 };
-
-            void toXml(::pugi::xml_node& parent) const
-            {
-                auto node { parent.append_child("wpml:payloadParam") };
-                node.append_child("wpml:payloadPositionIndex").text().set(payloadPositionIndex);
-            }
-        };
-
         struct WpmlPlacemark final: public kmz::PublicWpmlPlacemark
         {
-            double height { 100.0 };
-            double gimbalPitchAngle { 0 };
-            double ellipsoidHeight { 100.0 };
-            int    useGlobalHeight { 1 };
-            int    useGlobalSpeed { 1 };
-            int    useGlobalHeadingParam { 1 };
-            int    useGlobalTurnParam { 1 };
+            double                         height { 0.0 };
+            double                         ellipsoidHeight { 100.0 };
+            double                         waypointSpeed { 5.0 };
+            double                         gimbalPitchAngle { 0 };
+            wpml::WpmlWaypointHeadingParam waypointHeadingParam {};
+            wpml::WpmlWaypointTurnParam    waypointTurnParam {};
 
-            void   toXml(::pugi::xml_node& parent) const
+            void                           toXml(::pugi::xml_node& parent) const
             {
                 auto node { parent.append_child("Placemark") };
                 point.toXml(node);
                 node.append_child("wpml:index").text().set(index);
                 node.append_child("wpml:ellipsoidHeight").text().set(ellipsoidHeight);
                 node.append_child("wpml:height").text().set(height);
-                node.append_child("wpml:useGlobalHeight").text().set(useGlobalHeight);
-                node.append_child("wpml:useGlobalSpeed").text().set(useGlobalSpeed);
-                node.append_child("wpml:useGlobalHeadingParam").text().set(useGlobalHeadingParam);
-                node.append_child("wpml:useGlobalTurnParam").text().set(useGlobalTurnParam);
+                node.append_child("wpml:waypointSpeed").text().set(waypointSpeed);
+                waypointHeadingParam.toXml(node);
+                waypointTurnParam.toXml(node);
                 node.append_child("wpml:gimbalPitchAngle").text().set(gimbalPitchAngle);
                 node.append_child("wpml:useStraightLine").text().set(useStraightLine);
                 node.append_child("wpml:isRisky").text().set(isRisky);
@@ -409,7 +420,6 @@ namespace plane::protocol
             WpmlGlobalWaypointHeadingParam globalWaypointHeadingParam {};
             ::std::string                  globalWaypointTurnMode { "toPointAndStopWithDiscontinuityCurvature" };
             int                            globalUseStraightLine { 1 };
-            WpmlPayloadParam               payloadParam {};
             ::std::vector<WpmlPlacemark>   placemarks {};
 
             void                           toXml(::pugi::xml_node& parent) const
@@ -429,13 +439,12 @@ namespace plane::protocol
                 {
                     pm.toXml(node);
                 }
-                payloadParam.toXml(node);
             }
         };
 
         struct WpmlDroneInfo
         {
-            int  droneEnumValue { 78 };
+            int  droneEnumValue { 65'535 };
             int  droneSubEnumValue { 0 };
 
             void toXml(::pugi::xml_node& parent) const
@@ -450,7 +459,7 @@ namespace plane::protocol
         {
             int  payloadEnumValue { 65'535 };
             int  payloadSubEnumValue { 0 };
-            int  payloadPositionIndex { 7 };
+            int  payloadPositionIndex { 0 };
 
             void toXml(::pugi::xml_node& parent) const
             {
@@ -473,10 +482,8 @@ namespace plane::protocol
                 node.append_child("wpml:finishAction").text().set(finishAction);
                 node.append_child("wpml:exitOnRCLost").text().set(exitOnRCLost);
                 node.append_child("wpml:executeRCLostAction").text().set(executeRCLostAction);
-                node.append_child("wpml:takeOffSecurityHeight").text().set(takeOffSecurityHeight);
                 node.append_child("wpml:globalTransitionalSpeed").text().set(globalTransitionalSpeed);
                 droneInfo.toXml(node);
-                payloadInfo.toXml(node);
             }
         };
 

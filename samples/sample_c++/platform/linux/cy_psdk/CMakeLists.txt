@@ -207,27 +207,43 @@ target_link_libraries (
 			${LEAK_SANITIZER_LINK_LIBS}
 )
 
+# USB Bulk 事件监听小工具: 独占 ep0 读 FunctionFS 事件流, 写出"主机是否已配置我们"
+# 的状态文件, 供 bash/usb_bulk_config.sh 与 features.usb_bulk=auto 判断。
+# 纯 std 实现 (不链接 PSDK/vcpkg): 它要在 gadget 建立后长期独立运行。
+set (USB_BULK_WATCHER_TARGET_NAME "usb_bulk_event_watcher")
+add_executable (
+	${USB_BULK_WATCHER_TARGET_NAME}
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/tools/usb_bulk_event_watcher/main.cpp"
+)
+set_target_properties (
+	${USB_BULK_WATCHER_TARGET_NAME}
+	PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${MAIN_OUTPUT_PATH}"
+)
+
 # 构建时文件复制
 set (CONFIG_SOURCE_FILE "${CMAKE_SOURCE_DIR}/config/config.yml")
 set (RUN_SCRIPT_SOURCE_FILE "${CMAKE_SOURCE_DIR}/bash/run.sh")
+set (USB_BULK_SCRIPT_SOURCE_FILE "${CMAKE_SOURCE_DIR}/bash/usb_bulk_config.sh")
 set (SYSTEM_LIBS_SOURCE_DIR "${CMAKE_SOURCE_DIR}/system_lib/lib/${SYSTEM_LIBS_ARCH_SUBDIR}")
 set (CONFIG_DEST_FILE "${MAIN_OUTPUT_PATH}/config.yml")
 set (RUN_SCRIPT_DEST_FILE "${MAIN_OUTPUT_PATH}/run.sh")
+set (USB_BULK_SCRIPT_DEST_FILE "${MAIN_OUTPUT_PATH}/usb_bulk_config.sh")
 set (LIBS_DEST_DIR "${MAIN_OUTPUT_PATH}/libs")
 
 add_custom_target (
 	copy_runtime_files
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CONFIG_SOURCE_FILE} ${CONFIG_DEST_FILE}
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${RUN_SCRIPT_SOURCE_FILE} ${RUN_SCRIPT_DEST_FILE}
-	DEPENDS ${CONFIG_SOURCE_FILE} ${RUN_SCRIPT_SOURCE_FILE}
-	COMMENT "正在复制运行时文件 (config.yml, run.sh)"
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${USB_BULK_SCRIPT_SOURCE_FILE} ${USB_BULK_SCRIPT_DEST_FILE}
+	DEPENDS ${CONFIG_SOURCE_FILE} ${RUN_SCRIPT_SOURCE_FILE} ${USB_BULK_SCRIPT_SOURCE_FILE}
+	COMMENT "正在复制运行时文件 (config.yml, run.sh, usb_bulk_config.sh)"
 )
 
 add_custom_command (
 	TARGET copy_runtime_files
 	POST_BUILD
-	COMMAND chmod +x ${RUN_SCRIPT_DEST_FILE}
-	COMMENT "为 run.sh 添加可执行权限"
+	COMMAND chmod +x ${RUN_SCRIPT_DEST_FILE} ${USB_BULK_SCRIPT_DEST_FILE}
+	COMMENT "为 run.sh / usb_bulk_config.sh 添加可执行权限"
 	VERBATIM
 )
 

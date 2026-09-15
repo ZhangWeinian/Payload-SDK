@@ -6,6 +6,13 @@ features:
     skip_rc: false # 尝试跳过遥控器检测
     save_kmz_file: true # 保存 KMZ 文件到本地
 
+    # USB Bulk 链路注册策略:
+    # auto=飞机已配置才注册(状态文件 host_configured=1)
+    # force=无条件注册(现场测试验证)
+    # off=不注册
+    # 设备侧状态见 `usb_bulk_config.sh --check`
+    usb_bulk: auto
+
 catalog:
     node_id: CATF4KHZBF8
     port: 30906

@@ -193,6 +193,27 @@ namespace plane::config
         return this->readValue<bool>("features", "save_kmz_file", false);
     }
 
+    ConfigManager::UsbBulkPolicy ConfigManager::getUsbBulkPolicy(void) const noexcept
+    {
+        // features.usb_bulk: 缺省 auto。取值非法时告警并回落 auto —— 拼错 force/off 会变成
+        // "永不注册", 静默生效的排查成本很高
+        const auto mode { this->readValue<::std::string_view>("features", "usb_bulk", "auto") };
+
+        if (mode == "force")
+        {
+            return UsbBulkPolicy::Force;
+        }
+        if (mode == "off")
+        {
+            return UsbBulkPolicy::Off;
+        }
+        if (mode != "auto")
+        {
+            LOG_WARN("配置项 'features.usb_bulk' 取值非法 ('{}'), 已回落 auto; 可选: auto / force / off", mode);
+        }
+        return UsbBulkPolicy::Auto;
+    }
+
     plane::domain::AppConfigEntity ConfigManager::getAppConfig(void) const noexcept
     {
         // plane.* → AppConfigEntity 的“用户可配置子集” (登记项与 config.yml 的 plane 小节一一对应;

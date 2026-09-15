@@ -43,6 +43,15 @@ namespace plane::config
         [[nodiscard]] bool                         isSkipRC(void) const noexcept;
         [[nodiscard]] bool                         isSaveKmz(void) const noexcept;
 
+        // features.usb_bulk: USB Bulk 链路注册策略
+        enum class UsbBulkPolicy
+        {
+            Auto,  // 仅当飞机已配置我们 (usb_bulk_event_watcher 观察到 FUNCTIONFS_ENABLE) 时注册
+            Force, // 无条件注册 (现场验证用: 观察飞机是否要等 PSDK 请求才拉起 USB 主机)
+            Off    // 不注册, 退化为仅 UART
+        };
+        [[nodiscard]] UsbBulkPolicy getUsbBulkPolicy(void) const noexcept;
+
         // plane.*: 应用配置实体用户可配置子集 (登记项与 config/config.yml 的 plane 小节一致;
         // 其余字段由程序内部维护)
         [[nodiscard]] plane::domain::AppConfigEntity getAppConfig() const noexcept;

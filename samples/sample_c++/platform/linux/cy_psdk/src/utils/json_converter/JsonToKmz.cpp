@@ -254,7 +254,9 @@ namespace plane::utils
             const double a { ::sin(delta_lat_rad / 2) * ::sin(delta_lat_rad / 2) +
                              ::cos(lat1_rad) * ::cos(lat2_rad) * ::sin(delta_lon_rad / 2) * ::sin(delta_lon_rad / 2) };
             const double c { 2 * ::atan2(::sqrt(a), ::sqrt(1 - a)) };
-            return EARTH_RADIUS_M * c;
+            const double horizontal { EARTH_RADIUS_M * c };
+            const double vertical { wp2.GD - wp1.GD };
+            return ::sqrt(horizontal * horizontal + vertical * vertical);
         }
 
         inline double calculateTotalDistance(const ::std::vector<plane::protocol::Waypoint>& waypoints) noexcept
@@ -291,110 +293,62 @@ namespace plane::utils
             ::std::size_t                           size { waypoints.size() };
 
             wpml_file.document.missionConfig.globalTransitionalSpeed  = 10.0;
-            wpml_file.document.missionConfig.droneInfo.droneEnumValue = 78;
+            wpml_file.document.missionConfig.droneInfo.droneEnumValue = 65'535;
             wpml_file.document.folder.distance                        = calculateTotalDistance(waypoints);
             wpml_file.document.folder.duration                        = calculateTotalDuration(waypoints);
             wpml_file.document.folder.autoFlightSpeed                 = 5.0;
 
-            if (!waypoints.empty())
+            for (::std::size_t i { 0 }; i < size; ++i)
             {
-                plane::protocol::wpml::WpmlActionGroup ag {};
-                ag.actionTriggerType = "takeoff";
+                const auto&                          wp { waypoints[i] };
+                plane::protocol::wpml::WpmlPlacemark placemark {};
 
-                plane::protocol::wpml::WpmlAction gimbal_rotate {};
-                gimbal_rotate.actionId                                       = 0;
-                gimbal_rotate.actionActuatorFunc                             = "gimbalRotate";
-                gimbal_rotate.actionActuatorFuncParam.payloadPositionIndex   = 7;
-                gimbal_rotate.actionActuatorFuncParam.gimbalYawRotateEnable  = 1;
-                gimbal_rotate.actionActuatorFuncParam.gimbalPitchRotateAngle = waypoints[0].YTFYJ;
-                ag.actions.push_back(gimbal_rotate);
+                placemark.index                                           = static_cast<int>(i);
+                placemark.point.longitude                                 = wp.JD;
+                placemark.point.latitude                                  = wp.WD;
+                placemark.executeHeight                                   = wp.GD;
+                placemark.waypointSpeed                                   = wp.SD;
 
-                plane::protocol::wpml::WpmlAction hover {};
-                hover.actionId           = 1;
-                hover.actionActuatorFunc = "hover";
-                ag.actions.push_back(hover);
+                placemark.waypointHeadingParam.waypointHeadingMode        = "smoothTransition";
+                placemark.waypointHeadingParam.waypointHeadingAngle       = wp.FJPHJ;
+                placemark.waypointHeadingParam.waypointHeadingAngleEnable = 1;
 
-                plane::protocol::wpml::WpmlPlacemark first_placemark {};
-                first_placemark.index           = 0;
-                first_placemark.point.longitude = waypoints[0].JD;
-                first_placemark.point.latitude  = waypoints[0].WD;
-                first_placemark.executeHeight   = waypoints[0].GD;
-                first_placemark.waypointSpeed   = waypoints[0].SD;
-
-                if (size > 1)
+                if (i == 0)
                 {
-                    first_placemark.waypointHeadingParam.waypointHeadingAngle = .0;
-                }
-
-                // 有意保持注释 (作者测试项): first_placemark.actionGroups.push_back(ag);
-                first_placemark.waypointGimbalHeadingParam.waypointGimbalPitchAngle = waypoints[0].YTFYJ;
-                wpml_file.document.folder.placemarks.push_back(first_placemark);
-
-                for (::std::size_t i { 1 }; i < size - 1; ++i)
-                {
-                    plane::protocol::wpml::WpmlPlacemark placemark {};
-                    placemark.index                                     = static_cast<int>(i);
-                    placemark.point.longitude                           = waypoints[i].JD;
-                    placemark.point.latitude                            = waypoints[i].WD;
-                    placemark.executeHeight                             = waypoints[i].GD;
-                    placemark.waypointSpeed                             = waypoints[i].SD;
-                    placemark.waypointHeadingParam.waypointHeadingAngle = .0;
-
-                    if (i == 1)
-                    {
-                        plane::protocol::wpml::WpmlActionGroup between_ag {};
-                        between_ag.actionGroupEndIndex = size > 2 ? static_cast<int>(size - 2) : 0;
-                        between_ag.actionTriggerType   = "betweenAdjacentPoints";
-
-                        plane::protocol::wpml::WpmlAction lock {};
-                        lock.actionActuatorFunc                             = "gimbalAngleLock";
-                        lock.actionActuatorFuncParam.gimbalPitchRotateAngle = waypoints[i].YTFYJ;
-                        between_ag.actions.push_back(lock);
-
-                        plane::protocol::wpml::WpmlAction time_lapse {};
-                        time_lapse.actionId                                     = 1;
-                        time_lapse.actionActuatorFunc                           = "startTimeLapse";
-                        time_lapse.actionActuatorFuncParam.payloadPositionIndex = 7;
-                        between_ag.actions.push_back(time_lapse);
-
-                        // 有意保持注释 (作者测试项): placemark.actionGroups.push_back(between_ag);
-                    }
-
-                    placemark.waypointGimbalHeadingParam.waypointGimbalPitchAngle = waypoints[i].YTFYJ;
-                    wpml_file.document.folder.placemarks.push_back(placemark);
-                }
-
-                if (size > 1)
-                {
-                    const auto&                          last_wp { waypoints.back() };
-                    plane::protocol::wpml::WpmlPlacemark last_placemark {};
-                    last_placemark.index                                     = static_cast<int>(size - 1);
-                    last_placemark.point.longitude                           = last_wp.JD;
-                    last_placemark.point.latitude                            = last_wp.WD;
-                    last_placemark.executeHeight                             = last_wp.GD;
-                    last_placemark.waypointSpeed                             = last_wp.SD;
-                    last_placemark.waypointHeadingParam.waypointHeadingAngle = .0;
-
                     plane::protocol::wpml::WpmlActionGroup reach_ag {};
-                    reach_ag.actionGroupId         = 1;
-                    reach_ag.actionGroupStartIndex = static_cast<int>(waypoints.size() - 1);
-                    reach_ag.actionGroupEndIndex   = static_cast<int>(waypoints.size() - 1);
+                    reach_ag.actionGroupId         = 0;
+                    reach_ag.actionGroupStartIndex = 0;
+                    reach_ag.actionGroupEndIndex   = 0;
                     reach_ag.actionTriggerType     = "reachPoint";
 
-                    plane::protocol::wpml::WpmlAction stop {};
-                    stop.actionActuatorFunc                           = "stopTimeLapse";
-                    stop.actionActuatorFuncParam.payloadPositionIndex = 7;
-                    reach_ag.actions.push_back(stop);
+                    plane::protocol::wpml::WpmlAction gimbal_rotate {};
+                    gimbal_rotate.actionActuatorFunc                             = "gimbalRotate";
+                    gimbal_rotate.actionActuatorFuncParam.gimbalPitchRotateAngle = wp.YTFYJ;
+                    gimbal_rotate.actionActuatorFuncParam.payloadPositionIndex   = 0;
+                    reach_ag.actions.push_back(gimbal_rotate);
 
-                    plane::protocol::wpml::WpmlAction unlock {};
-                    unlock.actionId           = 1;
-                    unlock.actionActuatorFunc = "gimbalAngleUnlock";
-                    reach_ag.actions.push_back(unlock);
-
-                    // 有意保持注释 (作者测试项): lastPlacemark.actionGroups.push_back(reach_ag);
-                    last_placemark.waypointGimbalHeadingParam.waypointGimbalPitchAngle = last_wp.YTFYJ;
-                    wpml_file.document.folder.placemarks.push_back(last_placemark);
+                    placemark.actionGroups.push_back(reach_ag);
                 }
+
+                if (i + 1 < size)
+                {
+                    plane::protocol::wpml::WpmlActionGroup even_ag {};
+                    even_ag.actionGroupId         = static_cast<int>(i) + 1;
+                    even_ag.actionGroupStartIndex = static_cast<int>(i);
+                    even_ag.actionGroupEndIndex   = static_cast<int>(i) + 1;
+                    even_ag.actionTriggerType     = "betweenAdjacentPoints";
+
+                    plane::protocol::wpml::WpmlAction even_rotate {};
+                    even_rotate.actionActuatorFunc                       = "gimbalEvenlyRotate";
+                    even_rotate.useEvenlyRotateParam                     = true;
+                    even_rotate.evenlyRotateParam.gimbalPitchRotateAngle = waypoints[i + 1].YTFYJ;
+                    even_rotate.evenlyRotateParam.payloadPositionIndex   = 0;
+                    even_ag.actions.push_back(even_rotate);
+
+                    placemark.actionGroups.push_back(even_ag);
+                }
+
+                wpml_file.document.folder.placemarks.push_back(placemark);
             }
 
             return plane::utils::toXmlString(wpml_file);
@@ -417,16 +371,14 @@ namespace plane::utils
                 const auto&                         wp { waypoints[i] };
                 plane::protocol::kml::WpmlPlacemark pm {};
 
-                pm.index                 = static_cast<int>(i);
-                pm.point.longitude       = wp.JD;
-                pm.point.latitude        = wp.WD;
-                pm.height                = wp.GD;
-                pm.ellipsoidHeight       = wp.GD;
-                pm.useGlobalHeight       = 1;
-                pm.useGlobalSpeed        = 1;
-                pm.useGlobalHeadingParam = 1;
-                pm.useGlobalTurnParam    = 1;
-                pm.gimbalPitchAngle      = wp.YTFYJ;
+                pm.index                                     = static_cast<int>(i);
+                pm.point.longitude                           = wp.JD;
+                pm.point.latitude                            = wp.WD;
+                pm.ellipsoidHeight                           = wp.GD;
+                pm.waypointSpeed                             = wp.SD;
+                pm.gimbalPitchAngle                          = wp.YTFYJ;
+                pm.waypointHeadingParam.waypointHeadingMode  = "smoothTransition";
+                pm.waypointHeadingParam.waypointHeadingAngle = wp.FJPHJ;
 
                 kml_file.document.folder.placemarks.push_back(pm);
             }

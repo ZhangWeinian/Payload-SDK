@@ -36,8 +36,8 @@ TEST(ProtocolDataClass, WaypointDefaultsForMissingFields)
     EXPECT_DOUBLE_EQ(parsed.GD, 10.0);
     EXPECT_DOUBLE_EQ(parsed.SD, 5.0);      // 未提供 -> 默认 5.0
     EXPECT_DOUBLE_EQ(parsed.YTFYJ, -90.0); // 未提供 -> 默认 -90.0
-    EXPECT_EQ(parsed.FJPHJ, 0);
-    // FJPHJ 为 int, 缺字段时取 NSDMI 默认值 0
+    EXPECT_EQ(parsed.FJPHJ, 0.0);
+    // FJPHJ 为 double (真实任务报文里是小数), 缺字段时取 NSDMI 默认值 0
 }
 
 TEST(ProtocolDataClass, WaypointFullRoundTrip)
@@ -48,7 +48,7 @@ TEST(ProtocolDataClass, WaypointFullRoundTrip)
     w.GD            = 120.0;
     w.SD            = 6.5;
     w.YTFYJ         = -30.0;
-    w.FJPHJ         = 45;
+    w.FJPHJ         = 45.0;
 
     n_json     j    = w;
     const auto back = j.get<Waypoint>();
