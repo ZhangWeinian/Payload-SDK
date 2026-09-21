@@ -16,6 +16,7 @@ vcpkg_installed-clang/
 *.a
 *.so
 *.la
+__pycache__
 
 # system_lib/ 下的运行库需要随版本入库分发, 排除在 *.so 忽略之外
 !system_lib/**/*.so

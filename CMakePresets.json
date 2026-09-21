@@ -1,0 +1,345 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "environment": {
+                "PSDK_COMMON_WARNINGS": "-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wformat=2 -Wunused"
+            },
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_COLOR_DIAGNOSTICS": "ON",
+                "CMAKE_CXX_STANDARD": "23",
+                "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+                "CMAKE_CXX_EXTENSIONS": "OFF",
+                "CMAKE_C_STANDARD": "23",
+                "CMAKE_C_STANDARD_REQUIRED": "ON",
+                "CMAKE_C_EXTENSIONS": "OFF",
+                "TREAT_WARNINGS_AS_ERRORS": {
+                    "type": "BOOL",
+                    "value": "FALSE"
+                }
+            }
+        },
+        {
+            "name": "host-clang",
+            "hidden": true,
+            "displayName": "宿主原生开发基座 (LLVM/Clang)",
+            "description": "检错 / 分析 / 调试类预设的公共基座。目标架构跟随宿主（cmake/host-native.cmake），vcpkg 依赖树与 triplet 也按宿主选择（x86_64 → vcpkg_installed-clang/x64-linux，aarch64 → vcpkg_installed/arm64/arm64-linux），因此这些预设与容器架构无关",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_LINKER_TYPE": "LLD",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/host-native.cmake",
+                "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
+            }
+        },
+        {
+            "name": "x86_64-clang",
+            "hidden": true,
+            "displayName": "x86_64 固定目标基座 (LLVM/Clang)",
+            "description": "x86-release 专用：目标固定为 x86_64（宿主不是 x86_64 时自动交叉），依赖固定存于 vcpkg_installed-clang，与 aarch64 依赖隔离",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_LINKER_TYPE": "LLD",
+                "VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed-clang",
+                "VCPKG_TARGET_TRIPLET": "x64-linux",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/x86_64-linux-gnu.cmake",
+                "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "调试构建 (宿主原生, -O0 -g，无插桩)",
+            "description": "纯调试构建：不插桩、不优化，供 gdb/lldb 单步。同时是 clangd 与 clang-tidy 的索引源（.clangd 指向 build/host/debug）",
+            "inherits": "host-clang",
+            "binaryDir": "${sourceDir}/build/host/debug",
+            "installDir": "${sourceDir}/install/host/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O0 -fno-omit-frame-pointer",
+                "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O0 -fno-omit-frame-pointer",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "asan",
+            "displayName": "内存/UB 检测 (宿主原生, ASan + UBSan)",
+            "description": "AddressSanitizer + UndefinedBehaviorSanitizer 动态分析：越界访问、use-after-free、泄漏、有符号溢出等",
+            "inherits": "host-clang",
+            "binaryDir": "${sourceDir}/build/host/asan",
+            "installDir": "${sourceDir}/install/host/asan",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=address,undefined -fno-sanitize-recover=all",
+                "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=address,undefined -fno-sanitize-recover=all",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "cov",
+            "displayName": "覆盖率插桩 (宿主原生, llvm-cov)",
+            "description": "Clang 调试构建 + LLVM 源码级覆盖率插桩, 配合 scripts/llvm/clang-coverage.sh 生成报告",
+            "inherits": "host-clang",
+            "binaryDir": "${sourceDir}/build/host/cov",
+            "installDir": "${sourceDir}/install/host/cov",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O0 -fprofile-instr-generate -fcoverage-mapping",
+                "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O0 -fprofile-instr-generate -fcoverage-mapping",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "tsan",
+            "displayName": "数据竞争检测 (宿主原生, TSan)",
+            "description": "ThreadSanitizer 数据竞争检测 (与 ASan 互斥); 附加 -UCPPHTTPLIB_USE_NON_BLOCKING_GETADDRINFO: glibc 异步 DNS 内部线程未经 TSan 注册会导致分配器崩溃",
+            "inherits": "host-clang",
+            "binaryDir": "${sourceDir}/build/host/tsan",
+            "installDir": "${sourceDir}/install/host/tsan",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=thread -fno-sanitize-recover=all -UCPPHTTPLIB_USE_NON_BLOCKING_GETADDRINFO",
+                "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fstack-protector-strong -fsanitize=thread -fno-sanitize-recover=all -UCPPHTTPLIB_USE_NON_BLOCKING_GETADDRINFO",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "fuzz",
+            "displayName": "模糊测试 (宿主原生, Clang libFuzzer)",
+            "description": "libFuzzer 覆盖率引导模糊测试 (ASan/UBSan 插桩); 目标: ProbePacketCodec / JsonCodec 链路; 见 scripts/llvm/README.md §9",
+            "inherits": "host-clang",
+            "binaryDir": "${sourceDir}/build/host/fuzz",
+            "installDir": "${sourceDir}/install/host/fuzz",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all",
+                "CMAKE_C_FLAGS_DEBUG": "$env{PSDK_COMMON_WARNINGS} -g3 -O1 -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=all",
+                "BUILD_TESTING": "OFF",
+                "PSDK_BUILD_FUZZERS": "ON"
+            }
+        },
+        {
+            "name": "x86-release",
+            "displayName": "交付产物 (x86_64)",
+            "description": "Clang -O3 + LTO 发布构建; 同时构建并运行测试, 防止 debug 正常但 release 编译/运行失败。在 aarch64 宿主上配置会明确报错退出（本机没有 x86_64 交叉工具链）",
+            "inherits": "x86_64-clang",
+            "binaryDir": "${sourceDir}/build/x86_64/release",
+            "installDir": "${sourceDir}/install/x86_64/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_FLAGS_RELEASE": "$env{PSDK_COMMON_WARNINGS} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+                "CMAKE_C_FLAGS_RELEASE": "$env{PSDK_COMMON_WARNINGS} -O3 -DNDEBUG -march=native -fstack-protector-strong -D_FORTIFY_SOURCE=2",
+                "CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections -Wl,-z,relro,-z,now",
+                "CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections",
+                "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "perf",
+            "displayName": "性能剖析 (宿主原生, -O2 -g)",
+            "description": "Clang 带调试符号的优化构建：供 perf / 火焰图做性能剖析，也用于定位只在 -O2 下才出现的问题。不带 sanitizer，避免插桩扭曲性能表现",
+            "inherits": "host-clang",
+            "binaryDir": "${sourceDir}/build/host/perf",
+            "installDir": "${sourceDir}/install/host/perf",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
+                "CMAKE_C_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "arm-release",
+            "displayName": "交付产物 (aarch64 / RK3588S)",
+            "description": "面向 ARM64 (RK3588S) 的交付产物; x86 开发机交叉编译, 3588 板上直接本机编译; 依赖经 vcpkg arm64-linux triplet 构建; 静态链接 libstdc++/libgcc 规避目标板运行库版本差异。ARM 侧不设检错/分析版, 排障统一用宿主原生预设",
+            "inherits": "base",
+            "binaryDir": "${sourceDir}/build/aarch64/release",
+            "installDir": "${sourceDir}/install/aarch64/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed/arm64",
+                "VCPKG_TARGET_TRIPLET": "arm64-linux",
+                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/aarch64-linux-gnu.cmake",
+                "BUILD_TESTING": "OFF",
+                "CMAKE_EXE_LINKER_FLAGS": "-static-libstdc++ -static-libgcc"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "debug",
+            "displayName": "构建调试版",
+            "configurePreset": "debug",
+            "jobs": 16
+        },
+        {
+            "name": "asan",
+            "displayName": "构建内存/UB 检测版",
+            "configurePreset": "asan",
+            "jobs": 16
+        },
+        {
+            "name": "tsan",
+            "displayName": "构建数据竞争检测版",
+            "configurePreset": "tsan",
+            "jobs": 16
+        },
+        {
+            "name": "cov",
+            "displayName": "构建覆盖率插桩版",
+            "configurePreset": "cov",
+            "jobs": 16
+        },
+        {
+            "name": "fuzz",
+            "displayName": "构建模糊测试目标 (libFuzzer)",
+            "configurePreset": "fuzz",
+            "jobs": 16,
+            "targets": ["fuzz_probe_packet", "fuzz_json_codec"]
+        },
+        {
+            "name": "perf",
+            "displayName": "构建性能剖析版",
+            "configurePreset": "perf",
+            "jobs": 16
+        },
+        {
+            "name": "x86-release",
+            "displayName": "构建 x86_64 交付产物",
+            "configurePreset": "x86-release",
+            "jobs": 16
+        },
+        {
+            "name": "arm-release",
+            "displayName": "构建 aarch64 交付产物",
+            "configurePreset": "arm-release",
+            "jobs": 16
+        },
+        {
+            "name": "install-x86-release",
+            "displayName": "安装 x86_64 交付产物",
+            "configurePreset": "x86-release",
+            "jobs": 16,
+            "targets": ["install"]
+        },
+        {
+            "name": "install-arm-release",
+            "displayName": "安装 aarch64 交付产物",
+            "configurePreset": "arm-release",
+            "jobs": 16,
+            "targets": ["install"]
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "debug",
+            "displayName": "测试调试版",
+            "configurePreset": "debug",
+            "output": { "outputOnFailure": true, "verbosity": "verbose" },
+            "execution": { "noTestsAction": "error", "stopOnFailure": false }
+        },
+        {
+            "name": "asan",
+            "displayName": "测试内存/UB 检测版",
+            "configurePreset": "asan",
+            "output": { "outputOnFailure": true, "verbosity": "verbose" },
+            "execution": { "noTestsAction": "error", "stopOnFailure": false }
+        },
+        {
+            "name": "tsan",
+            "displayName": "测试数据竞争检测版",
+            "configurePreset": "tsan",
+            "output": { "outputOnFailure": true },
+            "execution": { "noTestsAction": "error", "stopOnFailure": false }
+        },
+        {
+            "name": "cov",
+            "displayName": "测试覆盖率插桩版",
+            "configurePreset": "cov",
+            "output": { "outputOnFailure": true },
+            "execution": { "noTestsAction": "error", "stopOnFailure": false }
+        },
+        {
+            "name": "x86-release",
+            "displayName": "测试 x86_64 交付产物",
+            "configurePreset": "x86-release",
+            "output": { "outputOnFailure": true }
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "debug",
+            "displayName": "配置 + 构建调试版",
+            "steps": [
+                { "type": "configure", "name": "debug" },
+                { "type": "build", "name": "debug" }
+            ]
+        },
+        {
+            "name": "asan",
+            "displayName": "配置 + 构建内存/UB 检测版",
+            "steps": [
+                { "type": "configure", "name": "asan" },
+                { "type": "build", "name": "asan" }
+            ]
+        },
+        {
+            "name": "tsan",
+            "displayName": "配置 + 构建数据竞争检测版",
+            "steps": [
+                { "type": "configure", "name": "tsan" },
+                { "type": "build", "name": "tsan" }
+            ]
+        },
+        {
+            "name": "cov",
+            "displayName": "配置 + 构建覆盖率插桩版",
+            "steps": [
+                { "type": "configure", "name": "cov" },
+                { "type": "build", "name": "cov" }
+            ]
+        },
+        {
+            "name": "fuzz",
+            "displayName": "配置 + 构建模糊测试目标",
+            "steps": [
+                { "type": "configure", "name": "fuzz" },
+                { "type": "build", "name": "fuzz" }
+            ]
+        },
+        {
+            "name": "perf",
+            "displayName": "配置 + 构建性能剖析版",
+            "steps": [
+                { "type": "configure", "name": "perf" },
+                { "type": "build", "name": "perf" }
+            ]
+        },
+        {
+            "name": "x86-release",
+            "displayName": "配置 + 构建 x86_64 交付产物",
+            "steps": [
+                { "type": "configure", "name": "x86-release" },
+                { "type": "build", "name": "x86-release" }
+            ]
+        },
+        {
+            "name": "arm-release",
+            "displayName": "配置 + 构建 aarch64 交付产物",
+            "steps": [
+                { "type": "configure", "name": "arm-release" },
+                { "type": "build", "name": "arm-release" }
+            ]
+        }
+    ]
+}

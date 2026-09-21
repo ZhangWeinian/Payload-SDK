@@ -86,70 +86,98 @@ namespace plane::utils
             return;
         }
 
+        // 单行转写: 命中正则 → 转成 spdlog 结构化日志(带源位置); 未命中 → 去色后原样输出(不丢内容)
+        const auto emitOneLine {
+            [this](const ::std::string& line) -> void
+            {
+                // (?:\x1b\[[0-9;]*m)? : 匹配并忽略开头的 ANSI 颜色码
+                // \s*([\d\.]+)        : 捕获组1 - PSDK运行时间戳
+                // \s+([^\s]+)         : 捕获组2 - 模块名
+                // \s+\[(\w+)\]        : 捕获组3 - 日志级别
+                // \s+([^:]+:\d+)      : 捕获组4 - 文件名:行号
+                // \s+(.*?)            : 捕获组5 - 实际消息内容
+                // (?:\x1b\[0m)?\s*$   : 匹配并忽略结尾的 ANSI 重置码和空格
+                static const ::std::
+                    regex pattern(R"((?:\x1b\[[0-9;]*m)?\s*([\d\.]+)\s+([^\s]+)\s+\[(\w+)\]\s+([^:]+:\d+)\s+(.*?)(?:\x1b\[0m)?\s*$)");
+
+                if (::std::smatch matches {}; ::std::regex_search(line, matches, pattern) && matches.size() == 6)
+                {
+                    ::std::string module { matches[2].str() };
+                    ::std::string level_str { matches[3].str() };
+
+                    // SDK 的 "文件:行号" (如 dji_command.c:910): 拆分为文件名与行号,
+                    // 作为 spdlog 源位置输出, 与其他日志列对齐 (避免空源位置显示 "[:]")
+                    ::std::string file_name { matches[4].str() };
+                    int           file_number { 0 };
+                    if (const auto colon_pos { file_name.rfind(':') }; colon_pos != ::std::string::npos)
+                    {
+                        try
+                        {
+                            file_number = ::std::stoi(file_name.substr(colon_pos + 1));
+                        }
+                        catch (...)
+                        {
+                            file_number = 0;
+                        }
+                        file_name.resize(colon_pos);
+                    }
+                    ::std::string content { matches[5].str() };
+
+                    // 映射日志级别
+                    ::spdlog::level::level_enum log_level { ::spdlog::level::info };
+                    if (level_str == "Error")
+                    {
+                        log_level = ::spdlog::level::err;
+                    }
+                    else if (level_str == "Warn")
+                    {
+                        log_level = ::spdlog::level::warn;
+                    }
+                    else if (level_str == "Debug")
+                    {
+                        log_level = ::spdlog::level::debug;
+                    }
+
+                    this->logger_->log(::spdlog::source_loc { file_name.c_str(), file_number, "" }, log_level, "[PSDK:{}] {}", module, content);
+                }
+                else
+                {
+                    static const ::std::regex ansi_pattern { R"(\x1b\[[0-9;]*m)" };
+                    ::std::string             cleanMsg { ::std::regex_replace(line, ansi_pattern, "") };
+                    this->logger_->log(
+                        ::spdlog::source_loc { "dji_logger.c", 0, "" },
+                        ::spdlog::level::warn,
+                        "[PSDK:internal] {} (PSDK 内部日志缓冲写满, 部分日志已被丢弃)",
+                        cleanMsg
+                    );
+                }
+            }
+        };
+
         try
         {
-            // (?:\x1b\[[0-9;]*m)? : 匹配并忽略开头的 ANSI 颜色码
-            // \s*([\d\.]+)        : 捕获组1 - PSDK运行时间戳
-            // \s+([^\s]+)         : 捕获组2 - 模块名
-            // \s+\[(\w+)\]        : 捕获组3 - 日志级别
-            // \s+([^:]+:\d+)      : 捕获组4 - 文件名:行号
-            // \s+(.*?)            : 捕获组5 - 实际消息内容
-            // (?:\x1b\[0m)?\s*$   : 匹配并忽略结尾的 ANSI 重置码和空格
-            static const ::std::
-                regex pattern(R"((?:\x1b\[[0-9;]*m)?\s*([\d\.]+)\s+([^\s]+)\s+\[(\w+)\]\s+([^:]+:\d+)\s+(.*?)(?:\x1b\[0m)?\s*$)");
-
-            if (::std::smatch matches {}; ::std::regex_search(rawMessage, matches, pattern) && matches.size() == 6)
+            // 必须逐行解析: PSDK 会一次吐出多行 (调试级别常见表格: 标题行 + 若干数据行),
+            // 且各行格式可能不同。整段一起匹配会因跨行而失配, 使全部内容退化成
+            // "原样输出 + 空源位置" 的难读形式 (即日志里看到的 "[:] [PSDK] ...")。
+            for (::std::size_t begin { 0 }; begin <= rawMessage.size();)
             {
-                ::std::string psdk_time { matches[1].str() };
-                ::std::string module { matches[2].str() };
-                ::std::string level_str { matches[3].str() };
-
-                // SDK 的 "文件:行号" (如 dji_command.c:910): 拆分为文件名与行号,
-                // 作为 spdlog 源位置输出, 与其他日志列对齐 (避免空源位置显示 "[:]")
-                ::std::string file_name { matches[4].str() };
-                int           file_number { 0 };
-                if (const auto colon_pos { file_name.rfind(':') }; colon_pos != ::std::string::npos)
+                const auto line_end { rawMessage.find('\n', begin) };
+                if (const auto line { rawMessage.substr(begin, line_end == ::std::string::npos ? ::std::string::npos : line_end - begin) };
+                    !line.empty())
                 {
-                    try
-                    {
-                        file_number = ::std::stoi(file_name.substr(colon_pos + 1));
-                    }
-                    catch (...)
-                    {
-                        file_number = 0;
-                    }
-                    file_name.resize(colon_pos);
+                    emitOneLine(line);
                 }
-                ::std::string content { matches[5].str() };
-
-                // 映射日志级别
-                ::spdlog::level::level_enum log_level { ::spdlog::level::info };
-                if (level_str == "Error")
+                if (line_end == ::std::string::npos)
                 {
-                    log_level = ::spdlog::level::err;
+                    break;
                 }
-                else if (level_str == "Warn")
-                {
-                    log_level = ::spdlog::level::warn;
-                }
-                else if (level_str == "Debug")
-                {
-                    log_level = ::spdlog::level::debug;
-                }
-
-                this->logger_->log(::spdlog::source_loc { file_name.c_str(), file_number, "" }, log_level, "[PSDK:{}] {}", module, content);
-            }
-            else
-            {
-                // 如果正则匹配失败，则进行简单的去除颜色码处理后输出
-                ::std::string cleanMsg { ::std::regex_replace(rawMessage, ::std::regex(R"(\x1b\[[0-9;]*m)"), "") };
-                this->logger_->log(::spdlog::level::info, "[PSDK] {}", cleanMsg);
+                begin = line_end + 1;
             }
         }
         catch (...)
         {
-            // 防止正则解析异常导致崩溃
-            this->logger_->log(::spdlog::level::info, "[PSDK] {}", rawMessage);
+            // 防止正则解析异常导致崩溃 (同样补一个非空源位置, 避免输出 "[:]")
+            this->logger_->log(::spdlog::source_loc { "dji_logger.c", 0, "" }, ::spdlog::level::warn, "[PSDK:internal] {}", rawMessage);
         }
     }
 

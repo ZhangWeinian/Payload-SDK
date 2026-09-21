@@ -29,24 +29,24 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stdint.h"
-#include <stdio.h>
-#include <unistd.h>
+#include "stdlib.h"
 #include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
 #include <termios.h>
 #include <unistd.h>
-#include <string.h>
-#include "stdlib.h"
 
 #include "dji_platform.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /* Exported constants --------------------------------------------------------*/
-//User can config dev based on there environmental conditions
-#define LINUX_UART_DEV1    "/dev/ttyUSB0"
-#define LINUX_UART_DEV2    ""
+// User can config dev based on there environmental conditions
+#define LINUX_UART_DEV1 "/dev/ttyS4"
+#define LINUX_UART_DEV2 ""
 
 /**
  * Use for Eport 2.0, specify the VID and PID of the USB serial port closest to the aircraft.
@@ -54,18 +54,18 @@ extern "C" {
  * CP2102   0x10C4:0xEA60
  * VCOM     0x2CA3:0xF002
  */
-#define USB_UART_CONNECTED_TO_UAV_VID (0x0403)
-#define USB_UART_CONNECTED_TO_UAV_PID (0x6001)
+#define USB_UART_CONNECTED_TO_UAV_VID (0X0403)
+#define USB_UART_CONNECTED_TO_UAV_PID (0X6001)
 
-/* Exported types ------------------------------------------------------------*/
+    /* Exported types ------------------------------------------------------------*/
 
-/* Exported functions --------------------------------------------------------*/
-T_DjiReturnCode HalUart_Init(E_DjiHalUartNum uartNum, uint32_t baudRate, T_DjiUartHandle *uartHandle);
-T_DjiReturnCode HalUart_DeInit(T_DjiUartHandle uartHandle);
-T_DjiReturnCode HalUart_WriteData(T_DjiUartHandle uartHandle, const uint8_t *buf, uint32_t len, uint32_t *realLen);
-T_DjiReturnCode HalUart_ReadData(T_DjiUartHandle uartHandle, uint8_t *buf, uint32_t len, uint32_t *realLen);
-T_DjiReturnCode HalUart_GetStatus(E_DjiHalUartNum uartNum, T_DjiUartStatus *status);
-T_DjiReturnCode HalUart_GetDeviceInfo(T_DjiHalUartDeviceInfo *deviceInfo);
+    /* Exported functions --------------------------------------------------------*/
+    T_DjiReturnCode HalUart_Init(E_DjiHalUartNum uartNum, uint32_t baudRate, T_DjiUartHandle* uartHandle);
+    T_DjiReturnCode HalUart_DeInit(T_DjiUartHandle uartHandle);
+    T_DjiReturnCode HalUart_WriteData(T_DjiUartHandle uartHandle, const uint8_t* buf, uint32_t len, uint32_t* realLen);
+    T_DjiReturnCode HalUart_ReadData(T_DjiUartHandle uartHandle, uint8_t* buf, uint32_t len, uint32_t* realLen);
+    T_DjiReturnCode HalUart_GetStatus(E_DjiHalUartNum uartNum, T_DjiUartStatus* status);
+    T_DjiReturnCode HalUart_GetDeviceInfo(T_DjiHalUartDeviceInfo* deviceInfo);
 
 #ifdef __cplusplus
 }

@@ -381,12 +381,29 @@ namespace plane::my_dji
 
         // 注意: resolveCatalogServiceId() 内部要读取 PlaneStateStore 快照, 必须在 update() 加锁之前解析;
         // 在 update() 回调内调用会因 std::mutex 不可重入而自锁 (曾导致板端启动卡死, 无任何后续日志)
+        const ::std::string configured_plane_code { config.getPlaneCode() };
         const ::std::string resolved_agent_identifier { plane::utils::DeviceIdentity::resolveCatalogServiceId() };
+
+        // 设备身份全局唯一来源 (顺序: 配置 plane.code → 飞控真实序列号, 无任何兜底):
+        //   - 已配置: 启动即落地身份, 目录注册/设备绑定/MQTT 寻址/遥测上报(FJSN) 全部立即可用, 不依赖 PSDK;
+        //   - 未配置: 先留空, 等 PSDKAdapter 从飞控读到真实 SN 后写入 (周期性重试, 覆盖飞机断电重启后重接入);
+        //     未就绪期间目录注册与设备绑定会保持等待 (各自有重试与提示)
+        if (!configured_plane_code.empty())
+        {
+            LOG_INFO("设备身份来源: 配置 plane.code = {}", configured_plane_code);
+        }
+        else
+        {
+            LOG_WARN("未配置 'plane.code': 设备身份将等待飞控真实序列号; 未取得前目录注册/设备绑定保持等待 (PSDK 就绪后自动继续)");
+        }
+
         plane::domain::PlaneStateStore::getInstance().update(
-            [&config, &resolved_agent_identifier](plane::domain::PlaneStateDataClass& st)
+            [&config, &configured_plane_code, &resolved_agent_identifier](plane::domain::PlaneStateDataClass& st)
             {
-                // 设备标识: 配置 plane.code 优先, 否则等待 PSDK 真实序列号 (由 PSDKAdapter 读取后写入);
-                // 序列号不做任何伪造 (仅 PSDK 来源)
+                if (!configured_plane_code.empty())
+                {
+                    st.serial_number = configured_plane_code;
+                }
                 st.swarm_agent_identifier = resolved_agent_identifier;
                 st.app_version            = config.getCatalogVersion();
                 st.app_config             = config.getAppConfig(); // plane.* → AppConfigEntity (启动装载)

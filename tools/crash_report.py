@@ -11,8 +11,8 @@ cy_psdk 崩溃转储解析工具 (开发容器专用)
 
 示例:
     uv run tools/crash_report.py dumps/core.12345.1789100000 \
-        --exe  build/aarch64-linux/release/bin/cy_psdk \
-        --libs build/aarch64-linux/release/bin/libs
+        --exe  build/aarch64/release/bin/cy_psdk \
+        --libs build/aarch64/release/bin/libs
 
 说明:
   - 依赖 gdb-multiarch (容器内安装: sudo apt-get install -y gdb-multiarch)

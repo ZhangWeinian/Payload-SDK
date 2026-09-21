@@ -1,29 +1,9 @@
 #!/bin/bash
 # USB Bulk 通道 gadget 配置 (树莓派侧 FunctionFS)。
 #
-# 为什么需要这个脚本:
 #   PSDK 的视频/高带宽数据走 USB Bulk 通道: 树莓派作为 USB Device(peripheral),
 #   飞机作为 USB Host。PSDK 侧只负责 open() 端点文件 (见 src/hal/hal_usb_bulk.h
 #   的 /dev/usb-ffs/bulkN/ep{1,2}), 既不会创建 gadget, 也不会写 USB 描述符。
-#
-# 三条来自内核实现 (drivers/usb/gadget/function/f_fs.c) 的硬约束, 决定了本脚本的形态:
-#   1) 描述符必须由用户态写入 ep0: 内核 ffs_ep0_write 的状态机是
-#      READ_DESCRIPTORS --(写 descriptors 块)--> READ_STRINGS --(写 strings 块)--> ACTIVE,
-#      只有到达 ACTIVE 后 ffs_epfiles_create() 才生成 ep1/ep2 文件。
-#   2) descriptors 与 strings 必须在"同一次打开"内连续写完: 中途关闭 fd 会触发
-#      ffs_data_closed(), 它发现 opened 归零就立刻 ffs_data_reset() 复位实例,
-#      已写入的描述符全部作废 (症状: dmesg 反复出现 "read descriptors" 而没有
-#      "read strings", 且第二个块报 EINVAL —— strings 块被当成 descriptors 解析)。
-#   3) 实例只在其上"至少有一个 fd 打开"期间存活 (ffs_data_closed): 最后一个 fd 关闭
-#      ⇒ ep 文件被销毁。因此必须有一个进程长期持有端点文件, 否则通道在脚本退出后
-#      立刻消失 —— 这是下面 holder 进程存在的原因。
-#   4) "飞机已配置我们"的唯一可靠信号是 ep0 事件流里的 FUNCTIONFS_ENABLE: 主机发
-#      SET_CONFIGURATION 时, 内核把该事件写进各实例的 ep0 读队列。**不能用
-#      /sys/class/udc/*/state 判断** —— dwc2 在 dr_mode=peripheral 下几乎不更新它
-#      (板测: 即使主机已复位+EnumDone 甚至完成配置, 它仍停在 "not attached")。
-#      事件是 12 字节二进制 (type 在偏移 8) 且内核要求读缓冲区不小于结构体, shell 无法正确
-#      解析, 故由随包发布的 C 程序 usb_bulk_event_watcher 独占 ep0 读事件流, 结果写入
-#      $HOLDER_STATE, 供 --check 与 cy_psdk (application.cpp 的 features.usb_bulk 策略) 读取。
 #
 # 用法:
 #   sudo bash usb_bulk_config.sh               配置 + 启动 holder + 绑定 (幂等)
@@ -38,7 +18,7 @@
 
 set -u
 
-# ---- 与 PSDK 约定一致的固定参数 (勿随意改动) ----
+# 与 PSDK 约定一致的固定参数 (勿随意改动)
 # VID/PID 见 src/hal/hal_usb_bulk.h (LINUX_USB_VID / LINUX_USB_PID)
 readonly VID='0x2ca3'
 readonly PID='0xf001'
@@ -103,13 +83,7 @@ endpoints_in_use() {
     done
 }
 
-# 让"我们自己的残留进程"释放端点 fd。
-# 只自动结束身份明确的遗留物: comm 为 sleep 的孤儿进程 —— 旧版 holder 用
-# `while :; do sleep 3600; done` 阻塞, sleep 子进程继承了端点 fd, holder 被杀后它变孤儿
-# 继续占着 ffs 实例 (这正是 umount/rmdir 失败、写 UDC 报 ENODEV 的元凶)。
-# 其余占用者一律只告警, 不擅自杀死:
-#   - 手工实验留下的 shell 会话 (bash): 需要在该会话里 exit;
-#   - 正在运行的 cy_psdk: 端点本来就该被它占用, 应先停止应用。
+# 只自动结束身份明确的遗留物: comm 为 sleep 的孤儿进程
 release_endpoints() {
     local pid fd comm link
     for pid in /proc/[0-9]*; do
@@ -173,7 +147,7 @@ EOF
 #   端点地址与 hal_usb_bulk.h 的编号一致: bulk1→0x81/0x01, bulk2→0x82/0x02, bulk3→0x83/0x03。
 #   ep 文件按描述符中端点出现的顺序命名: ep1=第一个(IN), ep2=第二个(OUT),
 #   与 PSDK HAL 打开 ep1(IN)/ep2(OUT) 的行为对应。
-#   注意: 两个块须各自一次 write() 写完, 且必须在同一次打开内 (见文件头约束 1、2)。
+#   注意: 两个块须各自一次 write() 写完, 且必须在同一次打开内
 write_ffs_descriptors() {
     local index="$1" fd="$2"
     local ep_in ep_out
@@ -196,9 +170,7 @@ write_ffs_descriptors() {
         return 1
 }
 
-# ---------------------------------------------------------------------------
-# holder: 长期持有各实例的端点文件, 防止内核复位 ffs 实例 (约束 3)
-# ---------------------------------------------------------------------------
+# holder: 长期持有各实例的端点文件, 防止内核复位 ffs 实例
 
 # 在 holder 进程内持有一个实例; 函数返回后 fd 仍保持打开 (fd 是进程级的)
 hold_instance() {
@@ -259,14 +231,12 @@ holder_main() {
     while read -r _ <&"$fd_wait"; do :; done
 }
 
-# ---------------------------------------------------------------------------
 # 事件监听: 判断"飞机(USB Host)是否已配置我们" (FUNCTIONFS_ENABLE)
 #
-# 为什么不用 /sys/class/udc/*/state: dwc2 在 dr_mode=peripheral 下几乎不更新该字段
+# dwc2 在 dr_mode=peripheral 下几乎不更新该字段
 # (板测: 即使主机已复位+EnumDone 甚至完成 SET_CONFIGURATION, 它仍停在 "not attached")。
 # 事件是 8 字节二进制且 type 字段带 NUL, shell 无法正确解析, 因此由随包发布的 C 程序
 # usb_bulk_event_watcher 独占 ep0 读事件流, 结果写入 $HOLDER_STATE。
-# ---------------------------------------------------------------------------
 watcher_alive() {
     local pid
     [ -f "$WATCHER_PIDFILE" ] || return 1
@@ -316,7 +286,7 @@ stop_watcher() {
         fi
         rm -f "$WATCHER_PIDFILE"
     fi
-    # 兜底: 清理 pidfile 丢失的残留监听进程
+    # 清理 pidfile 丢失的残留监听进程
     pkill -f -- "$WATCHER_BIN_NAME" 2>/dev/null || true
     return 0
 }
@@ -339,7 +309,7 @@ stop_holder() {
         fi
         rm -f "$HOLDER_PIDFILE"
     fi
-    # 兜底: 清理 pidfile 丢失的残留持有者
+    # 清理 pidfile 丢失的残留持有者
     pkill -f -- "--hold $HOLDER_PIDFILE" 2>/dev/null || true
     rm -f "$HOLDER_FIFO"
     return 0
@@ -373,15 +343,13 @@ start_holder() {
     return 1
 }
 
-# ---------------------------------------------------------------------------
 # gadget 结构
-# ---------------------------------------------------------------------------
 
 check_env() {
     is_mounted "$CONFIGFS" || mount -t configfs none "$CONFIGFS" 2>/dev/null ||
         die "挂载 configfs 到 $CONFIGFS 失败"
-    [ -d /sys/module/libcomposite ] || modprobe libcomposite 2>/dev/null ||
-        die "加载 libcomposite 模块失败 (内核不支持 USB gadget?)"
+    # [ -d /sys/module/libcomposite ] || modprobe libcomposite 2>/dev/null ||
+        # die "加载 libcomposite 模块失败 (内核不支持 USB gadget?)"
     [ -n "$(udc_name)" ] || {
         hint_dwc2
         die "无可用 UDC, 无法配置 USB Bulk 通道"
@@ -410,9 +378,8 @@ create_gadget() {
     echo "CY" >"$GADGET_DIR/strings/0x409/manufacturer"
     echo "PSDK USB Bulk" >"$GADGET_DIR/strings/0x409/product"
     echo "PSDK Bulk" >"$GADGET_DIR/configs/c.1/strings/0x409/configuration"
-    # bmAttributes 0x80: D7 保留位须置 1, 其余为 0 ⇒ 总线供电 (与官方脚本一致)
+    # bmAttributes 0x80: D7 保留位须置 1, 其余为 0 ⇒ 总线供电
     echo 0x80 >"$GADGET_DIR/configs/c.1/bmAttributes"
-    # 飞机 E-Port 供电能力有限: 按 USB 2.0 上限声明 500mA
     echo 250 >"$GADGET_DIR/configs/c.1/MaxPower"
 
     for index in $FFS_INSTANCES; do

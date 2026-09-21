@@ -80,7 +80,8 @@ namespace plane::manager
         // 从 PSDK 四元数到欧拉角的转换，将 PSDK 飞控订阅的四元数数据转换为以度为单位的 roll（横滚）、pitch（俯仰）、yaw（偏航）三个角度
         void convertQuaternionToEulerAngle(const ::T_DjiFcSubscriptionQuaternion& q, double& roll, double& pitch, double& yaw) noexcept;
         // 读取固定设备信息 (飞控序列号等) 写入域模型; 适配器就绪后调用一次 (失败仅告警, 下次启动重试)
-        void refreshFixedAircraftInfo(void) noexcept;
+        // 读取飞控真实序列号并写入域模型 (返回是否成功取得; 失败由采集循环周期性重试)
+        [[nodiscard]] bool refreshFixedAircraftInfo(void) noexcept;
         // 周期性地从 PSDK 订阅的飞控数据主题中拉取最新状态，转换为统一的 StatusPayload ，并通过事件总线发布
         void acquisitionLoop(void) noexcept;
 

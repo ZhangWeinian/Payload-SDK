@@ -77,8 +77,8 @@ fi
 # 默认构建目录按目标推导
 if [[ -z "${BUILD_DIR}" ]]; then
 	case "${TARGET}" in
-		x86) BUILD_DIR="${REPO_ROOT}/build/x86_64-linux/debug" ;;
-		aarch64) BUILD_DIR="${REPO_ROOT}/build/aarch64-linux/release" ;;
+		x86 | host) BUILD_DIR="${REPO_ROOT}/build/host/debug" ;;
+		aarch64) BUILD_DIR="${REPO_ROOT}/build/aarch64/release" ;;
 		*)
 			echo "错误: --target 仅支持 x86 或 aarch64 (收到 '${TARGET}')" >&2
 			exit 1
@@ -90,7 +90,7 @@ DB="${BUILD_DIR}/compile_commands.json"
 if [[ ! -f "${DB}" ]]; then
 	echo "错误: 未找到编译数据库 ${DB}" >&2
 	if [[ "${TARGET}" == "aarch64" ]]; then
-		echo "提示: 请先执行 cmake --preset aarch64 (及 --build --preset aarch64)" >&2
+		echo "提示: 请先执行 cmake --preset arm-release (及 --build --preset arm-release)" >&2
 	else
 		echo "提示: 请先执行 cmake --preset debug" >&2
 	fi

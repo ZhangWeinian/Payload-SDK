@@ -36,7 +36,7 @@ extern "C"
 #endif
 
 /* Exported constants --------------------------------------------------------*/
-#define LINUX_I2C_DEV1 "/dev/i2c-1"
+#define LINUX_I2C_DEV1 "/dev/i2c-4"
 
     /* Exported types ------------------------------------------------------------*/
 

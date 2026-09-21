@@ -15,8 +15,10 @@
 //   - 动作中的负载挂载位置 (payloadPositionIndex) 一律为 0
 //   - 不再出现 takeoff 触发器与 gimbalAngleLock/startTimeLapse/stopTimeLapse/gimbalAngleUnlock
 //
-// 注: convertWaypointsToKmz() 若配置允许还会顺带把 KMZ 落盘 (与返回值无关), 测试只校验返回值。
+// 注: convertWaypointsToKmz() 若配置允许还会顺带把 KMZ 落盘 (与返回值无关);
+//     该开关的真实生效性由 SaveDisabledWritesNoFile 覆盖。
 
+#include "utils/EXEHomePath.h"
 #include "utils/json_converter/JsonToKmz.h"
 
 #include "config/ConfigManager.h"
@@ -26,6 +28,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -49,6 +52,25 @@ namespace
     ::std::string readZipEntry(const ::std::vector<::std::uint8_t>& kmz, const ::std::string& entryName)
     {
         return ::plane::test::readZipEntry(kmz, entryName);
+    }
+
+    // KMZ 落盘目录 (与 JsonToKmz 内部一致: 可执行文件同级目录下的 kmz/) 中的 .kmz 文件数
+    ::std::size_t countKmzFiles(const ::std::filesystem::path& dir)
+    {
+        if (!::std::filesystem::exists(dir))
+        {
+            return 0;
+        }
+
+        ::std::size_t count { 0 };
+        for (const auto& entry : ::std::filesystem::directory_iterator(dir))
+        {
+            if (entry.is_regular_file() && entry.path().extension() == ".kmz")
+            {
+                ++count;
+            }
+        }
+        return count;
     }
 
     // 三个航点, 云台俯仰角各不相同, 用于验证"动作角度取自各航点 YTFYJ"
@@ -188,4 +210,18 @@ TEST_F(KmzGenerationTest, GimbalAnglesAndPayloadPosition)
 
     // 航点云台朝向不参与控制 (真机产物为 0), 控制改由动作组承担
     EXPECT_EQ(::std::string::npos, this->waylines_.find("<wpml:waypointGimbalPitchAngle>-90</wpml:waypointGimbalPitchAngle>"));
+}
+
+// 落盘开关必须真实生效: 夹具配置 features.save_kmz_file=false,
+// 此时仍要返回可用的内存 KMZ, 但不得在落盘目录留下任何文件
+TEST_F(KmzGenerationTest, SaveDisabledWritesNoFile)
+{
+    ASSERT_FALSE(::plane::config::ConfigManager::getInstance().isSaveKmz());
+
+    const ::std::filesystem::path kmz_dir { ::plane::utils::getEXEHomePath("kmz") };
+    const ::std::size_t           before { countKmzFiles(kmz_dir) };
+
+    EXPECT_TRUE(::plane::utils::JsonToKmzConverter::convertWaypointsToKmz(buildTestWaypoints()).has_value());
+
+    EXPECT_EQ(before, countKmzFiles(kmz_dir));
 }

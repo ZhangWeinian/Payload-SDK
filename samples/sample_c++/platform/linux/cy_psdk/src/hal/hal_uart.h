@@ -45,7 +45,7 @@ extern "C"
 
 /* Exported constants --------------------------------------------------------*/
 // User can config dev based on there environmental conditions
-#define LINUX_UART_DEV1 "/dev/ttyUSB0"
+#define LINUX_UART_DEV1 "/dev/ttyS4"
 #define LINUX_UART_DEV2 ""
 
 /**

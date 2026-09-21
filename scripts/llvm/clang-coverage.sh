@@ -5,7 +5,7 @@
 #   bash scripts/llvm/clang-coverage.sh [选项]
 #
 # 选项:
-#   --build-dir <目录>   覆盖率插桩构建目录 (默认 build/x86_64-linux/cov)
+#   --build-dir <目录>   覆盖率插桩构建目录 (默认 build/host/cov)
 #   --out <目录>         报告输出目录 (默认 <build-dir>/coverage)
 #   --html               额外生成 HTML 报告 (默认生成文本汇总 + 明细)
 #   --no-build           跳过构建 (复用已有插桩产物)
@@ -22,7 +22,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-BUILD_DIR="${REPO_ROOT}/build/x86_64-linux/cov"
+BUILD_DIR="${REPO_ROOT}/build/host/cov"
 OUT_DIR=""
 GEN_HTML=0
 DO_BUILD=1

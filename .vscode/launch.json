@@ -14,9 +14,9 @@
             "name": "LLDB: cy_psdk (debug 预设)",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/x86_64-linux/debug/bin/cy_psdk",
+            "program": "${workspaceFolder}/build/host/debug/bin/cy_psdk",
             "args": [],
-            "cwd": "${workspaceFolder}/build/x86_64-linux/debug/bin",
+            "cwd": "${workspaceFolder}/build/host/debug/bin",
             "stopOnEntry": false,
             "env": {
                 "ASAN_OPTIONS": "detect_leaks=0"
@@ -27,9 +27,9 @@
             "name": "LLDB: cy_psdk --help (冒烟)",
             "type": "lldb-dap",
             "request": "launch",
-            "program": "${workspaceFolder}/build/x86_64-linux/debug/bin/cy_psdk",
+            "program": "${workspaceFolder}/build/host/debug/bin/cy_psdk",
             "args": ["--help"],
-            "cwd": "${workspaceFolder}/build/x86_64-linux/debug/bin",
+            "cwd": "${workspaceFolder}/build/host/debug/bin",
             "stopOnEntry": false,
             "env": {
                 "ASAN_OPTIONS": "detect_leaks=0"

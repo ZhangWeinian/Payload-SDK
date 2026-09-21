@@ -456,6 +456,10 @@ namespace plane::utils
                     LOG_WARN("无法保存 KMZ 文件，因为存储目录无效");
                 }
             }
+            else
+            {
+                LOG_INFO("KMZ在内存中构建 ({} 字节) ", kmz_data.size());
+            }
 
             return kmz_data_opt;
         }

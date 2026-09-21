@@ -149,21 +149,21 @@ static void HalI2c_ResetDevice(void)
     char    systemCmd[DJI_SYSTEM_CMD_STR_MAX_SIZE] = { 0 };
     int32_t ret;
 
-    sprintf(systemCmd, "echo %d > /sys/class/gpio/export", I2C_DEVICE_RESET_GPIO_NUM);
+    sprintf(systemCmd, "echo %d > /sys/class/gpio/export", 116);
     ret = system(systemCmd);
     if (ret != 0)
     {
         printf("Export reset gpio failed, %d\r\n", ret);
     }
 
-    sprintf(systemCmd, "echo out > /sys/class/gpio/gpio4/direction");
+    sprintf(systemCmd, "echo out > /sys/class/gpio/gpio116/direction");
     ret = system(systemCmd);
     if (ret != 0)
     {
         printf("Set gpio direction failed, %d\r\n", ret);
     }
 
-    sprintf(systemCmd, "echo 0 > /sys/class/gpio/gpio4/value");
+    sprintf(systemCmd, "echo 0 > /sys/class/gpio/gpio116/value");
     ret = system(systemCmd);
     if (ret != 0)
     {
@@ -172,14 +172,14 @@ static void HalI2c_ResetDevice(void)
 
     usleep(I2C_DEVICE_RESET_TIME_US);
 
-    sprintf(systemCmd, "echo 1 > /sys/class/gpio/gpio4/value");
+    sprintf(systemCmd, "echo 1 > /sys/class/gpio/gpio116/value");
     ret = system(systemCmd);
     if (ret != 0)
     {
         printf("Set gpio value failed, %d\r\n", ret);
     }
 
-    sprintf(systemCmd, "echo %d > /sys/class/gpio/unexport", I2C_DEVICE_RESET_GPIO_NUM);
+    sprintf(systemCmd, "echo %d > /sys/class/gpio/unexport", 116);
     ret = system(systemCmd);
     if (ret != 0)
     {

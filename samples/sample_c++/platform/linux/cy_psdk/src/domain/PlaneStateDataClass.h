@@ -329,21 +329,21 @@ namespace plane::domain
         int    aircraft_total_flight_times { 0 };      // 飞行总次数
 
         // 后台服务连接状态
-        ::std::string                  localhost_ip { "" };                              // 本地 IP
-        ::std::string                  swarm_agent_identifier { "" };                    // = "swarm.agent.<SN>"
-        ::std::string                  swarm_agent_name { "" };                          // = "swarm.agent.<SN>.server"
-        ::std::string                  device_nickname { "未绑定" };                     // 设备昵称
-        ::std::string                  internal_plane_id { "" };                         // 后台内部飞机 ID
-        bool                           network_service_connected { false };              // 网络服务连接
-        bool                           device_binding { false };                         // 有效绑定
-        bool                           mqtt_connected { false };                         // MQTT 是否连接
-        ::std::string                  mqtt_connected_url { "" };                        // MQTT 地址
-        bool                           web_socket_connected { false };                   // WebSocket 是否连接
-        ::std::string                  web_socket_connected_url { "" };                  // WebSocket 地址
-        bool                           rtsp_push_video { false };                        // RTSP 推流状态
-        int                            rtsp_push_video_fps { 0 };                        // RTSP 帧率
-        ::std::string                  rtsp_push_video_user_name { "admin" };            // RTSP 用户名
-        ::std::string                  rtsp_push_video_password { "1" };                 // RTSP 密码
+        ::std::string                  localhost_ip { "" };                   // 本地 IP
+        ::std::string                  swarm_agent_identifier { "" };         // 启动时快照 "swarm.agent.<生效SN>" (权威值请用 DeviceIdentity)
+        ::std::string                  swarm_agent_name { "" };               // = "swarm.agent.<SN>.server"
+        ::std::string                  device_nickname { "未绑定" };          // 设备昵称
+        ::std::string                  internal_plane_id { "" };              // 后台内部飞机 ID
+        bool                           network_service_connected { false };   // 网络服务连接
+        bool                           device_binding { false };              // 有效绑定
+        bool                           mqtt_connected { false };              // MQTT 是否连接
+        ::std::string                  mqtt_connected_url { "" };             // MQTT 地址
+        bool                           web_socket_connected { false };        // WebSocket 是否连接
+        ::std::string                  web_socket_connected_url { "" };       // WebSocket 地址
+        bool                           rtsp_push_video { false };             // RTSP 推流状态
+        int                            rtsp_push_video_fps { 0 };             // RTSP 帧率
+        ::std::string                  rtsp_push_video_user_name { "admin" }; // RTSP 用户名
+        ::std::string                  rtsp_push_video_password { "1" };      // RTSP 密码
         ::std::string                  rtsp_push_video_base_url { "streaming/live/1" };  // RTSP 后缀
         int                            rtsp_push_video_server_port { 8554 };             // RTSP 端口
         bool                           tcp_push_data { false };                          // TCP 推流状态
@@ -411,7 +411,10 @@ namespace plane::domain
         ::std::string product_firmware_version { "" }; // 飞机固件版本
         ::std::string rc_firmware_version { "" };      // 遥控器固件版本
         ::std::string camera_firmware_version { "" };  // 相机固件版本
-        ::std::string serial_number { "" };            // 飞机序列号 (飞控 SN 优先; 不可得时为 SDK CC SN 兜底)
+        // 生效设备身份 / 全局唯一 SN (顺序: 配置 plane.code → 飞控真实序列号)
+        // 不使用任何兵底或推断值; 未就绪时保持空串, 由上层等待并重试
+        // 下游依赖: MQTT 报文 ZBID 比对、设备绑定 serialNumber、遥测上报 FJSN、状态板 Serial
+        ::std::string serial_number { "" };
 
         // RID 起降点 (部署常量; PSDK 飞控初始化时一次性上报, 之后无法更新; 不从 config.yml 读取;
         // 默认取模拟器默认坐标, 部署后由上层按实际位置更新)

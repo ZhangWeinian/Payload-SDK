@@ -578,8 +578,9 @@ namespace plane::manager
 
         LOG_INFO("PSDK 适配器准备就绪");
 
-        // 读取固定设备信息 (飞控序列号等) 写入域模型 (一次即可, 失败仅告警)
-        this->refreshFixedAircraftInfo();
+        // 读取固定设备信息 (飞控序列号等) 写入域模型。失败不阻塞启动:
+        // 未配置 plane.code 时由采集循环周期性重试, 直到取得真实序列号为止
+        (void)this->refreshFixedAircraftInfo();
 
         // 读取相机固定信息 (型号/固件版本) 写入域模型 (一次即可, 失败仅告警)
         // 相机模块未初始化成功 (如基础许可) 时跳过: 否则只会得到一条误导性的"读取失败"告警
@@ -611,46 +612,70 @@ namespace plane::manager
         return true;
     }
 
-    void PSDKAdapter::refreshFixedAircraftInfo(void) noexcept
+    bool PSDKAdapter::refreshFixedAircraftInfo(void) noexcept
     {
-        // 从飞控读取 SN
+        // 飞控序列号是"未配置 plane.code"时唯一合法的身份来源 (失败/为空一律返回 false, 绝不兵底伪造)
         ::T_DjiFlightControllerGeneralInfo gi {};
-        if (::T_DjiReturnCode return_code { ::DjiFlightController_GetGeneralInfo(&gi) }; return_code == ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
+        if (::T_DjiReturnCode return_code { ::DjiFlightController_GetGeneralInfo(&gi) }; return_code != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
         {
-            ::std::string sn { gi.serialNum };
-            // serialNum 为定长数组, 去除首尾空白/\0
-            ::std::size_t begin { 0 };
-            while (begin < sn.size() && (sn[begin] == ' ' || sn[begin] == '\0'))
-            {
-                ++begin;
-            }
-            ::std::size_t end { sn.size() };
-            while (end > begin && (sn[end - 1] == ' ' || sn[end - 1] == '\0'))
-            {
-                --end;
-            }
-            sn = sn.substr(begin, end - begin);
+            LOG_WARN("读取飞控通用信息(序列号)失败, 错误: {}", plane::utils::convertDjiError(return_code));
+            return false;
+        }
 
-            if (!sn.empty())
+        ::std::string sn { gi.serialNum };
+        // serialNum 为定长数组, 去除首尾空白/\0
+        ::std::size_t begin { 0 };
+        while (begin < sn.size() && (sn[begin] == ' ' || sn[begin] == '\0'))
+        {
+            ++begin;
+        }
+        ::std::size_t end { sn.size() };
+        while (end > begin && (sn[end - 1] == ' ' || sn[end - 1] == '\0'))
+        {
+            --end;
+        }
+        sn = sn.substr(begin, end - begin);
+
+        if (sn.empty())
+        {
+            LOG_WARN("飞控序列号为空");
+            return false;
+        }
+
+        // 配置 plane.code 时身份以配置为准 (部署方填的就是本机 SN); 飞控 SN 仅作一致性核对, 不覆盖身份
+        const ::std::string configured_plane_code { plane::config::ConfigManager::getInstance().getPlaneCode() };
+        if (!configured_plane_code.empty())
+        {
+            if (configured_plane_code == sn)
             {
-                plane::domain::PlaneStateStore::getInstance().update(
-                    [&sn](plane::domain::PlaneStateDataClass& st)
-                    {
-                        st.serial_number          = sn;
-                        st.swarm_agent_identifier = ::fmt::format("swarm.agent.{}", sn);
-                    }
-                );
-                LOG_INFO("已从飞控读取序列号: {}", sn);
+                LOG_INFO("飞控序列号与配置 plane.code 一致: {}", sn);
             }
             else
             {
-                LOG_WARN("飞控序列号为空");
+                LOG_WARN(
+                    "注意: 配置 plane.code ({}) 与飞控实际上报序列号 ({}) 不一致; 身份以配置为准 (如与预期不符请核对部署配置)",
+                    configured_plane_code,
+                    sn
+                );
             }
+            return true;
         }
-        else
+
+        // 未配置 plane.code: 用飞控真实 SN 作为身份; 值变化时更新 (飞机换机 / 飞控重启后自动跟随)
+        if (plane::domain::PlaneStateStore::getInstance().get(&plane::domain::PlaneStateDataClass::serial_number) == sn)
         {
-            LOG_WARN("读取飞控通用信息(序列号)失败, 错误: {}", plane::utils::convertDjiError(return_code));
+            return true;
         }
+
+        plane::domain::PlaneStateStore::getInstance().update(
+            [&sn](plane::domain::PlaneStateDataClass& st)
+            {
+                st.serial_number          = sn;
+                st.swarm_agent_identifier = ::fmt::format("swarm.agent.{}", sn);
+            }
+        );
+        LOG_INFO("设备身份来源: 飞控序列号 (未配置 plane.code) = {}", sn);
+        return true;
     }
 
     void PSDKAdapter::unsubscribeTelemetryData(void) noexcept
@@ -735,6 +760,10 @@ namespace plane::manager
 
     void PSDKAdapter::acquisitionLoop(void) noexcept
     {
+        // 设备标识(飞控 SN)重试节流: 采集周期 20ms, 250 个周期 ≈ 5s; 初值置满 → 首圈立即试一次
+        constexpr static ::std::size_t kSerialRetryTicks { 250 };
+        ::std::size_t                  serial_retry_ticks { kSerialRetryTicks };
+
         // 数据采集主循环
         while (this->run_acquisition_)
         {
@@ -1127,6 +1156,20 @@ namespace plane::manager
 
             // 发布健康状态心跳事件
             plane::manager::EventManager::getInstance().publishStatus(EventManager::PSDKEvent::HealthPing, ::std::chrono::steady_clock::now());
+
+            // 设备标识重试: 未配置 plane.code 时, 身份(飞控真实序列号)未就绪则周期性重试读取。
+            // 覆盖两种现场情况: ① 启动时飞机尚未连接; ② 运行中飞机断电重启 (如换电池) 后重新接入。
+            // 身份就绪前目录注册与设备绑定保持等待 (各自有重试与提示), 且绝不使用兵底/占位值。
+            if (++serial_retry_ticks >= kSerialRetryTicks)
+            {
+                serial_retry_ticks = 0;
+                if (plane::config::ConfigManager::getInstance().getPlaneCode().empty() &&
+                    plane::domain::PlaneStateStore::getInstance().get(&plane::domain::PlaneStateDataClass::serial_number).empty() &&
+                    !this->refreshFixedAircraftInfo())
+                {
+                    LOG_WARN("设备标识未就绪: 未配置 'plane.code' 且未能读到飞控序列号; 目录注册/设备绑定保持等待, 持续重试");
+                }
+            }
 
             // 控制采集频率
             auto end_time { ::std::chrono::steady_clock::now() };

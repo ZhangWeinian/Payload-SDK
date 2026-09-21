@@ -28,62 +28,6 @@ namespace plane::manager
 {
     namespace
     {
-        // 从 PSDK 日志行解析 SDK CC 序列号 ("Get DJI SDK CC serial num: <SN> (...)" 格式)。
-        // 该行由飞控在鉴权阶段主动上报, 基础权限下同样可得, 作为设备标识的兜底真实来源
-        [[nodiscard]] ::std::string parseSdkCcSerial(::std::string_view message) noexcept
-        {
-            constexpr ::std::string_view kMarker { "Get DJI SDK CC serial num:" };
-            const auto                   position { message.find(kMarker) };
-            if (position == ::std::string_view::npos)
-            {
-                return {};
-            }
-
-            auto begin { position + kMarker.size() };
-            while (begin < message.size() && message[begin] == ' ')
-            {
-                ++begin;
-            }
-            auto end { begin };
-            while (end < message.size() && message[end] != ' ' && message[end] != '(' && message[end] != '\r' && message[end] != '\n')
-            {
-                ++end;
-            }
-            return ::std::string { message.substr(begin, end - begin) };
-        }
-
-        // 截取 SDK CC 序列号写入域模型 (仅首次记录; 飞控真序列号读取成功时会覆盖为更高优先级来源)
-        void captureSdkCcSerialIfPresent(::std::string_view message) noexcept
-        {
-            static ::std::atomic<bool> captured { false };
-            if (captured.load(::std::memory_order_acquire))
-            {
-                return;
-            }
-
-            const ::std::string cc_serial { parseSdkCcSerial(message) };
-            if (cc_serial.empty())
-            {
-                return;
-            }
-
-            captured.store(true, ::std::memory_order_release);
-            plane::domain::PlaneStateStore::getInstance().update(
-                [&cc_serial](plane::domain::PlaneStateDataClass& st)
-                {
-                    if (st.serial_number.empty())
-                    {
-                        st.serial_number = cc_serial;
-                    }
-                    if (st.swarm_agent_identifier.empty())
-                    {
-                        st.swarm_agent_identifier = ::fmt::format("swarm.agent.{}", cc_serial);
-                    }
-                }
-            );
-            LOG_INFO("已从 PSDK 鉴权日志获取 SDK CC 序列号: {} (设备标识兜底来源)", cc_serial);
-        }
-
         // 将 PSDK 日志重定向到 spdlog
         ::T_DjiReturnCode psdkLogRedirectCallback(const ::std::uint8_t* data, ::std::uint16_t dataLen)
         {
@@ -92,8 +36,6 @@ namespace plane::manager
             {
                 message.pop_back();
             }
-
-            captureSdkCcSerialIfPresent(message); // SDK CC 序列号 (设备标识兜底)
 
             plane::utils::Logger::getInstance().PSDKLogRedirection(message);
             return ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS;
@@ -146,9 +88,14 @@ namespace plane::manager
 
         const auto& config { plane::config::ConfigManager::getInstance() };
 
-        if (::T_DjiLoggerConsole console = { .func           = psdkLogRedirectCallback,
-                                             .consoleLevel   = static_cast<uint8_t>(config.getPsdkLogLevel()),
-                                             .isSupportColor = true };
+        if (::T_DjiLoggerConsole console = { .func         = psdkLogRedirectCallback,
+                                             .consoleLevel = static_cast<uint8_t>(config.getPsdkLogLevel()),
+                                             // 必须为 false: PSDK 开启颜色后会在字段"中间"插入 ANSI 转义码,
+                                             // 而 Logger::PSDKLogRedirection() 的解析正则不接受字段间夹颜色码
+                                             // (实测失配) ⇒ 会退化到兼底分支原样输出, 源位置为空显示 "[:]",
+                                             // 日志变成难读的固定列宽原始行。反正颜色到不了终端(我们用自己的 sink),
+                                             // 关掉即可让全部行都能被正常解析美化。
+                                             .isSupportColor = false };
             ::DjiLogger_AddConsole(&console) != ::DJI_ERROR_SYSTEM_MODULE_CODE_SUCCESS)
         {
             // 失败不置位: 允许平台就绪后再次尝试
