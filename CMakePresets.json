@@ -36,7 +36,8 @@
                 "CMAKE_LINKER_TYPE": "LLD",
                 "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/host-native.cmake",
                 "CMAKE_C_COMPILER_LAUNCHER": "ccache",
-                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
+                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+                "CMAKE_CXX_CLANG_TIDY": "clang-tidy"
             }
         },
         {
@@ -179,64 +180,65 @@
         {
             "name": "debug",
             "displayName": "构建调试版",
+            "description": "并行度取核数",
             "configurePreset": "debug",
-            "jobs": 16
+            "jobs": 8
         },
         {
             "name": "asan",
             "displayName": "构建内存/UB 检测版",
             "configurePreset": "asan",
-            "jobs": 16
+            "jobs": 8
         },
         {
             "name": "tsan",
             "displayName": "构建数据竞争检测版",
             "configurePreset": "tsan",
-            "jobs": 16
+            "jobs": 8
         },
         {
             "name": "cov",
             "displayName": "构建覆盖率插桩版",
             "configurePreset": "cov",
-            "jobs": 16
+            "jobs": 8
         },
         {
             "name": "fuzz",
             "displayName": "构建模糊测试目标 (libFuzzer)",
             "configurePreset": "fuzz",
-            "jobs": 16,
+            "jobs": 8,
             "targets": ["fuzz_probe_packet", "fuzz_json_codec"]
         },
         {
             "name": "perf",
             "displayName": "构建性能剖析版",
             "configurePreset": "perf",
-            "jobs": 16
+            "jobs": 8
         },
         {
             "name": "x86_64-release",
             "displayName": "构建 x86_64 交付产物",
             "configurePreset": "x86_64-release",
-            "jobs": 16
+            "jobs": 8
         },
         {
             "name": "aarch_64-release",
             "displayName": "构建 aarch_64 交付产物",
             "configurePreset": "aarch_64-release",
-            "jobs": 16
+            "jobs": 8
         },
         {
             "name": "install-x86_64-release",
             "displayName": "安装 x86_64 交付产物",
             "configurePreset": "x86_64-release",
-            "jobs": 16,
+            "jobs": 8,
             "targets": ["install"]
         },
         {
             "name": "install-aarch_64-release",
             "displayName": "安装 aarch_64 交付产物",
             "configurePreset": "aarch_64-release",
-            "jobs": 16,
+            "jobs": 8,
             "targets": ["install"]
         }
     ],
