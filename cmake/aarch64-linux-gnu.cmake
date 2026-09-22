@@ -8,11 +8,11 @@
 #     (注意: 板上的 gcc 需支持 C++20, 建议与开发机保持同代工具链)
 #
 # 作为 vcpkg 的 VCPKG_CHAINLOAD_TOOLCHAIN_FILE 使用: vcpkg 构建 arm64-linux 依赖
-# 与本项目编译共用该工具链 (CMakePresets.json 中的 "arm-release" 预设已配置)
+# 与本项目编译共用该工具链 (CMakePresets.json 中的 "aarch_64-release" 预设已配置)
 #
 # 用法:
-#   cmake --preset arm-release      # x86 开发机: 交叉; 3588 板上: 本机编译
-#   cmake --build --preset arm-release
+#   cmake --preset aarch_64-release      # x86_64 开发机: 交叉; aarch_64 板上: 本机编译
+#   cmake --build --preset aarch_64-release
 
 set (CMAKE_SYSTEM_NAME Linux)
 set (CMAKE_SYSTEM_PROCESSOR aarch64)
@@ -40,7 +40,7 @@ else()
     if(NOT EXISTS "${SWARM_GCC_ROOT}/bin/aarch64-linux-gnu-g++")
         message (
             FATAL_ERROR
-                "当前宿主是 ${CMAKE_HOST_SYSTEM_PROCESSOR}，arm-release 产出的是 aarch64 二进制，"
+                "当前宿主是 ${CMAKE_HOST_SYSTEM_PROCESSOR}，aarch_64-release 产出的是 aarch_64 二进制，"
                 "需要自装交叉编译器 ${SWARM_GCC_ROOT}/bin/aarch64-linux-gnu-g++，本机未安装\n"
                 "请改用：debug / asan / tsan / cov / perf / fuzz（与平台无关），"
                 "或用 -DSWARM_GCC_ROOT=<工具链根目录> 指定含 aarch64 交叉编译器的自装工具链"

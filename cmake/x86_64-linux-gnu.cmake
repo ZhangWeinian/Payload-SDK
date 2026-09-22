@@ -3,15 +3,15 @@
 # 宿主自适应, 与 cmake/aarch64-linux-gnu.cmake 对称:
 #   - x86_64 开发机 (宿主 == 目标): 本机(native)编译, 不锁定编译器,
 #     交由 CMake/vcpkg 自动探测本机的 gcc / g++
-#   - 其他宿主 (例如未来在 aarch64 板上): 交叉编译, 使用 x86_64-linux-gnu-gcc / g++
+#   - 其他宿主 (例如未来在 aarch_64 板上): 交叉编译, 使用 x86_64-linux-gnu-gcc / g++
 #     (前提: 该宿主已安装 g++-x86_64-linux-gnu)
 #
 # 作为 vcpkg 的 VCPKG_CHAINLOAD_TOOLCHAIN_FILE 使用 (CMakePresets.json 中
-# "x86-release" 预设已配置), 与 "arm-release" 预设形态保持一致
+# "x86_64-release" 预设已配置), 与 "aarch_64-release" 预设形态保持一致
 #
 # 用法:
-#   cmake --preset x86-release        # x86_64 宿主: 本机编译; 其他宿主: 交叉编译
-#   cmake --build --preset x86-release
+#   cmake --preset x86_64-release        # x86_64 宿主: 本机编译; 其他宿主: 交叉编译
+#   cmake --build --preset x86_64-release
 
 set (CMAKE_SYSTEM_NAME Linux)
 set (CMAKE_SYSTEM_PROCESSOR x86_64)
@@ -20,7 +20,7 @@ set (CMAKE_SYSTEM_PROCESSOR x86_64)
 include (${CMAKE_CURRENT_LIST_DIR}/toolchain-common.cmake)
 
 if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
-    # x86_64 宿主上本机编译: 编译器由预设给出（x86-release 用自装 clang++），本文件不覆盖它，
+    # x86_64 宿主上本机编译: 编译器由预设给出（x86_64-release 用自装 clang++），本文件不覆盖它，
     # 末尾的探针会校验它真的能用
     message (STATUS "工具链 [x86_64]: 检测到 x86_64 宿主, 按本机(native)编译")
 else()
@@ -31,9 +31,9 @@ else()
     if(NOT EXISTS "${SWARM_GCC_ROOT}/bin/x86_64-linux-gnu-g++")
         message (
             FATAL_ERROR
-                "当前宿主是 ${CMAKE_HOST_SYSTEM_PROCESSOR}，x86-release 产出的是 x86_64 二进制，"
+                "当前宿主是 ${CMAKE_HOST_SYSTEM_PROCESSOR}，x86_64-release 产出的是 x86_64 二进制，"
                 "需要自装交叉编译器 ${SWARM_GCC_ROOT}/bin/x86_64-linux-gnu-g++，本机未安装\n"
-                "请改用：arm-release（本机原生）或 debug / asan / tsan / cov / perf / fuzz（与平台无关）"
+                "请改用：aarch_64-release（本机原生）或 debug / asan / tsan / cov / perf / fuzz（与平台无关）"
         )
     endif()
 

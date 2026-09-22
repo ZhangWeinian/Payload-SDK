@@ -28,7 +28,7 @@
             "name": "host-clang",
             "hidden": true,
             "displayName": "宿主原生开发基座 (LLVM/Clang)",
-            "description": "检错 / 分析 / 调试类预设的公共基座。目标架构跟随宿主（cmake/host-native.cmake），vcpkg 依赖树与 triplet 也按宿主选择（x86_64 → vcpkg_installed-clang/x64-linux，aarch64 → vcpkg_installed/arm64/arm64-linux），因此这些预设与容器架构无关",
+            "description": "检错 / 分析 / 调试类预设的公共基座。目标架构跟随宿主（cmake/host-native.cmake），vcpkg 依赖树与 triplet 也按宿主选择（x86_64 → vcpkg_installed-clang/x64-linux，aarch_64 → vcpkg_installed/arm64/arm64-linux），因此这些预设与容器架构无关",
             "inherits": "base",
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "clang",
@@ -43,7 +43,7 @@
             "name": "x86_64-clang",
             "hidden": true,
             "displayName": "x86_64 固定目标基座 (LLVM/Clang)",
-            "description": "x86-release 专用：目标固定为 x86_64（宿主不是 x86_64 时自动交叉），依赖固定存于 vcpkg_installed-clang，与 aarch64 依赖隔离",
+            "description": "x86_64-release 专用：目标固定为 x86_64（宿主不是 x86_64 时自动交叉），依赖固定存于 vcpkg_installed-clang，与 aarch_64 依赖隔离",
             "inherits": "base",
             "cacheVariables": {
                 "CMAKE_C_COMPILER": "clang",
@@ -128,9 +128,9 @@
             }
         },
         {
-            "name": "x86-release",
+            "name": "x86_64-release",
             "displayName": "交付产物 (x86_64)",
-            "description": "Clang -O3 + LTO 发布构建; 同时构建并运行测试, 防止 debug 正常但 release 编译/运行失败。在 aarch64 宿主上配置会明确报错退出（本机没有 x86_64 交叉工具链）",
+            "description": "Clang -O3 + LTO 发布构建; 同时构建并运行测试, 防止 debug 正常但 release 编译/运行失败。在 aarch_64 宿主上配置会明确报错退出（本机没有 x86_64 交叉工具链）",
             "inherits": "x86_64-clang",
             "binaryDir": "${sourceDir}/build/x86_64/release",
             "installDir": "${sourceDir}/install/x86_64/release",
@@ -159,12 +159,12 @@
             }
         },
         {
-            "name": "arm-release",
-            "displayName": "交付产物 (aarch64 / RK3588S)",
-            "description": "面向 ARM64 (RK3588S) 的交付产物; x86 开发机交叉编译, 3588 板上直接本机编译; 依赖经 vcpkg arm64-linux triplet 构建; 静态链接 libstdc++/libgcc 规避目标板运行库版本差异。ARM 侧不设检错/分析版, 排障统一用宿主原生预设",
+            "name": "aarch_64-release",
+            "displayName": "交付产物 (aarch_64 / RK3588S)",
+            "description": "面向 ARM64 (RK3588S) 的交付产物; x86_64 开发机交叉编译, aarch_64 板上直接本机编译; 依赖经 vcpkg arm64-linux triplet 构建; 静态链接 libstdc++/libgcc 规避目标板运行库版本差异。ARM 侧不设检错/分析版, 排障统一用宿主原生预设",
             "inherits": "base",
-            "binaryDir": "${sourceDir}/build/aarch64/release",
-            "installDir": "${sourceDir}/install/aarch64/release",
+            "binaryDir": "${sourceDir}/build/aarch_64/release",
+            "installDir": "${sourceDir}/install/aarch_64/release",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "VCPKG_INSTALLED_DIR": "${sourceDir}/vcpkg_installed/arm64",
@@ -214,28 +214,28 @@
             "jobs": 16
         },
         {
-            "name": "x86-release",
+            "name": "x86_64-release",
             "displayName": "构建 x86_64 交付产物",
-            "configurePreset": "x86-release",
+            "configurePreset": "x86_64-release",
             "jobs": 16
         },
         {
-            "name": "arm-release",
-            "displayName": "构建 aarch64 交付产物",
-            "configurePreset": "arm-release",
+            "name": "aarch_64-release",
+            "displayName": "构建 aarch_64 交付产物",
+            "configurePreset": "aarch_64-release",
             "jobs": 16
         },
         {
-            "name": "install-x86-release",
+            "name": "install-x86_64-release",
             "displayName": "安装 x86_64 交付产物",
-            "configurePreset": "x86-release",
+            "configurePreset": "x86_64-release",
             "jobs": 16,
             "targets": ["install"]
         },
         {
-            "name": "install-arm-release",
-            "displayName": "安装 aarch64 交付产物",
-            "configurePreset": "arm-release",
+            "name": "install-aarch_64-release",
+            "displayName": "安装 aarch_64 交付产物",
+            "configurePreset": "aarch_64-release",
             "jobs": 16,
             "targets": ["install"]
         }
@@ -270,9 +270,9 @@
             "execution": { "noTestsAction": "error", "stopOnFailure": false }
         },
         {
-            "name": "x86-release",
+            "name": "x86_64-release",
             "displayName": "测试 x86_64 交付产物",
-            "configurePreset": "x86-release",
+            "configurePreset": "x86_64-release",
             "output": { "outputOnFailure": true }
         }
     ],
@@ -326,19 +326,19 @@
             ]
         },
         {
-            "name": "x86-release",
+            "name": "x86_64-release",
             "displayName": "配置 + 构建 x86_64 交付产物",
             "steps": [
-                { "type": "configure", "name": "x86-release" },
-                { "type": "build", "name": "x86-release" }
+                { "type": "configure", "name": "x86_64-release" },
+                { "type": "build", "name": "x86_64-release" }
             ]
         },
         {
-            "name": "arm-release",
-            "displayName": "配置 + 构建 aarch64 交付产物",
+            "name": "aarch_64-release",
+            "displayName": "配置 + 构建 aarch_64 交付产物",
             "steps": [
-                { "type": "configure", "name": "arm-release" },
-                { "type": "build", "name": "arm-release" }
+                { "type": "configure", "name": "aarch_64-release" },
+                { "type": "build", "name": "aarch_64-release" }
             ]
         }
     ]

@@ -15,7 +15,7 @@
 #
 # 说明:
 #   - 仅分析自有代码 (src/ 与 test/), DJI 官方样例与 vcpkg 依赖自动过滤。
-#   - aarch64 模式需先配置交叉预设 (cmake --preset aarch64) 以生成编译数据库。
+#   - aarch64 模式需先配置交叉预设 (cmake --preset aarch_64-release) 以生成编译数据库。
 #   - 检查项配置见仓库根目录 .clang-tidy。
 set -euo pipefail
 
@@ -90,7 +90,7 @@ DB="${BUILD_DIR}/compile_commands.json"
 if [[ ! -f "${DB}" ]]; then
 	echo "错误: 未找到编译数据库 ${DB}" >&2
 	if [[ "${TARGET}" == "aarch64" ]]; then
-		echo "提示: 请先执行 cmake --preset arm-release (及 --build --preset arm-release)" >&2
+		echo "提示: 请先执行 cmake --preset aarch_64-release (及 --build --preset aarch_64-release)" >&2
 	else
 		echo "提示: 请先执行 cmake --preset debug" >&2
 	fi
