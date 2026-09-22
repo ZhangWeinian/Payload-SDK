@@ -11,6 +11,14 @@
 #      由脚本在编译数据库层面过滤, 不进入分析范围。
 #   2. 关闭与项目既定风格冲突的检查 (宏命名风格 / 传统返回类型 / 魔法数字),
 #      保留真正能发现缺陷的检查族: bugprone-* / clang-analyzer-* / concurrency-*。
+#      注意 optin 子族（全族开启, 不做任何排除）: 它属于 LLVM 文档 1.1.5
+#      「Default Checkers」而不是实验族 —— 实验族是 alpha.*(文档明言 "may crash or
+#      emit a higher number of false positives"), clang-tidy 根本不暴露。optin 默认关
+#      只因它们带「项目策略」色彩, 由项目自行决定采纳。它含 optin.cplusplus.VirtualCall
+#      / optin.core.EnumCastOutOfRange / optin.portability.UnixAPI /
+#      optin.performance.Padding 等有明确规则依据的检查。
+#      排除项必须写成纯检查名 —— Checks 是 YAML 折叠块标量, 块内 # 不是注释而是字面
+#      文本, 会让该条静默失效。
 #   3. 不以警告即错误运行, 便于渐进式治理。
 # ============================================================================
 Checks: >
