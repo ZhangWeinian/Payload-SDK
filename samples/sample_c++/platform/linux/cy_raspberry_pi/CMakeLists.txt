@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 project(dji_sdk_demo_on_rpi_cxx C CXX)
 
-set(CMAKE_C_FLAGS "-pthread -std=gnu99")
-set(CMAKE_CXX_FLAGS "-std=c++11 -pthread")
+set(CMAKE_C_FLAGS "-pthread")
+set(CMAKE_CXX_FLAGS "-pthread")
 set(CMAKE_EXE_LINKER_FLAGS "-pthread")
-set(CMAKE_C_COMPILER "aarch64-linux-gnu-gcc")
-set(CMAKE_CXX_COMPILER "aarch64-linux-gnu-g++")
 add_definitions(-D_GNU_SOURCE)
 
 # 官方 C++ 版缺失的平台宏 (C 版与 manifold3/nvidia_jetson C++ 版均有定义)。
