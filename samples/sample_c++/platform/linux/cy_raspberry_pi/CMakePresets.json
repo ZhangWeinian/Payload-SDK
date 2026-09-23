@@ -20,11 +20,11 @@
             }
         },
         {
-            "name": "aarch64",
-            "displayName": "Release (aarch64-linux / RK3588S)",
-            "description": "始终产出 aarch64 的 Release",
+            "name": "aarch_64",
+            "displayName": "Release (aarch_64-linux / RK3588S)",
+            "description": "始终产出 aarch_64 的 Release",
             "inherits": "base",
-            "binaryDir": "${sourceDir}/build/aarch64-linux/release",
+            "binaryDir": "${sourceDir}/build/aarch_64/release",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
@@ -32,10 +32,10 @@
     ],
     "buildPresets": [
         {
-            "name": "aarch64",
-            "displayName": "Build AArch64 (RK3588S)",
+            "name": "aarch_64",
+            "displayName": "Build aarch_64 (RK3588S)",
             "description": "并行度取核数",
-            "configurePreset": "aarch64",
+            "configurePreset": "aarch_64",
             "jobs": 8
         }
     ]

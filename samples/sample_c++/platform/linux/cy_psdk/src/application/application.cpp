@@ -25,9 +25,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "../manager/psdk/PSDKManager.h" // PSDK 日志重定向到 spdlog
 #include "../utils/log_util/Logger.h"    // LOG_* (spdlog, 与 DJI 日志重定向无关)
+
+#include "define.h"                      // cy_psdk 全局命名宏 (::std::/ ::/ ::等)
+
 #include "application.hpp"
+
 #include "config/ConfigManager.h"
-#include "define.h" // cy_psdk 全局命名宏 (::std::/ ::/ ::等)
+
 #include "dji_sdk_app_info.h"
 #include "dji_sdk_config.h"
 #include <dji_aircraft_info.h>
