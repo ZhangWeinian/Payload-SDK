@@ -14,10 +14,10 @@ features:
     usb_bulk: auto
 
 catalog:
-    node_id: CAT660GRY65
+    node_id: CATBJ9TYVMX
     port: 30906
     targets:
-        - 192.168.1.112
+        - 192.168.1.171
         - 192.168.1.*
 
 plane:

@@ -81,7 +81,14 @@ namespace plane::catalog::internal
             const ::std::string& service_id,
             bool                 allow_legacy_fallback
         );
-        [[nodiscard]] Result<CatalogServerInfo>             getCatalogServerInfo(void);
+        [[nodiscard]] Result<CatalogServerInfo> getCatalogServerInfo(void);
+
+        // 拉取当前 Catalog 发现的节点清单 (含查看授权),
+        // 对应 GET /api/datapool/v1/discovery/node-list
+        [[nodiscard]] Result<NodeList> getNodeList(void);
+        // 按 key 读取完整数据池条目 (含 contentType / version / 原始字节 payload),
+        // 对应 GET /api/datapool/v1/data?key=...
+        [[nodiscard]] Result<DataPoolValue>                 getDataValue(const ::std::string& key);
 
         [[nodiscard]] Result<::std::vector<ConfigDocument>> getConfigs(const ConfigQuery& query);
         [[nodiscard]] Result<ConfigDocument>                getConfig(const ConfigKey& key);
@@ -96,16 +103,25 @@ namespace plane::catalog::internal
 
         static ::std::string
             instanceCollection(const ::std::string& namespace_name, const ::std::string& group_name, const ::std::string& service_id);
-        static ::std::string             scopeValue(const ::std::string& value, const ::std::string& fallback);
+        static ::std::string                        scopeValue(const ::std::string& value, const ::std::string& fallback);
 
-        static Result<ServiceEndpoint>   parseEndpoint(const ::nlohmann::json& json, bool& healthy);
-        static Result<ConfigDocument>    parseConfig(const ::nlohmann::json& json);
-        static Result<ServiceStatus>     parseServiceStatus(const ::nlohmann::json& json);
-        static Result<ServiceSummary>    parseServiceSummary(const ::nlohmann::json& json);
-        static Result<CatalogServerInfo> parseCatalogServerInfo(const ::nlohmann::json& json);
+        static Result<ServiceEndpoint>              parseEndpoint(const ::nlohmann::json& json, bool& healthy);
+        static Result<ConfigDocument>               parseConfig(const ::nlohmann::json& json);
+        static Result<ServiceStatus>                parseServiceStatus(const ::nlohmann::json& json);
+        static Result<ServiceSummary>               parseServiceSummary(const ::nlohmann::json& json);
+        static Result<CatalogServerInfo>            parseCatalogServerInfo(const ::nlohmann::json& json);
 
-        static CatalogFailure            remapNotFound(CatalogFailure failure, CatalogError replacement);
+        static Result<NodeList>                     parseNodeList(const ::nlohmann::json& json);
+        static Result<NodeListEntry>                parseNodeListEntry(const ::nlohmann::json& json);
+        static Result<NodeListAuthorization>        parseNodeListAuthorization(const ::nlohmann::json& json);
+        static Result<DataPoolValue>                parseDataPoolValue(const ::nlohmann::json& json);
 
-        CatalogTransport                 transport_;
+        static Result<long long>                    requiredInt64(const ::nlohmann::json& json, const ::std::string& field);
+        static Result<bool>                         requiredBool(const ::nlohmann::json& json, const ::std::string& field);
+        static Result<::std::vector<::std::string>> requiredStringArray(const ::nlohmann::json& json, const ::std::string& field);
+
+        static CatalogFailure                       remapNotFound(CatalogFailure failure, CatalogError replacement);
+
+        CatalogTransport                            transport_;
     };
 } // namespace plane::catalog::internal

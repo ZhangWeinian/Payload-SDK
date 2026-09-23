@@ -36,6 +36,26 @@ namespace plane::catalog::internal
             out.push_back(static_cast<::std::uint8_t>(value & 0Xffu));
         }
 
+        // 追加 2 字节大端端口
+        void appendPort(::std::vector<::std::uint8_t>& out, int value)
+        {
+            const auto unsigned_value { static_cast<::std::uint32_t>(value) };
+            out.push_back(static_cast<::std::uint8_t>((unsigned_value >> 8u) & 0Xffu));
+            out.push_back(static_cast<::std::uint8_t>(unsigned_value & 0Xffu));
+        }
+
+        // 读取 2 字节大端端口; 数据不足时返回 0 且不推进 offset (字段可选)
+        int readPort(const ::std::vector<::std::uint8_t>& data, ::std::size_t& offset)
+        {
+            if (offset + 2 > data.size())
+            {
+                return 0;
+            }
+            const int value { (static_cast<int>(data[offset]) << 8) | static_cast<int>(data[offset + 1]) };
+            offset += 2;
+            return value;
+        }
+
         // 读取 1 字节长度前缀 + UTF-8 字段; 越界抛 ::std::invalid_argument
         ::std::string readField(const ::std::vector<::std::uint8_t>& data, ::std::size_t& offset)
         {
@@ -70,11 +90,20 @@ namespace plane::catalog::internal
             appendBytes(out, packet.ip);
             appendBytes(out, packet.node_id);
             out.push_back(static_cast<::std::uint8_t>(packet.status));
-            appendBytes(out, packet.node_name);
+            // 布局与服务端 / java 一致: requestId -> instanceId -> httpPort -> nodeName -> 组播
             appendU32(out, static_cast<::std::uint32_t>(packet.request_id));
             appendBytes(out, packet.instance_id);
-            out.push_back(static_cast<::std::uint8_t>((static_cast<::std::uint32_t>(packet.http_port) >> 8u) & 0Xffu));
-            out.push_back(static_cast<::std::uint8_t>(static_cast<::std::uint32_t>(packet.http_port) & 0Xffu));
+            appendPort(out, packet.http_port);
+            // nodeName 放在整包末尾, 旧端点不写; 组播地址与端口追加在 nodeName 之后
+            if (!packet.node_name.empty())
+            {
+                appendBytes(out, packet.node_name);
+            }
+            if (!packet.multicast_address.empty() && packet.multicast_port != 0)
+            {
+                appendBytes(out, packet.multicast_address);
+                appendPort(out, packet.multicast_port);
+            }
             return out;
         }
         catch (const ::std::exception& ex)
@@ -130,14 +159,8 @@ namespace plane::catalog::internal
             }
             packet.status = data[offset++];
 
-            // 旧服务端极短包: 无 nodeName/requestId/instanceId/port
-            if (offset >= data.size())
-            {
-                return packet;
-            }
-            packet.node_name = readField(data, offset);
-
-            // requestId 可选 (remaining>=4)
+            // status 之后的字段均可选, 布局与服务端 / java 一致:
+            // requestId -> instanceId -> httpPort -> nodeName -> 组播
             if (offset + 4 <= data.size())
             {
                 packet.request_id     = static_cast<int>(readU32());
@@ -147,11 +170,16 @@ namespace plane::catalog::internal
             {
                 packet.instance_id = readField(data, offset);
             }
-            if (offset + 2 <= data.size())
+            packet.http_port = readPort(data, offset);
+            if (offset < data.size())
             {
-                packet.http_port =
-                    static_cast<int>((static_cast<::std::uint32_t>(data[offset]) << 8u) | static_cast<::std::uint32_t>(data[offset + 1]));
+                packet.node_name = readField(data, offset);
             }
+            if (offset < data.size())
+            {
+                packet.multicast_address = readField(data, offset);
+            }
+            packet.multicast_port = readPort(data, offset);
             return packet;
         }
         catch (const ::std::exception& ex)

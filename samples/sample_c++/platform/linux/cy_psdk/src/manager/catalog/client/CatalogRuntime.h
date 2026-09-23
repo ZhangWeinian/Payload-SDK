@@ -93,8 +93,23 @@ namespace plane::catalog
             const ::std::string& instance_id
         );
 
-        [[nodiscard]] Result<::std::string>                 getLocalIp(void);
-        [[nodiscard]] Result<CatalogServerInfo>             getCatalogServerInfo(void);
+        [[nodiscard]] Result<::std::string>     getLocalIp(void);
+        [[nodiscard]] Result<CatalogServerInfo> getCatalogServerInfo(void);
+
+        // 拉取当前 Catalog 发现的节点清单 (含查看授权)。
+        // 需结构化节点行时用本方法; 需要完整入池 JSON (含 schemaVersion / scan / policy 等)
+        // 用 getValue("nodeList") 取原文。
+        [[nodiscard]] Result<NodeList> getNodeList(void);
+
+        // 按 key 读取数据池条目 (含 contentType / version / 原始字节 payload)。
+        // 空 key -> INVALID_ARGUMENT; key 不存在 -> DATA_NOT_FOUND;
+        // 系统键未就绪或有待发布变更时服务端 503 -> CATALOG_UNAVAILABLE (可重试)。
+        [[nodiscard]] Result<DataPoolValue> getDataValue(const ::std::string& key);
+
+        // 按 key 读取数据池条目的 UTF-8 正文 (payload 已 Base64 解码)。
+        // 系统保留键 nodeList / nodeAuthorization / nodeRelations 均为 UTF-8 JSON;
+        // payload 非法 Base64、大小不一致或非合法 UTF-8 -> PROTOCOL_ERROR。
+        [[nodiscard]] Result<::std::string>                 getValue(const ::std::string& key);
 
         [[nodiscard]] Result<ConfigDocument>                putConfig(const ConfigUploadRequest& request);
         [[nodiscard]] Result<::std::vector<ConfigDocument>> getConfig(const ConfigQuery& query);

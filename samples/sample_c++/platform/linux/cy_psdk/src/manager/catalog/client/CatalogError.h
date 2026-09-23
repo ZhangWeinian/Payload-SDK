@@ -28,7 +28,8 @@ namespace plane::catalog
         HTTP_ERROR,            // HTTP 请求失败
         PROTOCOL_ERROR,        // 协议或 JSON 非法
         TIMEOUT,               // 请求超时
-        STOPPED                // 运行时已停止
+        STOPPED,               // 运行时已停止
+        DATA_NOT_FOUND         // 数据池 key 不存在 (不可重试)
     };
 
     // 该错误类别是否可重试 (对齐 java CatalogError.retryable)
@@ -81,6 +82,8 @@ namespace plane::catalog
                 return "请求超时";
             case CatalogError::STOPPED:
                 return "运行时已停止";
+            case CatalogError::DATA_NOT_FOUND:
+                return "数据池 key 不存在";
         }
         return "";
     }

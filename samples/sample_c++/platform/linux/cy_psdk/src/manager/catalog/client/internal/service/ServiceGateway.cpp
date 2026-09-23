@@ -11,6 +11,7 @@
 #include "manager/catalog/client/CatalogError.h"
 #include "manager/catalog/client/CatalogFailure.h"
 #include "manager/catalog/client/internal/codec/JsonCodec.h"
+#include "manager/catalog/client/internal/util/Base64.h"
 
 #include "define.h"
 
@@ -23,6 +24,8 @@ namespace plane::catalog::internal
         constexpr const char*               kConfigsBatch = "/api/configs/batch";
         constexpr const char*               kLocalIp      = "/api/registry/services/local-ip";
         constexpr const char*               kUdpConfig    = "/api/udp-config";
+        constexpr const char*               kNodeList     = "/api/datapool/v1/discovery/node-list";
+        constexpr const char*               kDataPoolData = "/api/datapool/v1/data";
 
         [[nodiscard]] Result<::std::string> invalidString(const ::std::string& message)
         {
@@ -316,6 +319,41 @@ namespace plane::catalog::internal
         return parseCatalogServerInfo(response.value());
     }
 
+    // 拉取当前 Catalog 发现的节点清单 (含查看授权)。
+    // 响应是数据池 envelope (key=nodeList, value 为 JSON 字符串), 解析为结构化清单;
+    // 业务若只需数据池快照原文, 优先用 CatalogRuntime::getValue("nodeList")。
+    [[nodiscard]] Result<NodeList> ServiceGateway::getNodeList(void)
+    {
+        Result<::nlohmann::json> response { this->transport_.getJson(kNodeList) };
+        if (!response.has_value())
+        {
+            return ::std::unexpected(response.error());
+        }
+        return parseNodeList(response.value());
+    }
+
+    // 按 key 读取完整数据池条目 (含 contentType / version / 原始字节 payload)。
+    // 空 key -> INVALID_ARGUMENT; 404 -> DATA_NOT_FOUND; 400 -> INVALID_ARGUMENT (不可重试);
+    // payloadBase64 非法或 payloadBytes 与实际大小不符 -> PROTOCOL_ERROR。
+    [[nodiscard]] Result<DataPoolValue> ServiceGateway::getDataValue(const ::std::string& key)
+    {
+        if (key.empty())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "key is empty"));
+        }
+        Result<::nlohmann::json> response { this->transport_.getJson(::std::string { kDataPoolData } + "?key=" + encodeComponent(key)) };
+        if (!response.has_value())
+        {
+            CatalogFailure failure { response.error() };
+            if (failure.http_status == 400)
+            {
+                failure = failureWithRetryable(failureWithCode(failure, CatalogError::INVALID_ARGUMENT), false);
+            }
+            return ::std::unexpected(remapNotFound(failure, CatalogError::DATA_NOT_FOUND));
+        }
+        return parseDataPoolValue(response.value());
+    }
+
     [[nodiscard]] Result<::std::vector<ConfigDocument>> ServiceGateway::getConfigs(const ConfigQuery& query)
     {
         Result<void> validation { validateDataIds(query.data_ids) };
@@ -471,11 +509,20 @@ namespace plane::catalog::internal
         ::std::string version {};
         if (json.contains("version") && !json["version"].is_null())
         {
-            if (!json["version"].is_string())
+            // 服务端 catalog 3.x 的 version 可能为数字 (如 0) 或字符串, 二者均接受
+            const ::nlohmann::json& version_node { json["version"] };
+            if (version_node.is_string())
+            {
+                version = version_node.get<::std::string>();
+            }
+            else if (version_node.is_number())
+            {
+                version = version_node.dump();
+            }
+            else
             {
                 return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: version"));
             }
-            version = json["version"].get<::std::string>();
         }
         healthy = !json.contains("healthy") || !json["healthy"].is_boolean() || json["healthy"].get<bool>();
 
@@ -736,6 +783,384 @@ namespace plane::catalog::internal
         info.multicast_ip      = ::std::move(multicast_ip);
         info.multicast_address = ::std::move(multicast_address);
         return info;
+    }
+
+    // 解析 GET /api/datapool/v1/discovery/node-list 的 envelope (key 必须为 nodeList)
+    [[nodiscard]] Result<NodeList> ServiceGateway::parseNodeList(const ::nlohmann::json& json)
+    {
+        if (!json.is_object())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "node list must be an object"));
+        }
+        Result<::std::string> key { requiredString(json, "key") };
+        if (!key.has_value())
+        {
+            return ::std::unexpected(key.error());
+        }
+        if (key.value() != "nodeList")
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "unexpected key: " + key.value()));
+        }
+        Result<::std::string> value { requiredString(json, "value") };
+        if (!value.has_value())
+        {
+            return ::std::unexpected(value.error());
+        }
+        // value 是内嵌 JSON 字符串, 需二次解析
+        ::nlohmann::json inner {};
+        try
+        {
+            inner = ::nlohmann::json::parse(value.value());
+        }
+        catch (const ::std::exception& ex)
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, ex.what()));
+        }
+        if (!inner.is_object())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "node list value must be an object"));
+        }
+        Result<::std::string> local_node_id { requiredString(inner, "localNodeId") };
+        if (!local_node_id.has_value())
+        {
+            return ::std::unexpected(local_node_id.error());
+        }
+        if (!inner.contains("nodes") || !inner["nodes"].is_array())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: nodes"));
+        }
+        NodeList list {};
+        list.local_node_id = local_node_id.value();
+        list.nodes.reserve(inner["nodes"].size());
+        for (const auto& item : inner["nodes"])
+        {
+            Result<NodeListEntry> entry { parseNodeListEntry(item) };
+            if (!entry.has_value())
+            {
+                return ::std::unexpected(entry.error());
+            }
+            list.nodes.push_back(::std::move(entry.value()));
+        }
+        return list;
+    }
+
+    [[nodiscard]] Result<NodeListEntry> ServiceGateway::parseNodeListEntry(const ::nlohmann::json& json)
+    {
+        if (!json.is_object())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "node list item must be an object"));
+        }
+        if (!json.contains("node") || !json["node"].is_object())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: node"));
+        }
+        const ::nlohmann::json& node { json["node"] };
+
+        Result<::std::string>   node_id { requiredString(node, "nodeId") };
+        if (!node_id.has_value())
+        {
+            return ::std::unexpected(node_id.error());
+        }
+        Result<::std::string> node_name { requiredString(node, "nodeName") };
+        if (!node_name.has_value())
+        {
+            return ::std::unexpected(node_name.error());
+        }
+        Result<::std::string> address { requiredString(json, "address") };
+        if (!address.has_value())
+        {
+            return ::std::unexpected(address.error());
+        }
+        Result<::std::string> relation { requiredString(json, "relation") };
+        if (!relation.has_value())
+        {
+            return ::std::unexpected(relation.error());
+        }
+        Result<::std::string> mqtt { requiredString(json, "mqtt") };
+        if (!mqtt.has_value())
+        {
+            return ::std::unexpected(mqtt.error());
+        }
+        if (!json.contains("configVersion") || !json["configVersion"].is_object())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: configVersion"));
+        }
+        const ::nlohmann::json& config_version_json { json["configVersion"] };
+        Result<long long>       classification_revision { requiredInt64(config_version_json, "classificationRevision") };
+        if (!classification_revision.has_value())
+        {
+            return ::std::unexpected(classification_revision.error());
+        }
+        Result<long long> authorization_revision { requiredInt64(config_version_json, "authorizationRevision") };
+        if (!authorization_revision.has_value())
+        {
+            return ::std::unexpected(authorization_revision.error());
+        }
+        Result<::std::vector<::std::string>> effective_permissions { requiredStringArray(json, "effectivePermissions") };
+        if (!effective_permissions.has_value())
+        {
+            return ::std::unexpected(effective_permissions.error());
+        }
+        if (!json.contains("status") || !json["status"].is_object())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: status"));
+        }
+        const ::nlohmann::json& status_json { json["status"] };
+        Result<bool>            online { requiredBool(status_json, "online") };
+        if (!online.has_value())
+        {
+            return ::std::unexpected(online.error());
+        }
+        Result<::std::string> label { requiredString(status_json, "label") };
+        if (!label.has_value())
+        {
+            return ::std::unexpected(label.error());
+        }
+        Result<long long> response_millis { requiredInt64(status_json, "responseMillis") };
+        if (!response_millis.has_value())
+        {
+            return ::std::unexpected(response_millis.error());
+        }
+        Result<long long> missed_scans { requiredInt64(status_json, "missedScans") };
+        if (!missed_scans.has_value())
+        {
+            return ::std::unexpected(missed_scans.error());
+        }
+        if (!json.contains("authorization") || !json["authorization"].is_object())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: authorization"));
+        }
+        Result<NodeListAuthorization> authorization { parseNodeListAuthorization(json["authorization"]) };
+        if (!authorization.has_value())
+        {
+            return ::std::unexpected(authorization.error());
+        }
+
+        NodeListEntry entry {};
+        entry.node_id                                = node_id.value();
+        entry.node_name                              = node_name.value();
+        entry.address                                = address.value();
+        entry.relation                               = relation.value();
+        entry.config_version.classification_revision = classification_revision.value();
+        entry.config_version.authorization_revision  = authorization_revision.value();
+        entry.effective_permissions                  = ::std::move(effective_permissions.value());
+        entry.mqtt                                   = mqtt.value();
+        entry.status.online                          = online.value();
+        entry.status.label                           = label.value();
+        entry.status.response_millis                 = response_millis.value();
+        entry.status.missed_scans                    = static_cast<int>(missed_scans.value());
+        entry.authorization                          = ::std::move(authorization.value());
+        return entry;
+    }
+
+    [[nodiscard]] Result<NodeListAuthorization> ServiceGateway::parseNodeListAuthorization(const ::nlohmann::json& json)
+    {
+        Result<long long> network_revision { requiredInt64(json, "networkRevision") };
+        if (!network_revision.has_value())
+        {
+            return ::std::unexpected(network_revision.error());
+        }
+        Result<::std::string> owner_node_id { requiredString(json, "ownerNodeId") };
+        if (!owner_node_id.has_value())
+        {
+            return ::std::unexpected(owner_node_id.error());
+        }
+        if (!json.contains("pairs") || !json["pairs"].is_array())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: pairs"));
+        }
+        NodeListAuthorization authorization {};
+        authorization.network_revision = network_revision.value();
+        authorization.owner_node_id    = owner_node_id.value();
+        authorization.pairs.reserve(json["pairs"].size());
+        for (const auto& pair_json : json["pairs"])
+        {
+            if (!pair_json.is_object())
+            {
+                return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "relation pair must be an object"));
+            }
+            Result<::std::string> other_id { requiredString(pair_json, "otherId") };
+            if (!other_id.has_value())
+            {
+                return ::std::unexpected(other_id.error());
+            }
+            Result<::std::string> other_name { requiredString(pair_json, "otherName") };
+            if (!other_name.has_value())
+            {
+                return ::std::unexpected(other_name.error());
+            }
+            Result<::std::string> view { requiredString(pair_json, "view") };
+            if (!view.has_value())
+            {
+                return ::std::unexpected(view.error());
+            }
+            Result<::std::string> other_view { requiredString(pair_json, "otherView") };
+            if (!other_view.has_value())
+            {
+                return ::std::unexpected(other_view.error());
+            }
+            NodeListRelationPair pair {};
+            pair.other_id   = other_id.value();
+            pair.other_name = other_name.value();
+            pair.view       = view.value();
+            pair.other_view = other_view.value();
+            authorization.pairs.push_back(::std::move(pair));
+        }
+        if (!json.contains("grants") || !json["grants"].is_array())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: grants"));
+        }
+        authorization.grants.reserve(json["grants"].size());
+        for (const auto& grant_json : json["grants"])
+        {
+            if (!grant_json.is_object())
+            {
+                return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "peer grant must be an object"));
+            }
+            Result<::std::string> peer_node_id { requiredString(grant_json, "peerNodeId") };
+            if (!peer_node_id.has_value())
+            {
+                return ::std::unexpected(peer_node_id.error());
+            }
+            Result<::std::string> peer_node_name { requiredString(grant_json, "peerNodeName") };
+            if (!peer_node_name.has_value())
+            {
+                return ::std::unexpected(peer_node_name.error());
+            }
+            Result<::std::string> view { requiredString(grant_json, "view") };
+            if (!view.has_value())
+            {
+                return ::std::unexpected(view.error());
+            }
+            Result<::std::string> other_view { requiredString(grant_json, "otherView") };
+            if (!other_view.has_value())
+            {
+                return ::std::unexpected(other_view.error());
+            }
+            Result<::std::vector<::std::string>> outbound { requiredStringArray(grant_json, "outboundOperations") };
+            if (!outbound.has_value())
+            {
+                return ::std::unexpected(outbound.error());
+            }
+            Result<::std::vector<::std::string>> inbound { requiredStringArray(grant_json, "inboundOperations") };
+            if (!inbound.has_value())
+            {
+                return ::std::unexpected(inbound.error());
+            }
+            NodeListPeerGrant grant {};
+            grant.peer_node_id        = peer_node_id.value();
+            grant.peer_node_name      = peer_node_name.value();
+            grant.view                = view.value();
+            grant.other_view          = other_view.value();
+            grant.outbound_operations = ::std::move(outbound.value());
+            grant.inbound_operations  = ::std::move(inbound.value());
+            authorization.grants.push_back(::std::move(grant));
+        }
+        return authorization;
+    }
+
+    // 解析 GET /api/datapool/v1/data?key=... 的条目 (payloadBase64 解码为原始字节)
+    [[nodiscard]] Result<DataPoolValue> ServiceGateway::parseDataPoolValue(const ::nlohmann::json& json)
+    {
+        if (!json.is_object())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "data pool value must be an object"));
+        }
+        Result<::std::string> key { requiredString(json, "key") };
+        if (!key.has_value())
+        {
+            return ::std::unexpected(key.error());
+        }
+        Result<::std::string> content_type { requiredString(json, "contentType") };
+        if (!content_type.has_value())
+        {
+            return ::std::unexpected(content_type.error());
+        }
+        Result<long long> version { requiredInt64(json, "version") };
+        if (!version.has_value())
+        {
+            return ::std::unexpected(version.error());
+        }
+        Result<::std::string> source_node_id { requiredString(json, "sourceNodeId") };
+        if (!source_node_id.has_value())
+        {
+            return ::std::unexpected(source_node_id.error());
+        }
+        Result<::std::string> updated_at { requiredString(json, "updatedAt") };
+        if (!updated_at.has_value())
+        {
+            return ::std::unexpected(updated_at.error());
+        }
+        Result<::std::string> payload_base64 { requiredString(json, "payloadBase64") };
+        if (!payload_base64.has_value())
+        {
+            return ::std::unexpected(payload_base64.error());
+        }
+        Result<::std::vector<::std::uint8_t>> payload { decodeBase64(payload_base64.value()) };
+        if (!payload.has_value())
+        {
+            return ::std::unexpected(payload.error());
+        }
+        // payloadBytes 为可选冗余字段; 出现时必须与实际解码长度一致
+        if (json.contains("payloadBytes") && !json["payloadBytes"].is_null())
+        {
+            if (!json["payloadBytes"].is_number())
+            {
+                return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid type: payloadBytes"));
+            }
+            const long long declared { json["payloadBytes"].get<long long>() };
+            if (declared < 0 || declared != static_cast<long long>(payload.value().size()))
+            {
+                return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "payloadBytes does not match decoded payload size"));
+            }
+        }
+
+        DataPoolValue value {};
+        value.key            = key.value();
+        value.content_type   = content_type.value();
+        value.payload        = ::std::move(payload.value());
+        value.version        = version.value();
+        value.source_node_id = source_node_id.value();
+        value.updated_at     = updated_at.value();
+        return value;
+    }
+
+    [[nodiscard]] Result<long long> ServiceGateway::requiredInt64(const ::nlohmann::json& json, const ::std::string& field)
+    {
+        if (!json.contains(field) || json[field].is_null() || !json[field].is_number())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: " + field));
+        }
+        return json[field].get<long long>();
+    }
+
+    [[nodiscard]] Result<bool> ServiceGateway::requiredBool(const ::nlohmann::json& json, const ::std::string& field)
+    {
+        if (!json.contains(field) || json[field].is_null() || !json[field].is_boolean())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: " + field));
+        }
+        return json[field].get<bool>();
+    }
+
+    [[nodiscard]] Result<::std::vector<::std::string>>
+        ServiceGateway::requiredStringArray(const ::nlohmann::json& json, const ::std::string& field)
+    {
+        if (!json.contains(field) || json[field].is_null() || !json[field].is_array())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "missing or invalid field: " + field));
+        }
+        ::std::vector<::std::string> out {};
+        out.reserve(json[field].size());
+        for (const auto& item : json[field])
+        {
+            if (!item.is_string())
+            {
+                return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "invalid element in field: " + field));
+            }
+            out.push_back(item.get<::std::string>());
+        }
+        return out;
     }
 
     [[nodiscard]] Result<::std::string> ServiceGateway::requiredString(const ::nlohmann::json& json, const ::std::string& field)

@@ -43,6 +43,9 @@ namespace plane::manager
         using ServiceEndpoint        = plane::catalog::ServiceEndpoint;
         using ExposedPort            = plane::catalog::ExposedPort;
         using ServiceRegistration    = plane::catalog::ServiceRegistration;
+        using NodeList               = plane::catalog::NodeList;
+        using DataPoolValue          = plane::catalog::DataPoolValue;
+        using CatalogError           = plane::catalog::CatalogError;
 
         using Ms                     = ::std::chrono::milliseconds;
 
@@ -554,6 +557,48 @@ namespace plane::manager
         }
         ::std::lock_guard<::std::mutex> broker_lock { this->impl_->broker_url_mutex };
         return this->impl_->last_published_url;
+    }
+
+    plane::catalog::Result<NodeList> CatalogManager::getNodeList(void)
+    {
+        ::std::shared_ptr<CatalogRuntime> runtime {};
+        {
+            ::std::lock_guard<::std::mutex> lock { this->rt_mutex_ };
+            runtime = this->impl_ ? this->impl_->runtime : nullptr;
+        }
+        if (!runtime)
+        {
+            return ::std::unexpected(plane::catalog::makeFailure(CatalogError::NOT_STARTED));
+        }
+        return runtime->getNodeList();
+    }
+
+    plane::catalog::Result<DataPoolValue> CatalogManager::getDataValue(const ::std::string& key)
+    {
+        ::std::shared_ptr<CatalogRuntime> runtime {};
+        {
+            ::std::lock_guard<::std::mutex> lock { this->rt_mutex_ };
+            runtime = this->impl_ ? this->impl_->runtime : nullptr;
+        }
+        if (!runtime)
+        {
+            return ::std::unexpected(plane::catalog::makeFailure(CatalogError::NOT_STARTED));
+        }
+        return runtime->getDataValue(key);
+    }
+
+    plane::catalog::Result<::std::string> CatalogManager::getValue(const ::std::string& key)
+    {
+        ::std::shared_ptr<CatalogRuntime> runtime {};
+        {
+            ::std::lock_guard<::std::mutex> lock { this->rt_mutex_ };
+            runtime = this->impl_ ? this->impl_->runtime : nullptr;
+        }
+        if (!runtime)
+        {
+            return ::std::unexpected(plane::catalog::makeFailure(CatalogError::NOT_STARTED));
+        }
+        return runtime->getValue(key);
     }
 
     ::std::string CatalogManager::resolveServiceBaseUrl(const ::std::string& service_id, const ::std::string& protocol) noexcept

@@ -29,6 +29,7 @@
 #include "manager/catalog/client/internal/codec/ProbePacketCodec.h"
 #include "manager/catalog/client/internal/discovery/DiscoveryClient.h"
 #include "manager/catalog/client/internal/discovery/UdpAnnouncementListener.h"
+#include "manager/catalog/client/internal/discovery/UdpMulticastAnnouncementListener.h"
 #include "manager/catalog/client/internal/service/ServiceGateway.h"
 #include "manager/catalog/client/internal/transport/CppHttpTransport.h"
 #include "manager/catalog/client/internal/transport/HttpTransport.h"
@@ -36,6 +37,7 @@
 namespace
 {
     using plane::catalog::CatalogEndpoint;
+    using plane::catalog::CatalogError;
     using plane::catalog::CatalogRuntime;
     using plane::catalog::CatalogRuntimeOptions;
     using plane::catalog::CatalogState;
@@ -48,6 +50,7 @@ namespace
     using plane::catalog::internal::HttpTransport;
     using plane::catalog::internal::ServiceGateway;
     using plane::catalog::internal::UdpAnnouncementListener;
+    using plane::catalog::internal::UdpMulticastAnnouncementListener;
 
     using Clock = ::std::chrono::steady_clock;
 
@@ -251,6 +254,37 @@ TEST(CatalogRuntimeInjection, IdempotentRegisterConflictIsAccepted)
 
 // ServiceGateway
 
+TEST(CatalogServiceGateway, InstanceVersionAcceptsNumericForm)
+{
+    auto transport { ::std::make_unique<FakeHttpTransport>() };
+    transport->handler = [](const ::std::string&, const ::std::string& url, const ::std::string&) -> HttpResponseData
+    {
+        HttpResponseData response {};
+        response.transport_ok = true;
+        response.status       = 200;
+        if (url.find("healthyOnly=true") != ::std::string::npos)
+        {
+            // 回归: 服务端 catalog 3.x 返回数字型 version (如 0), 旧实现只接受字符串会直接判协议错误
+            response.body =
+                R"([{"id":"i1","ip":"10.0.0.1","healthy":true,"enabled":true,"version":0,"endpoints":[{"name":"http","protocol":"http","port":8080}]}])";
+        }
+        else
+        {
+            response.body = "{}";
+        }
+        return response;
+    };
+
+    ServiceGateway gateway { "http://127.0.0.1:18081", ::std::move(transport), ::std::chrono::milliseconds { 500 } };
+
+    ServiceQuery   query {};
+    query.service_id = "svc-a";
+    const auto result { gateway.resolve(query) };
+    ASSERT_TRUE(result.has_value()) << result.error().message;
+    ASSERT_EQ(result.value().endpoints.size(), 1u);
+    EXPECT_EQ(result.value().endpoints[0].version, "0");
+}
+
 TEST(CatalogServiceGateway, ResolveFiltersUnhealthyAndDisabled)
 {
     auto transport { ::std::make_unique<FakeHttpTransport>() };
@@ -301,6 +335,220 @@ TEST(CatalogServiceGateway, InstanceStatusHealthyIsCaseInsensitive)
     const auto     result { gateway.getInstanceStatus("public", "DEFAULT_GROUP", "svc-a", "i1") };
     ASSERT_TRUE(result.has_value());
     EXPECT_TRUE(result.value().healthy);
+}
+
+// 组播节点公告解析 (catalog-node-announce-v1)
+
+namespace
+{
+    // 实测报文 (192.168.1.118 每 ~5s 发布一次)
+    const char* const kMulticastSample = R"({"type":"catalog-node-announce-v1","timestamp":1789640712667,)"
+                                         R"("node":{"localName":"指挥所118","deploymentLocation":"未配置","nodePurpose":"服务目录节点",)"
+                                         R"("department":"未配置","accessAddress":"http://192.168.1.118:30906","onlineServiceCount":3}})";
+} // namespace
+
+TEST(CatalogMulticastAnnouncement, ParsesRealAnnouncementAndSplitsAccessAddress)
+{
+    const auto result { UdpMulticastAnnouncementListener::parse(kMulticastSample) };
+    ASSERT_TRUE(result.has_value()) << result.error().message;
+
+    EXPECT_EQ(result.value().type, "catalog-node-announce-v1");
+    EXPECT_EQ(result.value().timestamp, 1'789'640'712'667ll);
+    EXPECT_EQ(result.value().local_name, "指挥所118");
+    EXPECT_EQ(result.value().node_purpose, "服务目录节点");
+    EXPECT_EQ(result.value().access_address, "http://192.168.1.118:30906");
+    EXPECT_EQ(result.value().online_service_count, 3);
+    // accessAddress 解析出的 ip / port
+    EXPECT_EQ(result.value().ip, "192.168.1.118");
+    EXPECT_EQ(result.value().http_port, 30'906);
+}
+
+TEST(CatalogMulticastAnnouncement, IgnoresOtherTypesAndMalformedPayloads)
+{
+    const auto is_protocol_error = [](const ::std::string& payload)
+    {
+        const auto result { UdpMulticastAnnouncementListener::parse(payload) };
+        return !result.has_value() && result.error().code == CatalogError::PROTOCOL_ERROR;
+    };
+
+    // type 不匹配 (组播上还有其它协议/版本)
+    EXPECT_TRUE(is_protocol_error(R"({"type":"catalog-node-announce-v2","node":{}})"));
+    // 非 JSON
+    EXPECT_TRUE(is_protocol_error("RTPS-binary-payload"));
+    // 缺 node
+    EXPECT_TRUE(is_protocol_error(R"({"type":"catalog-node-announce-v1"})"));
+    // 缺 accessAddress
+    EXPECT_TRUE(is_protocol_error(R"({"type":"catalog-node-announce-v1","node":{"localName":"x"}})"));
+}
+
+TEST(CatalogMulticastAnnouncement, ToleratesAddressWithoutSchemeOrPort)
+{
+    // 无 scheme, 带端口
+    const auto with_port {
+        UdpMulticastAnnouncementListener::parse(R"({"type":"catalog-node-announce-v1","node":{"accessAddress":"10.0.0.5:8080"}})")
+    };
+    ASSERT_TRUE(with_port.has_value());
+    EXPECT_EQ(with_port.value().ip, "10.0.0.5");
+    EXPECT_EQ(with_port.value().http_port, 8080);
+
+    // 无 scheme 无端口 -> 端口回落 0
+    const auto no_port { UdpMulticastAnnouncementListener::parse(R"({"type":"catalog-node-announce-v1","node":{"accessAddress":"10.0.0.5"}})") };
+    ASSERT_TRUE(no_port.has_value());
+    EXPECT_EQ(no_port.value().ip, "10.0.0.5");
+    EXPECT_EQ(no_port.value().http_port, 0);
+
+    // 带路径
+    const auto with_path {
+        UdpMulticastAnnouncementListener::parse(R"({"type":"catalog-node-announce-v1","node":{"accessAddress":"http://10.0.0.7:30906/base"}})")
+    };
+    ASSERT_TRUE(with_path.has_value());
+    EXPECT_EQ(with_path.value().ip, "10.0.0.7");
+    EXPECT_EQ(with_path.value().http_port, 30'906);
+}
+
+// 数据池读取 (通过 key)
+
+TEST(CatalogServiceGateway, GetDataValueDecodesPayloadAndMapsNotFound)
+{
+    auto transport { ::std::make_unique<FakeHttpTransport>() };
+    transport->handler = [](const ::std::string&, const ::std::string& url, const ::std::string&) -> HttpResponseData
+    {
+        HttpResponseData response {};
+        response.transport_ok = true;
+        if (url.find("missing") != ::std::string::npos)
+        {
+            response.status = 404;
+            response.body   = R"({"code":"NOT_FOUND"})";
+            return response;
+        }
+        response.status = 200;
+        response.body   = R"({"key":"nodeList","contentType":"application/json","version":3,)"
+                          R"("sourceNodeId":"NODE-A","updatedAt":"2026-09-23T12:00:00Z",)"
+                          R"("payloadBase64":"aGVsbG8=","payloadBytes":5})";
+        return response;
+    };
+
+    ServiceGateway gateway { "http://127.0.0.1:18081", ::std::move(transport), ::std::chrono::milliseconds { 500 } };
+
+    const auto     value { gateway.getDataValue("nodeList") };
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(value.value().key, "nodeList");
+    EXPECT_EQ(value.value().content_type, "application/json");
+    EXPECT_EQ(value.value().version, 3);
+    EXPECT_EQ(value.value().source_node_id, "NODE-A");
+    // 注意: 花括号初始化含逗号, 直接塞进 EXPECT_EQ 会被预处理器拆成多个实参, 故先落变量
+    const ::std::string payload_text { value.value().payload.begin(), value.value().payload.end() };
+    EXPECT_EQ(payload_text, "hello");
+
+    // 空 key 为参数错误, 不发起请求
+    const auto empty_key { gateway.getDataValue("") };
+    ASSERT_FALSE(empty_key.has_value());
+    EXPECT_EQ(empty_key.error().code, CatalogError::INVALID_ARGUMENT);
+
+    // 404 -> DATA_NOT_FOUND (不可重试)
+    const auto missing { gateway.getDataValue("missing") };
+    ASSERT_FALSE(missing.has_value());
+    EXPECT_EQ(missing.error().code, CatalogError::DATA_NOT_FOUND);
+    EXPECT_FALSE(missing.error().retryable);
+}
+
+TEST(CatalogServiceGateway, GetDataValueRejectsPayloadSizeMismatch)
+{
+    auto transport { ::std::make_unique<FakeHttpTransport>() };
+    transport->handler = [](const ::std::string&, const ::std::string&, const ::std::string&) -> HttpResponseData
+    {
+        HttpResponseData response {};
+        response.transport_ok = true;
+        response.status       = 200;
+        // payloadBytes 声称 9 字节, 实际解码为 5 字节
+        response.body = R"({"key":"nodeList","contentType":"application/json","version":1,)"
+                        R"("sourceNodeId":"NODE-A","updatedAt":"t","payloadBase64":"aGVsbG8=","payloadBytes":9})";
+        return response;
+    };
+
+    ServiceGateway gateway { "http://127.0.0.1:18081", ::std::move(transport), ::std::chrono::milliseconds { 500 } };
+
+    const auto     value { gateway.getDataValue("nodeList") };
+    ASSERT_FALSE(value.has_value());
+    EXPECT_EQ(value.error().code, CatalogError::PROTOCOL_ERROR);
+}
+
+// 节点清单 (结构化行)
+
+TEST(CatalogServiceGateway, GetNodeListParsesStructuredRows)
+{
+    auto transport { ::std::make_unique<FakeHttpTransport>() };
+    transport->handler = [](const ::std::string&, const ::std::string& url, const ::std::string&) -> HttpResponseData
+    {
+        HttpResponseData response {};
+        response.transport_ok = true;
+        response.status       = 200;
+        if (url.find("/api/datapool/v1/discovery/node-list") == ::std::string::npos)
+        {
+            response.body = "{}";
+            return response;
+        }
+        response.body = R"({"key":"nodeList","value":"{\"localNodeId\":\"NODE-A\",\"nodes\":[)"
+                        R"({\"node\":{\"nodeId\":\"NODE-B\",\"nodeName\":\"\u8282\u70b9B\"},)"
+                        R"(\"address\":\"192.168.1.118:30906\",\"relation\":\"peer\",)"
+                        R"(\"configVersion\":{\"classificationRevision\":3,\"authorizationRevision\":4},)"
+                        R"(\"effectivePermissions\":[\"read.node\"],\"mqtt\":\"tcp://192.168.1.118:1883\",)"
+                        R"(\"status\":{\"online\":true,\"label\":\"\u5c31\u7eea\",\"responseMillis\":12,\"missedScans\":0},)"
+                        R"(\"authorization\":{\"networkRevision\":7,\"ownerNodeId\":\"NODE-A\",)"
+                        R"(\"pairs\":[{\"otherId\":\"NODE-B\",\"otherName\":\"\u8282\u70b9B\",\"view\":\"open\",\"otherView\":\"open\"}],)"
+                        R"(\"grants\":[{\"peerNodeId\":\"NODE-B\",\"peerNodeName\":\"\u8282\u70b9B\",\"view\":\"open\",)"
+                        R"(\"otherView\":\"open\",\"outboundOperations\":[\"a\"],\"inboundOperations\":[\"b\"]}]}}]}"})";
+        return response;
+    };
+
+    ServiceGateway gateway { "http://127.0.0.1:18081", ::std::move(transport), ::std::chrono::milliseconds { 500 } };
+
+    const auto     list { gateway.getNodeList() };
+    ASSERT_TRUE(list.has_value()) << list.error().message;
+    EXPECT_EQ(list.value().local_node_id, "NODE-A");
+    ASSERT_EQ(list.value().nodes.size(), 1u);
+
+    const auto& entry { list.value().nodes[0] };
+    EXPECT_EQ(entry.node_id, "NODE-B");
+    EXPECT_EQ(entry.node_name, "节点B");
+    EXPECT_EQ(entry.address, "192.168.1.118:30906");
+    EXPECT_EQ(entry.relation, "peer");
+    EXPECT_EQ(entry.config_version.classification_revision, 3);
+    EXPECT_EQ(entry.config_version.authorization_revision, 4);
+    ASSERT_EQ(entry.effective_permissions.size(), 1u);
+    EXPECT_EQ(entry.effective_permissions[0], "read.node");
+    EXPECT_EQ(entry.mqtt, "tcp://192.168.1.118:1883");
+    EXPECT_TRUE(entry.status.online);
+    EXPECT_EQ(entry.status.label, "就绪");
+    EXPECT_EQ(entry.status.response_millis, 12);
+    EXPECT_EQ(entry.status.missed_scans, 0);
+    EXPECT_EQ(entry.authorization.network_revision, 7);
+    EXPECT_EQ(entry.authorization.owner_node_id, "NODE-A");
+    ASSERT_EQ(entry.authorization.pairs.size(), 1u);
+    EXPECT_EQ(entry.authorization.pairs[0].other_id, "NODE-B");
+    EXPECT_EQ(entry.authorization.pairs[0].other_view, "open");
+    ASSERT_EQ(entry.authorization.grants.size(), 1u);
+    ASSERT_EQ(entry.authorization.grants[0].outbound_operations.size(), 1u);
+    EXPECT_EQ(entry.authorization.grants[0].inbound_operations[0], "b");
+}
+
+TEST(CatalogServiceGateway, GetNodeListRejectsUnexpectedKey)
+{
+    auto transport { ::std::make_unique<FakeHttpTransport>() };
+    transport->handler = [](const ::std::string&, const ::std::string&, const ::std::string&) -> HttpResponseData
+    {
+        HttpResponseData response {};
+        response.transport_ok = true;
+        response.status       = 200;
+        response.body         = R"({"key":"somethingElse","value":"{}"})";
+        return response;
+    };
+
+    ServiceGateway gateway { "http://127.0.0.1:18081", ::std::move(transport), ::std::chrono::milliseconds { 500 } };
+
+    const auto     list { gateway.getNodeList() };
+    ASSERT_FALSE(list.has_value());
+    EXPECT_EQ(list.error().code, CatalogError::PROTOCOL_ERROR);
 }
 
 // UdpAnnouncementListener

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -197,5 +198,107 @@ namespace plane::catalog
         ::std::string node_name {};
         ::std::string instance_id {};
         int           http_port { 0 };
+    };
+
+    // 组播节点公告 (UDP 组播 JSON, type=catalog-node-announce-v1)。
+    // 服务端在 multicastGroup:multicastPort (默认 239.255.18.18:38500) 持续发布节点摘要,
+    // 只表达"节点存在及摘要", 不含服务明细; 需要服务列表/在线明细时再访问 access_address 的 HTTP 接口。
+    struct MulticastNodeAnnouncement
+    {
+        // 固定 type 值; 接收方只处理该值的报文
+        constexpr static const char* TYPE = "catalog-node-announce-v1";
+
+        ::std::string                type {};
+        long long                    timestamp { 0 };
+        ::std::string                local_name {};
+        ::std::string                deployment_location {};
+        ::std::string                node_purpose {};
+        ::std::string                department {};
+        ::std::string                access_address {}; // 如 http://192.168.1.118:30906
+        int                          online_service_count { 0 };
+        // 以下两项由 access_address 解析填入 (解析失败为空串/0), 便于下游直接使用
+        ::std::string ip {};
+        int           http_port { 0 };
+    };
+
+    // 数据池条目 (GET /api/datapool/v1/data?key=...)。
+    // payload 为 payloadBase64 解码后的原始字节; 系统保留键 nodeList / nodeAuthorization /
+    // nodeRelations 的正文均为 UTF-8 JSON。
+    struct DataPoolValue
+    {
+        ::std::string                 key {};
+        ::std::string                 content_type {};
+        ::std::vector<::std::uint8_t> payload {};
+        long long                     version { 0 };
+        ::std::string                 source_node_id {};
+        ::std::string                 updated_at {};
+    };
+
+    // 节点清单条目的配置版本号 (分类权限 / 授权各一套修订号)
+    struct NodeListConfigVersion
+    {
+        long long classification_revision { 0 };
+        long long authorization_revision { 0 };
+    };
+
+    // 节点清单条目的探测状态
+    struct NodeListStatus
+    {
+        bool          online { false };
+        ::std::string label {}; // 就绪 / 探测中 / 失联 等展示文案
+        long long     response_millis { 0 };
+        int           missed_scans { 0 };
+    };
+
+    // 节点清单条目里的关系视图对
+    struct NodeListRelationPair
+    {
+        ::std::string other_id {};
+        ::std::string other_name {};
+        ::std::string view {};       // 本节点对该对端的可见性
+        ::std::string other_view {}; // 该对端对本节点的可见性
+    };
+
+    // 节点清单条目里的对端授权
+    struct NodeListPeerGrant
+    {
+        ::std::string                peer_node_id {};
+        ::std::string                peer_node_name {};
+        ::std::string                view {};
+        ::std::string                other_view {};
+        ::std::vector<::std::string> outbound_operations {};
+        ::std::vector<::std::string> inbound_operations {};
+    };
+
+    // 节点清单条目里的授权明细
+    struct NodeListAuthorization
+    {
+        ::std::vector<NodeListRelationPair> pairs {};
+        ::std::vector<NodeListPeerGrant>    grants {};
+        long long                           network_revision { 0 };
+        ::std::string                       owner_node_id {};
+    };
+
+    // 节点清单条目 (含当前实例的查看授权)
+    struct NodeListEntry
+    {
+        ::std::string                node_id {};
+        ::std::string                node_name {};
+        ::std::string                address {};  // 节点访问地址 (host:port 或 URL)
+        ::std::string                relation {}; // 与本节点的关系
+        NodeListConfigVersion        config_version {};
+        ::std::vector<::std::string> effective_permissions {};
+        ::std::string                mqtt {}; // 该节点的 MQTT 接入 info, 供下游寻址
+        NodeListStatus               status {};
+        NodeListAuthorization        authorization {};
+    };
+
+    // 当前 Catalog 发现的节点清单 (GET /api/datapool/v1/discovery/node-list)。
+    // 需结构化节点行时用本类型; 需要完整入池 JSON (含 schemaVersion / scan / policy 等)
+    // 时改用 getValue("nodeList") 取原文。
+    struct NodeList
+    {
+        ::std::string                local_node_id {};
+        ::std::vector<NodeListEntry> nodes {};
     };
 } // namespace plane::catalog

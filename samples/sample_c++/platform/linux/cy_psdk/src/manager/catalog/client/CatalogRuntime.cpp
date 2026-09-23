@@ -28,6 +28,7 @@
 #include "manager/catalog/client/internal/state/ConfigCache.h"
 #include "manager/catalog/client/internal/state/RuntimeStateMachine.h"
 #include "manager/catalog/client/internal/transport/HttpTransport.h"
+#include "manager/catalog/client/internal/util/TextUtil.h"
 
 #include "define.h"
 
@@ -588,8 +589,19 @@ namespace plane::catalog
         // 周期重发现
         void refreshDiscovery(void)
         {
-            const CatalogState    previous { this->state_machine_.state() };
-            const DiscoveryReport report { this->discovery_->discover(this->discovery_config_, this->discovery_cancelled_) };
+            const CatalogState previous { this->state_machine_.state() };
+            DiscoveryReport    report { this->discovery_->discover(this->discovery_config_, this->discovery_cancelled_) };
+
+            // 单次探测失败不足以判定 Catalog 丢失: UDP 探测不重传、响应窗口仅几百毫秒,
+            // 无线环境偶发丢包就会空手而归。若立即降级 UNAVAILABLE, 状态会在 READY 与
+            // UNAVAILABLE 之间反复抖动 (表现为下游每秒闪一次"未连接")。
+            // 因此仅在"确实没收到任何响应"(NOT_FOUND) 时立即补探一次, 连续两次失败才降级,
+            // 代价是降级判定延迟约一个探测窗口。
+            if (report.status == DiscoveryStatus::NOT_FOUND && report.endpoints.empty() && !report.multiple_instances &&
+                !this->discovery_cancelled_.load(::std::memory_order_acquire))
+            {
+                report = this->discovery_->discover(this->discovery_config_, this->discovery_cancelled_);
+            }
 
             if (report.multiple_instances || report.endpoints.size() > 1)
             {
@@ -1053,6 +1065,51 @@ namespace plane::catalog
             return ::std::unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
         }
         return impl_->gateway_->getCatalogServerInfo();
+    }
+
+    Result<NodeList> CatalogRuntime::getNodeList(void)
+    {
+        if (!impl_->state_machine_.allowQuery())
+        {
+            return ::std::unexpected(impl_->gateFailure());
+        }
+        if (!impl_->gateway_)
+        {
+            return ::std::unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+        }
+        return impl_->gateway_->getNodeList();
+    }
+
+    Result<DataPoolValue> CatalogRuntime::getDataValue(const ::std::string& key)
+    {
+        if (!impl_->state_machine_.allowQuery())
+        {
+            return ::std::unexpected(impl_->gateFailure());
+        }
+        if (key.empty())
+        {
+            return ::std::unexpected(makeFailure(CatalogError::INVALID_ARGUMENT, "key is empty"));
+        }
+        if (!impl_->gateway_)
+        {
+            return ::std::unexpected(makeFailure(CatalogError::CATALOG_UNAVAILABLE));
+        }
+        return impl_->gateway_->getDataValue(key);
+    }
+
+    Result<::std::string> CatalogRuntime::getValue(const ::std::string& key)
+    {
+        Result<DataPoolValue> value { getDataValue(key) };
+        if (!value.has_value())
+        {
+            return ::std::unexpected(value.error());
+        }
+        const ::std::vector<::std::uint8_t>& payload { value.value().payload };
+        if (!internal::isValidUtf8(payload))
+        {
+            return ::std::unexpected(makeFailure(CatalogError::PROTOCOL_ERROR, "payload is not valid UTF-8"));
+        }
+        return ::std::string { payload.begin(), payload.end() };
     }
 
     Result<ConfigDocument> CatalogRuntime::putConfig(const ConfigUploadRequest& request)

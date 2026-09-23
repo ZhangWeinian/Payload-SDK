@@ -20,6 +20,8 @@
 #include <thread>
 
 #include "define.h"
+#include "manager/catalog/client/CatalogModels.h"
+#include "manager/catalog/client/Result.h"
 
 namespace plane::manager
 {
@@ -54,6 +56,18 @@ namespace plane::manager
         // 目录最近一次解析到的中心 MQTT broker 地址; 未解析/已失联返回空串。
         // 广播事件为一次性 (服务可能晚于广播启动), 供 MQTT 服务启动/自检时兜底查询
         [[nodiscard]] ::std::string getMqttBrokerUrl(void) noexcept;
+
+        // ---- 目录数据面查询 (需目录已就绪; 未启动/未就绪时返回错误) ----
+
+        // 拉取当前 Catalog 发现的节点清单 (含查看授权)
+        [[nodiscard]] plane::catalog::Result<plane::catalog::NodeList> getNodeList(void);
+
+        // 按 key 读取数据池条目 (含 contentType / version / 原始字节 payload)
+        [[nodiscard]] plane::catalog::Result<plane::catalog::DataPoolValue> getDataValue(const ::std::string& key);
+
+        // 按 key 读取数据池条目的 UTF-8 正文
+        // (系统保留键: nodeList / nodeAuthorization / nodeRelations)
+        [[nodiscard]] plane::catalog::Result<::std::string> getValue(const ::std::string& key);
 
         // 绑定/昵称联动: 更新目录注册的 service_name (触发运行时重注册); 空串恢复默认名
         void updateServiceName(const ::std::string& service_name) noexcept;

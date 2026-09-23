@@ -42,7 +42,9 @@ add_executable (
 	../src/manager/catalog/client/internal/codec/ProbePacketCodec.cpp
 	../src/manager/catalog/client/internal/service/ServiceGateway.cpp
 	../src/manager/catalog/client/internal/util/TargetExpander.cpp
+	../src/manager/catalog/client/internal/util/Base64.cpp
 	../src/manager/catalog/client/internal/discovery/UdpAnnouncementListener.cpp
+	../src/manager/catalog/client/internal/discovery/UdpMulticastAnnouncementListener.cpp
 	../src/manager/catalog/client/internal/discovery/UdpDiscoveryClient.cpp
 	../src/utils/device_identity/DeviceIdentity.cpp
 	../src/utils/json_converter/BuildAndParse.cpp

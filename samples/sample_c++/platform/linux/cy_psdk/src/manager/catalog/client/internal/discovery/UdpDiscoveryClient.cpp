@@ -206,6 +206,9 @@ namespace plane::catalog::internal
                 endpoint.ip          = ip;
                 endpoint.http_port   = packet.http_port;
                 endpoint.node_name   = packet.node_name;
+                // 新版服务端在响应末尾透出组播公告配置 (旧端点为空/0, 调用方据此回落默认值)
+                endpoint.multicast_address = packet.multicast_address;
+                endpoint.multicast_port    = packet.multicast_port;
                 if (by_key.find(key) == by_key.end())
                 {
                     by_key[key] = endpoint;

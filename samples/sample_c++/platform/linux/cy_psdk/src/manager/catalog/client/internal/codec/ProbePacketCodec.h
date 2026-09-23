@@ -5,7 +5,12 @@
 // 包布局 (大端):
 //   magic(4B)=0x53574d50 "SWMP" | version(1B)=1 | command(1B) |
 //   ip(1B len + bytes) | nodeId(1B len + bytes) | status(1B) |
-//   nodeName(1B len + bytes) | requestId(4B) | instanceId(1B len + bytes) | httpPort(2B)
+//   requestId(4B) | instanceId(1B len + bytes) | httpPort(2B) |
+//   [可选] nodeName(1B len + bytes) | [可选] multicastAddress(1B len + bytes) | [可选] multicastPort(2B)
+//
+// 注意: 早期实现把 nodeName 排在 requestId 之前, 与新版服务端不符 ——
+// 那会让 requestId 错位, 导致带 requestId 的响应被全部丢弃 (发现不到节点)。
+// status 之后的字段全部可选, 以兼容尚未升级的旧端点 (不写 nodeName/组播)。
 
 #pragma once
 
@@ -40,6 +45,9 @@ namespace plane::catalog::internal
         bool          has_request_id { false };
         ::std::string instance_id {};
         int           http_port { 0 };
+        // 服务端组播公告配置 (新版服务端在响应末尾追加; 旧端点不写则为空/0)
+        ::std::string multicast_address {};
+        int           multicast_port { 0 };
     };
 
     // 编码探测请求包
