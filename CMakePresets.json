@@ -73,7 +73,7 @@
         },
         {
             "name": "asan",
-            "displayName": "内存/UB 检测 (宿主原生, ASan + UBSan)",
+            "displayName": "内存和 UB 检测 (宿主原生, ASan + UBSan)",
             "description": "AddressSanitizer + UndefinedBehaviorSanitizer 动态分析：越界访问、use-after-free、泄漏、有符号溢出等",
             "inherits": "host-clang",
             "binaryDir": "${sourceDir}/build/host/asan",
@@ -129,6 +129,20 @@
             }
         },
         {
+            "name": "perf",
+            "displayName": "性能剖析 (宿主原生, -O2 -g)",
+            "description": "Clang 带调试符号的优化构建：供 perf / 火焰图做性能剖析，也用于定位只在 -O2 下才出现的问题。不带 sanitizer，避免插桩扭曲性能表现",
+            "inherits": "host-clang",
+            "binaryDir": "${sourceDir}/build/host/perf",
+            "installDir": "${sourceDir}/install/host/perf",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
+                "CMAKE_C_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
             "name": "x86_64-release",
             "displayName": "交付产物 (x86_64)",
             "description": "Clang -O3 + LTO 发布构建; 同时构建并运行测试, 防止 debug 正常但 release 编译/运行失败。在 aarch_64 宿主上配置会明确报错退出（本机没有 x86_64 交叉工具链）",
@@ -142,20 +156,6 @@
                 "CMAKE_EXE_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections -Wl,-z,relro,-z,now",
                 "CMAKE_SHARED_LINKER_FLAGS_RELEASE": "-s -Wl,--gc-sections",
                 "CMAKE_INTERPROCEDURAL_OPTIMIZATION": "ON",
-                "BUILD_TESTING": "ON"
-            }
-        },
-        {
-            "name": "perf",
-            "displayName": "性能剖析 (宿主原生, -O2 -g)",
-            "description": "Clang 带调试符号的优化构建：供 perf / 火焰图做性能剖析，也用于定位只在 -O2 下才出现的问题。不带 sanitizer，避免插桩扭曲性能表现",
-            "inherits": "host-clang",
-            "binaryDir": "${sourceDir}/build/host/perf",
-            "installDir": "${sourceDir}/install/host/perf",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "CMAKE_CXX_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
-                "CMAKE_C_FLAGS_RELWITHDEBINFO": "$env{PSDK_COMMON_WARNINGS} -O2 -g -DNDEBUG",
                 "BUILD_TESTING": "ON"
             }
         },
